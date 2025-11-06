@@ -66,8 +66,8 @@ const Dashboard = () => {
   return (
     <div className="p-8 space-y-8">
       <div>
-        <h1 className="text-4xl font-bold mb-2">Dashboard</h1>
-        <p className="text-muted-foreground">Acompanhe sua jornada de criação</p>
+        <h1 className="text-4xl font-bold mb-2">Última criação</h1>
+        <p className="text-muted-foreground">Acompanhe seu progresso diário</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

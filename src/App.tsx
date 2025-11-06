@@ -3,19 +3,18 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { Sidebar } from "@/components/Sidebar";
+import { BottomNav } from "@/components/BottomNav";
 import Dashboard from "./pages/Dashboard";
 import Scripts from "./pages/Scripts";
-import ShotLists from "./pages/ShotLists";
 import Stats from "./pages/Stats";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
 const Layout = ({ children }: { children: React.ReactNode }) => (
-  <div className="flex min-h-screen bg-background">
-    <Sidebar />
-    <main className="flex-1 overflow-auto">{children}</main>
+  <div className="min-h-screen bg-background pb-20">
+    <main className="h-full overflow-auto">{children}</main>
+    <BottomNav />
   </div>
 );
 
@@ -28,7 +27,6 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Layout><Dashboard /></Layout>} />
           <Route path="/scripts" element={<Layout><Scripts /></Layout>} />
-          <Route path="/shot-lists" element={<Layout><ShotLists /></Layout>} />
           <Route path="/stats" element={<Layout><Stats /></Layout>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
