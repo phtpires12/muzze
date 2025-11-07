@@ -7,6 +7,8 @@ import { BottomNav } from "@/components/BottomNav";
 import Dashboard from "./pages/Dashboard";
 import Scripts from "./pages/Scripts";
 import Stats from "./pages/Stats";
+import CalendarioEditorial from "./pages/CalendarioEditorial";
+import Ideias from "./pages/Ideias";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,6 +29,8 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Layout><Dashboard /></Layout>} />
           <Route path="/scripts" element={<Layout><Scripts /></Layout>} />
+          <Route path="/calendario" element={<Layout><CalendarioEditorial /></Layout>} />
+          <Route path="/ideias" element={<Layout><Ideias /></Layout>} />
           <Route path="/stats" element={<Layout><Stats /></Layout>} />
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -1,4 +1,4 @@
-import { Home, FileText, BarChart3, Menu, Plus } from "lucide-react";
+import { Home, FileText, BarChart3, Menu, Plus, Calendar, Lightbulb } from "lucide-react";
 import { NavLink } from "./NavLink";
 import { Button } from "./ui/button";
 import { useState } from "react";
@@ -22,38 +22,18 @@ import { useNavigate } from "react-router-dom";
 
 const leftNavigation = [
   { name: "Última criação", href: "/", icon: Home },
+  { name: "Ideias", href: "/ideias", icon: Lightbulb },
 ];
 
 const rightNavigation = [
-  { name: "Roteiros", href: "/scripts", icon: FileText },
+  { name: "Calendário", href: "/calendario", icon: Calendar },
   { name: "Estatísticas", href: "/stats", icon: BarChart3 },
 ];
 
 export const BottomNav = () => {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [scriptTitle, setScriptTitle] = useState("");
-  const [scriptContent, setScriptContent] = useState("");
   const navigate = useNavigate();
-
-  const handleCreateScript = () => {
-    if (!scriptTitle.trim()) return;
-
-    const scripts = JSON.parse(localStorage.getItem("scripts") || "[]");
-    const newScript = {
-      id: Date.now().toString(),
-      title: scriptTitle,
-      content: scriptContent,
-      createdAt: new Date().toISOString(),
-    };
-    scripts.push(newScript);
-    localStorage.setItem("scripts", JSON.stringify(scripts));
-
-    setScriptTitle("");
-    setScriptContent("");
-    setIsCreateOpen(false);
-    navigate("/scripts");
-  };
 
   return (
     <>
@@ -113,25 +93,48 @@ export const BottomNav = () => {
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Criar Novo Roteiro</DialogTitle>
+            <DialogTitle>Adicionar</DialogTitle>
             <DialogDescription>
-              Adicione um título e comece a escrever seu roteiro
+              O que você deseja criar?
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <Input
-              placeholder="Título do roteiro"
-              value={scriptTitle}
-              onChange={(e) => setScriptTitle(e.target.value)}
-            />
-            <Textarea
-              placeholder="Conteúdo do roteiro"
-              value={scriptContent}
-              onChange={(e) => setScriptContent(e.target.value)}
-              rows={6}
-            />
-            <Button onClick={handleCreateScript} className="w-full">
-              Criar Roteiro
+          <div className="space-y-2">
+            <Button
+              variant="outline"
+              className="w-full justify-start h-auto py-4"
+              onClick={() => {
+                setIsCreateOpen(false);
+                navigate("/scripts");
+              }}
+            >
+              <div className="flex items-start gap-3">
+                <FileText className="w-5 h-5 mt-1" />
+                <div className="text-left">
+                  <div className="font-semibold">Roteiro</div>
+                  <div className="text-sm text-muted-foreground">
+                    Criar um novo roteiro de conteúdo
+                  </div>
+                </div>
+              </div>
+            </Button>
+            
+            <Button
+              variant="outline"
+              className="w-full justify-start h-auto py-4"
+              onClick={() => {
+                setIsCreateOpen(false);
+                navigate("/ideias");
+              }}
+            >
+              <div className="flex items-start gap-3">
+                <Lightbulb className="w-5 h-5 mt-1" />
+                <div className="text-left">
+                  <div className="font-semibold">Ideia</div>
+                  <div className="text-sm text-muted-foreground">
+                    Anotar uma nova ideia de conteúdo
+                  </div>
+                </div>
+              </div>
             </Button>
           </div>
         </DialogContent>
