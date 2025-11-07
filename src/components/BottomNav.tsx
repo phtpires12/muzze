@@ -149,12 +149,16 @@ export const BottomNav = () => {
               Configurações e opções do aplicativo
             </SheetDescription>
           </SheetHeader>
-          <div className="mt-6 space-y-4">
-            <Button variant="outline" className="w-full justify-start">
-              Configurações
-            </Button>
-            <Button variant="outline" className="w-full justify-start">
-              Sobre
+          <div className="mt-6">
+            <Button 
+              variant="outline" 
+              className="w-full justify-start"
+              onClick={() => {
+                setIsMenuOpen(false);
+                navigate("/profile");
+              }}
+            >
+              Ver Perfil Completo
             </Button>
           </div>
         </SheetContent>
