@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { BottomNav } from "@/components/BottomNav";
 import { hasCompletedOnboarding } from "./lib/workflows";
 import Onboarding from "./pages/Onboarding";
+import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Scripts from "./pages/Scripts";
 import Stats from "./pages/Stats";
@@ -31,7 +32,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => (
 );
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  return hasCompletedOnboarding() ? children : <Navigate to="/onboarding" />;
+  return children;
 };
 
 const App = () => (
@@ -41,6 +42,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
+          <Route path="/auth" element={<Auth />} />
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
           <Route path="/scripts" element={<ProtectedRoute><Layout><Scripts /></Layout></ProtectedRoute>} />

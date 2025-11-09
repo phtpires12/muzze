@@ -14,7 +14,150 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      analytics_events: {
+        Row: {
+          created_at: string | null
+          event: string
+          id: string
+          payload: Json | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          event: string
+          id?: string
+          payload?: Json | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          event?: string
+          id?: string
+          payload?: Json | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          current_workflow: string | null
+          daily_goal_minutes: number | null
+          first_login: boolean | null
+          min_streak_minutes: number | null
+          notifications_enabled: boolean | null
+          preferred_session_minutes: number | null
+          reminder_time: string | null
+          timezone: string
+          user_id: string
+          username: string | null
+          weekly_goal_minutes: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          current_workflow?: string | null
+          daily_goal_minutes?: number | null
+          first_login?: boolean | null
+          min_streak_minutes?: number | null
+          notifications_enabled?: boolean | null
+          preferred_session_minutes?: number | null
+          reminder_time?: string | null
+          timezone?: string
+          user_id: string
+          username?: string | null
+          weekly_goal_minutes?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          current_workflow?: string | null
+          daily_goal_minutes?: number | null
+          first_login?: boolean | null
+          min_streak_minutes?: number | null
+          notifications_enabled?: boolean | null
+          preferred_session_minutes?: number | null
+          reminder_time?: string | null
+          timezone?: string
+          user_id?: string
+          username?: string | null
+          weekly_goal_minutes?: number | null
+        }
+        Relationships: []
+      }
+      settings: {
+        Row: {
+          created_at: string | null
+          digest_day: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          digest_day?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          digest_day?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      stage_times: {
+        Row: {
+          content_item_id: string | null
+          created_at: string | null
+          duration_seconds: number | null
+          ended_at: string | null
+          id: string
+          stage: string | null
+          started_at: string | null
+          user_id: string
+        }
+        Insert: {
+          content_item_id?: string | null
+          created_at?: string | null
+          duration_seconds?: number | null
+          ended_at?: string | null
+          id?: string
+          stage?: string | null
+          started_at?: string | null
+          user_id: string
+        }
+        Update: {
+          content_item_id?: string | null
+          created_at?: string | null
+          duration_seconds?: number | null
+          ended_at?: string | null
+          id?: string
+          stage?: string | null
+          started_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      streaks: {
+        Row: {
+          created_at: string | null
+          current_streak: number | null
+          last_event_date: string | null
+          longest_streak: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          current_streak?: number | null
+          last_event_date?: string | null
+          longest_streak?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          current_streak?: number | null
+          last_event_date?: string | null
+          longest_streak?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
