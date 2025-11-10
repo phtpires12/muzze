@@ -1,4 +1,4 @@
-import { Home, FileText, BarChart3, Menu, Plus, Calendar, Lightbulb } from "lucide-react";
+import { Home, FileText, BarChart3, Menu, Plus, Calendar, Lightbulb, Zap } from "lucide-react";
 import { NavLink } from "./NavLink";
 import { Button } from "./ui/button";
 import { useState } from "react";
@@ -37,8 +37,8 @@ export const BottomNav = () => {
 
   return (
     <>
-      <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50">
-        <div className="flex items-center justify-between px-4 py-3">
+      <nav className="fixed bottom-4 left-4 right-4 bg-card/80 backdrop-blur-lg border border-border/20 rounded-3xl z-50 shadow-lg">
+        <div className="flex items-center justify-between px-6 py-3">
           {/* Left navigation */}
           <div className="flex items-center gap-2">
             {leftNavigation.map((item) => (
@@ -58,9 +58,9 @@ export const BottomNav = () => {
           <Button
             size="icon"
             onClick={() => setIsCreateOpen(true)}
-            className="h-14 w-14 rounded-full shadow-lg"
+            className="h-14 w-14 rounded-full shadow-lg bg-gradient-to-r from-primary to-accent hover:opacity-90 animate-pulse-glow"
           >
-            <Plus className="w-6 h-6" />
+            <Zap className="w-6 h-6 text-white" />
           </Button>
 
           {/* Right navigation */}
