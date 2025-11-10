@@ -8,6 +8,7 @@ import Onboarding from "./pages/Onboarding";
 import Auth from "./pages/Auth";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import Scripts from "./pages/Scripts";
 import Stats from "./pages/Stats";
@@ -138,7 +139,8 @@ const App = () => (
         <Routes>
           <Route path="/auth" element={<Auth />} />
           <Route path="/onboarding" element={<OnboardingRoute><Onboarding /></OnboardingRoute>} />
-          <Route path="/" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
+          <Route path="/" element={<ProtectedRoute><Layout><Index /></Layout></ProtectedRoute>} />
+          <Route path="/dashboard" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
           <Route path="/scripts" element={<ProtectedRoute><Layout><Scripts /></Layout></ProtectedRoute>} />
           <Route path="/calendario" element={<ProtectedRoute><Layout><CalendarioEditorial /></Layout></ProtectedRoute>} />
           <Route path="/ideias" element={<ProtectedRoute><Layout><Ideias /></Layout></ProtectedRoute>} />
