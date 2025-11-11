@@ -21,7 +21,7 @@ import {
 
 const Index = () => {
   const navigate = useNavigate();
-  const { profile, loading: profileLoading } = useProfile();
+  const { profile, loading: profileLoading, refetch } = useProfile();
   const { trackEvent } = useAnalytics();
   const [stats, setStats] = useState(getUserStats());
   const [streakData, setStreakData] = useState<any>(null);
@@ -30,16 +30,26 @@ const Index = () => {
   const [isWorkflowModalOpen, setIsWorkflowModalOpen] = useState(false);
 
   useEffect(() => {
-    fetchStreakData();
-    fetchWeeklySessions();
-    fetchLastActivity();
-    
-    const interval = setInterval(() => {
-      setStats(getUserStats());
-    }, 1000);
+    if (profile && !profileLoading) {
+      fetchStreakData();
+      fetchWeeklySessions();
+      fetchLastActivity();
+      
+      const statsInterval = setInterval(() => {
+        setStats(getUserStats());
+      }, 1000);
+      
+      const dataInterval = setInterval(() => {
+        fetchStreakData();
+        fetchWeeklySessions();
+      }, 30000);
 
-    return () => clearInterval(interval);
-  }, []);
+      return () => {
+        clearInterval(statsInterval);
+        clearInterval(dataInterval);
+      };
+    }
+  }, [profile, profileLoading]);
 
   const fetchStreakData = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -49,7 +59,7 @@ const Index = () => {
       .from('streaks')
       .select('*')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
 
     setStreakData(data);
   };
@@ -96,7 +106,7 @@ const Index = () => {
     navigate('/dashboard');
   };
 
-  if (profileLoading) {
+  if (profileLoading || !profile) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-accent/10 via-background to-primary/10">
         <div className="text-center">
@@ -107,11 +117,16 @@ const Index = () => {
     );
   }
 
+  // Safety check - if first_login is still true, don't render
+  if (profile?.first_login === true) {
+    return null;
+  }
+
   const workflow = profile?.current_workflow ? getWorkflow(profile.current_workflow) : null;
-  const currentLevel = stats.level;
-  const xpProgress = ((stats.totalPoints % 1000) / 1000) * 100;
-  const totalHours = Math.floor(stats.totalHours);
-  const totalMinutes = Math.round((stats.totalHours - totalHours) * 60);
+  const currentLevel = stats?.level ?? 1;
+  const xpProgress = (((stats?.totalPoints ?? 0) % 1000) / 1000) * 100;
+  const totalHours = Math.floor(stats?.totalHours ?? 0);
+  const totalMinutes = Math.round(((stats?.totalHours ?? 0) - totalHours) * 60);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-accent/10 via-background to-primary/10 pb-24">
@@ -120,11 +135,11 @@ const Index = () => {
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2 text-foreground">
             <Flame className="w-5 h-5 text-accent" />
-            <span className="font-semibold">{streakData?.current_streak || 0} dias</span>
+            <span className="font-semibold">{streakData?.current_streak ?? 0} dias</span>
           </div>
           <div className="flex items-center gap-2 text-foreground">
             <Clock className="w-5 h-5 text-primary" />
-            <span className="font-semibold">{weeklySessionsCount} sessões</span>
+            <span className="font-semibold">{weeklySessionsCount ?? 0} sessões</span>
           </div>
         </div>
         
@@ -220,7 +235,7 @@ const Index = () => {
                 <Trophy className="w-6 h-6 text-white" />
               </div>
               <div className="text-sm font-semibold text-foreground">
-                {stats.trophies.length}
+                {stats?.trophies?.length ?? 0}
               </div>
               <div className="text-xs text-muted-foreground">
                 Conquistas
@@ -244,7 +259,7 @@ const Index = () => {
                 <Lightbulb className="w-6 h-6 text-white" />
               </div>
               <div className="text-sm font-semibold text-foreground">
-                {stats.ideasCreated || 0}
+                {stats?.ideasCreated ?? 0}
               </div>
               <div className="text-xs text-muted-foreground">
                 Ideias
@@ -258,7 +273,7 @@ const Index = () => {
       <div className="px-6 mt-8">
         <Card className="p-6 bg-gradient-to-br from-accent to-primary text-white border-0 rounded-2xl shadow-lg">
           <p className="text-center font-medium">
-            {streakData?.current_streak > 0 
+            {(streakData?.current_streak ?? 0) > 0 
               ? `Você está há ${streakData.current_streak} dias com a mente em movimento.`
               : "Um dia de cada vez, uma obra por vez."}
           </p>

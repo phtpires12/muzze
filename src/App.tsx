@@ -48,7 +48,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
           .from('profiles')
           .select('*')
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle();
         setProfile(profileData);
       }
       setLoading(false);
@@ -56,16 +56,18 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
     checkAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user || null);
       
       if (session?.user) {
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('user_id', session.user.id)
-          .single();
-        setProfile(profileData);
+        setTimeout(() => {
+          supabase
+            .from('profiles')
+            .select('*')
+            .eq('user_id', session.user.id)
+            .maybeSingle()
+            .then(({ data: profileData }) => setProfile(profileData));
+        }, 0);
       } else {
         setProfile(null);
       }
@@ -76,8 +78,8 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse text-xl">Carregando...</div>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-pulse text-xl text-foreground">Carregando...</div>
       </div>
     );
   }
@@ -86,9 +88,8 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     return <Navigate to="/auth" replace />;
   }
 
-  // Don't redirect to onboarding if we're already on the onboarding page
   const currentPath = window.location.pathname;
-  if (profile?.first_login && currentPath !== '/onboarding') {
+  if (profile?.first_login === true && currentPath !== '/onboarding') {
     return <Navigate to="/onboarding" replace />;
   }
 

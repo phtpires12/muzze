@@ -40,29 +40,37 @@ const Onboarding = () => {
   const quickGoals = [30, 45, 60, 90];
 
   const handleContinue = async () => {
-    if (step < 6) {
+    if (step < 5) {
       setStep(step + 1);
       
       // Track events
-      if (step === 1) await trackEvent("onboarding_started");
-      if (step === 2) await trackEvent("workflow_selected", { workflow: selectedWorkflow });
-      if (step === 3) await trackEvent("time_goals_set", { daily: dailyGoal, weekly: weeklyGoal });
-      if (step === 4) await trackEvent("session_pref_set", { minutes: sessionMinutes });
-      if (step === 5) await trackEvent("reminder_configured", { time: reminderTime, enabled: notificationsEnabled });
+      if (step === 0) await trackEvent("onboarding_started");
+      if (step === 1) await trackEvent("workflow_selected", { workflow: selectedWorkflow });
+      if (step === 2) await trackEvent("time_goals_set", { daily: dailyGoal, weekly: weeklyGoal });
+      if (step === 3) await trackEvent("session_pref_set", { minutes: sessionMinutes });
+      if (step === 4) await trackEvent("reminder_configured", { time: reminderTime, enabled: notificationsEnabled });
     } else {
-      // Final step - save everything
-      await updateProfile({
-        current_workflow: selectedWorkflow,
-        daily_goal_minutes: dailyGoal,
-        weekly_goal_minutes: weeklyGoal,
-        preferred_session_minutes: sessionMinutes,
-        reminder_time: reminderTime,
-        notifications_enabled: notificationsEnabled,
-        first_login: false
-      });
-      
-      await trackEvent("onboarding_complete");
-      navigate("/");
+      // Final step - save everything and complete onboarding
+      try {
+        await updateProfile({
+          current_workflow: selectedWorkflow,
+          daily_goal_minutes: dailyGoal,
+          weekly_goal_minutes: weeklyGoal,
+          preferred_session_minutes: sessionMinutes,
+          reminder_time: reminderTime,
+          notifications_enabled: notificationsEnabled,
+          first_login: false
+        });
+        
+        await trackEvent("onboarding_complete");
+        
+        // Wait a bit to ensure profile is updated before navigating
+        setTimeout(() => {
+          navigate("/", { replace: true });
+        }, 300);
+      } catch (error) {
+        console.error("Error completing onboarding:", error);
+      }
     }
   };
 
