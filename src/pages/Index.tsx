@@ -147,18 +147,17 @@ const Index = () => {
   };
 
   const getEligibleItems = (stage: string): ContentItem[] => {
-    // Mock de itens - substitua pela lógica real de busca
     const allItems: ContentItem[] = JSON.parse(localStorage.getItem("scripts") || "[]").map((s: any) => ({
       id: s.id,
       title: s.title,
-      status: "ideia", // Status mock
+      status: s.status || "ideia",
       sessionsCount: 0,
     }));
 
     if (stage === "script") {
       return allItems.filter(item => ["ideia", "roteiro-em-progresso"].includes(item.status));
     } else if (stage === "record") {
-      return allItems.filter(item => ["roteiro-pronto", "gravação-pendente"].includes(item.status));
+      return allItems.filter(item => ["roteiro-pronto"].includes(item.status));
     } else if (stage === "edit") {
       return allItems.filter(item => ["gravado", "edição-pendente"].includes(item.status));
     }

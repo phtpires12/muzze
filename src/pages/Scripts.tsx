@@ -1,13 +1,15 @@
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Plus, Trash2, Edit, Check, Film, Scissors } from "lucide-react";
+import { Plus, Trash2, Edit, Check, Film, Scissors, Lightbulb } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -20,7 +22,18 @@ interface Script {
   id: string;
   title: string;
   content: string;
+  status: "ideia" | "roteiro-em-progresso" | "roteiro-pronto" | "gravado" | "edição-pendente";
   createdAt: string;
+  recordingChecklist?: {
+    locationConfirmed: boolean;
+    equipmentReady: boolean;
+    lightingChecked: boolean;
+  };
+  editingChecklist?: {
+    footageImported: boolean;
+    roughCutDone: boolean;
+    finalReviewDone: boolean;
+  };
 }
 
 interface ShotItem {
@@ -54,6 +67,24 @@ const Scripts = () => {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [detailScript, setDetailScript] = useState<Script | null>(null);
   const [detailTab, setDetailTab] = useState<"record" | "edit">("record");
+
+  // Status config
+  const statusConfig: Record<Script["status"], { label: string; icon: any; color: string }> = {
+    "ideia": { label: "Ideia", icon: Lightbulb, color: "text-yellow-500" },
+    "roteiro-em-progresso": { label: "Roteiro em progresso", icon: Edit, color: "text-blue-500" },
+    "roteiro-pronto": { label: "Roteiro pronto", icon: Check, color: "text-green-500" },
+    "gravado": { label: "Gravado", icon: Film, color: "text-purple-500" },
+    "edição-pendente": { label: "Edição pendente", icon: Scissors, color: "text-orange-500" },
+  };
+
+  const statusFlow: Record<Script["status"], Script["status"] | null> = {
+    "ideia": "roteiro-em-progresso",
+    "roteiro-em-progresso": "roteiro-pronto",
+    "roteiro-pronto": "gravado",
+    "gravado": "edição-pendente",
+    "edição-pendente": null,
+  };
+
 
   useEffect(() => {
     const saved = localStorage.getItem("scripts");
@@ -123,7 +154,18 @@ const Scripts = () => {
         id: Date.now().toString(),
         title,
         content,
+        status: "ideia",
         createdAt: new Date().toISOString(),
+        recordingChecklist: {
+          locationConfirmed: false,
+          equipmentReady: false,
+          lightingChecked: false,
+        },
+        editingChecklist: {
+          footageImported: false,
+          roughCutDone: false,
+          finalReviewDone: false,
+        },
       };
       saveScripts([...scripts, newScript]);
       toast.success("Roteiro criado!");
@@ -153,6 +195,57 @@ const Scripts = () => {
     setContent("");
     setCurrentScript(null);
   };
+
+  const advanceStatus = (script: Script) => {
+    const nextStatus = statusFlow[script.status];
+    if (!nextStatus) {
+      toast.info("Este item já está no status final");
+      return;
+    }
+
+    const updated = scripts.map((s) =>
+      s.id === script.id ? { ...s, status: nextStatus } : s
+    );
+    saveScripts(updated);
+    toast.success(`Status atualizado para: ${statusConfig[nextStatus].label}`);
+  };
+
+  const canShowRecordingChecklist = (status: Script["status"]) => {
+    return status === "roteiro-pronto" || status === "gravado";
+  };
+
+  const canShowEditingChecklist = (status: Script["status"]) => {
+    return status === "gravado" || status === "edição-pendente";
+  };
+
+  const updateChecklist = (scriptId: string, type: "recording" | "editing", field: string, value: boolean) => {
+    const updated = scripts.map((s) => {
+      if (s.id === scriptId) {
+        if (type === "recording") {
+          return {
+            ...s,
+            recordingChecklist: { ...s.recordingChecklist!, [field]: value },
+          };
+        } else {
+          return {
+            ...s,
+            editingChecklist: { ...s.editingChecklist!, [field]: value },
+          };
+        }
+      }
+      return s;
+    });
+    saveScripts(updated);
+    
+    // Update detail script if it's the current one
+    if (detailScript?.id === scriptId) {
+      const updatedScript = updated.find(s => s.id === scriptId);
+      if (updatedScript) {
+        setDetailScript(updatedScript);
+      }
+    }
+  };
+
 
   const saveShotLists = (lists: ShotList[]) => {
     localStorage.setItem("shotLists", JSON.stringify(lists));
@@ -297,37 +390,56 @@ const Scripts = () => {
                   </p>
                 </Card>
               ) : (
-                scripts.map((script) => (
-                  <Card key={script.id} className="p-6 space-y-4 hover:shadow-lg transition-all duration-300">
-                    <div>
-                      <h3 className="text-lg font-semibold mb-2">{script.title}</h3>
-                      <p className="text-sm text-muted-foreground line-clamp-3">
-                        {script.content || "Sem conteúdo"}
-                      </p>
-                    </div>
-                    <div className="flex items-center justify-between pt-4 border-t border-border">
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(script.createdAt).toLocaleDateString('pt-BR')}
-                      </span>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleEdit(script)}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleDelete(script.id)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                scripts.map((script) => {
+                  const StatusIcon = statusConfig[script.status].icon;
+                  return (
+                    <Card key={script.id} className="p-6 space-y-4 hover:shadow-lg transition-all duration-300">
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="text-lg font-semibold flex-1">{script.title}</h3>
+                          <Badge variant="outline" className={cn("gap-1", statusConfig[script.status].color)}>
+                            <StatusIcon className="w-3 h-3" />
+                            {statusConfig[script.status].label}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground line-clamp-3">
+                          {script.content || "Sem conteúdo"}
+                        </p>
                       </div>
-                    </div>
-                  </Card>
-                ))
+                      <div className="flex items-center justify-between pt-4 border-t border-border">
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(script.createdAt).toLocaleDateString('pt-BR')}
+                        </span>
+                        <div className="flex gap-2">
+                          {statusFlow[script.status] && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => advanceStatus(script)}
+                              title="Avançar status"
+                            >
+                              <Check className="w-4 h-4" />
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleEdit(script)}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDelete(script.id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                })
               )}
             </div>
           )}
@@ -474,91 +586,109 @@ const Scripts = () => {
             </TabsList>
 
             <TabsContent value="record" className="space-y-4 pt-4">
-              <div className="space-y-3">
-                <h3 className="font-semibold text-sm text-muted-foreground">
-                  Checklist de gravação
-                </h3>
-                
-                <div className="space-y-2">
-                  <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
-                    <Checkbox id="record-1" />
-                    <label htmlFor="record-1" className="text-sm cursor-pointer flex-1">
-                      Equipamento verificado e testado
-                    </label>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
-                    <Checkbox id="record-2" />
-                    <label htmlFor="record-2" className="text-sm cursor-pointer flex-1">
-                      Iluminação configurada
-                    </label>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
-                    <Checkbox id="record-3" />
-                    <label htmlFor="record-3" className="text-sm cursor-pointer flex-1">
-                      Áudio testado
-                    </label>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
-                    <Checkbox id="record-4" />
-                    <label htmlFor="record-4" className="text-sm cursor-pointer flex-1">
-                      Roteiro revisado
-                    </label>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
-                    <Checkbox id="record-5" />
-                    <label htmlFor="record-5" className="text-sm cursor-pointer flex-1">
-                      Gravação concluída
-                    </label>
+              {detailScript && canShowRecordingChecklist(detailScript.status) ? (
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-sm text-muted-foreground">
+                    Checklist de gravação
+                  </h3>
+                  
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
+                      <Checkbox 
+                        id="record-equipment" 
+                        checked={detailScript.recordingChecklist?.equipmentReady || false}
+                        onCheckedChange={(checked) => 
+                          updateChecklist(detailScript.id, "recording", "equipmentReady", checked as boolean)
+                        }
+                      />
+                      <label htmlFor="record-equipment" className="text-sm cursor-pointer flex-1">
+                        Equipamento verificado e testado
+                      </label>
+                    </div>
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
+                      <Checkbox 
+                        id="record-lighting" 
+                        checked={detailScript.recordingChecklist?.lightingChecked || false}
+                        onCheckedChange={(checked) => 
+                          updateChecklist(detailScript.id, "recording", "lightingChecked", checked as boolean)
+                        }
+                      />
+                      <label htmlFor="record-lighting" className="text-sm cursor-pointer flex-1">
+                        Iluminação configurada
+                      </label>
+                    </div>
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
+                      <Checkbox 
+                        id="record-location" 
+                        checked={detailScript.recordingChecklist?.locationConfirmed || false}
+                        onCheckedChange={(checked) => 
+                          updateChecklist(detailScript.id, "recording", "locationConfirmed", checked as boolean)
+                        }
+                      />
+                      <label htmlFor="record-location" className="text-sm cursor-pointer flex-1">
+                        Localização confirmada
+                      </label>
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  Checklist de gravação disponível quando o roteiro estiver pronto.
+                </p>
+              )}
             </TabsContent>
 
             <TabsContent value="edit" className="space-y-4 pt-4">
-              <div className="space-y-3">
-                <h3 className="font-semibold text-sm text-muted-foreground">
-                  Checklist de edição
-                </h3>
-                
-                <div className="space-y-2">
-                  <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
-                    <Checkbox id="edit-1" />
-                    <label htmlFor="edit-1" className="text-sm cursor-pointer flex-1">
-                      Footage importado e organizado
-                    </label>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
-                    <Checkbox id="edit-2" />
-                    <label htmlFor="edit-2" className="text-sm cursor-pointer flex-1">
-                      Cortes principais feitos
-                    </label>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
-                    <Checkbox id="edit-3" />
-                    <label htmlFor="edit-3" className="text-sm cursor-pointer flex-1">
-                      Transições adicionadas
-                    </label>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
-                    <Checkbox id="edit-4" />
-                    <label htmlFor="edit-4" className="text-sm cursor-pointer flex-1">
-                      Correção de cor aplicada
-                    </label>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
-                    <Checkbox id="edit-5" />
-                    <label htmlFor="edit-5" className="text-sm cursor-pointer flex-1">
-                      Áudio mixado e sincronizado
-                    </label>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
-                    <Checkbox id="edit-6" />
-                    <label htmlFor="edit-6" className="text-sm cursor-pointer flex-1">
-                      Revisão final concluída
-                    </label>
+              {detailScript && canShowEditingChecklist(detailScript.status) ? (
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-sm text-muted-foreground">
+                    Checklist de edição
+                  </h3>
+                  
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
+                      <Checkbox 
+                        id="edit-imported" 
+                        checked={detailScript.editingChecklist?.footageImported || false}
+                        onCheckedChange={(checked) => 
+                          updateChecklist(detailScript.id, "editing", "footageImported", checked as boolean)
+                        }
+                      />
+                      <label htmlFor="edit-imported" className="text-sm cursor-pointer flex-1">
+                        Footage importado e organizado
+                      </label>
+                    </div>
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
+                      <Checkbox 
+                        id="edit-rough" 
+                        checked={detailScript.editingChecklist?.roughCutDone || false}
+                        onCheckedChange={(checked) => 
+                          updateChecklist(detailScript.id, "editing", "roughCutDone", checked as boolean)
+                        }
+                      />
+                      <label htmlFor="edit-rough" className="text-sm cursor-pointer flex-1">
+                        Cortes principais feitos
+                      </label>
+                    </div>
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
+                      <Checkbox 
+                        id="edit-final" 
+                        checked={detailScript.editingChecklist?.finalReviewDone || false}
+                        onCheckedChange={(checked) => 
+                          updateChecklist(detailScript.id, "editing", "finalReviewDone", checked as boolean)
+                        }
+                      />
+                      <label htmlFor="edit-final" className="text-sm cursor-pointer flex-1">
+                        Revisão final concluída
+                      </label>
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  Checklist de edição disponível após a gravação.
+                </p>
+              )}
             </TabsContent>
           </Tabs>
         </DialogContent>
