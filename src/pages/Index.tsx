@@ -327,6 +327,7 @@ const Index = () => {
           ) : (
             <div className="space-y-4 text-center">
               <Button
+                data-testid="cta-start-session"
                 onClick={handleStartSession}
                 className="w-full relative overflow-hidden group h-14 rounded-2xl font-semibold text-base shadow-[0_0_20px_hsl(var(--primary)/0.4),0_0_40px_hsl(var(--accent)/0.2)]"
                 style={{
@@ -432,7 +433,7 @@ const Index = () => {
 
       {/* Session Stage Selection Modal */}
       <Dialog open={isSessionModalOpen} onOpenChange={setIsSessionModalOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent data-testid="modal-session-stage" className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold">Em que parte você quer criar agora?</DialogTitle>
             <DialogDescription className="text-sm">
@@ -444,6 +445,7 @@ const Index = () => {
             {/* Grid de etapas */}
             <div className="grid grid-cols-2 gap-3">
               <button
+                data-testid="pick-ideation"
                 onClick={() => handleStageSelect("ideation")}
                 className={cn(
                   "p-4 rounded-2xl border-2 transition-all text-left",
@@ -461,6 +463,7 @@ const Index = () => {
               </button>
 
               <button
+                data-testid="pick-script"
                 onClick={() => handleStageSelect("script")}
                 className={cn(
                   "p-4 rounded-2xl border-2 transition-all text-left",
@@ -478,6 +481,7 @@ const Index = () => {
               </button>
 
               <button
+                data-testid="pick-record"
                 onClick={() => handleStageSelect("record")}
                 className={cn(
                   "p-4 rounded-2xl border-2 transition-all text-left",
@@ -495,6 +499,7 @@ const Index = () => {
               </button>
 
               <button
+                data-testid="pick-edit"
                 onClick={() => handleStageSelect("edit")}
                 className={cn(
                   "p-4 rounded-2xl border-2 transition-all text-left",
@@ -521,6 +526,7 @@ const Index = () => {
                 {[15, 25, 45, 60].map((duration) => (
                   <button
                     key={duration}
+                    data-testid={`chip-${duration}`}
                     onClick={() => handleDurationSelect(duration)}
                     className={cn(
                       "flex-1 py-2 px-3 rounded-xl border-2 transition-all font-medium",
@@ -543,6 +549,7 @@ const Index = () => {
           {/* Footer */}
           <div className="flex gap-3">
             <Button
+              data-testid="btn-cancel-session"
               variant="outline"
               onClick={handleCancel}
               className="flex-1"
@@ -550,6 +557,7 @@ const Index = () => {
               Cancelar
             </Button>
             <Button
+              data-testid="btn-continue-session"
               onClick={handleContinue}
               disabled={!sessionStage}
               className="flex-1 bg-gradient-to-r from-primary to-accent hover:opacity-90 text-white disabled:opacity-50"
