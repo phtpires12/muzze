@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useProfile } from "@/hooks/useProfile";
 import { useAnalytics } from "@/hooks/useAnalytics";
+import { useSessionContext } from "@/contexts/SessionContext";
 import { supabase } from "@/integrations/supabase/client";
 import { getUserStats, awardPoints } from "@/lib/gamification";
 import { getWorkflow, getUserWorkflow } from "@/lib/workflows";
@@ -9,8 +10,10 @@ import { BottomNav } from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Flame, Clock, Trophy, Lightbulb, Zap, Film, Mic, Scissors } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Flame, Clock, Trophy, Lightbulb, Zap, Film, Mic, Scissors, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -18,11 +21,30 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
+interface ContentItem {
+  id: string;
+  title: string;
+  status: string;
+  dueDate?: string;
+  sessionsCount?: number;
+}
 
 const Index = () => {
   const navigate = useNavigate();
   const { profile, loading: profileLoading, refetch } = useProfile();
   const { trackEvent } = useAnalytics();
+  const { setSessionContext } = useSessionContext();
   const [stats, setStats] = useState(getUserStats());
   const [streakData, setStreakData] = useState<any>(null);
   const [weeklySessionsCount, setWeeklySessionsCount] = useState(0);
@@ -31,6 +53,14 @@ const Index = () => {
   const [isSessionModalOpen, setIsSessionModalOpen] = useState(false);
   const [sessionStage, setSessionStage] = useState<string>("");
   const [sessionDuration, setSessionDuration] = useState(profile?.preferred_session_minutes || 25);
+  
+  // Novos estados para seleção de item
+  const [isPickItemModalOpen, setIsPickItemModalOpen] = useState(false);
+  const [pickListType, setPickListType] = useState<"" | "script" | "record" | "edit">("");
+  const [eligibleItems, setEligibleItems] = useState<ContentItem[]>([]);
+  const [selectedItemId, setSelectedItemId] = useState<string>("");
+  const [isAlertOpen, setIsAlertOpen] = useState(false);
+  const [alertConfig, setAlertConfig] = useState({ title: "", description: "", action: "" });
 
   useEffect(() => {
     if (profile && !profileLoading) {
@@ -116,9 +146,98 @@ const Index = () => {
     setSessionDuration(duration);
   };
 
+  const getEligibleItems = (stage: string): ContentItem[] => {
+    // Mock de itens - substitua pela lógica real de busca
+    const allItems: ContentItem[] = JSON.parse(localStorage.getItem("scripts") || "[]").map((s: any) => ({
+      id: s.id,
+      title: s.title,
+      status: "ideia", // Status mock
+      sessionsCount: 0,
+    }));
+
+    if (stage === "script") {
+      return allItems.filter(item => ["ideia", "roteiro-em-progresso"].includes(item.status));
+    } else if (stage === "record") {
+      return allItems.filter(item => ["roteiro-pronto", "gravação-pendente"].includes(item.status));
+    } else if (stage === "edit") {
+      return allItems.filter(item => ["gravado", "edição-pendente"].includes(item.status));
+    }
+    return [];
+  };
+
   const handleContinue = () => {
-    setIsSessionModalOpen(false);
-    // Navegação será implementada no Passo 2
+    if (sessionStage === "ideation") {
+      // Ideação: ir direto para calendário
+      setSessionContext({
+        stage: "ideation",
+        duration: sessionDuration,
+        contentId: null,
+      });
+      setIsSessionModalOpen(false);
+      navigate("/calendario?mode=ideation");
+      trackEvent("session_ideation_started");
+      return;
+    }
+
+    // Para script/record/edit: verificar itens elegíveis
+    const eligible = getEligibleItems(sessionStage);
+    setEligibleItems(eligible);
+    setPickListType(sessionStage as "script" | "record" | "edit");
+
+    if (eligible.length > 0) {
+      // Tem itens: abrir modal de seleção
+      setIsSessionModalOpen(false);
+      setIsPickItemModalOpen(true);
+    } else {
+      // Sem itens: mostrar alerta ou navegar
+      setIsSessionModalOpen(false);
+      
+      if (sessionStage === "script") {
+        // Roteiro: criar novo
+        setSessionContext({
+          stage: "script",
+          duration: sessionDuration,
+          contentId: null,
+        });
+        navigate("/scripts");
+        trackEvent("session_script_new");
+      } else if (sessionStage === "record") {
+        // Gravação: pedir para finalizar roteiro
+        setAlertConfig({
+          title: "Finalize um roteiro antes de gravar",
+          description: "Você precisa ter pelo menos um roteiro pronto para iniciar uma sessão de gravação.",
+          action: "record",
+        });
+        setIsAlertOpen(true);
+      } else if (sessionStage === "edit") {
+        // Edição: pedir para gravar
+        setAlertConfig({
+          title: "Grave primeiro para editar",
+          description: "Você precisa ter pelo menos uma gravação feita para iniciar uma sessão de edição.",
+          action: "edit",
+        });
+        setIsAlertOpen(true);
+      }
+    }
+  };
+
+  const handleOpenItem = () => {
+    if (!selectedItemId) return;
+
+    setSessionContext({
+      stage: pickListType,
+      duration: sessionDuration,
+      contentId: selectedItemId,
+    });
+
+    setIsPickItemModalOpen(false);
+    navigate(`/scripts?item=${selectedItemId}`);
+    trackEvent(`session_${pickListType}_item_selected`);
+  };
+
+  const handleAlertAction = () => {
+    setIsAlertOpen(false);
+    navigate("/scripts");
   };
 
   const handleCancel = () => {
@@ -439,6 +558,101 @@ const Index = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Pick Item Modal */}
+      <Dialog open={isPickItemModalOpen} onOpenChange={setIsPickItemModalOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">
+              {pickListType === "script" && "Qual ideia você quer roteirizar?"}
+              {pickListType === "record" && "Qual item você vai gravar?"}
+              {pickListType === "edit" && "Qual item você vai editar?"}
+            </DialogTitle>
+            <DialogDescription className="text-sm">
+              Selecione um item para continuar com a sessão criativa.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 max-h-[400px] overflow-y-auto py-2">
+            {eligibleItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setSelectedItemId(item.id)}
+                className={cn(
+                  "w-full p-4 rounded-xl border-2 transition-all text-left",
+                  "hover:border-primary hover:bg-primary/5",
+                  selectedItemId === item.id
+                    ? "border-primary bg-primary/10"
+                    : "border-border bg-card"
+                )}
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <h3 className="font-semibold text-foreground">{item.title}</h3>
+                  {item.sessionsCount !== undefined && (
+                    <Badge variant="secondary" className="text-xs">
+                      {item.sessionsCount} sessões
+                    </Badge>
+                  )}
+                </div>
+                {item.dueDate && (
+                  <p className="text-xs text-muted-foreground mb-1">
+                    Vencimento: {new Date(item.dueDate).toLocaleDateString("pt-BR")}
+                  </p>
+                )}
+                <Badge variant="outline" className="text-xs">
+                  {item.status === "ideia" && "Ideia"}
+                  {item.status === "roteiro-em-progresso" && "Roteiro em progresso"}
+                  {item.status === "roteiro-pronto" && "Roteiro pronto"}
+                  {item.status === "gravação-pendente" && "Gravação pendente"}
+                  {item.status === "gravado" && "Gravado"}
+                  {item.status === "edição-pendente" && "Edição pendente"}
+                </Badge>
+              </button>
+            ))}
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsPickItemModalOpen(false);
+                setSelectedItemId("");
+              }}
+              className="flex-1"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleOpenItem}
+              disabled={!selectedItemId}
+              className="flex-1 bg-gradient-to-r from-primary to-accent hover:opacity-90 text-white disabled:opacity-50"
+            >
+              Abrir
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Alert Dialog for no eligible items */}
+      <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <div className="flex items-center gap-2 text-accent mb-2">
+              <AlertCircle className="w-5 h-5" />
+              <AlertDialogTitle>{alertConfig.title}</AlertDialogTitle>
+            </div>
+            <AlertDialogDescription>
+              {alertConfig.description}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleAlertAction}>
+              Abrir roteiros
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <BottomNav />
     </div>

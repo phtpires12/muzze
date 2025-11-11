@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -14,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Plus, FileText, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, FileText, ChevronLeft, ChevronRight, Lightbulb } from "lucide-react";
 
 interface ShotItem {
   id: string;
@@ -31,6 +33,9 @@ interface CalendarScript {
 }
 
 const CalendarioEditorial = () => {
+  const [searchParams] = useSearchParams();
+  const isIdeationMode = searchParams.get("mode") === "ideation";
+  
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<"month" | "week">("month");
   const [scripts, setScripts] = useState<CalendarScript[]>([]);
@@ -137,6 +142,17 @@ const CalendarioEditorial = () => {
           </div>
         </div>
       </div>
+
+      {isIdeationMode && (
+        <div className="container mx-auto px-4 pt-4">
+          <Alert className="bg-gradient-to-r from-accent/10 to-primary/10 border-accent">
+            <Lightbulb className="h-4 w-4 text-accent" />
+            <AlertDescription className="text-foreground">
+              <strong>Modo Ideação ativo</strong> — arraste suas ideias para a semana e organize sua criação.
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
 
       <div className="container mx-auto px-4 py-4">
         <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "month" | "week")}>
