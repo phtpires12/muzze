@@ -23,6 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { StreakHalo } from "@/components/StreakHalo";
 
 const STAGES: { id: SessionStage; label: string; icon: any; color: string }[] = [
   { id: "ideation", label: "Ideação", icon: Lightbulb, color: "text-yellow-500" },
@@ -37,6 +38,8 @@ const Session = () => {
   const { session, startSession, pauseSession, resumeSession, changeStage, endSession } = useSession();
   const [showSummary, setShowSummary] = useState(false);
   const [summary, setSummary] = useState<any>(null);
+  const [showStreakHalo, setShowStreakHalo] = useState(false);
+  const [streakCount, setStreakCount] = useState(0);
 
   const formatTime = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
@@ -58,6 +61,12 @@ const Session = () => {
     if (result) {
       setSummary(result);
       setShowSummary(true);
+      
+      // Show streak halo if achieved
+      if (result.streakAchieved && result.newStreak) {
+        setStreakCount(result.newStreak);
+        setShowStreakHalo(true);
+      }
     }
   };
 
@@ -251,6 +260,15 @@ const Session = () => {
                 </p>
               </div>
 
+              {summary.creativeMinutesToday && (
+                <div className="p-4 bg-primary/10 rounded-xl">
+                  <p className="text-sm text-muted-foreground mb-1">Minutos criativos hoje</p>
+                  <p className="text-2xl font-bold text-foreground">
+                    {Math.floor(summary.creativeMinutesToday)} min
+                  </p>
+                </div>
+              )}
+
               <Button
                 onClick={handleCloseSummary}
                 className="w-full bg-gradient-to-r from-primary to-accent"
@@ -261,6 +279,13 @@ const Session = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Streak Halo Effect */}
+      <StreakHalo 
+        show={showStreakHalo} 
+        streakCount={streakCount}
+        onComplete={() => setShowStreakHalo(false)}
+      />
     </div>
   );
 };

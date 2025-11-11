@@ -196,13 +196,16 @@ export const useSession = () => {
         }
       });
 
-      // Update streak
-      await updateStreak(user.id, sessionMinutes);
+      // Update streak and check if achieved
+      const streakResult = await updateStreak(user.id, sessionMinutes);
 
       const summary = {
         duration: session.elapsedSeconds,
         stage: session.stage,
         xpGained: Math.floor(xpGained),
+        streakAchieved: streakResult.streakAchieved || false,
+        newStreak: streakResult.newStreak,
+        creativeMinutesToday: streakResult.creativeMinutesToday,
       };
 
       // Reset session
@@ -229,58 +232,118 @@ export const useSession = () => {
   }, [session, toast]);
 
   const updateStreak = async (userId: string, sessionMinutes: number) => {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('min_streak_minutes')
-      .eq('user_id', userId)
-      .single();
+    try {
+      // Get profile with timezone and goals
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('min_streak_minutes, daily_goal_minutes, timezone')
+        .eq('user_id', userId)
+        .single();
 
-    const minStreak = profile?.min_streak_minutes || 20;
+      if (!profile) return { streakAchieved: false };
 
-    // Only count if session met minimum
-    if (sessionMinutes >= minStreak) {
+      const minStreak = profile.min_streak_minutes || 20;
+      const dailyGoal = profile.daily_goal_minutes || 60;
+      const timezone = profile.timezone || 'America/Sao_Paulo';
+
+      // Get today's date in user's timezone
+      const now = new Date();
+      const userDate = new Date(now.toLocaleString('en-US', { timeZone: timezone }));
+      const today = userDate.toISOString().split('T')[0];
+
+      // Calculate total creative minutes today
+      const startOfDay = new Date(userDate);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(userDate);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      const { data: todaySessions } = await supabase
+        .from('stage_times')
+        .select('duration_seconds')
+        .eq('user_id', userId)
+        .gte('created_at', startOfDay.toISOString())
+        .lte('created_at', endOfDay.toISOString());
+
+      const creativeMinutesToday = (todaySessions || []).reduce(
+        (sum, session) => sum + (session.duration_seconds / 60), 
+        0
+      );
+
+      // Check if day is fulfilled (at least min_streak_minutes AND met daily_goal_minutes)
+      const dayFulfilled = creativeMinutesToday >= minStreak && creativeMinutesToday >= dailyGoal;
+
+      if (!dayFulfilled) {
+        return { streakAchieved: false, creativeMinutesToday };
+      }
+
+      // Get current streak data
       const { data: streak } = await supabase
         .from('streaks')
         .select('*')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
 
-      if (streak) {
-        const today = new Date().toISOString().split('T')[0];
-        const lastEvent = streak.last_event_date;
+      if (!streak) return { streakAchieved: false };
 
-        let newCurrentStreak = streak.current_streak;
-        
-        if (lastEvent !== today) {
-          const yesterday = new Date();
-          yesterday.setDate(yesterday.getDate() - 1);
-          const yesterdayStr = yesterday.toISOString().split('T')[0];
+      const lastEvent = streak.last_event_date;
+      let newCurrentStreak = streak.current_streak || 0;
+      let streakAchieved = false;
 
-          if (lastEvent === yesterdayStr) {
-            // Consecutive day
-            newCurrentStreak += 1;
-          } else {
-            // Streak broken
-            newCurrentStreak = 1;
-          }
+      // Only update if this is the first completion today
+      if (lastEvent !== today) {
+        const yesterday = new Date(userDate);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = yesterday.toISOString().split('T')[0];
 
-          const newLongest = Math.max(streak.longest_streak, newCurrentStreak);
-
-          await supabase
-            .from('streaks')
-            .update({
-              current_streak: newCurrentStreak,
-              longest_streak: newLongest,
-              last_event_date: today,
-            })
-            .eq('user_id', userId);
-
-          // Award streak milestone points
-          if (newCurrentStreak % 7 === 0) {
-            awardPoints(POINTS.STREAK_MILESTONE, `${newCurrentStreak} dias de sequência!`);
-          }
+        if (lastEvent === yesterdayStr) {
+          // Consecutive day
+          newCurrentStreak += 1;
+          streakAchieved = true;
+        } else if (!lastEvent || lastEvent < yesterdayStr) {
+          // Streak broken, start new
+          newCurrentStreak = 1;
+          streakAchieved = true;
         }
+
+        const newLongest = Math.max(streak.longest_streak || 0, newCurrentStreak);
+
+        await supabase
+          .from('streaks')
+          .update({
+            current_streak: newCurrentStreak,
+            longest_streak: newLongest,
+            last_event_date: today,
+          })
+          .eq('user_id', userId);
+
+        // Track streak tick event
+        await supabase.from('analytics_events').insert({
+          user_id: userId,
+          event: 'streak_tick',
+          payload: {
+            current_streak: newCurrentStreak,
+            longest_streak: newLongest,
+            creative_minutes_today: creativeMinutesToday,
+            daily_goal: dailyGoal,
+          }
+        });
+
+        // Award streak milestone points
+        if (newCurrentStreak % 7 === 0) {
+          awardPoints(POINTS.STREAK_MILESTONE, `${newCurrentStreak} dias de sequência!`);
+        }
+
+        return { 
+          streakAchieved, 
+          newStreak: newCurrentStreak,
+          creativeMinutesToday 
+        };
       }
+
+      return { streakAchieved: false, creativeMinutesToday };
+    } catch (error) {
+      console.error('Error updating streak:', error);
+      return { streakAchieved: false };
     }
   };
 
