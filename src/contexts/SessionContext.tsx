@@ -6,26 +6,49 @@ export interface SessionContextType {
   contentId: string | null;
 }
 
+export interface SessionStore {
+  sessionContext: SessionContextType;
+  setSessionContext: (context: Partial<SessionContextType>) => void;
+  resetSessionContext: () => void;
+}
+
 interface SessionContextProviderProps {
   children: ReactNode;
 }
 
 interface SessionContextValue {
   sessionContext: SessionContextType;
-  setSessionContext: (context: SessionContextType) => void;
+  setSessionContext: (context: Partial<SessionContextType>) => void;
+  resetSessionContext: () => void;
 }
 
 const SessionContext = createContext<SessionContextValue | undefined>(undefined);
 
+const initialContext: SessionContextType = {
+  stage: "",
+  duration: null,
+  contentId: null,
+};
+
 export const SessionContextProvider = ({ children }: SessionContextProviderProps) => {
-  const [sessionContext, setSessionContext] = useState<SessionContextType>({
-    stage: "",
-    duration: null,
-    contentId: null,
-  });
+  const [sessionContext, setSessionContext] = useState<SessionContextType>(initialContext);
+
+  const updateSessionContext = (context: Partial<SessionContextType>) => {
+    setSessionContext((prev) => ({ ...prev, ...context }));
+  };
+
+  const resetSessionContext = () => {
+    setSessionContext(initialContext);
+  };
 
   return (
-    <SessionContext.Provider value={{ sessionContext, setSessionContext }}>
+    <SessionContext.Provider 
+      value={{ 
+        sessionContext, 
+        setSessionContext: updateSessionContext,
+        resetSessionContext,
+      }}
+    >
       {children}
     </SessionContext.Provider>
   );

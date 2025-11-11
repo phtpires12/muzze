@@ -167,7 +167,6 @@ const Index = () => {
 
   const handleContinue = () => {
     if (sessionStage === "ideation") {
-      // Ideação: ir direto para calendário
       setSessionContext({
         stage: "ideation",
         duration: sessionDuration,
@@ -179,30 +178,25 @@ const Index = () => {
       return;
     }
 
-    // Para script/record/edit: verificar itens elegíveis
     const eligible = getEligibleItems(sessionStage);
     setEligibleItems(eligible);
     setPickListType(sessionStage as "script" | "record" | "edit");
 
     if (eligible.length > 0) {
-      // Tem itens: abrir modal de seleção
       setIsSessionModalOpen(false);
       setIsPickItemModalOpen(true);
     } else {
-      // Sem itens: mostrar alerta ou navegar
       setIsSessionModalOpen(false);
       
       if (sessionStage === "script") {
-        // Roteiro: criar novo
         setSessionContext({
           stage: "script",
           duration: sessionDuration,
           contentId: null,
         });
-        navigate("/scripts");
+        navigate("/scripts?new=1");
         trackEvent("session_script_new");
       } else if (sessionStage === "record") {
-        // Gravação: pedir para finalizar roteiro
         setAlertConfig({
           title: "Finalize um roteiro antes de gravar",
           description: "Você precisa ter pelo menos um roteiro pronto para iniciar uma sessão de gravação.",
@@ -210,7 +204,6 @@ const Index = () => {
         });
         setIsAlertOpen(true);
       } else if (sessionStage === "edit") {
-        // Edição: pedir para gravar
         setAlertConfig({
           title: "Grave primeiro para editar",
           description: "Você precisa ter pelo menos uma gravação feita para iniciar uma sessão de edição.",
@@ -231,7 +224,15 @@ const Index = () => {
     });
 
     setIsPickItemModalOpen(false);
-    navigate(`/scripts?item=${selectedItemId}`);
+    
+    if (pickListType === "script") {
+      navigate(`/scripts?open=${selectedItemId}`);
+    } else if (pickListType === "record") {
+      navigate(`/scripts?detail=${selectedItemId}&tab=record`);
+    } else if (pickListType === "edit") {
+      navigate(`/scripts?detail=${selectedItemId}&tab=edit`);
+    }
+    
     trackEvent(`session_${pickListType}_item_selected`);
   };
 

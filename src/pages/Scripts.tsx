@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Plus, Trash2, Edit, Check } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { Plus, Trash2, Edit, Check, Film, Scissors } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,6 +8,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface Script {
   id: string;
@@ -29,6 +37,7 @@ interface ShotList {
 }
 
 const Scripts = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [scripts, setScripts] = useState<Script[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [currentScript, setCurrentScript] = useState<Script | null>(null);
@@ -40,6 +49,11 @@ const Scripts = () => {
   const [newListTitle, setNewListTitle] = useState("");
   const [newItemDescription, setNewItemDescription] = useState("");
 
+  // Detail view states
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [detailScript, setDetailScript] = useState<Script | null>(null);
+  const [detailTab, setDetailTab] = useState<"record" | "edit">("record");
+
   useEffect(() => {
     const saved = localStorage.getItem("scripts");
     if (saved) {
@@ -50,6 +64,37 @@ const Scripts = () => {
       setShotLists(JSON.parse(savedLists));
     }
   }, []);
+
+  // Handle query params
+  useEffect(() => {
+    const newParam = searchParams.get("new");
+    const openParam = searchParams.get("open");
+    const detailParam = searchParams.get("detail");
+    const tabParam = searchParams.get("tab") as "record" | "edit" | null;
+
+    if (newParam === "1") {
+      setIsEditing(true);
+      searchParams.delete("new");
+      setSearchParams(searchParams);
+    } else if (openParam) {
+      const script = scripts.find((s) => s.id === openParam);
+      if (script) {
+        handleEdit(script);
+      }
+      searchParams.delete("open");
+      setSearchParams(searchParams);
+    } else if (detailParam) {
+      const script = scripts.find((s) => s.id === detailParam);
+      if (script) {
+        setDetailScript(script);
+        setDetailTab(tabParam || "record");
+        setIsDetailOpen(true);
+      }
+      searchParams.delete("detail");
+      searchParams.delete("tab");
+      setSearchParams(searchParams);
+    }
+  }, [searchParams, scripts]);
 
   const saveScripts = (newScripts: Script[]) => {
     localStorage.setItem("scripts", JSON.stringify(newScripts));
@@ -399,6 +444,119 @@ const Scripts = () => {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Detail Dialog for Record/Edit */}
+      <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{detailScript?.title}</DialogTitle>
+            <DialogDescription>
+              {detailTab === "record" ? "Checklist de gravação" : "Checklist de edição"}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Tabs value={detailTab} onValueChange={(v) => setDetailTab(v as "record" | "edit")}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="record">
+                <Film className="w-4 h-4 mr-2" />
+                Gravação
+              </TabsTrigger>
+              <TabsTrigger value="edit">
+                <Scissors className="w-4 h-4 mr-2" />
+                Edição
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="record" className="space-y-4 pt-4">
+              <div className="space-y-3">
+                <h3 className="font-semibold text-sm text-muted-foreground">
+                  Checklist de gravação
+                </h3>
+                
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
+                    <Checkbox id="record-1" />
+                    <label htmlFor="record-1" className="text-sm cursor-pointer flex-1">
+                      Equipamento verificado e testado
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
+                    <Checkbox id="record-2" />
+                    <label htmlFor="record-2" className="text-sm cursor-pointer flex-1">
+                      Iluminação configurada
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
+                    <Checkbox id="record-3" />
+                    <label htmlFor="record-3" className="text-sm cursor-pointer flex-1">
+                      Áudio testado
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
+                    <Checkbox id="record-4" />
+                    <label htmlFor="record-4" className="text-sm cursor-pointer flex-1">
+                      Roteiro revisado
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
+                    <Checkbox id="record-5" />
+                    <label htmlFor="record-5" className="text-sm cursor-pointer flex-1">
+                      Gravação concluída
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="edit" className="space-y-4 pt-4">
+              <div className="space-y-3">
+                <h3 className="font-semibold text-sm text-muted-foreground">
+                  Checklist de edição
+                </h3>
+                
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
+                    <Checkbox id="edit-1" />
+                    <label htmlFor="edit-1" className="text-sm cursor-pointer flex-1">
+                      Footage importado e organizado
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
+                    <Checkbox id="edit-2" />
+                    <label htmlFor="edit-2" className="text-sm cursor-pointer flex-1">
+                      Cortes principais feitos
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
+                    <Checkbox id="edit-3" />
+                    <label htmlFor="edit-3" className="text-sm cursor-pointer flex-1">
+                      Transições adicionadas
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
+                    <Checkbox id="edit-4" />
+                    <label htmlFor="edit-4" className="text-sm cursor-pointer flex-1">
+                      Correção de cor aplicada
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
+                    <Checkbox id="edit-5" />
+                    <label htmlFor="edit-5" className="text-sm cursor-pointer flex-1">
+                      Áudio mixado e sincronizado
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
+                    <Checkbox id="edit-6" />
+                    <label htmlFor="edit-6" className="text-sm cursor-pointer flex-1">
+                      Revisão final concluída
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
