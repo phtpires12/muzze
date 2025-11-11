@@ -1,15 +1,15 @@
 import { createContext, useContext, useState, ReactNode } from "react";
 
-export interface SessionContextType {
+export interface MuzzeSessionType {
   stage: "" | "ideation" | "script" | "record" | "edit";
   duration: number | null;
   contentId: string | null;
 }
 
 export interface SessionStore {
-  sessionContext: SessionContextType;
-  setSessionContext: (context: Partial<SessionContextType>) => void;
-  resetSessionContext: () => void;
+  muzzeSession: MuzzeSessionType;
+  setMuzzeSession: (context: Partial<MuzzeSessionType>) => void;
+  resetMuzzeSession: () => void;
 }
 
 interface SessionContextProviderProps {
@@ -17,36 +17,36 @@ interface SessionContextProviderProps {
 }
 
 interface SessionContextValue {
-  sessionContext: SessionContextType;
-  setSessionContext: (context: Partial<SessionContextType>) => void;
-  resetSessionContext: () => void;
+  muzzeSession: MuzzeSessionType;
+  setMuzzeSession: (context: Partial<MuzzeSessionType>) => void;
+  resetMuzzeSession: () => void;
 }
 
 const SessionContext = createContext<SessionContextValue | undefined>(undefined);
 
-const initialContext: SessionContextType = {
+const initialContext: MuzzeSessionType = {
   stage: "",
   duration: null,
   contentId: null,
 };
 
 export const SessionContextProvider = ({ children }: SessionContextProviderProps) => {
-  const [sessionContext, setSessionContext] = useState<SessionContextType>(initialContext);
+  const [muzzeSession, setMuzzeSessionState] = useState<MuzzeSessionType>(initialContext);
 
-  const updateSessionContext = (context: Partial<SessionContextType>) => {
-    setSessionContext((prev) => ({ ...prev, ...context }));
+  const setMuzzeSession = (context: Partial<MuzzeSessionType>) => {
+    setMuzzeSessionState((prev) => ({ ...prev, ...context }));
   };
 
-  const resetSessionContext = () => {
-    setSessionContext(initialContext);
+  const resetMuzzeSession = () => {
+    setMuzzeSessionState(initialContext);
   };
 
   return (
     <SessionContext.Provider 
       value={{ 
-        sessionContext, 
-        setSessionContext: updateSessionContext,
-        resetSessionContext,
+        muzzeSession, 
+        setMuzzeSession,
+        resetMuzzeSession,
       }}
     >
       {children}

@@ -44,7 +44,7 @@ const Index = () => {
   const navigate = useNavigate();
   const { profile, loading: profileLoading, refetch } = useProfile();
   const { trackEvent } = useAnalytics();
-  const { setSessionContext } = useSessionContext();
+  const { muzzeSession, setMuzzeSession, resetMuzzeSession } = useSessionContext();
   const [stats, setStats] = useState(getUserStats());
   const [streakData, setStreakData] = useState<any>(null);
   const [weeklySessionsCount, setWeeklySessionsCount] = useState(0);
@@ -167,7 +167,7 @@ const Index = () => {
 
   const handleContinue = () => {
     if (sessionStage === "ideation") {
-      setSessionContext({
+      setMuzzeSession({
         stage: "ideation",
         duration: sessionDuration,
         contentId: null,
@@ -189,7 +189,7 @@ const Index = () => {
       setIsSessionModalOpen(false);
       
       if (sessionStage === "script") {
-        setSessionContext({
+        setMuzzeSession({
           stage: "script",
           duration: sessionDuration,
           contentId: null,
@@ -217,7 +217,7 @@ const Index = () => {
   const handleOpenItem = () => {
     if (!selectedItemId) return;
 
-    setSessionContext({
+    setMuzzeSession({
       stage: pickListType,
       duration: sessionDuration,
       contentId: selectedItemId,
