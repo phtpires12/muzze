@@ -145,10 +145,10 @@ const CalendarioEditorial = () => {
 
       {isIdeationMode && (
         <div className="container mx-auto px-4 pt-4">
-          <Alert className="bg-gradient-to-r from-accent/10 to-primary/10 border-accent">
+          <Alert data-testid="banner-ideation" className="bg-gradient-to-r from-accent/10 to-primary/10 border-accent">
             <Lightbulb className="h-4 w-4 text-accent" />
             <AlertDescription className="text-foreground">
-              <strong>Modo Ideação ativo</strong> — arraste suas ideias para a semana e organize sua criação.
+              Modo Ideação: arraste ideias para as datas e monte sua semana.
             </AlertDescription>
           </Alert>
         </div>
