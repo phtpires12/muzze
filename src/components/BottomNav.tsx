@@ -1,7 +1,7 @@
-import { Home, FileText, BarChart3, Menu, Plus, Calendar, Lightbulb, Zap } from "lucide-react";
+import { Home, Calendar, BarChart3, Settings, Zap, Timer, Video, Mic, Scissors, CheckCircle, Lightbulb } from "lucide-react";
 import { NavLink } from "./NavLink";
 import { Button } from "./ui/button";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -9,160 +9,170 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import { Input } from "./ui/input";
-import { Textarea } from "./ui/textarea";
 import { useNavigate } from "react-router-dom";
+import { useSession } from "@/hooks/useSession";
+import { useAnalytics } from "@/hooks/useAnalytics";
+import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
-const leftNavigation = [
-  { name: "Última criação", href: "/", icon: Home },
-  { name: "Ideias", href: "/ideias", icon: Lightbulb },
-];
-
-const rightNavigation = [
+const navigation = [
+  { name: "Home", href: "/", icon: Home },
   { name: "Calendário", href: "/calendario", icon: Calendar },
-  { name: "Estatísticas", href: "/stats", icon: BarChart3 },
+  { name: "Stats", href: "/stats", icon: BarChart3 },
+  { name: "Ajustes", href: "/settings", icon: Settings },
 ];
+
+const stageIcons = {
+  ideation: Lightbulb,
+  script: Video,
+  record: Mic,
+  edit: Scissors,
+  review: CheckCircle,
+};
 
 export const BottomNav = () => {
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isStageSelectOpen, setIsStageSelectOpen] = useState(false);
+  const [hasProgress, setHasProgress] = useState(false);
   const navigate = useNavigate();
+  const { startSession } = useSession();
+  const { trackEvent } = useAnalytics();
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+  const [isLongPress, setIsLongPress] = useState(false);
+
+  useEffect(() => {
+    const checkDailyProgress = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const today = new Date().toISOString().split('T')[0];
+      const { data } = await supabase
+        .from('stage_times')
+        .select('duration_seconds')
+        .eq('user_id', user.id)
+        .gte('created_at', `${today}T00:00:00`)
+        .lte('created_at', `${today}T23:59:59`);
+
+      const totalMinutes = (data || []).reduce((sum, item) => sum + (item.duration_seconds / 60), 0);
+      setHasProgress(totalMinutes > 0);
+    };
+
+    checkDailyProgress();
+  }, []);
+
+  const handleQuickStart = () => {
+    trackEvent('nav_click', { action: 'quick_start_session' });
+    startSession('ideation');
+    navigate('/session');
+  };
+
+  const handleStageSelect = (stage: string) => {
+    trackEvent('nav_click', { action: 'start_session', stage });
+    startSession(stage as any);
+    setIsStageSelectOpen(false);
+    navigate('/session');
+  };
+
+  const handleMouseDown = () => {
+    setIsLongPress(false);
+    longPressTimer.current = setTimeout(() => {
+      setIsLongPress(true);
+      setIsStageSelectOpen(true);
+    }, 500);
+  };
+
+  const handleMouseUp = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+    }
+    if (!isLongPress) {
+      handleQuickStart();
+    }
+  };
+
+  const handleNavClick = (name: string, href: string) => {
+    trackEvent('nav_click', { destination: name });
+  };
 
   return (
     <>
-      <nav className="fixed bottom-4 left-4 right-4 bg-card/80 backdrop-blur-lg border border-border/20 rounded-3xl z-50 shadow-lg">
-        <div className="flex items-center justify-between px-6 py-3">
-          {/* Left navigation */}
-          <div className="flex items-center gap-2">
-            {leftNavigation.map((item) => (
+      <nav className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-2xl z-50">
+        <div className="bg-background/40 backdrop-blur-xl border border-border/50 rounded-3xl shadow-2xl px-4 py-3">
+          <div className="flex items-center justify-around gap-2">
+            {/* Left navigation items */}
+            {navigation.slice(0, 2).map((item) => (
               <NavLink
                 key={item.name}
                 to={item.href}
-                className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all duration-200 text-muted-foreground hover:text-foreground"
-                activeClassName="text-primary"
+                onClick={() => handleNavClick(item.name, item.href)}
+                className="flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all duration-300 text-muted-foreground hover:text-foreground hover:bg-accent/10"
+                activeClassName="text-primary bg-primary/10"
               >
                 <item.icon className="w-5 h-5" />
-                <span className="text-xs font-medium">{item.name}</span>
+                <span className="text-xs font-medium hidden sm:block">{item.name}</span>
               </NavLink>
             ))}
-          </div>
 
-          {/* Center create button */}
-          <Button
-            size="icon"
-            onClick={() => setIsCreateOpen(true)}
-            className="h-14 w-14 rounded-full shadow-lg bg-gradient-to-r from-primary to-accent hover:opacity-90 animate-pulse-glow"
-          >
-            <Zap className="w-6 h-6 text-white" />
-          </Button>
+            {/* Center session button */}
+            <div className="relative">
+              <Button
+                size="icon"
+                onMouseDown={handleMouseDown}
+                onMouseUp={handleMouseUp}
+                onTouchStart={handleMouseDown}
+                onTouchEnd={handleMouseUp}
+                className={cn(
+                  "h-14 w-14 rounded-full shadow-lg bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-all duration-300",
+                  hasProgress && "animate-pulse ring-2 ring-primary/50 ring-offset-2 ring-offset-background"
+                )}
+              >
+                <Zap className="w-6 h-6 text-primary-foreground" />
+              </Button>
+              {hasProgress && (
+                <div className="absolute -top-1 -right-1 h-4 w-4 bg-green-500 rounded-full border-2 border-background animate-pulse" />
+              )}
+            </div>
 
-          {/* Right navigation */}
-          <div className="flex items-center gap-2">
-            {rightNavigation.map((item) => (
+            {/* Right navigation items */}
+            {navigation.slice(2).map((item) => (
               <NavLink
                 key={item.name}
                 to={item.href}
-                className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all duration-200 text-muted-foreground hover:text-foreground"
-                activeClassName="text-primary"
+                onClick={() => handleNavClick(item.name, item.href)}
+                className="flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all duration-300 text-muted-foreground hover:text-foreground hover:bg-accent/10"
+                activeClassName="text-primary bg-primary/10"
               >
                 <item.icon className="w-5 h-5" />
-                <span className="text-xs font-medium">{item.name}</span>
+                <span className="text-xs font-medium hidden sm:block">{item.name}</span>
               </NavLink>
             ))}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsMenuOpen(true)}
-              className="flex flex-col items-center gap-1 px-3 py-2 h-auto"
-            >
-              <Menu className="w-5 h-5" />
-              <span className="text-xs font-medium">Menu</span>
-            </Button>
           </div>
         </div>
       </nav>
 
-      {/* Create Dialog */}
-      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+      {/* Stage Selection Dialog */}
+      <Dialog open={isStageSelectOpen} onOpenChange={setIsStageSelectOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Adicionar</DialogTitle>
+            <DialogTitle>Escolher Estágio</DialogTitle>
             <DialogDescription>
-              O que você deseja criar?
+              Selecione o estágio da sessão criativa
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-2">
-            <Button
-              variant="outline"
-              className="w-full justify-start h-auto py-4"
-              onClick={() => {
-                setIsCreateOpen(false);
-                navigate("/scripts");
-              }}
-            >
-              <div className="flex items-start gap-3">
-                <FileText className="w-5 h-5 mt-1" />
-                <div className="text-left">
-                  <div className="font-semibold">Roteiro</div>
-                  <div className="text-sm text-muted-foreground">
-                    Criar um novo roteiro de conteúdo
-                  </div>
-                </div>
-              </div>
-            </Button>
-            
-            <Button
-              variant="outline"
-              className="w-full justify-start h-auto py-4"
-              onClick={() => {
-                setIsCreateOpen(false);
-                navigate("/ideias");
-              }}
-            >
-              <div className="flex items-start gap-3">
-                <Lightbulb className="w-5 h-5 mt-1" />
-                <div className="text-left">
-                  <div className="font-semibold">Ideia</div>
-                  <div className="text-sm text-muted-foreground">
-                    Anotar uma nova ideia de conteúdo
-                  </div>
-                </div>
-              </div>
-            </Button>
+          <div className="grid grid-cols-2 gap-3">
+            {Object.entries(stageIcons).map(([stage, Icon]) => (
+              <Button
+                key={stage}
+                variant="outline"
+                className="h-24 flex flex-col gap-2"
+                onClick={() => handleStageSelect(stage)}
+              >
+                <Icon className="w-6 h-6" />
+                <span className="capitalize">{stage}</span>
+              </Button>
+            ))}
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* Menu Sheet */}
-      <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
-        <SheetContent side="right">
-          <SheetHeader>
-            <SheetTitle>Menu</SheetTitle>
-            <SheetDescription>
-              Configurações e opções do aplicativo
-            </SheetDescription>
-          </SheetHeader>
-          <div className="mt-6">
-            <Button 
-              variant="outline" 
-              className="w-full justify-start"
-              onClick={() => {
-                setIsMenuOpen(false);
-                navigate("/profile");
-              }}
-            >
-              Ver Perfil Completo
-            </Button>
-          </div>
-        </SheetContent>
-      </Sheet>
     </>
   );
 };
