@@ -98,12 +98,12 @@ const Index = () => {
 
   const handleStartSession = () => {
     trackEvent('session_started');
-    navigate('/dashboard');
+    navigate('/session');
   };
 
   const handleContinueActivity = () => {
     trackEvent('continued_activity');
-    navigate('/dashboard');
+    navigate('/session');
   };
 
   if (profileLoading || !profile) {

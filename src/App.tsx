@@ -13,6 +13,7 @@ import Dashboard from "./pages/Dashboard";
 import Scripts from "./pages/Scripts";
 import Stats from "./pages/Stats";
 import CalendarioEditorial from "./pages/CalendarioEditorial";
+import Session from "./pages/Session";
 import Ideias from "./pages/Ideias";
 import Profile from "./pages/Profile";
 import EditProfile from "./pages/EditProfile";
@@ -144,6 +145,7 @@ const App = () => (
           <Route path="/dashboard" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
           <Route path="/scripts" element={<ProtectedRoute><Layout><Scripts /></Layout></ProtectedRoute>} />
           <Route path="/calendario" element={<ProtectedRoute><Layout><CalendarioEditorial /></Layout></ProtectedRoute>} />
+          <Route path="/session" element={<ProtectedRoute><Session /></ProtectedRoute>} />
           <Route path="/ideias" element={<ProtectedRoute><Layout><Ideias /></Layout></ProtectedRoute>} />
           <Route path="/stats" element={<ProtectedRoute><Layout><Stats /></Layout></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Layout><Profile /></Layout></ProtectedRoute>} />
