@@ -9,7 +9,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Flame, Clock, Trophy, Lightbulb, Zap } from "lucide-react";
+import { Flame, Clock, Trophy, Lightbulb, Zap, Film, Mic, Scissors } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Dialog,
@@ -28,6 +28,9 @@ const Index = () => {
   const [weeklySessionsCount, setWeeklySessionsCount] = useState(0);
   const [lastActivity, setLastActivity] = useState<any>(null);
   const [isWorkflowModalOpen, setIsWorkflowModalOpen] = useState(false);
+  const [isSessionModalOpen, setIsSessionModalOpen] = useState(false);
+  const [sessionStage, setSessionStage] = useState<string>("");
+  const [sessionDuration, setSessionDuration] = useState(profile?.preferred_session_minutes || 25);
 
   useEffect(() => {
     if (profile && !profileLoading) {
@@ -97,13 +100,31 @@ const Index = () => {
   };
 
   const handleStartSession = () => {
-    trackEvent('session_started');
-    navigate('/session');
+    setIsSessionModalOpen(true);
   };
 
   const handleContinueActivity = () => {
     trackEvent('continued_activity');
     navigate('/session');
+  };
+
+  const handleStageSelect = (stage: string) => {
+    setSessionStage(stage);
+  };
+
+  const handleDurationSelect = (duration: number) => {
+    setSessionDuration(duration);
+  };
+
+  const handleContinue = () => {
+    setIsSessionModalOpen(false);
+    // Navegação será implementada no Passo 2
+  };
+
+  const handleCancel = () => {
+    setIsSessionModalOpen(false);
+    setSessionStage("");
+    setSessionDuration(profile?.preferred_session_minutes || 25);
   };
 
   if (profileLoading || !profile) {
@@ -184,24 +205,21 @@ const Index = () => {
               </Button>
             </div>
           ) : (
-            <div className="space-y-6 text-center">
-              <div className="w-20 h-20 mx-auto bg-gradient-to-br from-accent to-primary rounded-full flex items-center justify-center shadow-lg">
-                <Zap className="w-10 h-10 text-white" />
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-foreground mb-2">
-                  Iniciar nova sessão criativa
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  Defina seu tempo e mergulhe na criação.
-                </p>
-              </div>
+            <div className="space-y-4 text-center">
               <Button
                 onClick={handleStartSession}
-                className="w-full bg-gradient-to-r from-primary to-accent hover:opacity-90 text-white shadow-lg h-12 rounded-xl font-semibold"
+                className="w-full relative overflow-hidden group h-14 rounded-2xl font-semibold text-base shadow-[0_0_20px_hsl(var(--primary)/0.4),0_0_40px_hsl(var(--accent)/0.2)]"
+                style={{
+                  background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)))',
+                  boxShadow: '0 0 0 1px hsl(var(--accent)), inset 0 1px 0 hsl(var(--primary)/0.5)',
+                }}
               >
-                Começar agora
+                <Zap className="w-5 h-5 mr-2" />
+                Iniciar sessão criativa
               </Button>
+              <p className="text-xs text-muted-foreground">
+                Defina a etapa e comece a criar — o tempo trabalhado vale pontos e streak.
+              </p>
             </div>
           )}
         </Card>
@@ -289,6 +307,136 @@ const Index = () => {
               Esta funcionalidade estará disponível em breve.
             </DialogDescription>
           </DialogHeader>
+        </DialogContent>
+      </Dialog>
+
+      {/* Session Stage Selection Modal */}
+      <Dialog open={isSessionModalOpen} onOpenChange={setIsSessionModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">Em que parte você quer criar agora?</DialogTitle>
+            <DialogDescription className="text-sm">
+              Você pode mudar de etapa a qualquer momento.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6 py-4">
+            {/* Grid de etapas */}
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => handleStageSelect("ideation")}
+                className={cn(
+                  "p-4 rounded-2xl border-2 transition-all text-left",
+                  "hover:border-primary hover:bg-primary/5",
+                  sessionStage === "ideation" 
+                    ? "border-primary bg-primary/10" 
+                    : "border-border bg-card"
+                )}
+              >
+                <Lightbulb className="w-8 h-8 mb-2 text-accent" />
+                <h3 className="font-semibold text-foreground mb-1">Ideação</h3>
+                <p className="text-xs text-muted-foreground">
+                  Separar ideias e distribuir no calendário.
+                </p>
+              </button>
+
+              <button
+                onClick={() => handleStageSelect("script")}
+                className={cn(
+                  "p-4 rounded-2xl border-2 transition-all text-left",
+                  "hover:border-primary hover:bg-primary/5",
+                  sessionStage === "script" 
+                    ? "border-primary bg-primary/10" 
+                    : "border-border bg-card"
+                )}
+              >
+                <Film className="w-8 h-8 mb-2 text-primary" />
+                <h3 className="font-semibold text-foreground mb-1">Roteiro</h3>
+                <p className="text-xs text-muted-foreground">
+                  Escrever ou desenvolver seu roteiro.
+                </p>
+              </button>
+
+              <button
+                onClick={() => handleStageSelect("record")}
+                className={cn(
+                  "p-4 rounded-2xl border-2 transition-all text-left",
+                  "hover:border-primary hover:bg-primary/5",
+                  sessionStage === "record" 
+                    ? "border-primary bg-primary/10" 
+                    : "border-border bg-card"
+                )}
+              >
+                <Mic className="w-8 h-8 mb-2 text-accent" />
+                <h3 className="font-semibold text-foreground mb-1">Gravação</h3>
+                <p className="text-xs text-muted-foreground">
+                  Checklist e shotlists para gravar.
+                </p>
+              </button>
+
+              <button
+                onClick={() => handleStageSelect("edit")}
+                className={cn(
+                  "p-4 rounded-2xl border-2 transition-all text-left",
+                  "hover:border-primary hover:bg-primary/5",
+                  sessionStage === "edit" 
+                    ? "border-primary bg-primary/10" 
+                    : "border-border bg-card"
+                )}
+              >
+                <Scissors className="w-8 h-8 mb-2 text-primary" />
+                <h3 className="font-semibold text-foreground mb-1">Edição</h3>
+                <p className="text-xs text-muted-foreground">
+                  Ajustes finais e notas de corte.
+                </p>
+              </button>
+            </div>
+
+            {/* Seleção de duração */}
+            <div className="space-y-3">
+              <label className="text-sm font-medium text-foreground">
+                Duração da sessão (opcional)
+              </label>
+              <div className="flex gap-2">
+                {[15, 25, 45, 60].map((duration) => (
+                  <button
+                    key={duration}
+                    onClick={() => handleDurationSelect(duration)}
+                    className={cn(
+                      "flex-1 py-2 px-3 rounded-xl border-2 transition-all font-medium",
+                      "hover:border-primary hover:bg-primary/5",
+                      sessionDuration === duration
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border bg-card text-foreground"
+                    )}
+                  >
+                    {duration}
+                  </button>
+                ))}
+              </div>
+              <button className="text-xs text-primary hover:underline">
+                Tempo livre
+              </button>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              onClick={handleCancel}
+              className="flex-1"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleContinue}
+              disabled={!sessionStage}
+              className="flex-1 bg-gradient-to-r from-primary to-accent hover:opacity-90 text-white disabled:opacity-50"
+            >
+              Continuar
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
