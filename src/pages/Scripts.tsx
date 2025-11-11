@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Plus, Trash2, Edit, Check, Film, Scissors } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -38,6 +38,7 @@ interface ShotList {
 
 const Scripts = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const titleInputRef = useRef<HTMLInputElement>(null);
   const [scripts, setScripts] = useState<Script[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [currentScript, setCurrentScript] = useState<Script | null>(null);
@@ -74,6 +75,10 @@ const Scripts = () => {
 
     if (newParam === "1") {
       setIsEditing(true);
+      setCurrentScript(null);
+      setTitle("");
+      setContent("");
+      setTimeout(() => titleInputRef.current?.focus(), 100);
       searchParams.delete("new");
       setSearchParams(searchParams);
     } else if (openParam) {
@@ -259,6 +264,7 @@ const Scripts = () => {
               <div className="space-y-2">
                 <label className="text-sm font-medium">Título</label>
                 <Input
+                  ref={titleInputRef}
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Ex: Roteiro para vídeo sobre..."
