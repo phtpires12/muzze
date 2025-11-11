@@ -570,7 +570,7 @@ const Index = () => {
 
       {/* Pick Item Modal */}
       <Dialog open={isPickItemModalOpen} onOpenChange={setIsPickItemModalOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent data-testid="modal-pick-item" className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold">
               {pickListType === "script" && "Qual ideia você quer roteirizar?"}
@@ -586,6 +586,7 @@ const Index = () => {
             {eligibleItems.map((item) => (
               <button
                 key={item.id}
+                data-testid={`pick-item-${item.id}`}
                 onClick={() => setSelectedItemId(item.id)}
                 className={cn(
                   "w-full p-4 rounded-xl border-2 transition-all text-left",
@@ -622,6 +623,7 @@ const Index = () => {
 
           <div className="flex gap-3 pt-2">
             <Button
+              data-testid="btn-cancel-pick"
               variant="outline"
               onClick={() => {
                 setIsPickItemModalOpen(false);
@@ -632,6 +634,7 @@ const Index = () => {
               Cancelar
             </Button>
             <Button
+              data-testid="btn-open-picked-item"
               onClick={handleOpenItem}
               disabled={!selectedItemId}
               className="flex-1 bg-gradient-to-r from-primary to-accent hover:opacity-90 text-white disabled:opacity-50"
