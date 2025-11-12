@@ -107,6 +107,9 @@ export const ScriptEditor = ({ onClose, scriptId }: ScriptEditorProps) => {
           description: "Seu roteiro foi salvo com sucesso!",
         });
       }
+
+      // Redirecionar para o calendário após salvar
+      navigate('/calendario-editorial');
     } catch (error) {
       console.error('Error saving script:', error);
       toast({
