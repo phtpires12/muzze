@@ -64,6 +64,11 @@ const Index = () => {
   
   // Modal de troféus
   const [isTrophiesModalOpen, setIsTrophiesModalOpen] = useState(false);
+  
+  // Modal de tempo total
+  const [isTimeModalOpen, setIsTimeModalOpen] = useState(false);
+  const [recentSessions, setRecentSessions] = useState<any[]>([]);
+  const [averageTimeByStage, setAverageTimeByStage] = useState<any>({});
 
   useEffect(() => {
     if (profile && !profileLoading) {
@@ -130,6 +135,79 @@ const Index = () => {
       .maybeSingle();
 
     setLastActivity(data);
+  };
+
+  const fetchRecentSessions = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // Buscar últimas 5 sessões agrupadas por content_item_id
+    const { data } = await supabase
+      .from('stage_times')
+      .select('content_item_id, started_at, ended_at, duration_seconds')
+      .eq('user_id', user.id)
+      .not('content_item_id', 'is', null)
+      .order('started_at', { ascending: false })
+      .limit(20);
+
+    if (data) {
+      // Agrupar por content_item_id e somar durações
+      const sessionMap = new Map();
+      data.forEach(item => {
+        const key = item.content_item_id;
+        if (!sessionMap.has(key)) {
+          sessionMap.set(key, {
+            content_item_id: key,
+            started_at: item.started_at,
+            total_duration: 0
+          });
+        }
+        sessionMap.get(key).total_duration += item.duration_seconds || 0;
+      });
+
+      const sessions = Array.from(sessionMap.values())
+        .sort((a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime())
+        .slice(0, 5);
+      
+      setRecentSessions(sessions);
+    }
+  };
+
+  const fetchAverageTimeByStage = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data } = await supabase
+      .from('stage_times')
+      .select('stage, duration_seconds')
+      .eq('user_id', user.id)
+      .not('duration_seconds', 'is', null);
+
+    if (data) {
+      const stageMap = new Map();
+      data.forEach(item => {
+        if (!item.stage) return;
+        if (!stageMap.has(item.stage)) {
+          stageMap.set(item.stage, { total: 0, count: 0 });
+        }
+        const stats = stageMap.get(item.stage);
+        stats.total += item.duration_seconds;
+        stats.count += 1;
+      });
+
+      const averages: any = {};
+      stageMap.forEach((value, key) => {
+        averages[key] = Math.round(value.total / value.count);
+      });
+
+      setAverageTimeByStage(averages);
+    }
+  };
+
+  const handleOpenTimeModal = () => {
+    setIsTimeModalOpen(true);
+    fetchRecentSessions();
+    fetchAverageTimeByStage();
   };
 
   const handleStartSession = () => {
@@ -386,7 +464,10 @@ const Index = () => {
               </div>
             </button>
 
-            <div className="p-4 bg-card rounded-2xl border border-border/20 shadow-sm text-center">
+            <button 
+              onClick={handleOpenTimeModal}
+              className="p-4 bg-card rounded-2xl border border-border/20 shadow-sm text-center hover:bg-accent/10 transition-colors"
+            >
               <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-gradient-to-br from-accent to-primary flex items-center justify-center">
                 <Clock className="w-6 h-6 text-white" />
               </div>
@@ -396,7 +477,7 @@ const Index = () => {
               <div className="text-xs text-muted-foreground">
                 Tempo Total
               </div>
-            </div>
+            </button>
 
             <div className="p-4 bg-card rounded-2xl border border-border/20 shadow-sm text-center">
               <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-gradient-to-br from-accent to-primary flex items-center justify-center">
@@ -721,6 +802,102 @@ const Index = () => {
                 </div>
               </div>
             ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Time Stats Modal */}
+      <Dialog open={isTimeModalOpen} onOpenChange={setIsTimeModalOpen}>
+        <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold flex items-center gap-2">
+              <Clock className="w-6 h-6 text-primary" />
+              Estatísticas de Tempo
+            </DialogTitle>
+            <DialogDescription>
+              Veja seu tempo de sessão preferido, histórico e médias por etapa
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6 py-4">
+            {/* Tempo de Sessão Preferido */}
+            <div className="p-4 rounded-lg bg-gradient-to-r from-primary/5 to-accent/5 border border-primary/20">
+              <h3 className="font-semibold text-foreground mb-2">Tempo de Sessão Preferido</h3>
+              <p className="text-3xl font-bold text-primary">
+                {profile?.preferred_session_minutes || 25} minutos
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Configurado nas suas preferências
+              </p>
+            </div>
+
+            {/* Últimas 5 Sessões */}
+            <div>
+              <h3 className="font-semibold text-foreground mb-3">Últimas 5 Sessões</h3>
+              {recentSessions.length > 0 ? (
+                <div className="space-y-2">
+                  {recentSessions.map((session, index) => {
+                    const hours = Math.floor(session.total_duration / 3600);
+                    const minutes = Math.floor((session.total_duration % 3600) / 60);
+                    return (
+                      <div
+                        key={session.content_item_id || index}
+                        className="flex items-center justify-between p-3 rounded-lg bg-card border border-border/20"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Clock className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">
+                            {new Date(session.started_at).toLocaleDateString('pt-BR')}
+                          </span>
+                        </div>
+                        <span className="text-sm font-semibold text-foreground">
+                          {hours > 0 ? `${hours}h ` : ''}{minutes}min
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Nenhuma sessão registrada ainda
+                </p>
+              )}
+            </div>
+
+            {/* Tempo Médio por Etapa */}
+            <div>
+              <h3 className="font-semibold text-foreground mb-3">Tempo Médio por Etapa</h3>
+              <div className="space-y-3">
+                {[
+                  { key: 'ideation', label: 'Ideação', icon: Lightbulb },
+                  { key: 'script', label: 'Roteirização', icon: Film },
+                  { key: 'record', label: 'Gravação', icon: Mic },
+                  { key: 'edit', label: 'Edição', icon: Scissors },
+                  { key: 'review', label: 'Revisão', icon: AlertCircle }
+                ].map(({ key, label, icon: Icon }) => {
+                  const avgSeconds = averageTimeByStage[key] || 0;
+                  const hours = Math.floor(avgSeconds / 3600);
+                  const minutes = Math.floor((avgSeconds % 3600) / 60);
+                  
+                  return (
+                    <div
+                      key={key}
+                      className="flex items-center justify-between p-3 rounded-lg bg-card border border-border/20"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Icon className="w-4 h-4 text-primary" />
+                        <span className="text-sm font-medium text-foreground">{label}</span>
+                      </div>
+                      <span className="text-sm font-semibold text-foreground">
+                        {avgSeconds > 0 
+                          ? `${hours > 0 ? `${hours}h ` : ''}${minutes}min`
+                          : 'Sem dados'}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
