@@ -157,31 +157,61 @@ const Session = () => {
 
   // If stage is "script", show the script editor with floating timer
   if (session.stage === "script") {
+    const progress = session.targetSeconds 
+      ? Math.min(100, (session.elapsedSeconds / session.targetSeconds) * 100)
+      : 0;
+
     return (
       <div className="relative">
         {/* Floating Timer Pop-up */}
         <div className="fixed top-6 right-6 z-50">
-          <Card className="p-4 backdrop-blur-md bg-card/95 border-border/20 shadow-xl rounded-2xl">
+          <Card className={cn(
+            "p-4 backdrop-blur-md border-border/20 shadow-xl rounded-2xl transition-all duration-300",
+            session.isOvertime 
+              ? "bg-destructive/95 border-destructive animate-pulse" 
+              : "bg-card/95"
+          )}>
             <div className="flex items-center gap-4">
               <div className={cn(
-                "w-12 h-12 rounded-full flex items-center justify-center",
-                "bg-gradient-to-br from-accent to-primary shadow-lg"
+                "w-12 h-12 rounded-full flex items-center justify-center shadow-lg",
+                session.isOvertime
+                  ? "bg-destructive-foreground/20"
+                  : "bg-gradient-to-br from-accent to-primary"
               )}>
-                <CurrentIcon className="w-6 h-6 text-white" />
+                <CurrentIcon className={cn(
+                  "w-6 h-6",
+                  session.isOvertime ? "text-destructive-foreground" : "text-white"
+                )} />
               </div>
               
-              <div>
-                <div className="text-sm text-muted-foreground">{currentStage.label}</div>
-                <div className="text-2xl font-bold text-foreground tabular-nums">
+              <div className="min-w-[140px]">
+                <div className={cn(
+                  "text-sm",
+                  session.isOvertime ? "text-destructive-foreground/80" : "text-muted-foreground"
+                )}>
+                  {currentStage.label}
+                </div>
+                <div className={cn(
+                  "text-2xl font-bold tabular-nums",
+                  session.isOvertime ? "text-destructive-foreground" : "text-foreground"
+                )}>
                   {formatTime(session.elapsedSeconds)}
                 </div>
+                {session.targetSeconds && (
+                  <div className={cn(
+                    "text-xs",
+                    session.isOvertime ? "text-destructive-foreground/70" : "text-muted-foreground"
+                  )}>
+                    {session.isOvertime ? "Tempo esgotado!" : `Meta: ${formatTime(session.targetSeconds)}`}
+                  </div>
+                )}
               </div>
 
               <div className="flex flex-col gap-2">
                 {!session.isPaused ? (
                   <Button
                     onClick={pauseSession}
-                    variant="outline"
+                    variant={session.isOvertime ? "secondary" : "outline"}
                     size="sm"
                   >
                     <Pause className="w-4 h-4" />
@@ -204,6 +234,17 @@ const Session = () => {
                 </Button>
               </div>
             </div>
+
+            {/* Progress bar */}
+            {session.targetSeconds && (
+              <Progress 
+                value={progress} 
+                className={cn(
+                  "mt-3 h-1.5",
+                  session.isOvertime && "bg-destructive-foreground/20"
+                )}
+              />
+            )}
           </Card>
         </div>
 
@@ -213,15 +254,26 @@ const Session = () => {
     );
   }
 
+  const progress = session.targetSeconds 
+    ? Math.min(100, (session.elapsedSeconds / session.targetSeconds) * 100)
+    : 0;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-accent/10 via-background to-primary/10 p-6">
       <div className="max-w-2xl mx-auto">
-        <Card className="p-8 backdrop-blur-md bg-card/85 border-border/20 shadow-lg rounded-[28px]">
+        <Card className={cn(
+          "p-8 backdrop-blur-md border-border/20 shadow-lg rounded-[28px] transition-all duration-300",
+          session.isOvertime 
+            ? "bg-destructive/10 border-destructive/30" 
+            : "bg-card/85"
+        )}>
           {/* Timer Display */}
           <div className="text-center mb-8">
             <div className={cn(
-              "w-24 h-24 mx-auto mb-4 rounded-full flex items-center justify-center",
-              "bg-gradient-to-br from-accent to-primary shadow-lg"
+              "w-24 h-24 mx-auto mb-4 rounded-full flex items-center justify-center shadow-lg transition-all duration-300",
+              session.isOvertime
+                ? "bg-destructive animate-pulse"
+                : "bg-gradient-to-br from-accent to-primary"
             )}>
               <CurrentIcon className="w-12 h-12 text-white" />
             </div>
@@ -230,9 +282,30 @@ const Session = () => {
               {currentStage.label}
             </h2>
             
-            <div className="text-6xl font-bold text-foreground mb-4 tabular-nums">
+            <div className={cn(
+              "text-6xl font-bold mb-2 tabular-nums transition-colors",
+              session.isOvertime ? "text-destructive" : "text-foreground"
+            )}>
               {formatTime(session.elapsedSeconds)}
             </div>
+
+            {session.targetSeconds && (
+              <div className="text-sm text-muted-foreground mb-2">
+                {session.isOvertime 
+                  ? "⏰ Tempo esgotado!"
+                  : `Tempo sugerido: ${formatTime(session.targetSeconds)}`}
+              </div>
+            )}
+
+            {session.targetSeconds && (
+              <Progress 
+                value={progress} 
+                className={cn(
+                  "max-w-xs mx-auto mb-4",
+                  session.isOvertime && "bg-destructive/20"
+                )}
+              />
+            )}
             
             {session.isPaused && (
               <p className="text-muted-foreground">Sessão pausada</p>

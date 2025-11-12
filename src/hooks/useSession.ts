@@ -12,6 +12,8 @@ interface SessionState {
   elapsedSeconds: number;
   startedAt: Date | null;
   sessionId: string | null;
+  targetSeconds: number | null; // Target time based on average of last 3 sessions
+  isOvertime: boolean; // Whether user exceeded the target time
 }
 
 export const useSession = () => {
@@ -23,19 +25,33 @@ export const useSession = () => {
     elapsedSeconds: 0,
     startedAt: null,
     sessionId: null,
+    targetSeconds: null,
+    isOvertime: false,
   });
   
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const currentStageStartRef = useRef<Date | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Timer tick
   useEffect(() => {
     if (session.isActive && !session.isPaused) {
       intervalRef.current = setInterval(() => {
-        setSession(prev => ({
-          ...prev,
-          elapsedSeconds: prev.elapsedSeconds + 1,
-        }));
+        setSession(prev => {
+          const newElapsedSeconds = prev.elapsedSeconds + 1;
+          const isOvertime = prev.targetSeconds !== null && newElapsedSeconds > prev.targetSeconds;
+          
+          // Trigger alarm when just crossed the target time
+          if (isOvertime && !prev.isOvertime && prev.targetSeconds !== null && newElapsedSeconds === prev.targetSeconds + 1) {
+            triggerAlarm();
+          }
+          
+          return {
+            ...prev,
+            elapsedSeconds: newElapsedSeconds,
+            isOvertime,
+          };
+        });
       }, 1000);
     } else {
       if (intervalRef.current) {
@@ -49,7 +65,22 @@ export const useSession = () => {
         clearInterval(intervalRef.current);
       }
     };
-  }, [session.isActive, session.isPaused]);
+  }, [session.isActive, session.isPaused, session.targetSeconds, session.isOvertime]);
+
+  const triggerAlarm = useCallback(() => {
+    // Visual alarm via toast
+    toast({
+      title: "⏰ Tempo esgotado!",
+      description: "Você atingiu o tempo limite para esta etapa",
+      variant: "destructive",
+    });
+
+    // Audio alarm
+    if (!audioRef.current) {
+      audioRef.current = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZURE');
+    }
+    audioRef.current.play().catch(err => console.log('Audio play failed:', err));
+  }, [toast]);
 
   const startSession = useCallback(async (initialStage: SessionStage = "ideation") => {
     try {
@@ -59,6 +90,21 @@ export const useSession = () => {
       const now = new Date();
       currentStageStartRef.current = now;
 
+      // Calculate average time from last 3 sessions for this stage
+      const { data: recentSessions } = await supabase
+        .from('stage_times')
+        .select('duration_seconds')
+        .eq('user_id', user.id)
+        .eq('stage', initialStage)
+        .order('created_at', { ascending: false })
+        .limit(3);
+
+      let targetSeconds = null;
+      if (recentSessions && recentSessions.length > 0) {
+        const totalSeconds = recentSessions.reduce((sum, s) => sum + (s.duration_seconds || 0), 0);
+        targetSeconds = Math.floor(totalSeconds / recentSessions.length);
+      }
+
       setSession({
         isActive: true,
         isPaused: false,
@@ -66,18 +112,22 @@ export const useSession = () => {
         elapsedSeconds: 0,
         startedAt: now,
         sessionId: crypto.randomUUID(),
+        targetSeconds,
+        isOvertime: false,
       });
 
       // Track analytics
       await supabase.from('analytics_events').insert({
         user_id: user.id,
         event: 'session_started',
-        payload: { stage: initialStage }
+        payload: { stage: initialStage, target_seconds: targetSeconds }
       });
 
       toast({
         title: "Sessão iniciada",
-        description: `Etapa: ${getStageLabel(initialStage)}`,
+        description: targetSeconds 
+          ? `Etapa: ${getStageLabel(initialStage)} • Tempo sugerido: ${formatTime(targetSeconds)}`
+          : `Etapa: ${getStageLabel(initialStage)}`,
       });
     } catch (error: any) {
       toast({
@@ -123,16 +173,39 @@ export const useSession = () => {
         });
       }
 
+      // Calculate average time for new stage
+      const { data: recentSessions } = await supabase
+        .from('stage_times')
+        .select('duration_seconds')
+        .eq('user_id', user.id)
+        .eq('stage', newStage)
+        .order('created_at', { ascending: false })
+        .limit(3);
+
+      let targetSeconds = null;
+      if (recentSessions && recentSessions.length > 0) {
+        const totalSeconds = recentSessions.reduce((sum, s) => sum + (s.duration_seconds || 0), 0);
+        targetSeconds = Math.floor(totalSeconds / recentSessions.length);
+      }
+
       // Start new stage
       currentStageStartRef.current = new Date();
-      setSession(prev => ({ ...prev, stage: newStage }));
+      setSession(prev => ({ 
+        ...prev, 
+        stage: newStage,
+        elapsedSeconds: 0,
+        targetSeconds,
+        isOvertime: false,
+      }));
 
       // Award points for stage change
       awardPoints(POINTS.CREATE_IDEA, `Mudou para etapa: ${newStage}`);
 
       toast({
         title: "Etapa alterada",
-        description: `Agora você está em: ${getStageLabel(newStage)}`,
+        description: targetSeconds
+          ? `Agora você está em: ${getStageLabel(newStage)} • Tempo sugerido: ${formatTime(targetSeconds)}`
+          : `Agora você está em: ${getStageLabel(newStage)}`,
       });
     } catch (error: any) {
       toast({
@@ -216,6 +289,8 @@ export const useSession = () => {
         elapsedSeconds: 0,
         startedAt: null,
         sessionId: null,
+        targetSeconds: null,
+        isOvertime: false,
       });
 
       currentStageStartRef.current = null;
@@ -366,4 +441,15 @@ const getStageLabel = (stage: SessionStage): string => {
     review: "Revisão",
   };
   return labels[stage];
+};
+
+const formatTime = (seconds: number): string => {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  
+  if (h > 0) {
+    return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  }
+  return `${m}:${s.toString().padStart(2, '0')}`;
 };
