@@ -273,24 +273,6 @@ const ShotList = () => {
     }
   };
 
-  // Auto-save functionality
-  useEffect(() => {
-    if (scriptId && shots.length > 0) {
-      if (autoSaveTimeoutRef.current) {
-        clearTimeout(autoSaveTimeoutRef.current);
-      }
-      
-      autoSaveTimeoutRef.current = setTimeout(() => {
-        handleSave(true);
-      }, 30000); // 30 seconds
-    }
-
-    return () => {
-      if (autoSaveTimeoutRef.current) {
-        clearTimeout(autoSaveTimeoutRef.current);
-      }
-    };
-  }, [shots, scriptId]);
 
   // Função para quebrar o roteiro em parágrafos
   const parseScriptIntoParagraphs = (content: string): Array<{ sectionName: string; paragraph: string }> => {
@@ -648,7 +630,10 @@ const ShotList = () => {
         <div className="flex items-center justify-between mb-6">
           <Button
             variant="ghost"
-            onClick={() => navigate(`/session?stage=review&scriptId=${scriptId}`)}
+            onClick={async () => {
+              await handleSave(false);
+              navigate(`/session?stage=review&scriptId=${scriptId}`);
+            }}
             className="gap-2"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -656,7 +641,6 @@ const ShotList = () => {
           </Button>
 
           <div className="flex gap-2 items-center">
-            <span className="text-xs text-muted-foreground">Auto-save a cada 30s</span>
             <Button 
               variant="outline" 
               onClick={regenerateFromScript}
