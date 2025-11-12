@@ -278,7 +278,12 @@ const ShotList = () => {
       if (data?.shot_list && data.shot_list.length > 0) {
         const parsedShots = data.shot_list.map((item: string) => {
           try {
-            return JSON.parse(item);
+            const parsedShot = JSON.parse(item);
+            // SEMPRE atualizar com o script mais recente
+            return {
+              ...parsedShot,
+              script: formattedScript
+            };
           } catch {
             return {
               id: crypto.randomUUID(),
