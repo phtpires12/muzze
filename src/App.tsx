@@ -10,7 +10,6 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
-import Scripts from "./pages/Scripts";
 import Stats from "./pages/Stats";
 import CalendarioEditorial from "./pages/CalendarioEditorial";
 import Session from "./pages/Session";
@@ -142,7 +141,6 @@ const App = () => (
           <Route path="/onboarding" element={<OnboardingRoute><Onboarding /></OnboardingRoute>} />
           <Route path="/" element={<ProtectedRoute><Layout><Index /></Layout></ProtectedRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
-          <Route path="/scripts" element={<ProtectedRoute><Layout><Scripts /></Layout></ProtectedRoute>} />
           <Route path="/calendario" element={<ProtectedRoute><Layout><CalendarioEditorial /></Layout></ProtectedRoute>} />
           <Route path="/session" element={<ProtectedRoute><Session /></ProtectedRoute>} />
           <Route path="/stats" element={<ProtectedRoute><Layout><Stats /></Layout></ProtectedRoute>} />
