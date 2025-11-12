@@ -1,22 +1,12 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Plus, FileText, ChevronLeft, ChevronRight, Lightbulb } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, Lightbulb } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -38,7 +28,7 @@ const CalendarioEditorial = () => {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<"month" | "week">("month");
   const [scripts, setScripts] = useState<Script[]>([]);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [draggedScript, setDraggedScript] = useState<Script | null>(null);
 
   useEffect(() => {
     fetchScripts();
@@ -77,6 +67,54 @@ const CalendarioEditorial = () => {
 
   const handleViewScript = (scriptId: string) => {
     navigate(`/session?stage=script&scriptId=${scriptId}`);
+  };
+
+  const handleDragStart = (e: React.DragEvent, script: Script) => {
+    setDraggedScript(script);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetDate: Date) => {
+    e.preventDefault();
+    
+    if (!draggedScript) return;
+
+    try {
+      const newPublishDate = format(targetDate, "yyyy-MM-dd");
+      
+      const { error } = await supabase
+        .from('scripts')
+        .update({ publish_date: newPublishDate })
+        .eq('id', draggedScript.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Data atualizada",
+        description: "A data de publicação foi alterada com sucesso!",
+      });
+
+      // Atualizar a lista local
+      setScripts(scripts.map(s => 
+        s.id === draggedScript.id 
+          ? { ...s, publish_date: newPublishDate }
+          : s
+      ));
+      
+      setDraggedScript(null);
+    } catch (error) {
+      console.error('Error updating script date:', error);
+      toast({
+        title: "Erro ao atualizar data",
+        description: "Não foi possível alterar a data de publicação.",
+        variant: "destructive",
+      });
+    }
   };
 
   const monthStart = startOfMonth(currentDate);
@@ -173,6 +211,8 @@ const CalendarioEditorial = () => {
                       className={`min-h-[120px] border-r border-b border-border p-2 ${
                         !isCurrentMonth ? "bg-muted/10" : "bg-card"
                       } ${idx % 7 === 6 ? "border-r-0" : ""}`}
+                      onDragOver={handleDragOver}
+                      onDrop={(e) => handleDrop(e, day)}
                     >
                       <div className={`text-sm font-medium mb-1 ${
                         !isCurrentMonth ? "text-muted-foreground" : isToday ? "text-primary" : "text-foreground"
@@ -184,7 +224,9 @@ const CalendarioEditorial = () => {
                         {dayScripts.slice(0, 3).map((script) => (
                           <div
                             key={script.id}
-                            className="text-xs p-1.5 rounded bg-primary/10 border-l-2 border-primary cursor-pointer hover:bg-primary/20 transition-colors"
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, script)}
+                            className="text-xs p-1.5 rounded bg-primary/10 border-l-2 border-primary cursor-move hover:bg-primary/20 transition-colors"
                             onClick={() => handleViewScript(script.id)}
                           >
                             <div className="font-medium truncate">{script.title}</div>
@@ -238,12 +280,16 @@ const CalendarioEditorial = () => {
                     <div
                       key={day.toISOString()}
                       className="min-h-[400px] border-r border-border last:border-r-0 p-3"
+                      onDragOver={handleDragOver}
+                      onDrop={(e) => handleDrop(e, day)}
                     >
                       <div className="space-y-2">
                         {dayScripts.map((script) => (
                           <div
                             key={script.id}
-                            className="p-3 rounded-lg bg-primary/10 border-l-4 border-primary cursor-pointer hover:bg-primary/20 transition-colors"
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, script)}
+                            className="p-3 rounded-lg bg-primary/10 border-l-4 border-primary cursor-move hover:bg-primary/20 transition-colors"
                             onClick={() => handleViewScript(script.id)}
                           >
                             <div className="font-semibold text-sm mb-1">{script.title}</div>
