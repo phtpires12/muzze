@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Plus, Trash2, Camera, Upload, GripVertical, X, RotateCcw } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Camera, Upload, GripVertical, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -216,7 +216,6 @@ const ShotList = () => {
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout>();
   
   const [shots, setShots] = useState<ShotItem[]>([]);
-  const [scriptContent, setScriptContent] = useState<string>("");
   const [isUploading, setIsUploading] = useState(false);
   const [history, setHistory] = useState<ShotItem[][]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
@@ -230,8 +229,6 @@ const ShotList = () => {
 
   useEffect(() => {
     if (scriptId) {
-      // Sempre recarregar o conteúdo mais recente do banco
-      loadScriptContent();
       loadShotList();
     }
   }, [scriptId]);
@@ -274,104 +271,8 @@ const ShotList = () => {
   };
 
 
-  // Função para quebrar o roteiro em parágrafos
-  const parseScriptIntoParagraphs = (content: string): Array<{ sectionName: string; paragraph: string }> => {
-    const paragraphs: Array<{ sectionName: string; paragraph: string }> = [];
-    
-    try {
-      const parsedContent = JSON.parse(content);
-      
-      const sections = [
-        { name: 'Gancho', content: parsedContent.gancho },
-        { name: 'Setup', content: parsedContent.setup },
-        { name: 'Desenvolvimento', content: parsedContent.desenvolvimento },
-        { name: 'Conclusão', content: parsedContent.conclusao }
-      ];
-      
-      sections.forEach(section => {
-        if (section.content && section.content.trim()) {
-          // Dividir por parágrafos (quebras de linha duplas ou simples)
-          const sectionParagraphs = section.content
-            .split(/\n\n+/)
-            .map(p => p.trim())
-            .filter(p => p.length > 0);
-          
-          sectionParagraphs.forEach(paragraph => {
-            paragraphs.push({
-              sectionName: section.name,
-              paragraph: paragraph
-            });
-          });
-        }
-      });
-    } catch {
-      // Se não for JSON, dividir por parágrafos simples
-      const simpleParagraphs = content
-        .split(/\n\n+/)
-        .map(p => p.trim())
-        .filter(p => p.length > 0);
-      
-      simpleParagraphs.forEach(paragraph => {
-        paragraphs.push({
-          sectionName: '',
-          paragraph: paragraph
-        });
-      });
-    }
-    
-    return paragraphs;
-  };
-
-  const loadScriptContent = async () => {
-    console.log('[DEBUG - ShotList] Carregando script content do banco...');
-    
-    try {
-      const { data, error } = await supabase
-        .from('scripts')
-        .select('content')
-        .eq('id', scriptId)
-        .single();
-
-      if (error) throw error;
-
-      console.log('[DEBUG - ShotList] ✅ Content carregado do banco', {
-        hasContent: !!data?.content,
-        contentLength: data?.content?.length,
-        contentPreview: data?.content?.substring(0, 100),
-      });
-
-      if (data?.content) {
-        setScriptContent(data.content);
-      }
-    } catch (error) {
-      console.error('[DEBUG - ShotList] ❌ Erro ao carregar content:', error);
-    }
-  };
-
   const loadShotList = async () => {
-    console.log('[DEBUG - ShotList] Carregando shot list...');
-    
     try {
-      // 1. Sempre carregar o conteúdo mais recente do roteiro primeiro
-      console.log('[DEBUG - ShotList] Buscando content mais recente...');
-      const { data: scriptData, error: scriptError } = await supabase
-        .from('scripts')
-        .select('content')
-        .eq('id', scriptId)
-        .single();
-
-      if (scriptError) throw scriptError;
-      
-      const latestContent = scriptData?.content || "";
-      console.log('[DEBUG - ShotList] ✅ Content obtido', {
-        hasContent: !!latestContent,
-        contentLength: latestContent.length,
-        contentPreview: latestContent.substring(0, 100),
-      });
-      setScriptContent(latestContent);
-      
-      // 2. Depois carregar a shot list
-      console.log('[DEBUG - ShotList] Buscando shot list...');
       const { data, error } = await supabase
         .from('scripts')
         .select('shot_list')
@@ -379,10 +280,6 @@ const ShotList = () => {
         .single();
 
       if (error) throw error;
-      console.log('[DEBUG - ShotList] Shot list obtida', {
-        hasShotList: !!data?.shot_list,
-        shotListLength: data?.shot_list?.length,
-      });
 
       if (data?.shot_list && data.shot_list.length > 0) {
         // Carregar shot list existente
@@ -411,21 +308,25 @@ const ShotList = () => {
         setShots(parsedShots);
         saveToHistory(parsedShots);
       } else {
-        // Gerar automaticamente por parágrafos se não existir shot list
-        const paragraphs = parseScriptIntoParagraphs(latestContent);
+        // Criar estrutura vazia com as 4 seções
+        const emptySections = [
+          { name: 'Gancho' },
+          { name: 'Setup' },
+          { name: 'Desenvolvimento' },
+          { name: 'Conclusão' }
+        ];
         
-        if (paragraphs.length > 0) {
-          const generatedShots = paragraphs.map(p => ({
-            id: crypto.randomUUID(),
-            scriptSegment: p.paragraph,
-            scene: "",
-            shotImageUrl: "",
-            location: "",
-            sectionName: p.sectionName
-          }));
-          setShots(generatedShots);
-          saveToHistory(generatedShots);
-        }
+        const emptyShots = emptySections.map(section => ({
+          id: crypto.randomUUID(),
+          scriptSegment: "",
+          scene: "",
+          shotImageUrl: "",
+          location: "",
+          sectionName: section.name
+        }));
+        
+        setShots(emptyShots);
+        saveToHistory(emptyShots);
       }
     } catch (error) {
       console.error('Error loading shot list:', error);
@@ -525,36 +426,6 @@ const ShotList = () => {
     });
   };
 
-  const regenerateFromScript = async () => {
-    if (!scriptContent) {
-      toast({
-        title: "Roteiro não encontrado",
-        description: "Carregue um roteiro antes de regenerar.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    const paragraphs = parseScriptIntoParagraphs(scriptContent);
-    
-    if (paragraphs.length > 0) {
-      const generatedShots = paragraphs.map(p => ({
-        id: crypto.randomUUID(),
-        scriptSegment: p.paragraph,
-        scene: "",
-        shotImageUrl: "",
-        location: "",
-        sectionName: p.sectionName
-      }));
-      setShots(generatedShots);
-      saveToHistory(generatedShots);
-      
-      toast({
-        title: "Shot List regenerada",
-        description: `${generatedShots.length} linhas criadas a partir do roteiro.`,
-      });
-    }
-  };
 
   const removeShot = (id: string) => {
     const newShots = shots.filter(shot => shot.id !== id);
@@ -640,19 +511,9 @@ const ShotList = () => {
             Voltar para Revisão
           </Button>
 
-          <div className="flex gap-2 items-center">
-            <Button 
-              variant="outline" 
-              onClick={regenerateFromScript}
-              className="gap-2"
-            >
-              <RotateCcw className="w-4 h-4" />
-              Regenerar do Roteiro
-            </Button>
-            <Button onClick={() => handleSave(false)} className="gap-2">
-              Salvar Shot List
-            </Button>
-          </div>
+          <Button onClick={() => handleSave(false)} className="gap-2">
+            Salvar Shot List
+          </Button>
         </div>
 
         {/* Title */}
@@ -698,7 +559,7 @@ const ShotList = () => {
                   ) : (
                     <tr>
                       <td colSpan={6} className="p-8 text-center text-muted-foreground">
-                        Nenhuma linha criada. Clique em "Adicionar Linha" ou "Regenerar do Roteiro".
+                        Nenhuma linha criada. Clique em "Adicionar Linha".
                       </td>
                     </tr>
                   )}
