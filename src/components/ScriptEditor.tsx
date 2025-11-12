@@ -389,58 +389,29 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
             </div>
           </div>
 
-          {/* Shot List */}
-          <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-accent/10 transition-colors group">
-            <div className="flex items-center gap-2 min-w-[180px] text-sm text-muted-foreground pt-2">
-              <ListChecks className="w-4 h-4" />
-              <span>Shot List</span>
-            </div>
-            <div className="flex-1">
-              {shotList.length === 0 ? (
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => setShotList([""])}
-                  className="h-8 text-xs text-muted-foreground"
+          {/* Shot List - Only in Review Mode */}
+          {isReviewMode && (
+            <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-accent/10 transition-colors group">
+              <div className="flex items-center gap-2 min-w-[180px] text-sm text-muted-foreground pt-2">
+                <ListChecks className="w-4 h-4" />
+                <span>Shot List</span>
+              </div>
+              <div className="flex-1">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    const params = new URLSearchParams(window.location.search);
+                    const currentScriptId = scriptId || params.get('scriptId');
+                    navigate(`/shot-list?scriptId=${currentScriptId}`);
+                  }}
+                  className="gap-2"
                 >
-                  Adicionar item
+                  <ListChecks className="w-4 h-4" />
+                  Abrir Shot List
                 </Button>
-              ) : (
-                <div className="space-y-2">
-                  {shotList.map((item, index) => (
-                    <div key={index} className="flex gap-2">
-                      <Input
-                        value={item}
-                        onChange={(e) => {
-                          const newList = [...shotList];
-                          newList[index] = e.target.value;
-                          setShotList(newList);
-                        }}
-                        placeholder="Descrição do plano..."
-                        className="flex-1 border-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
-                      />
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setShotList(shotList.filter((_, i) => i !== index))}
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  ))}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShotList([...shotList, ""])}
-                    className="h-8 text-xs text-muted-foreground"
-                  >
-                    + Adicionar mais
-                  </Button>
-                </div>
-              )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Content Editor */}

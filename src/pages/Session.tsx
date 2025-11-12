@@ -155,6 +155,12 @@ const Session = () => {
   const currentStage = STAGES.find(s => s.id === session.stage)!;
   const CurrentIcon = currentStage.icon;
 
+  // If stage is "record", redirect to shot list
+  if (session.stage === "record" && scriptId) {
+    navigate(`/shot-list?scriptId=${scriptId}`);
+    return null;
+  }
+
   // If stage is "script" or "review", show the script editor with floating timer
   if (session.stage === "script" || session.stage === "review") {
     const progress = session.targetSeconds 
