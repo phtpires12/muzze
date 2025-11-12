@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Plus, ChevronLeft, ChevronRight, Lightbulb, Filter } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, Lightbulb, Filter, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -137,6 +137,38 @@ const CalendarioEditorial = () => {
       
       // Reverter mudança em caso de erro
       fetchScripts();
+    }
+  };
+
+  const handleDeleteScript = async (e: React.MouseEvent, scriptId: string) => {
+    e.stopPropagation(); // Prevent opening the script
+    
+    if (!confirm("Tem certeza que deseja excluir este roteiro?")) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('scripts')
+        .delete()
+        .eq('id', scriptId);
+
+      if (error) throw error;
+
+      // Update local state
+      setScripts(scripts.filter(s => s.id !== scriptId));
+
+      toast({
+        title: "Roteiro excluído",
+        description: "O roteiro foi removido com sucesso.",
+      });
+    } catch (error) {
+      console.error('Error deleting script:', error);
+      toast({
+        title: "Erro ao excluir",
+        description: "Não foi possível excluir o roteiro.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -272,11 +304,18 @@ const CalendarioEditorial = () => {
                             key={script.id}
                             draggable
                             onDragStart={(e) => handleDragStart(e, script)}
-                            className={`text-xs p-2 rounded-lg bg-card/80 border border-border/50 cursor-move hover:bg-card hover:border-border hover:shadow-md transition-all ${
+                            className={`group relative text-xs p-2 rounded-lg bg-card/80 border border-border/50 cursor-move hover:bg-card hover:border-border hover:shadow-md transition-all ${
                               draggedScript?.id === script.id ? "opacity-50" : ""
                             }`}
                             onClick={() => handleViewScript(script.id)}
                           >
+                            <button
+                              onClick={(e) => handleDeleteScript(e, script.id)}
+                              className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity bg-destructive/90 hover:bg-destructive text-destructive-foreground rounded p-1 z-10"
+                              title="Excluir roteiro"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
                             <div className="font-semibold truncate mb-1.5 text-foreground">
                               {script.title}
                             </div>
@@ -351,12 +390,19 @@ const CalendarioEditorial = () => {
                             key={script.id}
                             draggable
                             onDragStart={(e) => handleDragStart(e, script)}
-                            className={`p-3 rounded-lg bg-card border border-border cursor-move hover:border-primary/50 hover:shadow-md transition-all ${
+                            className={`group relative p-3 rounded-lg bg-card border border-border cursor-move hover:border-primary/50 hover:shadow-md transition-all ${
                               draggedScript?.id === script.id ? "opacity-50" : ""
                             }`}
                             onClick={() => handleViewScript(script.id)}
                           >
-                            <div className="font-semibold text-sm mb-2">{script.title}</div>
+                            <button
+                              onClick={(e) => handleDeleteScript(e, script.id)}
+                              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-destructive/90 hover:bg-destructive text-destructive-foreground rounded p-1.5 z-10"
+                              title="Excluir roteiro"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                            <div className="font-semibold text-sm mb-2 pr-8">{script.title}</div>
                             <div className="flex flex-wrap gap-1.5 mb-2">
                               {script.content_type && (
                                 <Badge variant="secondary" className="text-xs">
