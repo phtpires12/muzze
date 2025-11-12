@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -17,97 +17,66 @@ import { Badge } from "@/components/ui/badge";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Plus, FileText, ChevronLeft, ChevronRight, Lightbulb } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
-interface ShotItem {
-  id: string;
-  description: string;
-  completed: boolean;
-}
-
-interface CalendarScript {
+interface Script {
   id: string;
   title: string;
-  content: string;
-  date: Date;
-  shotList?: ShotItem[];
+  content: string | null;
+  publish_date: string | null;
+  created_at: string;
+  shot_list: string[];
 }
 
 const CalendarioEditorial = () => {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { toast } = useToast();
   const isIdeationMode = searchParams.get("mode") === "ideation";
   
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<"month" | "week">("month");
-  const [scripts, setScripts] = useState<CalendarScript[]>([]);
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [scriptTitle, setScriptTitle] = useState("");
-  const [scriptContent, setScriptContent] = useState("");
-  const [selectedScript, setSelectedScript] = useState<CalendarScript | null>(null);
-  const [newShotItem, setNewShotItem] = useState("");
+  const [scripts, setScripts] = useState<Script[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
-  const handleCreateScript = () => {
-    if (!scriptTitle.trim() || !selectedDate) return;
+  useEffect(() => {
+    fetchScripts();
+  }, []);
 
-    const newScript: CalendarScript = {
-      id: Date.now().toString(),
-      title: scriptTitle,
-      content: scriptContent,
-      date: selectedDate,
-      shotList: [],
-    };
+  const fetchScripts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('scripts')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-    setScripts([...scripts, newScript]);
-    setScriptTitle("");
-    setScriptContent("");
-    setIsCreateOpen(false);
-  };
+      if (error) throw error;
 
-  const handleAddShotItem = () => {
-    if (!selectedScript || !newShotItem.trim()) return;
-
-    const updatedScripts = scripts.map((script) => {
-      if (script.id === selectedScript.id) {
-        return {
-          ...script,
-          shotList: [
-            ...(script.shotList || []),
-            {
-              id: Date.now().toString(),
-              description: newShotItem,
-              completed: false,
-            },
-          ],
-        };
-      }
-      return script;
-    });
-
-    setScripts(updatedScripts);
-    setNewShotItem("");
-  };
-
-  const toggleShotItem = (scriptId: string, itemId: string) => {
-    const updatedScripts = scripts.map((script) => {
-      if (script.id === scriptId) {
-        return {
-          ...script,
-          shotList: script.shotList?.map((item) =>
-            item.id === itemId ? { ...item, completed: !item.completed } : item
-          ),
-        };
-      }
-      return script;
-    });
-
-    setScripts(updatedScripts);
+      setScripts(data || []);
+    } catch (error) {
+      console.error('Error fetching scripts:', error);
+      toast({
+        title: "Erro ao carregar roteiros",
+        description: "Não foi possível carregar os roteiros.",
+        variant: "destructive",
+      });
+    }
   };
 
   const getScriptsForDate = (checkDate: Date) => {
-    return scripts.filter(
-      (script) =>
-        format(script.date, "yyyy-MM-dd") === format(checkDate, "yyyy-MM-dd")
-    );
+    return scripts.filter((script) => {
+      const scriptDate = script.publish_date || script.created_at;
+      return format(new Date(scriptDate), "yyyy-MM-dd") === format(checkDate, "yyyy-MM-dd");
+    });
+  };
+
+  const handleCreateNewScript = () => {
+    navigate('/session?stage=script');
+  };
+
+  const handleViewScript = (scriptId: string) => {
+    navigate(`/session?stage=script&scriptId=${scriptId}`);
   };
 
   const monthStart = startOfMonth(currentDate);
@@ -132,10 +101,7 @@ const CalendarioEditorial = () => {
         <div className="container mx-auto px-4 py-4">
           <div className="flex justify-between items-center">
             <h1 className="text-2xl font-bold">Calendário Editorial</h1>
-            <Button onClick={() => {
-              setSelectedDate(new Date());
-              setIsCreateOpen(true);
-            }}>
+            <Button onClick={handleCreateNewScript}>
               <Plus className="w-4 h-4 mr-2" />
               Novo Roteiro
             </Button>
@@ -207,10 +173,6 @@ const CalendarioEditorial = () => {
                       className={`min-h-[120px] border-r border-b border-border p-2 ${
                         !isCurrentMonth ? "bg-muted/10" : "bg-card"
                       } ${idx % 7 === 6 ? "border-r-0" : ""}`}
-                      onClick={() => {
-                        setSelectedDate(day);
-                        setIsCreateOpen(true);
-                      }}
                     >
                       <div className={`text-sm font-medium mb-1 ${
                         !isCurrentMonth ? "text-muted-foreground" : isToday ? "text-primary" : "text-foreground"
@@ -223,15 +185,12 @@ const CalendarioEditorial = () => {
                           <div
                             key={script.id}
                             className="text-xs p-1.5 rounded bg-primary/10 border-l-2 border-primary cursor-pointer hover:bg-primary/20 transition-colors"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedScript(script);
-                            }}
+                            onClick={() => handleViewScript(script.id)}
                           >
                             <div className="font-medium truncate">{script.title}</div>
-                            {script.shotList && script.shotList.length > 0 && (
+                            {script.shot_list && script.shot_list.length > 0 && (
                               <div className="text-muted-foreground">
-                                {script.shotList.length} shots
+                                {script.shot_list.length} shots
                               </div>
                             )}
                           </div>
@@ -279,28 +238,21 @@ const CalendarioEditorial = () => {
                     <div
                       key={day.toISOString()}
                       className="min-h-[400px] border-r border-border last:border-r-0 p-3"
-                      onClick={() => {
-                        setSelectedDate(day);
-                        setIsCreateOpen(true);
-                      }}
                     >
                       <div className="space-y-2">
                         {dayScripts.map((script) => (
                           <div
                             key={script.id}
                             className="p-3 rounded-lg bg-primary/10 border-l-4 border-primary cursor-pointer hover:bg-primary/20 transition-colors"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedScript(script);
-                            }}
+                            onClick={() => handleViewScript(script.id)}
                           >
                             <div className="font-semibold text-sm mb-1">{script.title}</div>
                             <div className="text-xs text-muted-foreground line-clamp-2">
                               {script.content}
                             </div>
-                            {script.shotList && script.shotList.length > 0 && (
+                            {script.shot_list && script.shot_list.length > 0 && (
                               <Badge variant="secondary" className="mt-2 text-xs">
-                                {script.shotList.length} shots
+                                {script.shot_list.length} shots
                               </Badge>
                             )}
                           </div>
@@ -314,83 +266,6 @@ const CalendarioEditorial = () => {
           </TabsContent>
         </Tabs>
       </div>
-
-      {/* Create Script Dialog */}
-      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Adicionar Roteiro ao Calendário</DialogTitle>
-            <DialogDescription>
-              Crie um roteiro para {selectedDate ? format(selectedDate, "dd/MM/yyyy", { locale: ptBR }) : "uma data"}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <Input
-              placeholder="Título do roteiro"
-              value={scriptTitle}
-              onChange={(e) => setScriptTitle(e.target.value)}
-            />
-            <Textarea
-              placeholder="Conteúdo do roteiro"
-              value={scriptContent}
-              onChange={(e) => setScriptContent(e.target.value)}
-              rows={6}
-            />
-            <Button onClick={handleCreateScript} className="w-full">
-              Criar Roteiro
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Script Detail with Shot List Dialog */}
-      <Dialog open={!!selectedScript} onOpenChange={() => setSelectedScript(null)}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>{selectedScript?.title}</DialogTitle>
-            <DialogDescription>
-              {selectedScript?.date && format(selectedScript.date, "dd/MM/yyyy", { locale: ptBR })}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <h3 className="font-semibold mb-2">Conteúdo</h3>
-              <p className="text-sm text-muted-foreground">{selectedScript?.content}</p>
-            </div>
-
-            <div>
-              <h3 className="font-semibold mb-2">Shot List</h3>
-              <div className="space-y-2 mb-4">
-                {selectedScript?.shotList?.map((item) => (
-                  <div key={item.id} className="flex items-center gap-2 p-2 rounded-md bg-muted">
-                    <input
-                      type="checkbox"
-                      checked={item.completed}
-                      onChange={() => toggleShotItem(selectedScript.id, item.id)}
-                      className="w-4 h-4"
-                    />
-                    <span className={item.completed ? "line-through text-muted-foreground" : ""}>
-                      {item.description}
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Adicionar item à shot list"
-                  value={newShotItem}
-                  onChange={(e) => setNewShotItem(e.target.value)}
-                  onKeyPress={(e) => e.key === "Enter" && handleAddShotItem()}
-                />
-                <Button onClick={handleAddShotItem} size="icon">
-                  <Plus className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

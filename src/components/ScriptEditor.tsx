@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -8,38 +8,158 @@ import {
   Link as LinkIcon,
   ListChecks,
   Tag,
-  X
+  X,
+  Save,
+  ArrowLeft
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 interface ScriptEditorProps {
   onClose?: () => void;
+  scriptId?: string;
 }
 
-export const ScriptEditor = ({ onClose }: ScriptEditorProps) => {
+export const ScriptEditor = ({ onClose, scriptId }: ScriptEditorProps) => {
+  const { toast } = useToast();
+  const navigate = useNavigate();
   const [title, setTitle] = useState("Novo Roteiro");
   const [content, setContent] = useState("");
   const [references, setReferences] = useState<string[]>([]);
   const [shotList, setShotList] = useState<string[]>([]);
   const [contentType, setContentType] = useState("");
   const [publishDate, setPublishDate] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (scriptId) {
+      loadScript();
+    }
+  }, [scriptId]);
+
+  const loadScript = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('scripts')
+        .select('*')
+        .eq('id', scriptId)
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        setTitle(data.title);
+        setContent(data.content || "");
+        setReferences(data.reference_links || []);
+        setShotList(data.shot_list || []);
+        setContentType(data.content_type || "");
+        setPublishDate(data.publish_date || "");
+      }
+    } catch (error) {
+      console.error('Error loading script:', error);
+      toast({
+        title: "Erro ao carregar roteiro",
+        description: "Não foi possível carregar o roteiro.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
+      const scriptData = {
+        user_id: user.id,
+        title,
+        content,
+        reference_links: references.filter(ref => ref.trim() !== ""),
+        shot_list: shotList.filter(item => item.trim() !== ""),
+        content_type: contentType,
+        publish_date: publishDate || null,
+      };
+
+      if (scriptId) {
+        const { error } = await supabase
+          .from('scripts')
+          .update(scriptData)
+          .eq('id', scriptId);
+
+        if (error) throw error;
+
+        toast({
+          title: "Roteiro atualizado",
+          description: "Seu roteiro foi atualizado com sucesso!",
+        });
+      } else {
+        const { error } = await supabase
+          .from('scripts')
+          .insert(scriptData);
+
+        if (error) throw error;
+
+        toast({
+          title: "Roteiro salvo",
+          description: "Seu roteiro foi salvo com sucesso!",
+        });
+      }
+    } catch (error) {
+      console.error('Error saving script:', error);
+      toast({
+        title: "Erro ao salvar",
+        description: "Não foi possível salvar o roteiro.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleBack = () => {
+    navigate('/calendario-editorial');
+  };
 
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-4xl mx-auto">
-        {/* Header with close button */}
-        {onClose && (
-          <div className="flex justify-end mb-4">
+        {/* Header with action buttons */}
+        <div className="flex justify-between items-center mb-4">
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={handleBack}
+            className="gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Voltar
+          </Button>
+          <div className="flex gap-2">
             <Button 
-              variant="ghost" 
-              size="icon"
-              onClick={onClose}
-              className="rounded-full"
+              variant="default"
+              size="sm"
+              onClick={handleSave}
+              disabled={isSaving}
+              className="gap-2"
             >
-              <X className="w-5 h-5" />
+              <Save className="w-4 h-4" />
+              {isSaving ? "Salvando..." : "Salvar"}
             </Button>
+            {onClose && (
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={onClose}
+                className="rounded-full"
+              >
+                <X className="w-5 h-5" />
+              </Button>
+            )}
           </div>
-        )}
+        </div>
 
         {/* Title */}
         <div className="mb-6">

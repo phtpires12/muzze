@@ -83,6 +83,45 @@ export type Database = {
         }
         Relationships: []
       }
+      scripts: {
+        Row: {
+          content: string | null
+          content_type: string | null
+          created_at: string
+          id: string
+          publish_date: string | null
+          reference_links: string[] | null
+          shot_list: string[] | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content?: string | null
+          content_type?: string | null
+          created_at?: string
+          id?: string
+          publish_date?: string | null
+          reference_links?: string[] | null
+          shot_list?: string[] | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string | null
+          content_type?: string | null
+          created_at?: string
+          id?: string
+          publish_date?: string | null
+          reference_links?: string[] | null
+          shot_list?: string[] | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       settings: {
         Row: {
           created_at: string | null

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useSession, SessionStage } from "@/hooks/useSession";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -36,11 +36,28 @@ const STAGES: { id: SessionStage; label: string; icon: any; color: string }[] = 
 
 const Session = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const stageParam = searchParams.get("stage");
+  const scriptIdParam = searchParams.get("scriptId");
+  
+  const [scriptId, setScriptId] = useState<string | undefined>(scriptIdParam || undefined);
   const { session, startSession, pauseSession, resumeSession, changeStage, endSession } = useSession();
   const [showSummary, setShowSummary] = useState(false);
   const [summary, setSummary] = useState<any>(null);
   const [showStreakHalo, setShowStreakHalo] = useState(false);
   const [streakCount, setStreakCount] = useState(0);
+
+  useEffect(() => {
+    if (stageParam) {
+      startSession(stageParam as SessionStage);
+    }
+  }, [stageParam]);
+
+  useEffect(() => {
+    if (scriptIdParam) {
+      setScriptId(scriptIdParam);
+    }
+  }, [scriptIdParam]);
 
   const formatTime = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
@@ -191,7 +208,7 @@ const Session = () => {
         </div>
 
         {/* Script Editor */}
-        <ScriptEditor />
+        <ScriptEditor scriptId={scriptId} />
       </div>
     );
   }
