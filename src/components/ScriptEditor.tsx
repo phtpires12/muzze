@@ -182,9 +182,9 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
     navigate('/calendario');
   };
 
-  const handleNextStage = () => {
+  const handleNextStage = async () => {
     // Save current changes before advancing
-    handleAutoSave();
+    await handleAutoSave();
     
     // Navigate to next stage based on current mode
     const nextStage = isReviewMode ? 'record' : 'review';
@@ -201,7 +201,14 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
       }
     }
     
-    navigate(`/session?stage=${nextStage}`);
+    // Preserve scriptId in the URL
+    const params = new URLSearchParams(window.location.search);
+    const currentScriptId = scriptId || params.get('scriptId');
+    const url = currentScriptId 
+      ? `/session?stage=${nextStage}&scriptId=${currentScriptId}`
+      : `/session?stage=${nextStage}`;
+    
+    navigate(url);
     
     toast({
       title: `Avançando para ${nextLabel}`,
