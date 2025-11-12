@@ -75,13 +75,11 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
       handleAutoSave();
     }, 5000);
 
-    // Cleanup on unmount - force save before component unmounts
+    // Cleanup - only clear timer, DON'T call handleAutoSave (state may be stale)
     return () => {
       if (autoSaveTimer.current) {
         clearTimeout(autoSaveTimer.current);
       }
-      // Force final save on unmount
-      handleAutoSave();
     };
   }, [title, content, references, contentType, publishDate]);
 
