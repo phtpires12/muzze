@@ -29,6 +29,7 @@ const CalendarioEditorial = () => {
   const [viewMode, setViewMode] = useState<"month" | "week">("month");
   const [scripts, setScripts] = useState<Script[]>([]);
   const [draggedScript, setDraggedScript] = useState<Script | null>(null);
+  const [dragOverDate, setDragOverDate] = useState<string | null>(null);
 
   useEffect(() => {
     fetchScripts();
@@ -74,19 +75,35 @@ const CalendarioEditorial = () => {
     e.dataTransfer.effectAllowed = "move";
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = (e: React.DragEvent, targetDate: Date) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
+    setDragOverDate(format(targetDate, "yyyy-MM-dd"));
+  };
+
+  const handleDragLeave = () => {
+    setDragOverDate(null);
   };
 
   const handleDrop = async (e: React.DragEvent, targetDate: Date) => {
     e.preventDefault();
+    setDragOverDate(null);
     
     if (!draggedScript) return;
 
+    const newPublishDate = format(targetDate, "yyyy-MM-dd");
+    
+    // Atualizar imediatamente a interface
+    const updatedScripts = scripts.map(s => 
+      s.id === draggedScript.id 
+        ? { ...s, publish_date: newPublishDate }
+        : s
+    );
+    setScripts(updatedScripts);
+    setDraggedScript(null);
+
+    // Atualizar no banco de dados
     try {
-      const newPublishDate = format(targetDate, "yyyy-MM-dd");
-      
       const { error } = await supabase
         .from('scripts')
         .update({ publish_date: newPublishDate })
@@ -98,15 +115,6 @@ const CalendarioEditorial = () => {
         title: "Data atualizada",
         description: "A data de publicação foi alterada com sucesso!",
       });
-
-      // Atualizar a lista local
-      setScripts(scripts.map(s => 
-        s.id === draggedScript.id 
-          ? { ...s, publish_date: newPublishDate }
-          : s
-      ));
-      
-      setDraggedScript(null);
     } catch (error) {
       console.error('Error updating script date:', error);
       toast({
@@ -114,6 +122,9 @@ const CalendarioEditorial = () => {
         description: "Não foi possível alterar a data de publicação.",
         variant: "destructive",
       });
+      
+      // Reverter mudança em caso de erro
+      fetchScripts();
     }
   };
 
@@ -205,13 +216,18 @@ const CalendarioEditorial = () => {
                   const isCurrentMonth = isSameMonth(day, currentDate);
                   const isToday = isSameDay(day, new Date());
 
+                  const isDragOver = dragOverDate === format(day, "yyyy-MM-dd");
+                  
                   return (
                     <div
                       key={idx}
-                      className={`min-h-[120px] border-r border-b border-border p-2 ${
+                      className={`min-h-[120px] border-r border-b border-border p-2 transition-all ${
                         !isCurrentMonth ? "bg-muted/10" : "bg-card"
-                      } ${idx % 7 === 6 ? "border-r-0" : ""}`}
-                      onDragOver={handleDragOver}
+                      } ${idx % 7 === 6 ? "border-r-0" : ""} ${
+                        isDragOver ? "bg-primary/20 ring-2 ring-primary ring-inset shadow-lg" : ""
+                      }`}
+                      onDragOver={(e) => handleDragOver(e, day)}
+                      onDragLeave={handleDragLeave}
                       onDrop={(e) => handleDrop(e, day)}
                     >
                       <div className={`text-sm font-medium mb-1 ${
@@ -226,7 +242,9 @@ const CalendarioEditorial = () => {
                             key={script.id}
                             draggable
                             onDragStart={(e) => handleDragStart(e, script)}
-                            className="text-xs p-1.5 rounded bg-primary/10 border-l-2 border-primary cursor-move hover:bg-primary/20 transition-colors"
+                            className={`text-xs p-1.5 rounded bg-primary/10 border-l-2 border-primary cursor-move hover:bg-primary/20 transition-all ${
+                              draggedScript?.id === script.id ? "opacity-50" : ""
+                            }`}
                             onClick={() => handleViewScript(script.id)}
                           >
                             <div className="font-medium truncate">{script.title}</div>
@@ -276,11 +294,16 @@ const CalendarioEditorial = () => {
                 {weekDays.map((day) => {
                   const dayScripts = getScriptsForDate(day);
 
+                  const isDragOver = dragOverDate === format(day, "yyyy-MM-dd");
+                  
                   return (
                     <div
                       key={day.toISOString()}
-                      className="min-h-[400px] border-r border-border last:border-r-0 p-3"
-                      onDragOver={handleDragOver}
+                      className={`min-h-[400px] border-r border-border last:border-r-0 p-3 transition-all ${
+                        isDragOver ? "bg-primary/20 ring-2 ring-primary ring-inset shadow-lg" : ""
+                      }`}
+                      onDragOver={(e) => handleDragOver(e, day)}
+                      onDragLeave={handleDragLeave}
                       onDrop={(e) => handleDrop(e, day)}
                     >
                       <div className="space-y-2">
@@ -289,7 +312,9 @@ const CalendarioEditorial = () => {
                             key={script.id}
                             draggable
                             onDragStart={(e) => handleDragStart(e, script)}
-                            className="p-3 rounded-lg bg-primary/10 border-l-4 border-primary cursor-move hover:bg-primary/20 transition-colors"
+                            className={`p-3 rounded-lg bg-primary/10 border-l-4 border-primary cursor-move hover:bg-primary/20 transition-all ${
+                              draggedScript?.id === script.id ? "opacity-50" : ""
+                            }`}
                             onClick={() => handleViewScript(script.id)}
                           >
                             <div className="font-semibold text-sm mb-1">{script.title}</div>
