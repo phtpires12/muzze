@@ -2,8 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Plus, Trash2, Camera, Upload, GripVertical, X, Split, RotateCcw } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Camera, Upload, GripVertical, X, RotateCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -33,15 +32,16 @@ interface ShotItem {
   sectionName?: string; // Nome da seção (Gancho, Setup, etc.)
 }
 
-const SortableRow = ({ shot, index, onUpdate, onRemove, onImageUpload, onSplit }: {
+const SortableRow = ({ shot, index, onUpdate, onRemove, onImageUpload, onSplitAtCursor }: {
   shot: ShotItem;
   index: number;
   onUpdate: (id: string, field: keyof ShotItem, value: string) => void;
   onRemove: (id: string) => void;
   onImageUpload: (id: string, file: File) => void;
-  onSplit: (id: string) => void;
+  onSplitAtCursor: (id: string, cursorPosition: number) => void;
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const editableDivRef = useRef<HTMLDivElement>(null);
   const {
     attributes,
     listeners,
@@ -87,6 +87,28 @@ const SortableRow = ({ shot, index, onUpdate, onRemove, onImageUpload, onSplit }
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      
+      const selection = window.getSelection();
+      if (!selection || !editableDivRef.current) return;
+      
+      const range = selection.getRangeAt(0);
+      const preCaretRange = range.cloneRange();
+      preCaretRange.selectNodeContents(editableDivRef.current);
+      preCaretRange.setEnd(range.endContainer, range.endOffset);
+      const cursorPosition = preCaretRange.toString().length;
+      
+      onSplitAtCursor(shot.id, cursorPosition);
+    }
+  };
+
+  const handleInput = (e: React.FormEvent<HTMLDivElement>) => {
+    const newText = e.currentTarget.textContent || '';
+    onUpdate(shot.id, 'scriptSegment', newText);
+  };
+
   return (
     <tr ref={setNodeRef} style={style} className="border-t border-border hover:bg-muted/20">
       <td className="p-4 w-12">
@@ -104,21 +126,17 @@ const SortableRow = ({ shot, index, onUpdate, onRemove, onImageUpload, onSplit }
               {shot.sectionName}
             </span>
           )}
-          <Textarea
-            value={shot.scriptSegment}
-            onChange={(e) => onUpdate(shot.id, 'scriptSegment', e.target.value)}
-            placeholder="Texto do roteiro..."
-            className="min-h-[80px] text-sm resize-y"
-          />
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onSplit(shot.id)}
-            className="gap-2 self-start text-xs"
+          <div
+            ref={editableDivRef}
+            contentEditable
+            onInput={handleInput}
+            onKeyDown={handleKeyDown}
+            suppressContentEditableWarning
+            className="min-h-[80px] text-sm p-3 rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 whitespace-pre-wrap"
           >
-            <Split className="w-3 h-3" />
-            Dividir aqui
-          </Button>
+            {shot.scriptSegment}
+          </div>
+          <span className="text-xs text-muted-foreground">Pressione Enter para dividir</span>
         </div>
       </td>
       <td className="p-4">
@@ -200,6 +218,8 @@ const ShotList = () => {
   const [shots, setShots] = useState<ShotItem[]>([]);
   const [scriptContent, setScriptContent] = useState<string>("");
   const [isUploading, setIsUploading] = useState(false);
+  const [history, setHistory] = useState<ShotItem[][]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -214,6 +234,43 @@ const ShotList = () => {
       loadScriptContent();
     }
   }, [scriptId]);
+
+  // Undo/Redo com Ctrl+Z e Ctrl+Shift+Z
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        handleUndo();
+      } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'z') {
+        e.preventDefault();
+        handleRedo();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [historyIndex, history]);
+
+  const saveToHistory = (newShots: ShotItem[]) => {
+    const newHistory = history.slice(0, historyIndex + 1);
+    newHistory.push(JSON.parse(JSON.stringify(newShots)));
+    setHistory(newHistory);
+    setHistoryIndex(newHistory.length - 1);
+  };
+
+  const handleUndo = () => {
+    if (historyIndex > 0) {
+      setHistoryIndex(historyIndex - 1);
+      setShots(JSON.parse(JSON.stringify(history[historyIndex - 1])));
+    }
+  };
+
+  const handleRedo = () => {
+    if (historyIndex < history.length - 1) {
+      setHistoryIndex(historyIndex + 1);
+      setShots(JSON.parse(JSON.stringify(history[historyIndex + 1])));
+    }
+  };
 
   // Auto-save functionality
   useEffect(() => {
@@ -339,6 +396,7 @@ const ShotList = () => {
           }
         });
         setShots(parsedShots);
+        saveToHistory(parsedShots);
       } else {
         // Gerar automaticamente por parágrafos se não existir shot list
         const paragraphs = parseScriptIntoParagraphs(data.content);
@@ -353,6 +411,7 @@ const ShotList = () => {
             sectionName: p.sectionName
           }));
           setShots(generatedShots);
+          saveToHistory(generatedShots);
         }
       }
     } catch (error) {
@@ -398,41 +457,27 @@ const ShotList = () => {
   };
 
   const addShot = () => {
-    setShots([...shots, {
+    const newShots = [...shots, {
       id: crypto.randomUUID(),
       scriptSegment: "",
       scene: "",
       shotImageUrl: "",
       location: "",
       sectionName: ""
-    }]);
+    }];
+    setShots(newShots);
+    saveToHistory(newShots);
   };
 
-  const splitShot = (id: string) => {
+  const splitShotAtCursor = (id: string, cursorPosition: number) => {
     const shotIndex = shots.findIndex(s => s.id === id);
     if (shotIndex === -1) return;
     
     const shot = shots[shotIndex];
     const text = shot.scriptSegment;
     
-    // Encontrar ponto de divisão (meio do texto)
-    const midPoint = Math.floor(text.length / 2);
-    
-    // Tentar dividir em uma quebra de linha ou espaço próximo
-    let splitPoint = text.lastIndexOf('\n', midPoint);
-    if (splitPoint === -1 || Math.abs(splitPoint - midPoint) > text.length * 0.3) {
-      splitPoint = text.lastIndexOf('. ', midPoint);
-      if (splitPoint !== -1) splitPoint += 2; // Incluir o ponto e espaço
-    }
-    if (splitPoint === -1 || splitPoint === 0) {
-      splitPoint = text.lastIndexOf(' ', midPoint);
-    }
-    if (splitPoint === -1 || splitPoint === 0) {
-      splitPoint = midPoint;
-    }
-    
-    const firstPart = text.substring(0, splitPoint).trim();
-    const secondPart = text.substring(splitPoint).trim();
+    const firstPart = text.substring(0, cursorPosition).trim();
+    const secondPart = text.substring(cursorPosition).trim();
     
     if (!firstPart || !secondPart) {
       toast({
@@ -459,6 +504,7 @@ const ShotList = () => {
     });
     
     setShots(newShots);
+    saveToHistory(newShots);
     
     toast({
       title: "Linha dividida",
@@ -488,6 +534,7 @@ const ShotList = () => {
         sectionName: p.sectionName
       }));
       setShots(generatedShots);
+      saveToHistory(generatedShots);
       
       toast({
         title: "Shot List regenerada",
@@ -497,13 +544,17 @@ const ShotList = () => {
   };
 
   const removeShot = (id: string) => {
-    setShots(shots.filter(shot => shot.id !== id));
+    const newShots = shots.filter(shot => shot.id !== id);
+    setShots(newShots);
+    saveToHistory(newShots);
   };
 
   const updateShot = (id: string, field: keyof ShotItem, value: string) => {
-    setShots(shots.map(shot => 
+    const newShots = shots.map(shot => 
       shot.id === id ? { ...shot, [field]: value } : shot
-    ));
+    );
+    setShots(newShots);
+    saveToHistory(newShots);
   };
 
   const handleImageUpload = async (shotId: string, file: File) => {
@@ -552,7 +603,9 @@ const ShotList = () => {
         const oldIndex = items.findIndex((item) => item.id === active.id);
         const newIndex = items.findIndex((item) => item.id === over.id);
 
-        return arrayMove(items, oldIndex, newIndex);
+        const newShots = arrayMove(items, oldIndex, newIndex);
+        saveToHistory(newShots);
+        return newShots;
       });
     }
   };
@@ -624,7 +677,7 @@ const ShotList = () => {
                         onUpdate={updateShot}
                         onRemove={removeShot}
                         onImageUpload={handleImageUpload}
-                        onSplit={splitShot}
+                        onSplitAtCursor={splitShotAtCursor}
                       />
                     ))
                   ) : (
