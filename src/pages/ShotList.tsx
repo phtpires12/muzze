@@ -111,15 +111,15 @@ const SortableRow = ({ shot, index, onUpdate, onRemove, onImageUpload, onSplitAt
 
   return (
     <tr ref={setNodeRef} style={style} className="border-t border-border hover:bg-muted/20">
-      <td className="p-4 w-12">
-        <div className="flex flex-col gap-2">
+      <td className="p-4 w-20">
+        <div className="flex flex-col gap-2 items-center">
           <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
             <GripVertical className="w-5 h-5 text-muted-foreground" />
           </div>
           <span className="text-xs text-muted-foreground font-mono">#{index + 1}</span>
         </div>
       </td>
-      <td className="p-4">
+      <td className="p-4 w-80">
         <div className="flex flex-col gap-2">
           {shot.sectionName && (
             <span className="text-xs font-semibold text-primary uppercase tracking-wide">
@@ -132,22 +132,22 @@ const SortableRow = ({ shot, index, onUpdate, onRemove, onImageUpload, onSplitAt
             onInput={handleInput}
             onKeyDown={handleKeyDown}
             suppressContentEditableWarning
-            className="min-h-[80px] text-sm p-3 rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 whitespace-pre-wrap"
+            className="min-h-[80px] max-h-[160px] overflow-y-auto text-sm p-3 rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 whitespace-pre-wrap"
           >
             {shot.scriptSegment}
           </div>
           <span className="text-xs text-muted-foreground">Pressione Enter para dividir</span>
         </div>
       </td>
-      <td className="p-4">
+      <td className="p-4 w-48">
         <Input
           value={shot.scene}
           onChange={(e) => onUpdate(shot.id, 'scene', e.target.value)}
           placeholder="Ex: Tarde na garagem"
-          className="border-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-sm"
+          className="text-sm"
         />
       </td>
-      <td className="p-4">
+      <td className="p-4 w-48">
         <div className="flex flex-col gap-2">
           <input
             ref={fileInputRef}
@@ -186,12 +186,12 @@ const SortableRow = ({ shot, index, onUpdate, onRemove, onImageUpload, onSplitAt
           )}
         </div>
       </td>
-      <td className="p-4">
+      <td className="p-4 w-48">
         <Input
           value={shot.location}
           onChange={(e) => onUpdate(shot.id, 'location', e.target.value)}
           placeholder="Ex: Tarde no quarto"
-          className="border-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-sm"
+          className="text-sm"
         />
       </td>
       <td className="p-4">
@@ -669,16 +669,16 @@ const ShotList = () => {
           collisionDetection={closestCenter}
           onDragEnd={handleDragEnd}
         >
-          <div className="border border-border rounded-lg overflow-hidden">
-            <table className="w-full">
+          <div className="border border-border rounded-lg overflow-x-auto">
+            <table className="w-full table-fixed">
               <thead className="bg-muted/50">
                 <tr>
-                  <th className="w-12"></th>
-                  <th className="text-left p-4 font-semibold text-sm">Roteiro</th>
+                  <th className="w-20"></th>
+                  <th className="text-left p-4 font-semibold text-sm w-80">Roteiro</th>
                   <th className="text-left p-4 font-semibold text-sm w-48">Cena</th>
-                  <th className="text-left p-4 font-semibold text-sm w-40">Plano (Imagem)</th>
+                  <th className="text-left p-4 font-semibold text-sm w-48">Plano (Imagem)</th>
                   <th className="text-left p-4 font-semibold text-sm w-48">Local</th>
-                  <th className="w-12"></th>
+                  <th className="w-20"></th>
                 </tr>
               </thead>
               <tbody>
