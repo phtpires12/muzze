@@ -9,11 +9,12 @@ interface SessionState {
   isActive: boolean;
   isPaused: boolean;
   stage: SessionStage;
-  elapsedSeconds: number;
+  elapsedSeconds: number; // Timer for current stage only
+  totalElapsedSeconds: number; // Timer for entire session
   startedAt: Date | null;
   sessionId: string | null;
-  targetSeconds: number | null; // Target time based on average of last 3 sessions
-  isOvertime: boolean; // Whether user exceeded the target time
+  targetSeconds: number | null; // Target time based on average of last 3 sessions for current stage
+  isOvertime: boolean; // Whether user exceeded the target time for current stage
 }
 
 export const useSession = () => {
@@ -23,6 +24,7 @@ export const useSession = () => {
     isPaused: false,
     stage: "ideation",
     elapsedSeconds: 0,
+    totalElapsedSeconds: 0,
     startedAt: null,
     sessionId: null,
     targetSeconds: null,
@@ -33,12 +35,13 @@ export const useSession = () => {
   const currentStageStartRef = useRef<Date | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Timer tick
+  // Timer tick - increments both stage timer and total session timer
   useEffect(() => {
     if (session.isActive && !session.isPaused) {
       intervalRef.current = setInterval(() => {
         setSession(prev => {
           const newElapsedSeconds = prev.elapsedSeconds + 1;
+          const newTotalElapsedSeconds = prev.totalElapsedSeconds + 1;
           const isOvertime = prev.targetSeconds !== null && newElapsedSeconds > prev.targetSeconds;
           
           // Trigger alarm when just crossed the target time
@@ -49,6 +52,7 @@ export const useSession = () => {
           return {
             ...prev,
             elapsedSeconds: newElapsedSeconds,
+            totalElapsedSeconds: newTotalElapsedSeconds,
             isOvertime,
           };
         });
@@ -110,6 +114,7 @@ export const useSession = () => {
         isPaused: false,
         stage: initialStage,
         elapsedSeconds: 0,
+        totalElapsedSeconds: 0,
         startedAt: now,
         sessionId: crypto.randomUUID(),
         targetSeconds,
@@ -188,12 +193,13 @@ export const useSession = () => {
         targetSeconds = Math.floor(totalSeconds / recentSessions.length);
       }
 
-      // Start new stage
+      // Start new stage - reset stage timer but keep total session timer running
       currentStageStartRef.current = new Date();
       setSession(prev => ({ 
         ...prev, 
         stage: newStage,
-        elapsedSeconds: 0,
+        elapsedSeconds: 0, // Reset stage timer
+        // totalElapsedSeconds keeps running
         targetSeconds,
         isOvertime: false,
       }));
@@ -235,9 +241,9 @@ export const useSession = () => {
         });
       }
 
-      // Award XP based on session duration
+      // Award XP based on total session duration
       const stats = getUserStats();
-      const sessionMinutes = session.elapsedSeconds / 60;
+      const sessionMinutes = session.totalElapsedSeconds / 60;
       
       // Add to total hours
       stats.totalHours += sessionMinutes / 60;
@@ -263,7 +269,7 @@ export const useSession = () => {
         user_id: user.id,
         event: 'session_completed',
         payload: { 
-          duration_seconds: session.elapsedSeconds,
+          duration_seconds: session.totalElapsedSeconds,
           final_stage: session.stage,
           xp_gained: Math.floor(xpGained)
         }
@@ -273,7 +279,7 @@ export const useSession = () => {
       const streakResult = await updateStreak(user.id, sessionMinutes);
 
       const summary = {
-        duration: session.elapsedSeconds,
+        duration: session.totalElapsedSeconds,
         stage: session.stage,
         xpGained: Math.floor(xpGained),
         streakAchieved: streakResult.streakAchieved || false,
@@ -287,6 +293,7 @@ export const useSession = () => {
         isPaused: false,
         stage: "ideation",
         elapsedSeconds: 0,
+        totalElapsedSeconds: 0,
         startedAt: null,
         sessionId: null,
         targetSeconds: null,
