@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Plus, Trash2, Camera, Upload, GripVertical, X } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { ArrowLeft, Plus, Trash2, Camera, Upload, GripVertical, X, Split, RotateCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -25,18 +26,20 @@ import { CSS } from '@dnd-kit/utilities';
 
 interface ShotItem {
   id: string;
-  script: string;
+  scriptSegment: string; // Apenas o trecho específico do roteiro desta linha
   scene: string;
   shotImageUrl: string;
   location: string;
+  sectionName?: string; // Nome da seção (Gancho, Setup, etc.)
 }
 
-const SortableRow = ({ shot, index, onUpdate, onRemove, onImageUpload }: {
+const SortableRow = ({ shot, index, onUpdate, onRemove, onImageUpload, onSplit }: {
   shot: ShotItem;
   index: number;
   onUpdate: (id: string, field: keyof ShotItem, value: string) => void;
   onRemove: (id: string) => void;
   onImageUpload: (id: string, file: File) => void;
+  onSplit: (id: string) => void;
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const {
@@ -87,15 +90,35 @@ const SortableRow = ({ shot, index, onUpdate, onRemove, onImageUpload }: {
   return (
     <tr ref={setNodeRef} style={style} className="border-t border-border hover:bg-muted/20">
       <td className="p-4 w-12">
-        <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
-          <GripVertical className="w-5 h-5 text-muted-foreground" />
+        <div className="flex flex-col gap-2">
+          <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
+            <GripVertical className="w-5 h-5 text-muted-foreground" />
+          </div>
+          <span className="text-xs text-muted-foreground font-mono">#{index + 1}</span>
         </div>
       </td>
       <td className="p-4">
-        <div className="text-sm text-muted-foreground whitespace-pre-wrap">
-          {shot.script && shot.script.trim() && !shot.script.startsWith('{') 
-            ? shot.script 
-            : "Roteiro não carregado"}
+        <div className="flex flex-col gap-2">
+          {shot.sectionName && (
+            <span className="text-xs font-semibold text-primary uppercase tracking-wide">
+              {shot.sectionName}
+            </span>
+          )}
+          <Textarea
+            value={shot.scriptSegment}
+            onChange={(e) => onUpdate(shot.id, 'scriptSegment', e.target.value)}
+            placeholder="Texto do roteiro..."
+            className="min-h-[80px] text-sm resize-y"
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onSplit(shot.id)}
+            className="gap-2 self-start text-xs"
+          >
+            <Split className="w-3 h-3" />
+            Dividir aqui
+          </Button>
         </div>
       </td>
       <td className="p-4">
@@ -174,13 +197,7 @@ const ShotList = () => {
   const { toast } = useToast();
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout>();
   
-  const [shots, setShots] = useState<ShotItem[]>([{
-    id: crypto.randomUUID(),
-    script: "",
-    scene: "",
-    shotImageUrl: "",
-    location: ""
-  }]);
+  const [shots, setShots] = useState<ShotItem[]>([]);
   const [scriptContent, setScriptContent] = useState<string>("");
   const [isUploading, setIsUploading] = useState(false);
 
@@ -217,6 +234,54 @@ const ShotList = () => {
     };
   }, [shots, scriptId]);
 
+  // Função para quebrar o roteiro em parágrafos
+  const parseScriptIntoParagraphs = (content: string): Array<{ sectionName: string; paragraph: string }> => {
+    const paragraphs: Array<{ sectionName: string; paragraph: string }> = [];
+    
+    try {
+      const parsedContent = JSON.parse(content);
+      
+      const sections = [
+        { name: 'Gancho', content: parsedContent.gancho },
+        { name: 'Setup', content: parsedContent.setup },
+        { name: 'Desenvolvimento', content: parsedContent.desenvolvimento },
+        { name: 'Conclusão', content: parsedContent.conclusao }
+      ];
+      
+      sections.forEach(section => {
+        if (section.content && section.content.trim()) {
+          // Dividir por parágrafos (quebras de linha duplas ou simples)
+          const sectionParagraphs = section.content
+            .split(/\n\n+/)
+            .map(p => p.trim())
+            .filter(p => p.length > 0);
+          
+          sectionParagraphs.forEach(paragraph => {
+            paragraphs.push({
+              sectionName: section.name,
+              paragraph: paragraph
+            });
+          });
+        }
+      });
+    } catch {
+      // Se não for JSON, dividir por parágrafos simples
+      const simpleParagraphs = content
+        .split(/\n\n+/)
+        .map(p => p.trim())
+        .filter(p => p.length > 0);
+      
+      simpleParagraphs.forEach(paragraph => {
+        paragraphs.push({
+          sectionName: '',
+          paragraph: paragraph
+        });
+      });
+    }
+    
+    return paragraphs;
+  };
+
   const loadScriptContent = async () => {
     try {
       const { data, error } = await supabase
@@ -228,21 +293,7 @@ const ShotList = () => {
       if (error) throw error;
 
       if (data?.content) {
-        // Parse JSON content if it's structured
-        try {
-          const parsedContent = JSON.parse(data.content);
-          // Concatenate all sections into readable text
-          const sections = [];
-          if (parsedContent.gancho && parsedContent.gancho.trim()) sections.push(`Gancho: ${parsedContent.gancho}`);
-          if (parsedContent.setup && parsedContent.setup.trim()) sections.push(`Setup: ${parsedContent.setup}`);
-          if (parsedContent.desenvolvimento && parsedContent.desenvolvimento.trim()) sections.push(`Desenvolvimento: ${parsedContent.desenvolvimento}`);
-          if (parsedContent.conclusao && parsedContent.conclusao.trim()) sections.push(`Conclusão: ${parsedContent.conclusao}`);
-          
-          setScriptContent(sections.join('\n\n'));
-        } catch {
-          // If not JSON, use as plain text
-          setScriptContent(data.content);
-        }
+        setScriptContent(data.content);
       }
     } catch (error) {
       console.error('Error loading script content:', error);
@@ -259,55 +310,49 @@ const ShotList = () => {
 
       if (error) throw error;
 
-      // Parse script content - sempre buscar a versão mais recente do banco
-      let formattedScript = "";
-      if (data?.content) {
-        try {
-          const parsedContent = JSON.parse(data.content);
-          const sections = [];
-          if (parsedContent.gancho && parsedContent.gancho.trim()) sections.push(`Gancho: ${parsedContent.gancho}`);
-          if (parsedContent.setup && parsedContent.setup.trim()) sections.push(`Setup: ${parsedContent.setup}`);
-          if (parsedContent.desenvolvimento && parsedContent.desenvolvimento.trim()) sections.push(`Desenvolvimento: ${parsedContent.desenvolvimento}`);
-          if (parsedContent.conclusao && parsedContent.conclusao.trim()) sections.push(`Conclusão: ${parsedContent.conclusao}`);
-          formattedScript = sections.join('\n\n');
-        } catch {
-          formattedScript = data.content;
-        }
-      }
+      if (!data?.content) return;
 
-      // Atualizar o estado do scriptContent também para sincronizar
-      setScriptContent(formattedScript);
+      setScriptContent(data.content);
 
       if (data?.shot_list && data.shot_list.length > 0) {
+        // Carregar shot list existente
         const parsedShots = data.shot_list.map((item: string) => {
           try {
             const parsedShot = JSON.parse(item);
-            // SEMPRE atualizar com o script mais recente do banco
             return {
-              ...parsedShot,
-              script: formattedScript
+              id: parsedShot.id || crypto.randomUUID(),
+              scriptSegment: parsedShot.scriptSegment || parsedShot.script || "",
+              scene: parsedShot.scene || "",
+              shotImageUrl: parsedShot.shotImageUrl || "",
+              location: parsedShot.location || "",
+              sectionName: parsedShot.sectionName || ""
             };
           } catch {
             return {
               id: crypto.randomUUID(),
-              script: formattedScript,
+              scriptSegment: "",
               scene: "",
               shotImageUrl: "",
-              location: ""
+              location: "",
+              sectionName: ""
             };
           }
         });
         setShots(parsedShots);
       } else {
-        // Initialize with script content if no shot list exists (only if there's content)
-        if (formattedScript.trim()) {
-          setShots([{
+        // Gerar automaticamente por parágrafos se não existir shot list
+        const paragraphs = parseScriptIntoParagraphs(data.content);
+        
+        if (paragraphs.length > 0) {
+          const generatedShots = paragraphs.map(p => ({
             id: crypto.randomUUID(),
-            script: formattedScript,
+            scriptSegment: p.paragraph,
             scene: "",
             shotImageUrl: "",
-            location: ""
-          }]);
+            location: "",
+            sectionName: p.sectionName
+          }));
+          setShots(generatedShots);
         }
       }
     } catch (error) {
@@ -317,13 +362,14 @@ const ShotList = () => {
 
   const handleSave = async (isAutoSave = false) => {
     try {
-      // Salvar apenas os campos editáveis, NÃO salvar o script
+      // Salvar apenas os campos editáveis da shot list
       const shotListData = shots.map(shot => JSON.stringify({
         id: shot.id,
+        scriptSegment: shot.scriptSegment,
         scene: shot.scene,
         shotImageUrl: shot.shotImageUrl,
-        location: shot.location
-        // NÃO incluir 'script' aqui - ele será sempre carregado do banco
+        location: shot.location,
+        sectionName: shot.sectionName
       }));
 
       const { error } = await supabase
@@ -354,11 +400,100 @@ const ShotList = () => {
   const addShot = () => {
     setShots([...shots, {
       id: crypto.randomUUID(),
-      script: scriptContent,
+      scriptSegment: "",
       scene: "",
       shotImageUrl: "",
-      location: ""
+      location: "",
+      sectionName: ""
     }]);
+  };
+
+  const splitShot = (id: string) => {
+    const shotIndex = shots.findIndex(s => s.id === id);
+    if (shotIndex === -1) return;
+    
+    const shot = shots[shotIndex];
+    const text = shot.scriptSegment;
+    
+    // Encontrar ponto de divisão (meio do texto)
+    const midPoint = Math.floor(text.length / 2);
+    
+    // Tentar dividir em uma quebra de linha ou espaço próximo
+    let splitPoint = text.lastIndexOf('\n', midPoint);
+    if (splitPoint === -1 || Math.abs(splitPoint - midPoint) > text.length * 0.3) {
+      splitPoint = text.lastIndexOf('. ', midPoint);
+      if (splitPoint !== -1) splitPoint += 2; // Incluir o ponto e espaço
+    }
+    if (splitPoint === -1 || splitPoint === 0) {
+      splitPoint = text.lastIndexOf(' ', midPoint);
+    }
+    if (splitPoint === -1 || splitPoint === 0) {
+      splitPoint = midPoint;
+    }
+    
+    const firstPart = text.substring(0, splitPoint).trim();
+    const secondPart = text.substring(splitPoint).trim();
+    
+    if (!firstPart || !secondPart) {
+      toast({
+        title: "Não foi possível dividir",
+        description: "O texto é muito curto para ser dividido.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const newShots = [...shots];
+    newShots[shotIndex] = {
+      ...shot,
+      scriptSegment: firstPart
+    };
+    
+    newShots.splice(shotIndex + 1, 0, {
+      id: crypto.randomUUID(),
+      scriptSegment: secondPart,
+      scene: shot.scene,
+      shotImageUrl: "",
+      location: shot.location,
+      sectionName: shot.sectionName
+    });
+    
+    setShots(newShots);
+    
+    toast({
+      title: "Linha dividida",
+      description: "Uma nova linha foi criada com sucesso.",
+    });
+  };
+
+  const regenerateFromScript = async () => {
+    if (!scriptContent) {
+      toast({
+        title: "Roteiro não encontrado",
+        description: "Carregue um roteiro antes de regenerar.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const paragraphs = parseScriptIntoParagraphs(scriptContent);
+    
+    if (paragraphs.length > 0) {
+      const generatedShots = paragraphs.map(p => ({
+        id: crypto.randomUUID(),
+        scriptSegment: p.paragraph,
+        scene: "",
+        shotImageUrl: "",
+        location: "",
+        sectionName: p.sectionName
+      }));
+      setShots(generatedShots);
+      
+      toast({
+        title: "Shot List regenerada",
+        description: `${generatedShots.length} linhas criadas a partir do roteiro.`,
+      });
+    }
   };
 
   const removeShot = (id: string) => {
@@ -438,6 +573,14 @@ const ShotList = () => {
 
           <div className="flex gap-2 items-center">
             <span className="text-xs text-muted-foreground">Auto-save a cada 30s</span>
+            <Button 
+              variant="outline" 
+              onClick={regenerateFromScript}
+              className="gap-2"
+            >
+              <RotateCcw className="w-4 h-4" />
+              Regenerar do Roteiro
+            </Button>
             <Button onClick={() => handleSave(false)} className="gap-2">
               Salvar Shot List
             </Button>
@@ -472,16 +615,25 @@ const ShotList = () => {
               </thead>
               <tbody>
                 <SortableContext items={shots.map(s => s.id)} strategy={verticalListSortingStrategy}>
-                  {shots.map((shot, index) => (
-                    <SortableRow
-                      key={shot.id}
-                      shot={shot}
-                      index={index}
-                      onUpdate={updateShot}
-                      onRemove={removeShot}
-                      onImageUpload={handleImageUpload}
-                    />
-                  ))}
+                  {shots.length > 0 ? (
+                    shots.map((shot, index) => (
+                      <SortableRow
+                        key={shot.id}
+                        shot={shot}
+                        index={index}
+                        onUpdate={updateShot}
+                        onRemove={removeShot}
+                        onImageUpload={handleImageUpload}
+                        onSplit={splitShot}
+                      />
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={6} className="p-8 text-center text-muted-foreground">
+                        Nenhuma linha criada. Clique em "Adicionar Linha" ou "Regenerar do Roteiro".
+                      </td>
+                    </tr>
+                  )}
                 </SortableContext>
               </tbody>
             </table>
