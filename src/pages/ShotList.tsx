@@ -259,7 +259,7 @@ const ShotList = () => {
 
       if (error) throw error;
 
-      // Parse script content
+      // Parse script content - sempre buscar a versão mais recente do banco
       let formattedScript = "";
       if (data?.content) {
         try {
@@ -275,11 +275,14 @@ const ShotList = () => {
         }
       }
 
+      // Atualizar o estado do scriptContent também para sincronizar
+      setScriptContent(formattedScript);
+
       if (data?.shot_list && data.shot_list.length > 0) {
         const parsedShots = data.shot_list.map((item: string) => {
           try {
             const parsedShot = JSON.parse(item);
-            // SEMPRE atualizar com o script mais recente
+            // SEMPRE atualizar com o script mais recente do banco
             return {
               ...parsedShot,
               script: formattedScript
@@ -314,9 +317,14 @@ const ShotList = () => {
 
   const handleSave = async (isAutoSave = false) => {
     try {
-      const shotListData = shots
-        .filter(shot => shot.script.trim() !== "")
-        .map(shot => JSON.stringify(shot));
+      // Salvar apenas os campos editáveis, NÃO salvar o script
+      const shotListData = shots.map(shot => JSON.stringify({
+        id: shot.id,
+        scene: shot.scene,
+        shotImageUrl: shot.shotImageUrl,
+        location: shot.location
+        // NÃO incluir 'script' aqui - ele será sempre carregado do banco
+      }));
 
       const { error } = await supabase
         .from('scripts')
