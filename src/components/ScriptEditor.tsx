@@ -31,8 +31,18 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
   const navigate = useNavigate();
   const { setMuzzeSession } = useSessionContext();
   const [title, setTitle] = useState("Novo Roteiro");
-  const [content, setContent] = useState("");
-  const [originalContent, setOriginalContent] = useState(""); // Store original content for review comparison
+  const [content, setContent] = useState({
+    gancho: "",
+    setup: "",
+    desenvolvimento: "",
+    conclusao: ""
+  });
+  const [originalContent, setOriginalContent] = useState({
+    gancho: "",
+    setup: "",
+    desenvolvimento: "",
+    conclusao: ""
+  });
   const [references, setReferences] = useState<string[]>([]);
   const [newReference, setNewReference] = useState("");
   const [shotList, setShotList] = useState<string[]>([]);
@@ -41,11 +51,12 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const autoSaveTimer = useRef<NodeJS.Timeout | null>(null);
   const [reviewedSections, setReviewedSections] = useState<{[key: string]: boolean}>({
-    intro: false,
-    development: false,
-    conclusion: false,
+    gancho: false,
+    setup: false,
+    desenvolvimento: false,
+    conclusao: false,
   });
-  const [showComparison, setShowComparison] = useState(false); // Toggle for side-by-side comparison
+  const [showComparison, setShowComparison] = useState(false);
 
   useEffect(() => {
     if (scriptId) {
@@ -85,10 +96,29 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
 
       if (data) {
         setTitle(data.title);
-        setContent(data.content || "");
+        
+        let loadedContent;
+        try {
+          loadedContent = typeof data.content === 'string' 
+            ? JSON.parse(data.content)
+            : data.content;
+          
+          // Ensure all sections exist
+          loadedContent = {
+            gancho: loadedContent?.gancho || "",
+            setup: loadedContent?.setup || "",
+            desenvolvimento: loadedContent?.desenvolvimento || "",
+            conclusao: loadedContent?.conclusao || ""
+          };
+        } catch {
+          loadedContent = { gancho: "", setup: "", desenvolvimento: "", conclusao: "" };
+        }
+        
+        setContent(loadedContent);
+        
         // Store original content when entering review mode
         if (isReviewMode) {
-          setOriginalContent(data.content || "");
+          setOriginalContent(loadedContent);
         }
         setReferences(data.reference_links || []);
         setShotList(data.shot_list || []);
@@ -113,7 +143,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
       const scriptData = {
         user_id: user.id,
         title,
-        content,
+        content: JSON.stringify(content),
         reference_links: references.filter(ref => ref.trim() !== ""),
         shot_list: shotList.filter(item => item.trim() !== ""),
         content_type: contentType,
@@ -415,118 +445,262 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
             </Button>
           </div>
 
-          {isReviewMode ? (
-            // Review Mode: Single editor with optional side-by-side comparison
-            <div className="space-y-4">
-              <div className="bg-muted/30 p-4 rounded-lg border border-border/40">
-                <p className="text-sm text-muted-foreground mb-3">
-                  💡 Dica: Leia seu texto frase por frase em voz alta, finja que já está gravando-o.
-                </p>
-                <div className="flex items-center justify-between gap-4 flex-wrap">
-                  <div className="flex gap-3 flex-wrap">
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="intro-check"
-                        checked={reviewedSections.intro}
-                        onChange={() => toggleSectionReview('intro')}
-                        className="w-4 h-4 rounded border-border"
-                      />
-                      <label htmlFor="intro-check" className="text-sm text-foreground cursor-pointer">
-                        Intro/Gancho
-                      </label>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="dev-check"
-                        checked={reviewedSections.development}
-                        onChange={() => toggleSectionReview('development')}
-                        className="w-4 h-4 rounded border-border"
-                      />
-                      <label htmlFor="dev-check" className="text-sm text-foreground cursor-pointer">
-                        Desenvolvimento
-                      </label>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="conclusion-check"
-                        checked={reviewedSections.conclusion}
-                        onChange={() => toggleSectionReview('conclusion')}
-                        className="w-4 h-4 rounded border-border"
-                      />
-                      <label htmlFor="conclusion-check" className="text-sm text-foreground cursor-pointer">
-                        Conclusão
-                      </label>
-                    </div>
+          {isReviewMode && (
+            <div className="bg-muted/30 p-4 rounded-lg border border-border/40 mb-4">
+              <p className="text-sm text-muted-foreground mb-3">
+                💡 Dica: Leia seu texto frase por frase em voz alta, finja que já está gravando-o.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowComparison(!showComparison)}
+                className="gap-2"
+              >
+                {showComparison ? 'Ocultar Comparação' : 'Comparar Versões'}
+              </Button>
+            </div>
+          )}
+
+          {showComparison && isReviewMode ? (
+            // Side-by-side comparison view
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Original Version (Read-only) */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
+                  Original
+                </h4>
+                
+                <div className="space-y-4">
+                  <div>
+                    <h5 className="text-base font-semibold text-foreground mb-2 flex items-center gap-2">
+                      🪝 Gancho
+                    </h5>
+                    <Textarea
+                      value={originalContent.gancho}
+                      readOnly
+                      className="min-h-[100px] text-base leading-relaxed resize-none border-border/40 bg-muted/20 focus-visible:ring-0"
+                    />
                   </div>
-                  
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowComparison(!showComparison)}
-                    className="gap-2"
-                  >
-                    {showComparison ? 'Ocultar Comparação' : 'Comparar Versões'}
-                  </Button>
+
+                  <div>
+                    <h5 className="text-base font-semibold text-foreground mb-2 flex items-center gap-2">
+                      🤨 Setup (Contexto)
+                    </h5>
+                    <Textarea
+                      value={originalContent.setup}
+                      readOnly
+                      className="min-h-[100px] text-base leading-relaxed resize-none border-border/40 bg-muted/20 focus-visible:ring-0"
+                    />
+                  </div>
+
+                  <div>
+                    <h5 className="text-base font-semibold text-foreground mb-2 flex items-center gap-2">
+                      🦅 Desenvolvimento
+                    </h5>
+                    <Textarea
+                      value={originalContent.desenvolvimento}
+                      readOnly
+                      className="min-h-[100px] text-base leading-relaxed resize-none border-border/40 bg-muted/20 focus-visible:ring-0"
+                    />
+                  </div>
+
+                  <div>
+                    <h5 className="text-base font-semibold text-foreground mb-2 flex items-center gap-2">
+                      📩 Conclusão (Fecho de Loop)
+                    </h5>
+                    <Textarea
+                      value={originalContent.conclusao}
+                      readOnly
+                      className="min-h-[100px] text-base leading-relaxed resize-none border-border/40 bg-muted/20 focus-visible:ring-0"
+                    />
+                  </div>
                 </div>
               </div>
 
-              {showComparison ? (
-                // Side-by-side comparison view
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {/* Original Version (Read-only) */}
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                        Original
-                      </h4>
+              {/* Edited Version (Editable) */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-semibold text-primary uppercase tracking-wider mb-4">
+                  Versão Editada
+                </h4>
+                
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <h5 className="text-base font-semibold text-foreground flex items-center gap-2">
+                        🪝 Gancho
+                      </h5>
+                      <input
+                        type="checkbox"
+                        id="gancho-check"
+                        checked={reviewedSections.gancho}
+                        onChange={() => toggleSectionReview('gancho')}
+                        className="w-4 h-4 rounded border-border cursor-pointer"
+                      />
                     </div>
                     <Textarea
-                      value={originalContent}
-                      readOnly
-                      className="min-h-[400px] text-base leading-relaxed resize-none border-border/40 bg-muted/20 focus-visible:ring-0 focus-visible:ring-offset-0"
+                      value={content.gancho}
+                      onChange={(e) => setContent({...content, gancho: e.target.value})}
+                      className="min-h-[100px] text-base leading-relaxed resize-none border-primary/40 bg-background focus-visible:ring-1 focus-visible:ring-primary"
                     />
                   </div>
 
-                  {/* Edited Version (Editable) */}
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <h4 className="text-sm font-semibold text-primary uppercase tracking-wider">
-                        Versão Editada
-                      </h4>
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <h5 className="text-base font-semibold text-foreground flex items-center gap-2">
+                        🤨 Setup (Contexto)
+                      </h5>
+                      <input
+                        type="checkbox"
+                        id="setup-check"
+                        checked={reviewedSections.setup}
+                        onChange={() => toggleSectionReview('setup')}
+                        className="w-4 h-4 rounded border-border cursor-pointer"
+                      />
                     </div>
                     <Textarea
-                      value={content}
-                      onChange={(e) => setContent(e.target.value)}
-                      className="min-h-[400px] text-base leading-relaxed resize-none border-primary/40 bg-background focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-offset-0"
+                      value={content.setup}
+                      onChange={(e) => setContent({...content, setup: e.target.value})}
+                      className="min-h-[100px] text-base leading-relaxed resize-none border-primary/40 bg-background focus-visible:ring-1 focus-visible:ring-primary"
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <h5 className="text-base font-semibold text-foreground flex items-center gap-2">
+                        🦅 Desenvolvimento
+                      </h5>
+                      <input
+                        type="checkbox"
+                        id="desenvolvimento-check"
+                        checked={reviewedSections.desenvolvimento}
+                        onChange={() => toggleSectionReview('desenvolvimento')}
+                        className="w-4 h-4 rounded border-border cursor-pointer"
+                      />
+                    </div>
+                    <Textarea
+                      value={content.desenvolvimento}
+                      onChange={(e) => setContent({...content, desenvolvimento: e.target.value})}
+                      className="min-h-[100px] text-base leading-relaxed resize-none border-primary/40 bg-background focus-visible:ring-1 focus-visible:ring-primary"
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <h5 className="text-base font-semibold text-foreground flex items-center gap-2">
+                        📩 Conclusão (Fecho de Loop)
+                      </h5>
+                      <input
+                        type="checkbox"
+                        id="conclusao-check"
+                        checked={reviewedSections.conclusao}
+                        onChange={() => toggleSectionReview('conclusao')}
+                        className="w-4 h-4 rounded border-border cursor-pointer"
+                      />
+                    </div>
+                    <Textarea
+                      value={content.conclusao}
+                      onChange={(e) => setContent({...content, conclusao: e.target.value})}
+                      className="min-h-[100px] text-base leading-relaxed resize-none border-primary/40 bg-background focus-visible:ring-1 focus-visible:ring-primary"
                     />
                   </div>
                 </div>
-              ) : (
-                // Single editor view (default)
-                <Textarea
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  placeholder="Revise e edite seu roteiro aqui..."
-                  className="min-h-[400px] text-base leading-relaxed resize-none border-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent"
-                />
-              )}
+              </div>
             </div>
           ) : (
-            // Script Mode: Single editor
-            <Textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="Escreva seu roteiro aqui... 
+            // Single editor view (default for both script and review mode)
+            <div className="space-y-4">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h5 className="text-base font-semibold text-foreground flex items-center gap-2">
+                    🪝 Gancho
+                  </h5>
+                  {isReviewMode && (
+                    <input
+                      type="checkbox"
+                      id="gancho-check-single"
+                      checked={reviewedSections.gancho}
+                      onChange={() => toggleSectionReview('gancho')}
+                      className="w-4 h-4 rounded border-border cursor-pointer"
+                    />
+                  )}
+                </div>
+                <Textarea
+                  value={content.gancho}
+                  onChange={(e) => setContent({...content, gancho: e.target.value})}
+                  placeholder="Escreva o gancho inicial..."
+                  className="min-h-[100px] text-base leading-relaxed resize-none border-none focus-visible:ring-0 bg-transparent"
+                />
+              </div>
 
-Você pode organizar em seções como:
-- INTRO (Gancho)
-- DESENVOLVIMENTO
-- CONCLUSÃO"
-              className="min-h-[400px] text-base leading-relaxed resize-none border-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent"
-            />
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h5 className="text-base font-semibold text-foreground flex items-center gap-2">
+                    🤨 Setup (Contexto)
+                  </h5>
+                  {isReviewMode && (
+                    <input
+                      type="checkbox"
+                      id="setup-check-single"
+                      checked={reviewedSections.setup}
+                      onChange={() => toggleSectionReview('setup')}
+                      className="w-4 h-4 rounded border-border cursor-pointer"
+                    />
+                  )}
+                </div>
+                <Textarea
+                  value={content.setup}
+                  onChange={(e) => setContent({...content, setup: e.target.value})}
+                  placeholder="Forneça o contexto necessário..."
+                  className="min-h-[100px] text-base leading-relaxed resize-none border-none focus-visible:ring-0 bg-transparent"
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h5 className="text-base font-semibold text-foreground flex items-center gap-2">
+                    🦅 Desenvolvimento
+                  </h5>
+                  {isReviewMode && (
+                    <input
+                      type="checkbox"
+                      id="desenvolvimento-check-single"
+                      checked={reviewedSections.desenvolvimento}
+                      onChange={() => toggleSectionReview('desenvolvimento')}
+                      className="w-4 h-4 rounded border-border cursor-pointer"
+                    />
+                  )}
+                </div>
+                <Textarea
+                  value={content.desenvolvimento}
+                  onChange={(e) => setContent({...content, desenvolvimento: e.target.value})}
+                  placeholder="Desenvolva o conteúdo principal..."
+                  className="min-h-[100px] text-base leading-relaxed resize-none border-none focus-visible:ring-0 bg-transparent"
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h5 className="text-base font-semibold text-foreground flex items-center gap-2">
+                    📩 Conclusão (Fecho de Loop)
+                  </h5>
+                  {isReviewMode && (
+                    <input
+                      type="checkbox"
+                      id="conclusao-check-single"
+                      checked={reviewedSections.conclusao}
+                      onChange={() => toggleSectionReview('conclusao')}
+                      className="w-4 h-4 rounded border-border cursor-pointer"
+                    />
+                  )}
+                </div>
+                <Textarea
+                  value={content.conclusao}
+                  onChange={(e) => setContent({...content, conclusao: e.target.value})}
+                  placeholder="Conclua e feche o loop..."
+                  className="min-h-[100px] text-base leading-relaxed resize-none border-none focus-visible:ring-0 bg-transparent"
+                />
+              </div>
+            </div>
           )}
         </div>
       </div>
