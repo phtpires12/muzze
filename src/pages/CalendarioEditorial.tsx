@@ -143,33 +143,60 @@ const CalendarioEditorial = () => {
   const handleDeleteScript = async (e: React.MouseEvent, scriptId: string) => {
     e.stopPropagation(); // Prevent opening the script
     
-    if (!confirm("Tem certeza que deseja excluir este roteiro?")) {
-      return;
-    }
+    const scriptToDelete = scripts.find(s => s.id === scriptId);
+    if (!scriptToDelete) return;
 
-    try {
-      const { error } = await supabase
-        .from('scripts')
-        .delete()
-        .eq('id', scriptId);
+    // Optimistically remove from UI
+    setScripts(scripts.filter(s => s.id !== scriptId));
+    
+    let undoTimeout: NodeJS.Timeout;
+    
+    // Show undo toast with action element
+    toast({
+      title: "Roteiro excluído",
+      description: "O roteiro foi removido.",
+      action: (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            clearTimeout(undoTimeout);
+            setScripts(prev => [...prev, scriptToDelete].sort((a, b) => 
+              new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+            ));
+            toast({
+              title: "Exclusão cancelada",
+              description: "O roteiro foi restaurado.",
+            });
+          }}
+        >
+          Desfazer
+        </Button>
+      ),
+    });
 
-      if (error) throw error;
+    // Delete after 5 seconds if not undone
+    undoTimeout = setTimeout(async () => {
+      try {
+        const { error } = await supabase
+          .from('scripts')
+          .delete()
+          .eq('id', scriptId);
 
-      // Update local state
-      setScripts(scripts.filter(s => s.id !== scriptId));
-
-      toast({
-        title: "Roteiro excluído",
-        description: "O roteiro foi removido com sucesso.",
-      });
-    } catch (error) {
-      console.error('Error deleting script:', error);
-      toast({
-        title: "Erro ao excluir",
-        description: "Não foi possível excluir o roteiro.",
-        variant: "destructive",
-      });
-    }
+        if (error) throw error;
+      } catch (error) {
+        console.error('Error deleting script:', error);
+        // Restore on error
+        setScripts(prev => [...prev, scriptToDelete].sort((a, b) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        ));
+        toast({
+          title: "Erro ao excluir",
+          description: "Não foi possível excluir o roteiro.",
+          variant: "destructive",
+        });
+      }
+    }, 5000);
   };
 
   const monthStart = startOfMonth(currentDate);
