@@ -20,10 +20,6 @@ const Help = () => {
       question: "Como usar o calendário editorial?",
       answer: "Acesse a aba Calendário e clique em qualquer data para adicionar um roteiro. Você pode alternar entre visualização mensal e semanal.",
     },
-    {
-      question: "Como organizar minhas ideias?",
-      answer: "Use a aba Ideias para anotar todas as suas ideias de conteúdo. Você pode adicionar tags e categorias para melhor organização.",
-    },
   ];
 
   return (
