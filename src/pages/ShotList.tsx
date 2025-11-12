@@ -230,8 +230,9 @@ const ShotList = () => {
 
   useEffect(() => {
     if (scriptId) {
-      loadShotList();
+      // Sempre recarregar o conteúdo mais recente do banco
       loadScriptContent();
+      loadShotList();
     }
   }, [scriptId]);
 
@@ -359,17 +360,26 @@ const ShotList = () => {
 
   const loadShotList = async () => {
     try {
+      // 1. Sempre carregar o conteúdo mais recente do roteiro primeiro
+      const { data: scriptData, error: scriptError } = await supabase
+        .from('scripts')
+        .select('content')
+        .eq('id', scriptId)
+        .single();
+
+      if (scriptError) throw scriptError;
+      
+      const latestContent = scriptData?.content || "";
+      setScriptContent(latestContent);
+      
+      // 2. Depois carregar a shot list
       const { data, error } = await supabase
         .from('scripts')
-        .select('shot_list, content')
+        .select('shot_list')
         .eq('id', scriptId)
         .single();
 
       if (error) throw error;
-
-      if (!data?.content) return;
-
-      setScriptContent(data.content);
 
       if (data?.shot_list && data.shot_list.length > 0) {
         // Carregar shot list existente
@@ -399,7 +409,7 @@ const ShotList = () => {
         saveToHistory(parsedShots);
       } else {
         // Gerar automaticamente por parágrafos se não existir shot list
-        const paragraphs = parseScriptIntoParagraphs(data.content);
+        const paragraphs = parseScriptIntoParagraphs(latestContent);
         
         if (paragraphs.length > 0) {
           const generatedShots = paragraphs.map(p => ({

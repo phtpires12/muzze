@@ -45,7 +45,6 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
   });
   const [references, setReferences] = useState<string[]>([]);
   const [newReference, setNewReference] = useState("");
-  const [shotList, setShotList] = useState<string[]>([]);
   const [contentType, setContentType] = useState("");
   const [publishDate, setPublishDate] = useState("");
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
@@ -82,7 +81,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
         clearTimeout(autoSaveTimer.current);
       }
     };
-  }, [title, content, references, shotList, contentType, publishDate]);
+  }, [title, content, references, contentType, publishDate]);
 
   const loadScript = async () => {
     try {
@@ -121,7 +120,6 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
           setOriginalContent(loadedContent);
         }
         setReferences(data.reference_links || []);
-        setShotList(data.shot_list || []);
         setContentType(data.content_type || "");
         setPublishDate(data.publish_date || "");
       }
@@ -145,7 +143,6 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
         title,
         content: JSON.stringify(content),
         reference_links: references.filter(ref => ref.trim() !== ""),
-        shot_list: shotList.filter(item => item.trim() !== ""),
         content_type: contentType,
         publish_date: publishDate || null,
       };
