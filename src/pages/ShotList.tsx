@@ -1,75 +1,280 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Plus, Trash2, Camera } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Camera, Upload, GripVertical, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface ShotItem {
   id: string;
   script: string;
   scene: string;
-  shot: string;
+  shotImageUrl: string;
   location: string;
 }
+
+const SortableRow = ({ shot, index, onUpdate, onRemove, onImageUpload }: {
+  shot: ShotItem;
+  index: number;
+  onUpdate: (id: string, field: keyof ShotItem, value: string) => void;
+  onRemove: (id: string) => void;
+  onImageUpload: (id: string, file: File) => void;
+}) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: shot.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  const handleImageClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      onImageUpload(shot.id, file);
+    }
+  };
+
+  const handleRemoveImage = async () => {
+    if (shot.shotImageUrl) {
+      try {
+        const fileName = shot.shotImageUrl.split('/').pop();
+        if (fileName) {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            await supabase.storage
+              .from('shot-references')
+              .remove([`${user.id}/${fileName}`]);
+          }
+        }
+      } catch (error) {
+        console.error('Error removing image:', error);
+      }
+      onUpdate(shot.id, 'shotImageUrl', '');
+    }
+  };
+
+  return (
+    <tr ref={setNodeRef} style={style} className="border-t border-border hover:bg-muted/20">
+      <td className="p-4 w-12">
+        <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
+          <GripVertical className="w-5 h-5 text-muted-foreground" />
+        </div>
+      </td>
+      <td className="p-4">
+        <div className="text-sm text-muted-foreground whitespace-pre-wrap">
+          {shot.script || "Roteiro não carregado"}
+        </div>
+      </td>
+      <td className="p-4">
+        <Input
+          value={shot.scene}
+          onChange={(e) => onUpdate(shot.id, 'scene', e.target.value)}
+          placeholder="Ex: Tarde na garagem"
+          className="border-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-sm"
+        />
+      </td>
+      <td className="p-4">
+        <div className="flex flex-col gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            className="hidden"
+          />
+          {shot.shotImageUrl ? (
+            <div className="relative group">
+              <img
+                src={shot.shotImageUrl}
+                alt="Referência"
+                className="w-32 h-20 object-cover rounded border border-border cursor-pointer"
+                onClick={handleImageClick}
+              />
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleRemoveImage}
+                className="absolute top-1 right-1 h-6 w-6 bg-background/80 hover:bg-background opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleImageClick}
+              className="gap-2 w-32"
+            >
+              <Upload className="w-4 h-4" />
+              Upload
+            </Button>
+          )}
+        </div>
+      </td>
+      <td className="p-4">
+        <Input
+          value={shot.location}
+          onChange={(e) => onUpdate(shot.id, 'location', e.target.value)}
+          placeholder="Ex: Tarde no quarto"
+          className="border-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-sm"
+        />
+      </td>
+      <td className="p-4">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => onRemove(shot.id)}
+          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+        >
+          <Trash2 className="w-4 h-4" />
+        </Button>
+      </td>
+    </tr>
+  );
+};
 
 const ShotList = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const scriptId = searchParams.get("scriptId");
   const { toast } = useToast();
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout>();
   
   const [shots, setShots] = useState<ShotItem[]>([{
     id: crypto.randomUUID(),
     script: "",
     scene: "",
-    shot: "",
+    shotImageUrl: "",
     location: ""
   }]);
+  const [scriptContent, setScriptContent] = useState<string>("");
+  const [isUploading, setIsUploading] = useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   useEffect(() => {
     if (scriptId) {
       loadShotList();
+      loadScriptContent();
     }
   }, [scriptId]);
+
+  // Auto-save functionality
+  useEffect(() => {
+    if (scriptId && shots.length > 0) {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+      
+      autoSaveTimeoutRef.current = setTimeout(() => {
+        handleSave(true);
+      }, 30000); // 30 seconds
+    }
+
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, [shots, scriptId]);
+
+  const loadScriptContent = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('scripts')
+        .select('content')
+        .eq('id', scriptId)
+        .single();
+
+      if (error) throw error;
+
+      if (data?.content) {
+        setScriptContent(data.content);
+      }
+    } catch (error) {
+      console.error('Error loading script content:', error);
+    }
+  };
 
   const loadShotList = async () => {
     try {
       const { data, error } = await supabase
         .from('scripts')
-        .select('shot_list')
+        .select('shot_list, content')
         .eq('id', scriptId)
         .single();
 
       if (error) throw error;
 
       if (data?.shot_list && data.shot_list.length > 0) {
-        // Parse shot list from array to structured format
-        const parsedShots = data.shot_list.map((item: string, index: number) => {
+        const parsedShots = data.shot_list.map((item: string) => {
           try {
             return JSON.parse(item);
           } catch {
             return {
               id: crypto.randomUUID(),
-              script: item,
+              script: data.content || "",
               scene: "",
-              shot: "",
+              shotImageUrl: "",
               location: ""
             };
           }
         });
         setShots(parsedShots);
+      } else if (data?.content) {
+        // Initialize with script content if no shot list exists
+        setShots([{
+          id: crypto.randomUUID(),
+          script: data.content,
+          scene: "",
+          shotImageUrl: "",
+          location: ""
+        }]);
       }
     } catch (error) {
       console.error('Error loading shot list:', error);
     }
   };
 
-  const handleSave = async () => {
+  const handleSave = async (isAutoSave = false) => {
     try {
-      // Convert structured shots to JSON strings for storage
       const shotListData = shots
         .filter(shot => shot.script.trim() !== "")
         .map(shot => JSON.stringify(shot));
@@ -81,26 +286,30 @@ const ShotList = () => {
 
       if (error) throw error;
 
-      toast({
-        title: "Shot List salva",
-        description: "Suas alterações foram salvas com sucesso.",
-      });
+      if (!isAutoSave) {
+        toast({
+          title: "Shot List salva",
+          description: "Suas alterações foram salvas com sucesso.",
+        });
+      }
     } catch (error) {
       console.error('Error saving shot list:', error);
-      toast({
-        title: "Erro ao salvar",
-        description: "Não foi possível salvar o shot list.",
-        variant: "destructive",
-      });
+      if (!isAutoSave) {
+        toast({
+          title: "Erro ao salvar",
+          description: "Não foi possível salvar o shot list.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
   const addShot = () => {
     setShots([...shots, {
       id: crypto.randomUUID(),
-      script: "",
+      script: scriptContent,
       scene: "",
-      shot: "",
+      shotImageUrl: "",
       location: ""
     }]);
   };
@@ -113,6 +322,57 @@ const ShotList = () => {
     setShots(shots.map(shot => 
       shot.id === id ? { ...shot, [field]: value } : shot
     ));
+  };
+
+  const handleImageUpload = async (shotId: string, file: File) => {
+    setIsUploading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${crypto.randomUUID()}.${fileExt}`;
+      const filePath = `${user.id}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('shot-references')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('shot-references')
+        .getPublicUrl(filePath);
+
+      updateShot(shotId, 'shotImageUrl', publicUrl);
+
+      toast({
+        title: "Imagem carregada",
+        description: "Imagem de referência adicionada com sucesso.",
+      });
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      toast({
+        title: "Erro ao carregar imagem",
+        description: "Não foi possível fazer upload da imagem.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      setShots((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id);
+        const newIndex = items.findIndex((item) => item.id === over.id);
+
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
   };
 
   return (
@@ -129,9 +389,12 @@ const ShotList = () => {
             Voltar para Revisão
           </Button>
 
-          <Button onClick={handleSave} className="gap-2">
-            Salvar Shot List
-          </Button>
+          <div className="flex gap-2 items-center">
+            <span className="text-xs text-muted-foreground">Auto-save a cada 30s</span>
+            <Button onClick={() => handleSave(false)} className="gap-2">
+              Salvar Shot List
+            </Button>
+          </div>
         </div>
 
         {/* Title */}
@@ -143,67 +406,40 @@ const ShotList = () => {
         </div>
 
         {/* Table */}
-        <div className="border border-border rounded-lg overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-muted/50">
-              <tr>
-                <th className="text-left p-4 font-semibold text-sm">Roteiro</th>
-                <th className="text-left p-4 font-semibold text-sm w-32">Cena</th>
-                <th className="text-left p-4 font-semibold text-sm w-32">Plano</th>
-                <th className="text-left p-4 font-semibold text-sm w-48">Local</th>
-                <th className="w-12"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {shots.map((shot, index) => (
-                <tr key={shot.id} className="border-t border-border hover:bg-muted/20">
-                  <td className="p-4">
-                    <Textarea
-                      value={shot.script}
-                      onChange={(e) => updateShot(shot.id, 'script', e.target.value)}
-                      placeholder="Descrição do que será gravado..."
-                      className="min-h-[80px] resize-none border-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
-                    />
-                  </td>
-                  <td className="p-4">
-                    <Input
-                      value={shot.scene}
-                      onChange={(e) => updateShot(shot.id, 'scene', e.target.value)}
-                      placeholder="Ex: a tarde na garagem"
-                      className="border-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-sm"
-                    />
-                  </td>
-                  <td className="p-4">
-                    <Input
-                      value={shot.shot}
-                      onChange={(e) => updateShot(shot.id, 'shot', e.target.value)}
-                      placeholder="Ex: a noite no escritório"
-                      className="border-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-sm"
-                    />
-                  </td>
-                  <td className="p-4">
-                    <Input
-                      value={shot.location}
-                      onChange={(e) => updateShot(shot.id, 'location', e.target.value)}
-                      placeholder="Ex: a tarde no quarto"
-                      className="border-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-sm"
-                    />
-                  </td>
-                  <td className="p-4">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeShot(shot.id)}
-                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </td>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="border border-border rounded-lg overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-muted/50">
+                <tr>
+                  <th className="w-12"></th>
+                  <th className="text-left p-4 font-semibold text-sm">Roteiro</th>
+                  <th className="text-left p-4 font-semibold text-sm w-48">Cena</th>
+                  <th className="text-left p-4 font-semibold text-sm w-40">Plano (Imagem)</th>
+                  <th className="text-left p-4 font-semibold text-sm w-48">Local</th>
+                  <th className="w-12"></th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                <SortableContext items={shots.map(s => s.id)} strategy={verticalListSortingStrategy}>
+                  {shots.map((shot, index) => (
+                    <SortableRow
+                      key={shot.id}
+                      shot={shot}
+                      index={index}
+                      onUpdate={updateShot}
+                      onRemove={removeShot}
+                      onImageUpload={handleImageUpload}
+                    />
+                  ))}
+                </SortableContext>
+              </tbody>
+            </table>
+          </div>
+        </DndContext>
 
         {/* Add Row Button */}
         <Button
