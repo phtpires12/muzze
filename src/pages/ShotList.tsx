@@ -341,6 +341,8 @@ const ShotList = () => {
   };
 
   const loadScriptContent = async () => {
+    console.log('[DEBUG - ShotList] Carregando script content do banco...');
+    
     try {
       const { data, error } = await supabase
         .from('scripts')
@@ -350,17 +352,26 @@ const ShotList = () => {
 
       if (error) throw error;
 
+      console.log('[DEBUG - ShotList] ✅ Content carregado do banco', {
+        hasContent: !!data?.content,
+        contentLength: data?.content?.length,
+        contentPreview: data?.content?.substring(0, 100),
+      });
+
       if (data?.content) {
         setScriptContent(data.content);
       }
     } catch (error) {
-      console.error('Error loading script content:', error);
+      console.error('[DEBUG - ShotList] ❌ Erro ao carregar content:', error);
     }
   };
 
   const loadShotList = async () => {
+    console.log('[DEBUG - ShotList] Carregando shot list...');
+    
     try {
       // 1. Sempre carregar o conteúdo mais recente do roteiro primeiro
+      console.log('[DEBUG - ShotList] Buscando content mais recente...');
       const { data: scriptData, error: scriptError } = await supabase
         .from('scripts')
         .select('content')
@@ -370,9 +381,15 @@ const ShotList = () => {
       if (scriptError) throw scriptError;
       
       const latestContent = scriptData?.content || "";
+      console.log('[DEBUG - ShotList] ✅ Content obtido', {
+        hasContent: !!latestContent,
+        contentLength: latestContent.length,
+        contentPreview: latestContent.substring(0, 100),
+      });
       setScriptContent(latestContent);
       
       // 2. Depois carregar a shot list
+      console.log('[DEBUG - ShotList] Buscando shot list...');
       const { data, error } = await supabase
         .from('scripts')
         .select('shot_list')
@@ -380,6 +397,10 @@ const ShotList = () => {
         .single();
 
       if (error) throw error;
+      console.log('[DEBUG - ShotList] Shot list obtida', {
+        hasShotList: !!data?.shot_list,
+        shotListLength: data?.shot_list?.length,
+      });
 
       if (data?.shot_list && data.shot_list.length > 0) {
         // Carregar shot list existente

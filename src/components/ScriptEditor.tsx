@@ -70,16 +70,18 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
       clearTimeout(autoSaveTimer.current);
     }
 
-    // Set up auto-save every 30 seconds
+    // Set up auto-save every 5 seconds (reduced from 30s for more frequent saves)
     autoSaveTimer.current = setTimeout(() => {
       handleAutoSave();
-    }, 30000);
+    }, 5000);
 
-    // Cleanup on unmount
+    // Cleanup on unmount - force save before component unmounts
     return () => {
       if (autoSaveTimer.current) {
         clearTimeout(autoSaveTimer.current);
       }
+      // Force final save on unmount
+      handleAutoSave();
     };
   }, [title, content, references, contentType, publishDate]);
 
@@ -134,9 +136,23 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
   };
 
   const handleAutoSave = async () => {
+    console.log('[DEBUG - ScriptEditor] Auto-save iniciado', {
+      scriptId,
+      hasContent: !!(content.gancho || content.setup || content.desenvolvimento || content.conclusao),
+      contentPreview: {
+        gancho: content.gancho?.substring(0, 50),
+        setup: content.setup?.substring(0, 50),
+        desenvolvimento: content.desenvolvimento?.substring(0, 50),
+        conclusao: content.conclusao?.substring(0, 50),
+      }
+    });
+    
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        console.log('[DEBUG - ScriptEditor] No user found, skipping save');
+        return;
+      }
 
       const scriptData = {
         user_id: user.id,
@@ -154,6 +170,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
           .eq('id', scriptId);
 
         if (error) throw error;
+        console.log('[DEBUG - ScriptEditor] ✅ Script atualizado com sucesso');
       } else {
         const { data, error } = await supabase
           .from('scripts')
@@ -163,6 +180,8 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
 
         if (error) throw error;
         
+        console.log('[DEBUG - ScriptEditor] ✅ Novo script criado com sucesso', data?.id);
+        
         // Update URL with new script ID without reloading
         if (data?.id) {
           window.history.replaceState({}, '', `/session?stage=script&scriptId=${data.id}`);
@@ -171,7 +190,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
 
       setLastSaved(new Date());
     } catch (error) {
-      console.error('Error auto-saving script:', error);
+      console.error('[DEBUG - ScriptEditor] ❌ Erro no auto-save:', error);
     }
   };
 
@@ -180,9 +199,9 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
   };
 
   const handleNextStage = async () => {
-    console.log('[ScriptEditor] handleNextStage called');
-    console.log('[ScriptEditor] Current mode:', isReviewMode ? 'review' : 'script');
-    console.log('[ScriptEditor] Current scriptId:', scriptId);
+    console.log('[DEBUG - ScriptEditor] handleNextStage called');
+    console.log('[DEBUG - ScriptEditor] Current mode:', isReviewMode ? 'review' : 'script');
+    console.log('[DEBUG - ScriptEditor] Current scriptId:', scriptId);
     
     // Validate that script has content before advancing to review
     if (!isReviewMode) {
@@ -202,19 +221,24 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
     }
     
     // Save current changes before advancing
+    console.log('[DEBUG - ScriptEditor] Salvando antes de navegar...');
     await handleAutoSave();
-    console.log('[ScriptEditor] Auto-save completed');
+    console.log('[DEBUG - ScriptEditor] ✅ Auto-save completed');
+    
+    // Add small delay to ensure DB commit completes
+    await new Promise(resolve => setTimeout(resolve, 500));
+    console.log('[DEBUG - ScriptEditor] Delay completado, prosseguindo com navegação');
     
     // Navigate to next stage based on current mode
     const nextStage = isReviewMode ? 'record' : 'review';
     const nextLabel = isReviewMode ? 'Gravação' : 'Revisão';
     
-    console.log('[ScriptEditor] Next stage:', nextStage);
+    console.log('[DEBUG - ScriptEditor] Next stage:', nextStage);
     
     // Check if all sections are reviewed when in review mode
     if (isReviewMode) {
       const allReviewed = Object.values(reviewedSections).every(v => v);
-      console.log('[ScriptEditor] All sections reviewed:', allReviewed);
+      console.log('[DEBUG - ScriptEditor] All sections reviewed:', allReviewed);
       if (!allReviewed) {
         toast({
           title: "Atenção",
@@ -230,7 +254,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
       ? `/session?stage=${nextStage}&scriptId=${currentScriptId}`
       : `/session?stage=${nextStage}`;
     
-    console.log('[ScriptEditor] Navigating to:', url);
+    console.log('[DEBUG - ScriptEditor] Navegando para:', url);
     navigate(url);
     
     toast({
