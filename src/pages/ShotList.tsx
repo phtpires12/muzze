@@ -93,7 +93,9 @@ const SortableRow = ({ shot, index, onUpdate, onRemove, onImageUpload }: {
       </td>
       <td className="p-4">
         <div className="text-sm text-muted-foreground whitespace-pre-wrap">
-          {shot.script || "Roteiro não carregado"}
+          {shot.script && shot.script.trim() && !shot.script.startsWith('{') 
+            ? shot.script 
+            : "Roteiro não carregado"}
         </div>
       </td>
       <td className="p-4">
