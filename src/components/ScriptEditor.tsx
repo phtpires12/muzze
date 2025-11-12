@@ -187,6 +187,23 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
     console.log('[ScriptEditor] Current mode:', isReviewMode ? 'review' : 'script');
     console.log('[ScriptEditor] Current scriptId:', scriptId);
     
+    // Validate that script has content before advancing to review
+    if (!isReviewMode) {
+      const hasContent = content.gancho.trim() || 
+                        content.setup.trim() || 
+                        content.desenvolvimento.trim() || 
+                        content.conclusao.trim();
+      
+      if (!hasContent) {
+        toast({
+          title: "Roteiro vazio",
+          description: "Você precisa escrever algo no roteiro antes de avançar para a revisão.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+    
     // Save current changes before advancing
     await handleAutoSave();
     console.log('[ScriptEditor] Auto-save completed');
