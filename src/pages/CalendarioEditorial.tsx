@@ -14,6 +14,7 @@ interface Script {
   id: string;
   title: string;
   content: string | null;
+  content_type: string | null;
   publish_date: string | null;
   created_at: string;
   shot_list: string[];
@@ -58,7 +59,10 @@ const CalendarioEditorial = () => {
   const getScriptsForDate = (checkDate: Date) => {
     return scripts.filter((script) => {
       const scriptDate = script.publish_date || script.created_at;
-      return format(new Date(scriptDate), "yyyy-MM-dd") === format(checkDate, "yyyy-MM-dd");
+      // Compare apenas a parte da data, ignorando timezone
+      const scriptDateOnly = scriptDate.split('T')[0];
+      const checkDateOnly = format(checkDate, "yyyy-MM-dd");
+      return scriptDateOnly === checkDateOnly;
     });
   };
 
@@ -242,17 +246,26 @@ const CalendarioEditorial = () => {
                             key={script.id}
                             draggable
                             onDragStart={(e) => handleDragStart(e, script)}
-                            className={`text-xs p-1.5 rounded bg-primary/10 border-l-2 border-primary cursor-move hover:bg-primary/20 transition-all ${
+                            className={`text-xs p-2 rounded-lg bg-card/80 border border-border/50 cursor-move hover:bg-card hover:border-border hover:shadow-md transition-all ${
                               draggedScript?.id === script.id ? "opacity-50" : ""
                             }`}
                             onClick={() => handleViewScript(script.id)}
                           >
-                            <div className="font-medium truncate">{script.title}</div>
-                            {script.shot_list && script.shot_list.length > 0 && (
-                              <div className="text-muted-foreground">
-                                {script.shot_list.length} shots
-                              </div>
-                            )}
+                            <div className="font-semibold truncate mb-1.5 text-foreground">
+                              {script.title}
+                            </div>
+                            <div className="flex flex-wrap gap-1">
+                              {script.content_type && (
+                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                                  {script.content_type}
+                                </Badge>
+                              )}
+                              {script.shot_list && script.shot_list.length > 0 && (
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                                  {script.shot_list.length} shots
+                                </Badge>
+                              )}
+                            </div>
                           </div>
                         ))}
                         {dayScripts.length > 3 && (
@@ -312,19 +325,28 @@ const CalendarioEditorial = () => {
                             key={script.id}
                             draggable
                             onDragStart={(e) => handleDragStart(e, script)}
-                            className={`p-3 rounded-lg bg-primary/10 border-l-4 border-primary cursor-move hover:bg-primary/20 transition-all ${
+                            className={`p-3 rounded-lg bg-card border border-border cursor-move hover:border-primary/50 hover:shadow-md transition-all ${
                               draggedScript?.id === script.id ? "opacity-50" : ""
                             }`}
                             onClick={() => handleViewScript(script.id)}
                           >
-                            <div className="font-semibold text-sm mb-1">{script.title}</div>
-                            <div className="text-xs text-muted-foreground line-clamp-2">
-                              {script.content}
+                            <div className="font-semibold text-sm mb-2">{script.title}</div>
+                            <div className="flex flex-wrap gap-1.5 mb-2">
+                              {script.content_type && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {script.content_type}
+                                </Badge>
+                              )}
+                              {script.shot_list && script.shot_list.length > 0 && (
+                                <Badge variant="outline" className="text-xs">
+                                  {script.shot_list.length} shots
+                                </Badge>
+                              )}
                             </div>
-                            {script.shot_list && script.shot_list.length > 0 && (
-                              <Badge variant="secondary" className="mt-2 text-xs">
-                                {script.shot_list.length} shots
-                              </Badge>
+                            {script.content && (
+                              <div className="text-xs text-muted-foreground line-clamp-2">
+                                {script.content}
+                              </div>
                             )}
                           </div>
                         ))}
