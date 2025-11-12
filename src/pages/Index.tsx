@@ -4,14 +4,14 @@ import { useProfile } from "@/hooks/useProfile";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { useSessionContext } from "@/contexts/SessionContext";
 import { supabase } from "@/integrations/supabase/client";
-import { getUserStats, awardPoints } from "@/lib/gamification";
+import { getUserStats, awardPoints, TROPHIES } from "@/lib/gamification";
 import { getWorkflow, getUserWorkflow } from "@/lib/workflows";
 import { BottomNav } from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Flame, Clock, Trophy, Lightbulb, Zap, Film, Mic, Scissors, AlertCircle } from "lucide-react";
+import { Flame, Clock, Trophy, Lightbulb, Zap, Film, Mic, Scissors, AlertCircle, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -61,6 +61,9 @@ const Index = () => {
   const [selectedItemId, setSelectedItemId] = useState<string>("");
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [alertConfig, setAlertConfig] = useState({ title: "", description: "", action: "" });
+  
+  // Modal de troféus
+  const [isTrophiesModalOpen, setIsTrophiesModalOpen] = useState(false);
 
   useEffect(() => {
     if (profile && !profileLoading) {
@@ -368,17 +371,20 @@ const Index = () => {
           </div>
 
           <div className="grid grid-cols-3 gap-3">
-            <div className="p-4 bg-card rounded-2xl border border-border/20 shadow-sm text-center">
+            <button 
+              onClick={() => setIsTrophiesModalOpen(true)}
+              className="p-4 bg-card rounded-2xl border border-border/20 shadow-sm text-center hover:bg-accent/10 transition-colors"
+            >
               <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-gradient-to-br from-accent to-primary flex items-center justify-center">
                 <Trophy className="w-6 h-6 text-white" />
               </div>
               <div className="text-sm font-semibold text-foreground">
-                {stats?.trophies?.length ?? 0}
+                {stats?.trophies?.length ?? 0}/9
               </div>
               <div className="text-xs text-muted-foreground">
                 Conquistas
               </div>
-            </div>
+            </button>
 
             <div className="p-4 bg-card rounded-2xl border border-border/20 shadow-sm text-center">
               <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-gradient-to-br from-accent to-primary flex items-center justify-center">
@@ -664,6 +670,60 @@ const Index = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Trophies Modal */}
+      <Dialog open={isTrophiesModalOpen} onOpenChange={setIsTrophiesModalOpen}>
+        <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold flex items-center gap-2">
+              <Trophy className="w-6 h-6 text-accent" />
+              Troféus
+            </DialogTitle>
+            <DialogDescription>
+              {stats?.trophies?.length ?? 0} de {TROPHIES.length} conquistas desbloqueadas
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {/* Unlocked Trophies */}
+            {TROPHIES.filter(t => stats?.trophies?.includes(t.id)).map((trophy) => (
+              <div
+                key={trophy.id}
+                className="flex items-start gap-3 p-4 rounded-lg bg-gradient-to-r from-primary/5 to-accent/5 border border-primary/20"
+              >
+                <div className="text-3xl">{trophy.icon}</div>
+                <div className="flex-1">
+                  <h4 className="font-semibold text-foreground">{trophy.name}</h4>
+                  <p className="text-sm text-muted-foreground">{trophy.description}</p>
+                  <Badge variant="secondary" className="mt-2">
+                    +{trophy.points} pontos
+                  </Badge>
+                </div>
+              </div>
+            ))}
+            
+            {/* Locked Trophies */}
+            {TROPHIES.filter(t => !stats?.trophies?.includes(t.id)).map((trophy) => (
+              <div
+                key={trophy.id}
+                className="flex items-start gap-3 p-4 rounded-lg bg-muted/20 border border-border opacity-60"
+              >
+                <div className="text-3xl grayscale">{trophy.icon}</div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <Lock className="w-4 h-4 text-muted-foreground" />
+                    <h4 className="font-semibold text-muted-foreground">{trophy.name}</h4>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{trophy.description}</p>
+                  <Badge variant="outline" className="mt-2">
+                    +{trophy.points} pontos
+                  </Badge>
+                </div>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <BottomNav />
     </div>
