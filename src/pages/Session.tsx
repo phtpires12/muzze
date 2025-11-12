@@ -24,6 +24,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { StreakHalo } from "@/components/StreakHalo";
+import { ScriptEditor } from "@/components/ScriptEditor";
 
 const STAGES: { id: SessionStage; label: string; icon: any; color: string }[] = [
   { id: "ideation", label: "Ideação", icon: Lightbulb, color: "text-yellow-500" },
@@ -136,6 +137,64 @@ const Session = () => {
 
   const currentStage = STAGES.find(s => s.id === session.stage)!;
   const CurrentIcon = currentStage.icon;
+
+  // If stage is "script", show the script editor with floating timer
+  if (session.stage === "script") {
+    return (
+      <div className="relative">
+        {/* Floating Timer Pop-up */}
+        <div className="fixed top-6 right-6 z-50">
+          <Card className="p-4 backdrop-blur-md bg-card/95 border-border/20 shadow-xl rounded-2xl">
+            <div className="flex items-center gap-4">
+              <div className={cn(
+                "w-12 h-12 rounded-full flex items-center justify-center",
+                "bg-gradient-to-br from-accent to-primary shadow-lg"
+              )}>
+                <CurrentIcon className="w-6 h-6 text-white" />
+              </div>
+              
+              <div>
+                <div className="text-sm text-muted-foreground">{currentStage.label}</div>
+                <div className="text-2xl font-bold text-foreground tabular-nums">
+                  {formatTime(session.elapsedSeconds)}
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                {!session.isPaused ? (
+                  <Button
+                    onClick={pauseSession}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <Pause className="w-4 h-4" />
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={resumeSession}
+                    size="sm"
+                  >
+                    <Play className="w-4 h-4" />
+                  </Button>
+                )}
+                
+                <Button
+                  onClick={handleEnd}
+                  variant="destructive"
+                  size="sm"
+                >
+                  <Square className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        {/* Script Editor */}
+        <ScriptEditor />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-accent/10 via-background to-primary/10 p-6">
