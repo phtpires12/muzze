@@ -155,8 +155,8 @@ const Session = () => {
   const currentStage = STAGES.find(s => s.id === session.stage)!;
   const CurrentIcon = currentStage.icon;
 
-  // If stage is "script", show the script editor with floating timer
-  if (session.stage === "script") {
+  // If stage is "script" or "review", show the script editor with floating timer
+  if (session.stage === "script" || session.stage === "review") {
     const progress = session.targetSeconds 
       ? Math.min(100, (session.elapsedSeconds / session.targetSeconds) * 100)
       : 0;
@@ -249,7 +249,7 @@ const Session = () => {
         </div>
 
         {/* Script Editor */}
-        <ScriptEditor scriptId={scriptId} />
+        <ScriptEditor scriptId={scriptId} isReviewMode={session.stage === "review"} />
       </div>
     );
   }

@@ -23,9 +23,10 @@ import { useSessionContext } from "@/contexts/SessionContext";
 interface ScriptEditorProps {
   onClose?: () => void;
   scriptId?: string;
+  isReviewMode?: boolean;
 }
 
-export const ScriptEditor = ({ onClose, scriptId }: ScriptEditorProps) => {
+export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: ScriptEditorProps) => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { setMuzzeSession } = useSessionContext();
@@ -144,12 +145,15 @@ export const ScriptEditor = ({ onClose, scriptId }: ScriptEditorProps) => {
     // Save current changes before advancing
     handleAutoSave();
     
-    // Navigate to next stage (review)
-    navigate('/session?stage=review');
+    // Navigate to next stage based on current mode
+    const nextStage = isReviewMode ? 'record' : 'review';
+    const nextLabel = isReviewMode ? 'Gravação' : 'Revisão';
+    
+    navigate(`/session?stage=${nextStage}`);
     
     toast({
-      title: "Avançando para Revisão",
-      description: "Seu roteiro foi salvo. Hora de revisar!",
+      title: `Avançando para ${nextLabel}`,
+      description: `Seu roteiro foi salvo. ${isReviewMode ? 'Prepare-se para gravar!' : 'Hora de revisar!'}`,
     });
   };
 
@@ -369,7 +373,7 @@ export const ScriptEditor = ({ onClose, scriptId }: ScriptEditorProps) => {
           <div className="flex items-center justify-between mb-4">
             <div className="border-l-4 border-primary/30 pl-4">
               <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                📝 ROTEIRO
+                {isReviewMode ? '👁️ REVISÃO' : '📝 ROTEIRO'}
               </h3>
             </div>
             
@@ -377,7 +381,7 @@ export const ScriptEditor = ({ onClose, scriptId }: ScriptEditorProps) => {
               onClick={handleNextStage}
               className="gap-2 bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-opacity"
             >
-              Avançar para Revisão
+              {isReviewMode ? 'Avançar para Gravação' : 'Avançar para Revisão'}
               <ArrowRight className="w-4 h-4" />
             </Button>
           </div>
@@ -385,13 +389,16 @@ export const ScriptEditor = ({ onClose, scriptId }: ScriptEditorProps) => {
           <Textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="Escreva seu roteiro aqui... 
+            placeholder={isReviewMode 
+              ? "Leia seu texto frase por frase em voz alta, finja que já está gravando-o."
+              : `Escreva seu roteiro aqui... 
 
 Você pode organizar em seções como:
 - INTRO (Gancho)
 - DESENVOLVIMENTO
-- CONCLUSÃO"
+- CONCLUSÃO`}
             className="min-h-[400px] text-base leading-relaxed resize-none border-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent"
+            readOnly={isReviewMode}
           />
         </div>
       </div>
