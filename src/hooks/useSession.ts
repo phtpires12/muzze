@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { awardPoints, POINTS, getUserStats, saveUserStats } from "@/lib/gamification";
 
-export type SessionStage = "ideation" | "script" | "record" | "edit" | "review";
+export type SessionStage = "ideation" | "script" | "review" | "record" | "edit";
 
 interface SessionState {
   isActive: boolean;
@@ -103,10 +103,22 @@ export const useSession = () => {
         .order('created_at', { ascending: false })
         .limit(3);
 
-      let targetSeconds = null;
+      // Default recommended times (in seconds) for each stage
+      const defaultTimes: Record<SessionStage, number> = {
+        ideation: 15 * 60,    // 15 minutes
+        script: 45 * 60,      // 45 minutes
+        review: 30 * 60,      // 30 minutes (not specified, using reasonable default)
+        record: 50 * 60,      // 50 minutes
+        edit: 120 * 60,       // 2 hours
+      };
+
+      let targetSeconds: number | null = null;
       if (recentSessions && recentSessions.length > 0) {
         const totalSeconds = recentSessions.reduce((sum, s) => sum + (s.duration_seconds || 0), 0);
         targetSeconds = Math.floor(totalSeconds / recentSessions.length);
+      } else {
+        // Use default time if no history
+        targetSeconds = defaultTimes[initialStage];
       }
 
       setSession({
@@ -130,9 +142,7 @@ export const useSession = () => {
 
       toast({
         title: "Sessão iniciada",
-        description: targetSeconds 
-          ? `Etapa: ${getStageLabel(initialStage)} • Tempo sugerido: ${formatTime(targetSeconds)}`
-          : `Etapa: ${getStageLabel(initialStage)}`,
+        description: `Etapa: ${getStageLabel(initialStage)} • Tempo recomendado: ${formatTime(targetSeconds || 0)}`,
       });
     } catch (error: any) {
       toast({
@@ -178,6 +188,15 @@ export const useSession = () => {
         });
       }
 
+      // Default recommended times (in seconds) for each stage
+      const defaultTimes: Record<SessionStage, number> = {
+        ideation: 15 * 60,    // 15 minutes
+        script: 45 * 60,      // 45 minutes
+        review: 30 * 60,      // 30 minutes
+        record: 50 * 60,      // 50 minutes
+        edit: 120 * 60,       // 2 hours
+      };
+
       // Calculate average time for new stage
       const { data: recentSessions } = await supabase
         .from('stage_times')
@@ -187,10 +206,13 @@ export const useSession = () => {
         .order('created_at', { ascending: false })
         .limit(3);
 
-      let targetSeconds = null;
+      let targetSeconds: number | null = null;
       if (recentSessions && recentSessions.length > 0) {
         const totalSeconds = recentSessions.reduce((sum, s) => sum + (s.duration_seconds || 0), 0);
         targetSeconds = Math.floor(totalSeconds / recentSessions.length);
+      } else {
+        // Use default time if no history
+        targetSeconds = defaultTimes[newStage];
       }
 
       // Start new stage - reset stage timer but keep total session timer running
@@ -209,9 +231,7 @@ export const useSession = () => {
 
       toast({
         title: "Etapa alterada",
-        description: targetSeconds
-          ? `Agora você está em: ${getStageLabel(newStage)} • Tempo sugerido: ${formatTime(targetSeconds)}`
-          : `Agora você está em: ${getStageLabel(newStage)}`,
+        description: `Agora você está em: ${getStageLabel(newStage)} • Tempo recomendado: ${formatTime(targetSeconds || 0)}`,
       });
     } catch (error: any) {
       toast({

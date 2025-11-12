@@ -144,12 +144,12 @@ export const ScriptEditor = ({ onClose, scriptId }: ScriptEditorProps) => {
     // Save current changes before advancing
     handleAutoSave();
     
-    // Navigate to next stage (record)
-    navigate('/session?stage=record');
+    // Navigate to next stage (review)
+    navigate('/session?stage=review');
     
     toast({
-      title: "Avançando para Gravação",
-      description: "Seu roteiro foi salvo. Prepare-se para gravar!",
+      title: "Avançando para Revisão",
+      description: "Seu roteiro foi salvo. Hora de revisar!",
     });
   };
 
@@ -377,7 +377,7 @@ export const ScriptEditor = ({ onClose, scriptId }: ScriptEditorProps) => {
               onClick={handleNextStage}
               className="gap-2 bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-opacity"
             >
-              Avançar para Gravação
+              Avançar para Revisão
               <ArrowRight className="w-4 h-4" />
             </Button>
           </div>

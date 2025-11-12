@@ -29,9 +29,9 @@ import { ScriptEditor } from "@/components/ScriptEditor";
 const STAGES: { id: SessionStage; label: string; icon: any; color: string }[] = [
   { id: "ideation", label: "Ideação", icon: Lightbulb, color: "text-yellow-500" },
   { id: "script", label: "Roteiro", icon: FileText, color: "text-blue-500" },
+  { id: "review", label: "Revisão", icon: CheckCircle, color: "text-green-500" },
   { id: "record", label: "Gravação", icon: Video, color: "text-red-500" },
   { id: "edit", label: "Edição", icon: Scissors, color: "text-purple-500" },
-  { id: "review", label: "Revisão", icon: CheckCircle, color: "text-green-500" },
 ];
 
 const Session = () => {
