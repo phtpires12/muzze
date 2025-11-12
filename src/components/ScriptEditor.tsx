@@ -183,16 +183,24 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
   };
 
   const handleNextStage = async () => {
+    console.log('[ScriptEditor] handleNextStage called');
+    console.log('[ScriptEditor] Current mode:', isReviewMode ? 'review' : 'script');
+    console.log('[ScriptEditor] Current scriptId:', scriptId);
+    
     // Save current changes before advancing
     await handleAutoSave();
+    console.log('[ScriptEditor] Auto-save completed');
     
     // Navigate to next stage based on current mode
     const nextStage = isReviewMode ? 'record' : 'review';
     const nextLabel = isReviewMode ? 'Gravação' : 'Revisão';
     
+    console.log('[ScriptEditor] Next stage:', nextStage);
+    
     // Check if all sections are reviewed when in review mode
     if (isReviewMode) {
       const allReviewed = Object.values(reviewedSections).every(v => v);
+      console.log('[ScriptEditor] All sections reviewed:', allReviewed);
       if (!allReviewed) {
         toast({
           title: "Atenção",
@@ -208,6 +216,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
       ? `/session?stage=${nextStage}&scriptId=${currentScriptId}`
       : `/session?stage=${nextStage}`;
     
+    console.log('[ScriptEditor] Navigating to:', url);
     navigate(url);
     
     toast({
