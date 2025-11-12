@@ -11,12 +11,14 @@ import {
   Tag,
   X,
   ArrowLeft,
-  Check
+  Check,
+  ArrowRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { useSessionContext } from "@/contexts/SessionContext";
 
 interface ScriptEditorProps {
   onClose?: () => void;
@@ -26,6 +28,7 @@ interface ScriptEditorProps {
 export const ScriptEditor = ({ onClose, scriptId }: ScriptEditorProps) => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { setMuzzeSession } = useSessionContext();
   const [title, setTitle] = useState("Novo Roteiro");
   const [content, setContent] = useState("");
   const [references, setReferences] = useState<string[]>([]);
@@ -135,6 +138,19 @@ export const ScriptEditor = ({ onClose, scriptId }: ScriptEditorProps) => {
 
   const handleBack = () => {
     navigate('/calendario');
+  };
+
+  const handleNextStage = () => {
+    // Save current changes before advancing
+    handleAutoSave();
+    
+    // Navigate to next stage (record)
+    navigate('/session?stage=record');
+    
+    toast({
+      title: "Avançando para Gravação",
+      description: "Seu roteiro foi salvo. Prepare-se para gravar!",
+    });
   };
 
   const handleAddReference = () => {
@@ -350,10 +366,20 @@ export const ScriptEditor = ({ onClose, scriptId }: ScriptEditorProps) => {
 
         {/* Content Editor */}
         <div className="space-y-4">
-          <div className="border-l-4 border-primary/30 pl-4">
-            <h3 className="text-lg font-semibold text-foreground mb-2 flex items-center gap-2">
-              📝 ROTEIRO
-            </h3>
+          <div className="flex items-center justify-between mb-4">
+            <div className="border-l-4 border-primary/30 pl-4">
+              <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                📝 ROTEIRO
+              </h3>
+            </div>
+            
+            <Button
+              onClick={handleNextStage}
+              className="gap-2 bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-opacity"
+            >
+              Avançar para Gravação
+              <ArrowRight className="w-4 h-4" />
+            </Button>
           </div>
           
           <Textarea
