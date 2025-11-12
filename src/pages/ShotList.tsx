@@ -226,7 +226,21 @@ const ShotList = () => {
       if (error) throw error;
 
       if (data?.content) {
-        setScriptContent(data.content);
+        // Parse JSON content if it's structured
+        try {
+          const parsedContent = JSON.parse(data.content);
+          // Concatenate all sections into readable text
+          const sections = [];
+          if (parsedContent.gancho && parsedContent.gancho.trim()) sections.push(`Gancho: ${parsedContent.gancho}`);
+          if (parsedContent.setup && parsedContent.setup.trim()) sections.push(`Setup: ${parsedContent.setup}`);
+          if (parsedContent.desenvolvimento && parsedContent.desenvolvimento.trim()) sections.push(`Desenvolvimento: ${parsedContent.desenvolvimento}`);
+          if (parsedContent.conclusao && parsedContent.conclusao.trim()) sections.push(`Conclusão: ${parsedContent.conclusao}`);
+          
+          setScriptContent(sections.join('\n\n'));
+        } catch {
+          // If not JSON, use as plain text
+          setScriptContent(data.content);
+        }
       }
     } catch (error) {
       console.error('Error loading script content:', error);
@@ -243,6 +257,22 @@ const ShotList = () => {
 
       if (error) throw error;
 
+      // Parse script content
+      let formattedScript = "";
+      if (data?.content) {
+        try {
+          const parsedContent = JSON.parse(data.content);
+          const sections = [];
+          if (parsedContent.gancho && parsedContent.gancho.trim()) sections.push(`Gancho: ${parsedContent.gancho}`);
+          if (parsedContent.setup && parsedContent.setup.trim()) sections.push(`Setup: ${parsedContent.setup}`);
+          if (parsedContent.desenvolvimento && parsedContent.desenvolvimento.trim()) sections.push(`Desenvolvimento: ${parsedContent.desenvolvimento}`);
+          if (parsedContent.conclusao && parsedContent.conclusao.trim()) sections.push(`Conclusão: ${parsedContent.conclusao}`);
+          formattedScript = sections.join('\n\n');
+        } catch {
+          formattedScript = data.content;
+        }
+      }
+
       if (data?.shot_list && data.shot_list.length > 0) {
         const parsedShots = data.shot_list.map((item: string) => {
           try {
@@ -250,7 +280,7 @@ const ShotList = () => {
           } catch {
             return {
               id: crypto.randomUUID(),
-              script: data.content || "",
+              script: formattedScript,
               scene: "",
               shotImageUrl: "",
               location: ""
@@ -258,15 +288,17 @@ const ShotList = () => {
           }
         });
         setShots(parsedShots);
-      } else if (data?.content) {
-        // Initialize with script content if no shot list exists
-        setShots([{
-          id: crypto.randomUUID(),
-          script: data.content,
-          scene: "",
-          shotImageUrl: "",
-          location: ""
-        }]);
+      } else {
+        // Initialize with script content if no shot list exists (only if there's content)
+        if (formattedScript.trim()) {
+          setShots([{
+            id: crypto.randomUUID(),
+            script: formattedScript,
+            scene: "",
+            shotImageUrl: "",
+            location: ""
+          }]);
+        }
       }
     } catch (error) {
       console.error('Error loading shot list:', error);
