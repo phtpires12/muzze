@@ -45,6 +45,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
     development: false,
     conclusion: false,
   });
+  const [showComparison, setShowComparison] = useState(false); // Toggle for side-by-side comparison
 
   useEffect(() => {
     if (scriptId) {
@@ -415,82 +416,103 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
           </div>
 
           {isReviewMode ? (
-            // Review Mode: Side-by-side view with original and edited version
+            // Review Mode: Single editor with optional side-by-side comparison
             <div className="space-y-4">
               <div className="bg-muted/30 p-4 rounded-lg border border-border/40">
-                <p className="text-sm text-muted-foreground mb-2">
+                <p className="text-sm text-muted-foreground mb-3">
                   💡 Dica: Leia seu texto frase por frase em voz alta, finja que já está gravando-o.
                 </p>
-                <div className="flex gap-2 flex-wrap">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id="intro-check"
-                      checked={reviewedSections.intro}
-                      onChange={() => toggleSectionReview('intro')}
-                      className="w-4 h-4 rounded border-border"
-                    />
-                    <label htmlFor="intro-check" className="text-sm text-foreground cursor-pointer">
-                      Intro/Gancho
-                    </label>
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                  <div className="flex gap-3 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="intro-check"
+                        checked={reviewedSections.intro}
+                        onChange={() => toggleSectionReview('intro')}
+                        className="w-4 h-4 rounded border-border"
+                      />
+                      <label htmlFor="intro-check" className="text-sm text-foreground cursor-pointer">
+                        Intro/Gancho
+                      </label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="dev-check"
+                        checked={reviewedSections.development}
+                        onChange={() => toggleSectionReview('development')}
+                        className="w-4 h-4 rounded border-border"
+                      />
+                      <label htmlFor="dev-check" className="text-sm text-foreground cursor-pointer">
+                        Desenvolvimento
+                      </label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="conclusion-check"
+                        checked={reviewedSections.conclusion}
+                        onChange={() => toggleSectionReview('conclusion')}
+                        className="w-4 h-4 rounded border-border"
+                      />
+                      <label htmlFor="conclusion-check" className="text-sm text-foreground cursor-pointer">
+                        Conclusão
+                      </label>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id="dev-check"
-                      checked={reviewedSections.development}
-                      onChange={() => toggleSectionReview('development')}
-                      className="w-4 h-4 rounded border-border"
-                    />
-                    <label htmlFor="dev-check" className="text-sm text-foreground cursor-pointer">
-                      Desenvolvimento
-                    </label>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id="conclusion-check"
-                      checked={reviewedSections.conclusion}
-                      onChange={() => toggleSectionReview('conclusion')}
-                      className="w-4 h-4 rounded border-border"
-                    />
-                    <label htmlFor="conclusion-check" className="text-sm text-foreground cursor-pointer">
-                      Conclusão
-                    </label>
-                  </div>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowComparison(!showComparison)}
+                    className="gap-2"
+                  >
+                    {showComparison ? 'Ocultar Comparação' : 'Comparar Versões'}
+                  </Button>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {/* Original Version (Read-only) */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                      Original
-                    </h4>
+              {showComparison ? (
+                // Side-by-side comparison view
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {/* Original Version (Read-only) */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                        Original
+                      </h4>
+                    </div>
+                    <Textarea
+                      value={originalContent}
+                      readOnly
+                      className="min-h-[400px] text-base leading-relaxed resize-none border-border/40 bg-muted/20 focus-visible:ring-0 focus-visible:ring-offset-0"
+                    />
                   </div>
-                  <Textarea
-                    value={originalContent}
-                    readOnly
-                    className="min-h-[400px] text-base leading-relaxed resize-none border-border/40 bg-muted/20 focus-visible:ring-0 focus-visible:ring-offset-0"
-                  />
-                </div>
 
-                {/* Edited Version (Editable) */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <h4 className="text-sm font-semibold text-primary uppercase tracking-wider">
-                      Versão Editada
-                    </h4>
-                    <span className="text-xs text-muted-foreground">(editável)</span>
+                  {/* Edited Version (Editable) */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-sm font-semibold text-primary uppercase tracking-wider">
+                        Versão Editada
+                      </h4>
+                    </div>
+                    <Textarea
+                      value={content}
+                      onChange={(e) => setContent(e.target.value)}
+                      className="min-h-[400px] text-base leading-relaxed resize-none border-primary/40 bg-background focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-offset-0"
+                    />
                   </div>
-                  <Textarea
-                    value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                    className="min-h-[400px] text-base leading-relaxed resize-none border-primary/40 bg-background focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-offset-0"
-                  />
                 </div>
-              </div>
+              ) : (
+                // Single editor view (default)
+                <Textarea
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  placeholder="Revise e edite seu roteiro aqui..."
+                  className="min-h-[400px] text-base leading-relaxed resize-none border-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent"
+                />
+              )}
             </div>
           ) : (
             // Script Mode: Single editor
