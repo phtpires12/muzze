@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -9,8 +9,8 @@ import {
   ListChecks,
   Tag,
   X,
-  Save,
-  ArrowLeft
+  ArrowLeft,
+  Check
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,13 +31,34 @@ export const ScriptEditor = ({ onClose, scriptId }: ScriptEditorProps) => {
   const [shotList, setShotList] = useState<string[]>([]);
   const [contentType, setContentType] = useState("");
   const [publishDate, setPublishDate] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const autoSaveTimer = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (scriptId) {
       loadScript();
     }
   }, [scriptId]);
+
+  // Auto-save effect
+  useEffect(() => {
+    // Clear any existing timer
+    if (autoSaveTimer.current) {
+      clearTimeout(autoSaveTimer.current);
+    }
+
+    // Set up auto-save every 30 seconds
+    autoSaveTimer.current = setTimeout(() => {
+      handleAutoSave();
+    }, 30000);
+
+    // Cleanup on unmount
+    return () => {
+      if (autoSaveTimer.current) {
+        clearTimeout(autoSaveTimer.current);
+      }
+    };
+  }, [title, content, references, shotList, contentType, publishDate]);
 
   const loadScript = async () => {
     try {
@@ -67,11 +88,10 @@ export const ScriptEditor = ({ onClose, scriptId }: ScriptEditorProps) => {
     }
   };
 
-  const handleSave = async () => {
-    setIsSaving(true);
+  const handleAutoSave = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("User not authenticated");
+      if (!user) return;
 
       const scriptData = {
         user_id: user.id,
@@ -90,40 +110,29 @@ export const ScriptEditor = ({ onClose, scriptId }: ScriptEditorProps) => {
           .eq('id', scriptId);
 
         if (error) throw error;
-
-        toast({
-          title: "Roteiro atualizado",
-          description: "Seu roteiro foi atualizado com sucesso!",
-        });
       } else {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('scripts')
-          .insert(scriptData);
+          .insert(scriptData)
+          .select()
+          .single();
 
         if (error) throw error;
-
-        toast({
-          title: "Roteiro salvo",
-          description: "Seu roteiro foi salvo com sucesso!",
-        });
+        
+        // Update URL with new script ID without reloading
+        if (data?.id) {
+          window.history.replaceState({}, '', `/session?stage=script&scriptId=${data.id}`);
+        }
       }
 
-      // Redirecionar para o calendário após salvar
-      navigate('/calendario-editorial');
+      setLastSaved(new Date());
     } catch (error) {
-      console.error('Error saving script:', error);
-      toast({
-        title: "Erro ao salvar",
-        description: "Não foi possível salvar o roteiro.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSaving(false);
+      console.error('Error auto-saving script:', error);
     }
   };
 
   const handleBack = () => {
-    navigate('/calendario-editorial');
+    navigate('/calendario');
   };
 
   return (
@@ -140,17 +149,13 @@ export const ScriptEditor = ({ onClose, scriptId }: ScriptEditorProps) => {
             <ArrowLeft className="w-4 h-4" />
             Voltar
           </Button>
-          <div className="flex gap-2">
-            <Button 
-              variant="default"
-              size="sm"
-              onClick={handleSave}
-              disabled={isSaving}
-              className="gap-2"
-            >
-              <Save className="w-4 h-4" />
-              {isSaving ? "Salvando..." : "Salvar"}
-            </Button>
+          <div className="flex items-center gap-3">
+            {lastSaved && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Check className="w-4 h-4 text-green-500" />
+                Salvo {new Date(lastSaved).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+              </div>
+            )}
             {onClose && (
               <Button 
                 variant="ghost" 
