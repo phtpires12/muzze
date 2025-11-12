@@ -223,7 +223,7 @@ const CalendarioEditorial = () => {
             <h1 className="text-2xl font-bold">Calendário Editorial</h1>
             <Button onClick={handleCreateNewScript}>
               <Plus className="w-4 h-4 mr-2" />
-              Novo Roteiro
+              Nova Ideia
             </Button>
           </div>
         </div>
@@ -306,11 +306,12 @@ const CalendarioEditorial = () => {
                   const isToday = isSameDay(day, new Date());
 
                   const isDragOver = dragOverDate === format(day, "yyyy-MM-dd");
+                  const [isHovered, setIsHovered] = useState(false);
                   
                   return (
                     <div
                       key={idx}
-                      className={`min-h-[120px] border-r border-b border-border p-2 transition-all ${
+                      className={`group relative min-h-[120px] border-r border-b border-border p-2 transition-all ${
                         !isCurrentMonth ? "bg-muted/10" : "bg-card"
                       } ${idx % 7 === 6 ? "border-r-0" : ""} ${
                         isDragOver ? "bg-primary/20 ring-2 ring-primary ring-inset shadow-lg" : ""
@@ -318,11 +319,28 @@ const CalendarioEditorial = () => {
                       onDragOver={(e) => handleDragOver(e, day)}
                       onDragLeave={handleDragLeave}
                       onDrop={(e) => handleDrop(e, day)}
+                      onMouseEnter={() => setIsHovered(true)}
+                      onMouseLeave={() => setIsHovered(false)}
                     >
-                      <div className={`text-sm font-medium mb-1 ${
-                        !isCurrentMonth ? "text-muted-foreground" : isToday ? "text-primary" : "text-foreground"
-                      }`}>
-                        {format(day, "d")}
+                      <div className="flex justify-between items-start">
+                        <div className={`text-sm font-medium mb-1 ${
+                          !isCurrentMonth ? "text-muted-foreground" : isToday ? "text-primary" : "text-foreground"
+                        }`}>
+                          {format(day, "d")}
+                        </div>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className={`h-6 w-6 transition-opacity ${
+                            isHovered ? "opacity-100" : "opacity-0"
+                          }`}
+                          onClick={() => {
+                            const publishDate = format(day, "yyyy-MM-dd");
+                            navigate(`/session?stage=script&publishDate=${publishDate}`);
+                          }}
+                        >
+                          <Plus className="w-4 h-4" />
+                        </Button>
                       </div>
                       
                       <div className="space-y-1">
@@ -400,17 +418,33 @@ const CalendarioEditorial = () => {
                   const dayScripts = getScriptsForDate(day);
 
                   const isDragOver = dragOverDate === format(day, "yyyy-MM-dd");
+                  const [isHovered, setIsHovered] = useState(false);
                   
                   return (
                     <div
                       key={day.toISOString()}
-                      className={`min-h-[400px] border-r border-border last:border-r-0 p-3 transition-all ${
+                      className={`group relative min-h-[400px] border-r border-border last:border-r-0 p-3 transition-all ${
                         isDragOver ? "bg-primary/20 ring-2 ring-primary ring-inset shadow-lg" : ""
                       }`}
                       onDragOver={(e) => handleDragOver(e, day)}
                       onDragLeave={handleDragLeave}
                       onDrop={(e) => handleDrop(e, day)}
+                      onMouseEnter={() => setIsHovered(true)}
+                      onMouseLeave={() => setIsHovered(false)}
                     >
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className={`absolute top-2 right-2 h-7 w-7 transition-opacity z-10 ${
+                          isHovered ? "opacity-100" : "opacity-0"
+                        }`}
+                        onClick={() => {
+                          const publishDate = format(day, "yyyy-MM-dd");
+                          navigate(`/session?stage=script&publishDate=${publishDate}`);
+                        }}
+                      >
+                        <Plus className="w-4 h-4" />
+                      </Button>
                       <div className="space-y-2">
                         {dayScripts.map((script) => (
                           <div
