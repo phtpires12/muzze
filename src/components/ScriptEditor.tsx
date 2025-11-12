@@ -29,6 +29,7 @@ export const ScriptEditor = ({ onClose, scriptId }: ScriptEditorProps) => {
   const [title, setTitle] = useState("Novo Roteiro");
   const [content, setContent] = useState("");
   const [references, setReferences] = useState<string[]>([]);
+  const [newReference, setNewReference] = useState("");
   const [shotList, setShotList] = useState<string[]>([]);
   const [contentType, setContentType] = useState("");
   const [publishDate, setPublishDate] = useState("");
@@ -136,6 +137,20 @@ export const ScriptEditor = ({ onClose, scriptId }: ScriptEditorProps) => {
     navigate('/calendario');
   };
 
+  const handleAddReference = () => {
+    if (newReference.trim() !== "") {
+      setReferences([...references, newReference.trim()]);
+      setNewReference("");
+    }
+  };
+
+  const handleReferenceKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddReference();
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-4xl mx-auto">
@@ -222,50 +237,60 @@ export const ScriptEditor = ({ onClose, scriptId }: ScriptEditorProps) => {
               <LinkIcon className="w-4 h-4" />
               <span>Referências</span>
             </div>
-            <div className="flex-1">
-              {references.length === 0 ? (
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => setReferences([""])}
-                  className="h-8 text-xs text-muted-foreground"
-                >
-                  Adicionar referência
-                </Button>
-              ) : (
-                <div className="space-y-2">
+            <div className="flex-1 space-y-2">
+              {/* Display confirmed references as clickable buttons */}
+              {references.length > 0 && (
+                <div className="flex flex-wrap gap-2">
                   {references.map((ref, index) => (
-                    <div key={index} className="flex gap-2">
-                      <Input
-                        value={ref}
-                        onChange={(e) => {
-                          const newRefs = [...references];
-                          newRefs[index] = e.target.value;
-                          setReferences(newRefs);
-                        }}
-                        placeholder="https://..."
-                        className="flex-1 border-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
-                      />
+                    <div key={index} className="flex items-center gap-1 group/ref">
                       <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setReferences(references.filter((_, i) => i !== index))}
+                        variant="outline"
+                        size="sm"
+                        className="h-8 gap-2 pr-1"
+                        asChild
                       >
-                        <X className="w-4 h-4" />
+                        <a href={ref} target="_blank" rel="noopener noreferrer">
+                          <LinkIcon className="w-3 h-3" />
+                          <span className="max-w-[200px] truncate text-xs">
+                            {ref}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 ml-1 opacity-0 group-hover/ref:opacity-100 transition-opacity"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setReferences(references.filter((_, i) => i !== index));
+                            }}
+                          >
+                            <X className="w-3 h-3" />
+                          </Button>
+                        </a>
                       </Button>
                     </div>
                   ))}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setReferences([...references, ""])}
-                    className="h-8 text-xs text-muted-foreground"
-                  >
-                    + Adicionar mais
-                  </Button>
                 </div>
               )}
+              
+              {/* Input for new reference */}
+              <div className="flex gap-2">
+                <Input
+                  value={newReference}
+                  onChange={(e) => setNewReference(e.target.value)}
+                  onKeyDown={handleReferenceKeyDown}
+                  placeholder="Colar https://..."
+                  className="flex-1 border-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-sm"
+                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleAddReference}
+                  disabled={!newReference.trim()}
+                  className="h-8 text-xs"
+                >
+                  Link
+                </Button>
+              </div>
             </div>
           </div>
 
