@@ -32,6 +32,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
   const { setMuzzeSession } = useSessionContext();
   const [title, setTitle] = useState("Novo Roteiro");
   const [content, setContent] = useState("");
+  const [originalContent, setOriginalContent] = useState(""); // Store original content for review comparison
   const [references, setReferences] = useState<string[]>([]);
   const [newReference, setNewReference] = useState("");
   const [shotList, setShotList] = useState<string[]>([]);
@@ -39,6 +40,11 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
   const [publishDate, setPublishDate] = useState("");
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const autoSaveTimer = useRef<NodeJS.Timeout | null>(null);
+  const [reviewedSections, setReviewedSections] = useState<{[key: string]: boolean}>({
+    intro: false,
+    development: false,
+    conclusion: false,
+  });
 
   useEffect(() => {
     if (scriptId) {
@@ -79,6 +85,10 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
       if (data) {
         setTitle(data.title);
         setContent(data.content || "");
+        // Store original content when entering review mode
+        if (isReviewMode) {
+          setOriginalContent(data.content || "");
+        }
         setReferences(data.reference_links || []);
         setShotList(data.shot_list || []);
         setContentType(data.content_type || "");
@@ -149,12 +159,30 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
     const nextStage = isReviewMode ? 'record' : 'review';
     const nextLabel = isReviewMode ? 'Gravação' : 'Revisão';
     
+    // Check if all sections are reviewed when in review mode
+    if (isReviewMode) {
+      const allReviewed = Object.values(reviewedSections).every(v => v);
+      if (!allReviewed) {
+        toast({
+          title: "Atenção",
+          description: "Você ainda não marcou todas as seções como revisadas. Deseja continuar mesmo assim?",
+        });
+      }
+    }
+    
     navigate(`/session?stage=${nextStage}`);
     
     toast({
       title: `Avançando para ${nextLabel}`,
       description: `Seu roteiro foi salvo. ${isReviewMode ? 'Prepare-se para gravar!' : 'Hora de revisar!'}`,
     });
+  };
+
+  const toggleSectionReview = (section: string) => {
+    setReviewedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
   };
 
   const handleAddReference = () => {
@@ -385,21 +413,99 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
               <ArrowRight className="w-4 h-4" />
             </Button>
           </div>
-          
-          <Textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder={isReviewMode 
-              ? "Leia seu texto frase por frase em voz alta, finja que já está gravando-o."
-              : `Escreva seu roteiro aqui... 
+
+          {isReviewMode ? (
+            // Review Mode: Side-by-side view with original and edited version
+            <div className="space-y-4">
+              <div className="bg-muted/30 p-4 rounded-lg border border-border/40">
+                <p className="text-sm text-muted-foreground mb-2">
+                  💡 Dica: Leia seu texto frase por frase em voz alta, finja que já está gravando-o.
+                </p>
+                <div className="flex gap-2 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="intro-check"
+                      checked={reviewedSections.intro}
+                      onChange={() => toggleSectionReview('intro')}
+                      className="w-4 h-4 rounded border-border"
+                    />
+                    <label htmlFor="intro-check" className="text-sm text-foreground cursor-pointer">
+                      Intro/Gancho
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="dev-check"
+                      checked={reviewedSections.development}
+                      onChange={() => toggleSectionReview('development')}
+                      className="w-4 h-4 rounded border-border"
+                    />
+                    <label htmlFor="dev-check" className="text-sm text-foreground cursor-pointer">
+                      Desenvolvimento
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="conclusion-check"
+                      checked={reviewedSections.conclusion}
+                      onChange={() => toggleSectionReview('conclusion')}
+                      className="w-4 h-4 rounded border-border"
+                    />
+                    <label htmlFor="conclusion-check" className="text-sm text-foreground cursor-pointer">
+                      Conclusão
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* Original Version (Read-only) */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                      Original
+                    </h4>
+                  </div>
+                  <Textarea
+                    value={originalContent}
+                    readOnly
+                    className="min-h-[400px] text-base leading-relaxed resize-none border-border/40 bg-muted/20 focus-visible:ring-0 focus-visible:ring-offset-0"
+                  />
+                </div>
+
+                {/* Edited Version (Editable) */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-sm font-semibold text-primary uppercase tracking-wider">
+                      Versão Editada
+                    </h4>
+                    <span className="text-xs text-muted-foreground">(editável)</span>
+                  </div>
+                  <Textarea
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
+                    className="min-h-[400px] text-base leading-relaxed resize-none border-primary/40 bg-background focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-offset-0"
+                  />
+                </div>
+              </div>
+            </div>
+          ) : (
+            // Script Mode: Single editor
+            <Textarea
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder="Escreva seu roteiro aqui... 
 
 Você pode organizar em seções como:
 - INTRO (Gancho)
 - DESENVOLVIMENTO
-- CONCLUSÃO`}
-            className="min-h-[400px] text-base leading-relaxed resize-none border-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent"
-            readOnly={isReviewMode}
-          />
+- CONCLUSÃO"
+              className="min-h-[400px] text-base leading-relaxed resize-none border-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent"
+            />
+          )}
         </div>
       </div>
     </div>
