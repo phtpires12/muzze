@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   Calendar,
   FileText,
@@ -188,12 +189,17 @@ export const ScriptEditor = ({ onClose, scriptId }: ScriptEditorProps) => {
               <FileText className="w-4 h-4" />
               <span>Tipo de Conteúdo</span>
             </div>
-            <Input
-              value={contentType}
-              onChange={(e) => setContentType(e.target.value)}
-              placeholder="Ex: Reels, YouTube, TikTok..."
-              className="flex-1 border-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
-            />
+            <Select value={contentType} onValueChange={setContentType}>
+              <SelectTrigger className="flex-1 border-none bg-transparent focus:ring-0 focus:ring-offset-0">
+                <SelectValue placeholder="Selecione o tipo de conteúdo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Reels">Reels</SelectItem>
+                <SelectItem value="YouTube">YouTube</SelectItem>
+                <SelectItem value="TikTok">TikTok</SelectItem>
+                <SelectItem value="X (Twitter)">X (Twitter)</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Publish Date */}

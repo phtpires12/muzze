@@ -4,9 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Plus, ChevronLeft, ChevronRight, Lightbulb } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, Lightbulb, Filter } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -31,6 +32,7 @@ const CalendarioEditorial = () => {
   const [scripts, setScripts] = useState<Script[]>([]);
   const [draggedScript, setDraggedScript] = useState<Script | null>(null);
   const [dragOverDate, setDragOverDate] = useState<string | null>(null);
+  const [contentTypeFilter, setContentTypeFilter] = useState<string>("all");
 
   useEffect(() => {
     fetchScripts();
@@ -62,7 +64,13 @@ const CalendarioEditorial = () => {
       // Compare apenas a parte da data, ignorando timezone
       const scriptDateOnly = scriptDate.split('T')[0];
       const checkDateOnly = format(checkDate, "yyyy-MM-dd");
-      return scriptDateOnly === checkDateOnly;
+      const dateMatches = scriptDateOnly === checkDateOnly;
+      
+      // Apply content type filter
+      if (contentTypeFilter === "all") {
+        return dateMatches;
+      }
+      return dateMatches && script.content_type === contentTypeFilter;
     });
   };
 
@@ -175,11 +183,29 @@ const CalendarioEditorial = () => {
 
       <div className="container mx-auto px-4 py-4">
         <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "month" | "week")}>
-          <div className="flex justify-between items-center mb-4">
-            <TabsList>
-              <TabsTrigger value="month">Mês</TabsTrigger>
-              <TabsTrigger value="week">Semana</TabsTrigger>
-            </TabsList>
+          <div className="flex justify-between items-center mb-4 flex-wrap gap-4">
+            <div className="flex items-center gap-3">
+              <TabsList>
+                <TabsTrigger value="month">Mês</TabsTrigger>
+                <TabsTrigger value="week">Semana</TabsTrigger>
+              </TabsList>
+              
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-muted-foreground" />
+                <Select value={contentTypeFilter} onValueChange={setContentTypeFilter}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Filtrar por tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os tipos</SelectItem>
+                    <SelectItem value="Reels">Reels</SelectItem>
+                    <SelectItem value="YouTube">YouTube</SelectItem>
+                    <SelectItem value="TikTok">TikTok</SelectItem>
+                    <SelectItem value="X (Twitter)">X (Twitter)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
             
             <div className="flex items-center gap-2">
               <Button 
