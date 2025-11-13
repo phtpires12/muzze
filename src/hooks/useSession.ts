@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { awardPoints, POINTS, getUserStats, saveUserStats } from "@/lib/gamification";
 
-export type SessionStage = "ideation" | "script" | "review" | "record" | "edit";
+export type SessionStage = "idea" | "ideation" | "script" | "review" | "record" | "edit";
 
 interface SessionState {
   isActive: boolean;
@@ -105,9 +105,10 @@ export const useSession = () => {
 
       // Default recommended times (in seconds) for each stage
       const defaultTimes: Record<SessionStage, number> = {
+        idea: 10 * 60,        // 10 minutes
         ideation: 15 * 60,    // 15 minutes
         script: 45 * 60,      // 45 minutes
-        review: 30 * 60,      // 30 minutes (not specified, using reasonable default)
+        review: 30 * 60,      // 30 minutes
         record: 50 * 60,      // 50 minutes
         edit: 120 * 60,       // 2 hours
       };
@@ -190,6 +191,7 @@ export const useSession = () => {
 
       // Default recommended times (in seconds) for each stage
       const defaultTimes: Record<SessionStage, number> = {
+        idea: 10 * 60,        // 10 minutes
         ideation: 15 * 60,    // 15 minutes
         script: 45 * 60,      // 45 minutes
         review: 30 * 60,      // 30 minutes
@@ -461,6 +463,7 @@ export const useSession = () => {
 
 const getStageLabel = (stage: SessionStage): string => {
   const labels: Record<SessionStage, string> = {
+    idea: "Ideia",
     ideation: "Ideação",
     script: "Roteiro",
     record: "Gravação",

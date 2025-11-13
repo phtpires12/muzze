@@ -75,7 +75,7 @@ const CalendarioEditorial = () => {
   };
 
   const handleCreateNewScript = () => {
-    navigate('/session?stage=script');
+    navigate('/session?stage=idea');
   };
 
   const handleViewScript = (scriptId: string) => {
@@ -336,7 +336,7 @@ const CalendarioEditorial = () => {
                           }`}
                           onClick={() => {
                             const publishDate = format(day, "yyyy-MM-dd");
-                            navigate(`/session?stage=script&publishDate=${publishDate}`);
+                            navigate(`/session?stage=idea&publishDate=${publishDate}`);
                           }}
                         >
                           <Plus className="w-4 h-4" />
@@ -440,7 +440,7 @@ const CalendarioEditorial = () => {
                         }`}
                         onClick={() => {
                           const publishDate = format(day, "yyyy-MM-dd");
-                          navigate(`/session?stage=script&publishDate=${publishDate}`);
+                          navigate(`/session?stage=idea&publishDate=${publishDate}`);
                         }}
                       >
                         <Plus className="w-4 h-4" />
