@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/dialog";
 import { StreakHalo } from "@/components/StreakHalo";
 import { ScriptEditor } from "@/components/ScriptEditor";
-import { IdeaForm } from "@/components/IdeaForm";
+import { BrainstormWorkspace } from "@/components/brainstorm/BrainstormWorkspace";
 
 const STAGES: { id: SessionStage; label: string; icon: any; color: string }[] = [
   { id: "idea" as SessionStage, label: "Ideia", icon: Lightbulb, color: "text-yellow-500" },
@@ -162,11 +162,11 @@ const Session = () => {
     return null;
   }
 
-  // If stage is "idea", show the idea form
+  // If stage is "idea", show the brainstorm workspace
   if (session.stage === "idea") {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-accent/10 via-background to-primary/10 p-6">
-        <div className="max-w-4xl mx-auto">
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
+        <div className="container mx-auto px-4 py-8">
           <Button
             variant="ghost"
             onClick={() => navigate("/")}
@@ -176,21 +176,7 @@ const Session = () => {
             Voltar
           </Button>
 
-          <Card className="p-8 backdrop-blur-md bg-card/85 border-border/20 shadow-lg rounded-[28px]">
-            <div className="flex items-center gap-4 mb-8">
-              <div className="w-14 h-14 rounded-full flex items-center justify-center bg-gradient-to-br from-accent/20 to-primary/20">
-                <Lightbulb className="w-7 h-7 text-yellow-500" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold text-foreground">Nova Ideia</h1>
-                <p className="text-muted-foreground">
-                  Registre sua ideia para desenvolver depois
-                </p>
-              </div>
-            </div>
-
-            <IdeaForm scriptId={scriptId} />
-          </Card>
+          <BrainstormWorkspace />
         </div>
       </div>
     );
