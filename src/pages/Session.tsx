@@ -25,9 +25,10 @@ import {
 } from "@/components/ui/dialog";
 import { StreakHalo } from "@/components/StreakHalo";
 import { ScriptEditor } from "@/components/ScriptEditor";
+import { IdeaForm } from "@/components/IdeaForm";
 
 const STAGES: { id: SessionStage; label: string; icon: any; color: string }[] = [
-  { id: "ideation", label: "Ideação", icon: Lightbulb, color: "text-yellow-500" },
+  { id: "idea" as SessionStage, label: "Ideia", icon: Lightbulb, color: "text-yellow-500" },
   { id: "script", label: "Roteiro", icon: FileText, color: "text-blue-500" },
   { id: "review", label: "Revisão", icon: CheckCircle, color: "text-green-500" },
   { id: "record", label: "Gravação", icon: Video, color: "text-red-500" },
@@ -159,6 +160,40 @@ const Session = () => {
   if (session.stage === "record" && scriptId) {
     navigate(`/shot-list?scriptId=${scriptId}`);
     return null;
+  }
+
+  // If stage is "idea", show the idea form
+  if (session.stage === "idea") {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-accent/10 via-background to-primary/10 p-6">
+        <div className="max-w-4xl mx-auto">
+          <Button
+            variant="ghost"
+            onClick={() => navigate("/")}
+            className="mb-6"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Voltar
+          </Button>
+
+          <Card className="p-8 backdrop-blur-md bg-card/85 border-border/20 shadow-lg rounded-[28px]">
+            <div className="flex items-center gap-4 mb-8">
+              <div className="w-14 h-14 rounded-full flex items-center justify-center bg-gradient-to-br from-accent/20 to-primary/20">
+                <Lightbulb className="w-7 h-7 text-yellow-500" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-foreground">Nova Ideia</h1>
+                <p className="text-muted-foreground">
+                  Registre sua ideia para desenvolver depois
+                </p>
+              </div>
+            </div>
+
+            <IdeaForm scriptId={scriptId} />
+          </Card>
+        </div>
+      </div>
+    );
   }
 
   // If stage is "script" or "review", show the script editor with floating timer
