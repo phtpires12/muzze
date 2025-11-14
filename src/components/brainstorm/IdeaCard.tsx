@@ -39,10 +39,10 @@ export const IdeaCard = ({
   onDelete,
   isDragging = false,
 }: IdeaCardProps) => {
-  const [localTitle, setLocalTitle] = useState(title);
-  const [localContentType, setLocalContentType] = useState(contentType);
-  const [localCentralIdea, setLocalCentralIdea] = useState(centralIdea);
-  const [localReferenceUrl, setLocalReferenceUrl] = useState(referenceUrl);
+  const [localTitle, setLocalTitle] = useState(title || "");
+  const [localContentType, setLocalContentType] = useState(contentType || "");
+  const [localCentralIdea, setLocalCentralIdea] = useState(centralIdea || "");
+  const [localReferenceUrl, setLocalReferenceUrl] = useState(referenceUrl || "");
 
   const {
     attributes,
@@ -64,7 +64,7 @@ export const IdeaCard = ({
     onUpdate(id, { [field]: value });
   };
 
-  const isComplete = localContentType && localCentralIdea && localCentralIdea.length >= 20;
+  const isComplete = !!localContentType && !!localCentralIdea && localCentralIdea.length >= 20;
   const ContentIcon = CONTENT_TYPES.find(t => t.value === localContentType)?.icon || FileText;
 
   return (
