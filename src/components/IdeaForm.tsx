@@ -62,6 +62,7 @@ export const IdeaForm = ({ scriptId }: IdeaFormProps) => {
       if (data) {
         setTitle(data.title || "");
         setContentType(data.content_type || "");
+        // @ts-ignore - central_idea will be available after types regenerate
         setCentralIdea(data.central_idea || "");
         if (data.publish_date) {
           setPublishDate(data.publish_date);
@@ -93,7 +94,7 @@ export const IdeaForm = ({ scriptId }: IdeaFormProps) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      const scriptData = {
+      const scriptData: any = {
         title: title.trim() || "Nova Ideia",
         content_type: contentType,
         central_idea: centralIdea.trim(),

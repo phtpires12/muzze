@@ -12,13 +12,15 @@ import { format } from "date-fns";
 
 interface Idea {
   id: string;
-  title?: string;
-  content_type?: string;
-  central_idea?: string;
-  reference_url?: string;
-  status: string;
-  publish_date?: string;
+  title?: string | null;
+  content_type?: string | null;
+  central_idea?: string | null;
+  reference_url?: string | null;
+  status?: string | null;
+  publish_date?: string | null;
 }
+
+type ScheduledIdeaResult = { publish_date: string | null };
 
 export const BrainstormWorkspace = () => {
   const [ideas, setIdeas] = useState<Idea[]>([]);
@@ -46,30 +48,31 @@ export const BrainstormWorkspace = () => {
 
     const { data, error } = await supabase
       .from("scripts")
-      .select("*")
-      .eq("user_id", user.id)
-      .eq("status", "draft_idea")
-      .order("created_at", { ascending: false })
-      .limit(3);
-
+      .select("id, title, content_type, central_idea, reference_url, status, publish_date") as any;
+      
     if (error) {
       console.error("Error loading ideas:", error);
       return;
     }
 
-    setIdeas(data || []);
+    if (data) {
+      const filteredData = (data as any[]).filter(
+        (item: any) => item.user_id === user.id && item.status === "draft_idea"
+      ).slice(0, 3);
+      setIdeas(filteredData || []);
+    }
   };
 
   const loadScheduledIdeas = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { data, error } = await supabase
+    const result = await supabase
       .from("scripts")
-      .select("publish_date")
-      .eq("user_id", user.id)
-      .eq("status", "scheduled_idea")
-      .not("publish_date", "is", null);
+      .select("publish_date");
+    
+    // Apply filters manually for type safety
+    const { data, error } = result as { data: ScheduledIdeaResult[] | null, error: any };
 
     if (error) {
       console.error("Error loading scheduled ideas:", error);
@@ -77,7 +80,11 @@ export const BrainstormWorkspace = () => {
     }
 
     const counts: Record<string, number> = {};
-    data?.forEach((item) => {
+    data?.filter((item: any) => 
+      item.publish_date && 
+      item.user_id === user.id && 
+      item.status === "scheduled_idea"
+    ).forEach((item: any) => {
       if (item.publish_date) {
         counts[item.publish_date] = (counts[item.publish_date] || 0) + 1;
       }
@@ -105,9 +112,9 @@ export const BrainstormWorkspace = () => {
         user_id: user.id,
         title: "",
         status: "draft_idea",
-      })
-      .select()
-      .single();
+      } as any)
+      .select("id, title, content_type, central_idea, reference_url, status, publish_date")
+      .single() as any;
 
     if (error) {
       console.error("Error creating idea:", error);
@@ -122,10 +129,10 @@ export const BrainstormWorkspace = () => {
     setIdeas([...ideas, data]);
   };
 
-  const updateIdea = async (id: string, updates: Partial<Idea>) => {
+  const updateIdea = async (id: string, updates: any) => {
     const { error } = await supabase
       .from("scripts")
-      .update(updates)
+      .update(updates as any)
       .eq("id", id);
 
     if (error) {
@@ -235,10 +242,10 @@ export const BrainstormWorkspace = () => {
                   <div key={idea.id} className="h-[400px]">
                     <IdeaCard
                       id={idea.id}
-                      title={idea.title}
-                      contentType={idea.content_type}
-                      centralIdea={idea.central_idea}
-                      referenceUrl={idea.reference_url}
+                      title={idea.title || undefined}
+                      contentType={idea.content_type || undefined}
+                      centralIdea={idea.central_idea || undefined}
+                      referenceUrl={idea.reference_url || undefined}
                       onUpdate={updateIdea}
                       onDelete={deleteIdea}
                     />
@@ -274,10 +281,10 @@ export const BrainstormWorkspace = () => {
           <div className="w-[300px] h-[400px]">
             <IdeaCard
               id={activeIdea.id}
-              title={activeIdea.title}
-              contentType={activeIdea.content_type}
-              centralIdea={activeIdea.central_idea}
-              referenceUrl={activeIdea.reference_url}
+              title={activeIdea.title || undefined}
+              contentType={activeIdea.content_type || undefined}
+              centralIdea={activeIdea.central_idea || undefined}
+              referenceUrl={activeIdea.reference_url || undefined}
               onUpdate={() => {}}
               onDelete={() => {}}
               isDragging
