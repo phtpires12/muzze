@@ -3,18 +3,37 @@ import { useDroppable } from "@dnd-kit/core";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, addMonths, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
-interface CompactCalendarProps {
-  scheduledIdeas: Record<string, number>; // date -> count
-  onDayClick?: (date: Date) => void;
+interface Idea {
+  id: string;
+  title?: string | null;
+  content_type?: string | null;
+  central_idea?: string | null;
+  reference_url?: string | null;
+  status?: string | null;
+  publish_date?: string | null;
 }
 
-export const CompactCalendar = ({ scheduledIdeas, onDayClick }: CompactCalendarProps) => {
+interface CompactCalendarProps {
+  scheduledIdeas: Record<string, Idea[]>;
+}
+
+export const CompactCalendar = ({ scheduledIdeas }: CompactCalendarProps) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedIdeas, setSelectedIdeas] = useState<Idea[]>([]);
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
@@ -22,6 +41,13 @@ export const CompactCalendar = ({ scheduledIdeas, onDayClick }: CompactCalendarP
 
   const handlePrevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
   const handleNextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
+
+  const handleDayClick = (dateStr: string, ideas: Idea[]) => {
+    if (ideas.length > 0) {
+      setSelectedDate(dateStr);
+      setSelectedIdeas(ideas);
+    }
+  };
 
   return (
     <Card className="p-4">
@@ -49,18 +75,84 @@ export const CompactCalendar = ({ scheduledIdeas, onDayClick }: CompactCalendarP
 
         {days.map((day) => {
           const dateStr = format(day, "yyyy-MM-dd");
-          const count = scheduledIdeas[dateStr] || 0;
+          const ideas = scheduledIdeas[dateStr] || [];
           
           return (
             <CalendarDay
               key={dateStr}
               date={day}
               dateStr={dateStr}
-              count={count}
-              onClick={() => onDayClick?.(day)}
+              count={ideas.length}
+              onClick={() => handleDayClick(dateStr, ideas)}
             />
           );
         })}
+      </div>
+
+      <Dialog open={!!selectedDate} onOpenChange={() => setSelectedDate(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              Ideias Agendadas - {selectedDate && format(new Date(selectedDate), "dd/MM/yyyy")}
+            </DialogTitle>
+            <DialogDescription>
+              Visualize e roteirize suas ideias agendadas para este dia
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+            {selectedIdeas.map((idea) => (
+              <IdeaPreview key={idea.id} idea={idea} />
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </Card>
+  );
+};
+
+const IdeaPreview = ({ idea }: { idea: Idea }) => {
+  const navigate = useNavigate();
+
+  const handleRoteirizar = () => {
+    navigate(`/session?stage=script&scriptId=${idea.id}`);
+  };
+
+  return (
+    <Card className="p-4">
+      <div className="space-y-3">
+        <div>
+          <h4 className="font-semibold text-lg">{idea.title || "Sem título"}</h4>
+          {idea.content_type && (
+            <Badge variant="secondary" className="mt-1">
+              {idea.content_type}
+            </Badge>
+          )}
+        </div>
+        
+        {idea.central_idea && (
+          <div>
+            <p className="text-sm text-muted-foreground mb-1">Ideia Central:</p>
+            <p className="text-sm">{idea.central_idea}</p>
+          </div>
+        )}
+        
+        {idea.reference_url && (
+          <div>
+            <p className="text-sm text-muted-foreground mb-1">Referência:</p>
+            <a 
+              href={idea.reference_url} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-sm text-primary hover:underline"
+            >
+              {idea.reference_url}
+            </a>
+          </div>
+        )}
+
+        <Button onClick={handleRoteirizar} className="w-full mt-2">
+          Roteirizar essa ideia
+        </Button>
       </div>
     </Card>
   );

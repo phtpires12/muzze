@@ -24,7 +24,7 @@ type ScheduledIdeaResult = { publish_date: string | null };
 
 export const BrainstormWorkspace = () => {
   const [ideas, setIdeas] = useState<Idea[]>([]);
-  const [scheduledIdeas, setScheduledIdeas] = useState<Record<string, number>>({});
+  const [scheduledIdeas, setScheduledIdeas] = useState<Record<string, Idea[]>>({});
   const [activeId, setActiveId] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -69,28 +69,30 @@ export const BrainstormWorkspace = () => {
 
     const result = await supabase
       .from("scripts")
-      .select("publish_date");
+      .select("id, title, content_type, central_idea, reference_url, status, publish_date");
     
-    // Apply filters manually for type safety
-    const { data, error } = result as { data: ScheduledIdeaResult[] | null, error: any };
+    const { data, error } = result as { data: Idea[] | null, error: any };
 
     if (error) {
       console.error("Error loading scheduled ideas:", error);
       return;
     }
 
-    const counts: Record<string, number> = {};
+    const grouped: Record<string, Idea[]> = {};
     data?.filter((item: any) => 
       item.publish_date && 
       item.user_id === user.id && 
       item.status === "scheduled_idea"
     ).forEach((item: any) => {
       if (item.publish_date) {
-        counts[item.publish_date] = (counts[item.publish_date] || 0) + 1;
+        if (!grouped[item.publish_date]) {
+          grouped[item.publish_date] = [];
+        }
+        grouped[item.publish_date].push(item);
       }
     });
 
-    setScheduledIdeas(counts);
+    setScheduledIdeas(grouped);
   };
 
   const createNewIdea = async () => {
@@ -208,7 +210,7 @@ export const BrainstormWorkspace = () => {
     setIdeas(ideas.filter(i => i.id !== ideaId));
     setScheduledIdeas({
       ...scheduledIdeas,
-      [targetDate]: (scheduledIdeas[targetDate] || 0) + 1,
+      [targetDate]: [...(scheduledIdeas[targetDate] || []), { ...idea, publish_date: targetDate, status: "scheduled_idea" }],
     });
 
     toast({
@@ -269,10 +271,6 @@ export const BrainstormWorkspace = () => {
 
         <CompactCalendar 
           scheduledIdeas={scheduledIdeas}
-          onDayClick={(date) => {
-            // TODO: Open modal to show scheduled ideas for this day
-            console.log("Clicked day:", date);
-          }}
         />
       </div>
 

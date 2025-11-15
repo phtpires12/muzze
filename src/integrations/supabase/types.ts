@@ -85,37 +85,46 @@ export type Database = {
       }
       scripts: {
         Row: {
+          central_idea: string | null
           content: string | null
           content_type: string | null
           created_at: string
           id: string
           publish_date: string | null
           reference_links: string[] | null
+          reference_url: string | null
           shot_list: string[] | null
+          status: string | null
           title: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          central_idea?: string | null
           content?: string | null
           content_type?: string | null
           created_at?: string
           id?: string
           publish_date?: string | null
           reference_links?: string[] | null
+          reference_url?: string | null
           shot_list?: string[] | null
+          status?: string | null
           title: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          central_idea?: string | null
           content?: string | null
           content_type?: string | null
           created_at?: string
           id?: string
           publish_date?: string | null
           reference_links?: string[] | null
+          reference_url?: string | null
           shot_list?: string[] | null
+          status?: string | null
           title?: string
           updated_at?: string
           user_id?: string
