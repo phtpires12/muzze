@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Flame, Clock, Trophy, Lightbulb, Zap, Film, Mic, Scissors, AlertCircle, Lock, Users, TrendingUp } from "lucide-react";
+import { Flame, Clock, Trophy, Lightbulb, Zap, Film, Mic, Scissors, AlertCircle, Lock, Sparkles, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -70,19 +70,7 @@ const Index = () => {
   const [recentSessions, setRecentSessions] = useState<any[]>([]);
   const [averageTimeByStage, setAverageTimeByStage] = useState<any>({});
 
-  // Modal de amigos/ranking
-  const [isFriendsModalOpen, setIsFriendsModalOpen] = useState(false);
-  const [leaderboard, setLeaderboard] = useState<any[]>([]);
-  const [userRank, setUserRank] = useState<number | null>(null);
-  const [currentUserId, setCurrentUserId] = useState<string>("");
 
-  useEffect(() => {
-    const fetchCurrentUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) setCurrentUserId(user.id);
-    };
-    fetchCurrentUser();
-  }, []);
 
   useEffect(() => {
     if (profile && !profileLoading) {
@@ -218,23 +206,6 @@ const Index = () => {
     }
   };
 
-  const fetchLeaderboard = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { data, error } = await supabase.rpc('get_weekly_leaderboard');
-
-    if (error) {
-      console.error('Erro ao buscar ranking:', error);
-      return;
-    }
-
-    if (data) {
-      setLeaderboard(data);
-      const currentUser = data.find((u: any) => u.user_id === user.id);
-      setUserRank(currentUser?.rank || null);
-    }
-  };
 
   const handleOpenTimeModal = () => {
     setIsTimeModalOpen(true);
@@ -242,10 +213,6 @@ const Index = () => {
     fetchAverageTimeByStage();
   };
 
-  const handleOpenFriendsModal = () => {
-    setIsFriendsModalOpen(true);
-    fetchLeaderboard();
-  };
 
   const handleStartSession = () => {
     setIsSessionModalOpen(true);
@@ -517,17 +484,17 @@ const Index = () => {
             </button>
 
             <button 
-              onClick={handleOpenFriendsModal}
+              onClick={() => navigate('/novidades')}
               className="p-4 bg-card rounded-2xl border border-border/20 shadow-sm text-center hover:bg-accent/10 transition-colors"
             >
-              <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-gradient-to-br from-accent to-primary flex items-center justify-center">
-                <Users className="w-6 h-6 text-white" />
+              <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                <Sparkles className="w-6 h-6 text-white" />
               </div>
               <div className="text-sm font-semibold text-foreground">
-                #{userRank ?? "—"}
+                Em breve
               </div>
               <div className="text-xs text-muted-foreground">
-                Amigos
+                Novidades
               </div>
             </button>
           </div>
@@ -942,92 +909,6 @@ const Index = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Friends/Ranking Modal */}
-      <Dialog open={isFriendsModalOpen} onOpenChange={setIsFriendsModalOpen}>
-        <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold flex items-center gap-2">
-              <Users className="w-6 h-6 text-accent" />
-              Ranking Semanal
-            </DialogTitle>
-            <DialogDescription>
-              Compare seu progresso com outros criadores na última semana
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-2 py-4">
-            {leaderboard.length > 0 ? (
-              leaderboard.map((user, index) => {
-                const isCurrentUser = user.user_id === currentUserId;
-                const hours = Math.floor(user.weekly_time_seconds / 3600);
-                const minutes = Math.floor((user.weekly_time_seconds % 3600) / 60);
-                
-                return (
-                  <div
-                    key={user.user_id}
-                    className={cn(
-                      "flex items-center gap-4 p-4 rounded-lg border transition-all",
-                      isCurrentUser 
-                        ? "bg-gradient-to-r from-primary/10 to-accent/10 border-primary/40 shadow-md" 
-                        : "bg-card border-border/20 hover:bg-muted/30"
-                    )}
-                  >
-                    {/* Posição */}
-                    <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-accent to-primary shrink-0">
-                      <span className="text-lg font-bold text-white">
-                        #{user.rank}
-                      </span>
-                    </div>
-
-                    {/* Info do usuário */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h4 className={cn(
-                          "font-semibold truncate",
-                          isCurrentUser ? "text-primary" : "text-foreground"
-                        )}>
-                          {user.username || 'Anônimo'}
-                        </h4>
-                        {isCurrentUser && (
-                          <Badge variant="secondary" className="text-xs">
-                            Você
-                          </Badge>
-                        )}
-                      </div>
-                      
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <Clock className="w-4 h-4" />
-                          <span>
-                            {hours > 0 ? `${hours}h ` : ''}{minutes}min
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Lightbulb className="w-4 h-4" />
-                          <span>{user.weekly_ideas_count} ideias</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Badge de posição especial */}
-                    {user.rank <= 3 && (
-                      <div className="shrink-0">
-                        {user.rank === 1 && <span className="text-2xl">🥇</span>}
-                        {user.rank === 2 && <span className="text-2xl">🥈</span>}
-                        {user.rank === 3 && <span className="text-2xl">🥉</span>}
-                      </div>
-                    )}
-                  </div>
-                );
-              })
-            ) : (
-              <p className="text-sm text-muted-foreground text-center py-8">
-                Nenhum dado de ranking disponível ainda
-              </p>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
 
       <BottomNav />
     </div>
