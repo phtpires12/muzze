@@ -10,6 +10,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import Index from "./pages/Index";
 import Stats from "./pages/Stats";
+import Novidades from "./pages/Novidades";
 import CalendarioEditorial from "./pages/CalendarioEditorial";
 import Session from "./pages/Session";
 import ShotList from "./pages/ShotList";
@@ -140,6 +141,7 @@ const App = () => (
           <Route path="/auth" element={<Auth />} />
           <Route path="/onboarding" element={<OnboardingRoute><Onboarding /></OnboardingRoute>} />
           <Route path="/" element={<ProtectedRoute><Layout><Index /></Layout></ProtectedRoute>} />
+          <Route path="/novidades" element={<ProtectedRoute><Layout><Novidades /></Layout></ProtectedRoute>} />
           <Route path="/calendario" element={<ProtectedRoute><Layout><CalendarioEditorial /></Layout></ProtectedRoute>} />
           <Route path="/session" element={<ProtectedRoute><Session /></ProtectedRoute>} />
           <Route path="/shot-list" element={<ProtectedRoute><ShotList /></ProtectedRoute>} />
