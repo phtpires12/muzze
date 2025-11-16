@@ -44,7 +44,7 @@ const Auth = () => {
         
         toast({
           title: "Conta criada!",
-          description: "Bem-vindo à Muse. Vamos começar sua jornada.",
+          description: "Bem-vindo à Muzze. Vamos começar sua jornada.",
         });
         navigate("/onboarding");
       } else {
@@ -71,7 +71,7 @@ const Auth = () => {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <CardTitle className="text-3xl font-bold text-center bg-gradient-to-r from-accent to-primary bg-clip-text text-transparent">
-            {isSignUp ? "Entre na Muse" : "Bem-vindo de volta"}
+            {isSignUp ? "Criar conta na Muzze" : "Bem-vindo de volta"}
           </CardTitle>
           <CardDescription className="text-center">
             {isSignUp ? "Crie sua conta e comece sua jornada criativa." : "Continue sua jornada de constância criativa."}
