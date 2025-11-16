@@ -347,7 +347,7 @@ const Index = () => {
     return null;
   }
 
-  const workflow = profile?.current_workflow ? getWorkflow(profile.current_workflow) : null;
+  
   const currentLevel = stats?.level ?? 1;
   const xpProgress = (((stats?.totalPoints ?? 0) % 1000) / 1000) * 100;
   const totalHours = Math.floor(stats?.totalHours ?? 0);
@@ -367,15 +367,6 @@ const Index = () => {
             <span className="font-semibold">{weeklySessionsCount ?? 0} sessões</span>
           </div>
         </div>
-        
-        {workflow && (
-          <button
-            onClick={() => setIsWorkflowModalOpen(true)}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors text-center w-full mt-2"
-          >
-            Workflow: {workflow.name}
-          </button>
-        )}
       </header>
 
       {/* Main Panel */}

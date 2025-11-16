@@ -46,6 +46,7 @@ export type Database = {
           first_login: boolean | null
           min_streak_minutes: number | null
           notifications_enabled: boolean | null
+          preferred_platform: string | null
           preferred_session_minutes: number | null
           reminder_time: string | null
           timezone: string
@@ -60,6 +61,7 @@ export type Database = {
           first_login?: boolean | null
           min_streak_minutes?: number | null
           notifications_enabled?: boolean | null
+          preferred_platform?: string | null
           preferred_session_minutes?: number | null
           reminder_time?: string | null
           timezone?: string
@@ -74,6 +76,7 @@ export type Database = {
           first_login?: boolean | null
           min_streak_minutes?: number | null
           notifications_enabled?: boolean | null
+          preferred_platform?: string | null
           preferred_session_minutes?: number | null
           reminder_time?: string | null
           timezone?: string

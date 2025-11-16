@@ -4,20 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
-import { WORKFLOWS, type WorkflowType } from "@/lib/workflows";
-import { Check } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { supabase } from "@/integrations/supabase/client";
 
 const Onboarding = () => {
   const [step, setStep] = useState(0);
-  const [selectedWorkflow, setSelectedWorkflow] = useState<WorkflowType>("A");
-  const [dailyGoal, setDailyGoal] = useState(60);
-  const [weeklyGoal, setWeeklyGoal] = useState(420);
-  const [sessionMinutes, setSessionMinutes] = useState(25);
+  const [platform, setPlatform] = useState<string>("");
+  const [dailyGoalMinutes, setDailyGoalMinutes] = useState(25);
+  const [showCustomGoal, setShowCustomGoal] = useState(false);
   const [reminderTime, setReminderTime] = useState("09:00");
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const navigate = useNavigate();
@@ -36,27 +32,22 @@ const Onboarding = () => {
     checkAuth();
   }, [navigate]);
 
-  const sessionOptions = [15, 25, 30, 45, 60];
-  const quickGoals = [30, 45, 60, 90];
-
   const handleContinue = async () => {
     if (step < 5) {
       setStep(step + 1);
       
       // Track events
       if (step === 0) await trackEvent("onboarding_started");
-      if (step === 1) await trackEvent("workflow_selected", { workflow: selectedWorkflow });
-      if (step === 2) await trackEvent("time_goals_set", { daily: dailyGoal, weekly: weeklyGoal });
-      if (step === 3) await trackEvent("session_pref_set", { minutes: sessionMinutes });
+      if (step === 1) await trackEvent("methodology_viewed");
+      if (step === 2) await trackEvent("platform_selected", { platform });
+      if (step === 3) await trackEvent("daily_goal_set", { minutes: dailyGoalMinutes });
       if (step === 4) await trackEvent("reminder_configured", { time: reminderTime, enabled: notificationsEnabled });
     } else {
       // Final step - save everything and complete onboarding
       try {
         await updateProfile({
-          current_workflow: selectedWorkflow,
-          daily_goal_minutes: dailyGoal,
-          weekly_goal_minutes: weeklyGoal,
-          preferred_session_minutes: sessionMinutes,
+          preferred_platform: platform,
+          daily_goal_minutes: dailyGoalMinutes,
           reminder_time: reminderTime,
           notifications_enabled: notificationsEnabled,
           first_login: false
@@ -64,7 +55,6 @@ const Onboarding = () => {
         
         await trackEvent("onboarding_complete");
         
-        // Wait a bit to ensure profile is updated before navigating
         setTimeout(() => {
           navigate("/", { replace: true });
         }, 300);
@@ -81,12 +71,12 @@ const Onboarding = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/5 flex items-center justify-center p-4">
       <div className="w-full max-w-4xl">
-        {/* Tela 0 - Boas-vindas */}
+        {/* Step 0 - Boas-vindas */}
         {step === 0 && (
           <div className="text-center space-y-6 animate-fade-in">
             <div className="text-6xl mb-4">🎨</div>
             <h1 className="text-5xl font-bold bg-gradient-to-r from-accent to-primary bg-clip-text text-transparent">
-              Bem-vindo à Muse
+              Bem-vindo à Muzze
             </h1>
             <p className="text-xl text-foreground max-w-2xl mx-auto leading-relaxed">
               O seu templo de constância criativa.
@@ -100,72 +90,210 @@ const Onboarding = () => {
           </div>
         )}
 
-        {/* Tela 1 - Escolha de Workflow */}
+        {/* Step 1 - Como a Muzze vai te ajudar */}
         {step === 1 && (
-          <div className="space-y-6 animate-fade-in">
+          <div className="space-y-8 animate-fade-in max-w-3xl mx-auto">
             <div className="text-center space-y-2">
-              <h2 className="text-3xl font-bold">Como a Muse pode te ajudar?</h2>
+              <h2 className="text-3xl font-bold">Como a Muzze vai te ajudar</h2>
+            </div>
+
+            <div className="space-y-6">
+              {/* Bullet 1 */}
+              <Card className="p-6">
+                <div className="flex gap-4">
+                  <div className="text-3xl">⏱️</div>
+                  <div>
+                    <h3 className="font-semibold text-lg mb-2">Sessões criativas</h3>
+                    <p className="text-muted-foreground">
+                      Você escolhe a etapa do seu processo (ideias, roteiro, revisão, gravação ou edição), 
+                      inicia uma sessão e cria com foco total.
+                    </p>
+                  </div>
+                </div>
+              </Card>
+
+              {/* Bullet 2 */}
+              <Card className="p-6">
+                <div className="flex gap-4">
+                  <div className="text-3xl">⏰</div>
+                  <div>
+                    <h3 className="font-semibold text-lg mb-2">Minutos, não posts</h3>
+                    <p className="text-muted-foreground">
+                      Nós medimos seu progresso pelo <strong>tempo criando</strong>, 
+                      não pela quantidade de publicações.
+                    </p>
+                  </div>
+                </div>
+              </Card>
+
+              {/* Bullet 3 */}
+              <Card className="p-6">
+                <div className="flex gap-4">
+                  <div className="text-3xl">🌱</div>
+                  <div>
+                    <h3 className="font-semibold text-lg mb-2">Constância diária</h3>
+                    <p className="text-muted-foreground">
+                      A Muzze foi criada para te ajudar a <strong>criar um pouco todos os dias</strong>, 
+                      sem pressão e sem perfeccionismo.
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            </div>
+
+            <div className="flex justify-center pt-4">
+              <Button onClick={handleContinue} size="lg" className="min-w-[300px]">
+                Entendi, quero criar todos os dias
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 2 - Onde você publica mais? */}
+        {step === 2 && (
+          <div className="space-y-8 animate-fade-in max-w-2xl mx-auto">
+            <div className="text-center space-y-2">
+              <h2 className="text-3xl font-bold">Onde você publica mais?</h2>
               <p className="text-muted-foreground">
-                Escolha o caminho que mais se parece com o seu processo criativo atual.
+                Isso nos ajuda a ajustar a experiência pra você.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {Object.values(WORKFLOWS).map((workflow) => (
+            <div className="grid grid-cols-2 gap-4">
+              {[
+                { id: 'instagram', name: 'Instagram', icon: '📸' },
+                { id: 'tiktok', name: 'TikTok', icon: '🎵' },
+                { id: 'youtube', name: 'YouTube', icon: '▶️' },
+                { id: 'outros', name: 'Outros', icon: '🌐' }
+              ].map((option) => (
                 <Card
-                  key={workflow.id}
-                  className={`p-6 cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-105 ${
-                    selectedWorkflow === workflow.id
-                      ? 'border-2 border-primary bg-primary/5 shadow-xl'
+                  key={option.id}
+                  className={`p-6 cursor-pointer transition-all hover:scale-105 ${
+                    platform === option.id
+                      ? 'border-2 border-primary bg-primary/5 shadow-lg'
                       : 'border-2 border-transparent hover:border-primary/20'
                   }`}
-                  onClick={() => setSelectedWorkflow(workflow.id)}
+                  onClick={() => setPlatform(option.id)}
                 >
-                  <div className="space-y-4">
-                    <div className="flex items-start justify-between">
-                      <div 
-                        className="text-5xl w-16 h-16 rounded-full flex items-center justify-center"
-                        style={{ backgroundColor: workflow.color + '20' }}
-                      >
-                        {workflow.icon}
-                      </div>
-                      {selectedWorkflow === workflow.id && (
-                        <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-                          <Check className="w-5 h-5 text-primary-foreground" />
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div>
-                      <h3 className="text-xl font-bold mb-2">{workflow.name}</h3>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        {workflow.description}
-                      </p>
-                      
-                      <div className="space-y-3">
-                        <div className="text-xs font-semibold text-destructive">
-                          Problema:
-                        </div>
-                        <p className="text-xs text-muted-foreground italic">
-                          {workflow.problem}
-                        </p>
-                        
-                        <div className="text-xs font-semibold" style={{ color: workflow.color }}>
-                          Solução:
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {workflow.solution}
-                        </p>
-                      </div>
-                    </div>
+                  <div className="text-center space-y-2">
+                    <div className="text-4xl">{option.icon}</div>
+                    <p className="font-medium">{option.name}</p>
                   </div>
                 </Card>
               ))}
             </div>
 
-            <p className="text-center text-sm text-muted-foreground italic mt-4">
-              "Publicar é consequência. Constância é propósito."
-            </p>
+            <div className="flex justify-center gap-4 pt-4">
+              <Button variant="outline" onClick={handleBack}>
+                Voltar
+              </Button>
+              <Button 
+                onClick={handleContinue} 
+                disabled={!platform}
+                className="min-w-[200px]"
+              >
+                Continuar
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 3 - Meta diária mínima */}
+        {step === 3 && (
+          <div className="space-y-8 animate-fade-in max-w-2xl mx-auto">
+            <div className="text-center space-y-3">
+              <h2 className="text-3xl font-bold">Vamos combinar um mínimo diário?</h2>
+              <p className="text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed">
+                Para construir constância, a Muzze recomenda começar com{' '}
+                <strong className="text-foreground">25 minutos por dia de sessão criativa.</strong>
+                <br />
+                É pouco o suficiente pra caber na rotina, mas poderoso o bastante pra mover sua criatividade.
+              </p>
+            </div>
+
+            {!showCustomGoal ? (
+              <div className="flex flex-col items-center gap-4">
+                <Button onClick={handleContinue} size="lg" className="min-w-[300px]">
+                  Topar esse compromisso
+                </Button>
+                <Button 
+                  variant="link" 
+                  onClick={() => setShowCustomGoal(true)}
+                  className="text-muted-foreground"
+                >
+                  Quero ajustar esse tempo
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div className="text-center">
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Escolha sua meta diária:
+                  </p>
+                  <div className="flex gap-3 flex-wrap justify-center">
+                    {[15, 25, 30, 45, 60].map((minutes) => (
+                      <Button
+                        key={minutes}
+                        variant={dailyGoalMinutes === minutes ? "default" : "outline"}
+                        size="lg"
+                        onClick={() => setDailyGoalMinutes(minutes)}
+                        className="min-w-[90px]"
+                      >
+                        {minutes} min
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex justify-center gap-4 pt-4">
+                  <Button variant="outline" onClick={handleBack}>
+                    Voltar
+                  </Button>
+                  <Button onClick={handleContinue} className="min-w-[200px]">
+                    Continuar
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Step 4 - Lembrete diário */}
+        {step === 4 && (
+          <div className="space-y-8 animate-fade-in max-w-2xl mx-auto">
+            <div className="text-center space-y-2">
+              <h2 className="text-3xl font-bold">Quando você quer que a Muzze te lembre de criar?</h2>
+              <p className="text-muted-foreground">
+                Um lembrete por dia, no horário que fizer mais sentido pra você.
+              </p>
+            </div>
+
+            <Card className="p-8 space-y-6">
+              <div className="space-y-4">
+                <Label htmlFor="reminder-time">Horário do lembrete</Label>
+                <Input
+                  id="reminder-time"
+                  type="time"
+                  value={reminderTime}
+                  onChange={(e) => setReminderTime(e.target.value)}
+                  className="text-lg h-12"
+                />
+              </div>
+
+              <div className="flex items-center justify-between pt-4">
+                <div className="space-y-1">
+                  <Label htmlFor="notifications">Receber lembrete diário</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Ative para receber notificações
+                  </p>
+                </div>
+                <Switch
+                  id="notifications"
+                  checked={notificationsEnabled}
+                  onCheckedChange={setNotificationsEnabled}
+                />
+              </div>
+            </Card>
 
             <div className="flex justify-center gap-4 pt-4">
               <Button variant="outline" onClick={handleBack}>
@@ -178,150 +306,7 @@ const Onboarding = () => {
           </div>
         )}
 
-        {/* Tela 2 - Meta de Tempo Criativo */}
-        {step === 2 && (
-          <div className="space-y-8 animate-fade-in max-w-2xl mx-auto">
-            <div className="text-center space-y-2">
-              <h2 className="text-3xl font-bold">Quanto tempo por dia você quer criar?</h2>
-            </div>
-
-            <div className="space-y-6">
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <Label>Meta diária</Label>
-                  <span className="text-2xl font-bold text-primary">{dailyGoal} min</span>
-                </div>
-                <Slider
-                  value={[dailyGoal]}
-                  onValueChange={(value) => {
-                    setDailyGoal(value[0]);
-                    setWeeklyGoal(value[0] * 7);
-                  }}
-                  min={15}
-                  max={180}
-                  step={15}
-                  className="w-full"
-                />
-                <div className="flex gap-2 flex-wrap justify-center">
-                  {quickGoals.map((goal) => (
-                    <Button
-                      key={goal}
-                      variant={dailyGoal === goal ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => {
-                        setDailyGoal(goal);
-                        setWeeklyGoal(goal * 7);
-                      }}
-                    >
-                      {goal} min
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="p-4 bg-muted rounded-lg text-center">
-                <p className="text-sm text-muted-foreground">
-                  Isso dá <span className="font-bold text-foreground">{(weeklyGoal / 60).toFixed(1)}h</span> por semana
-                </p>
-              </div>
-            </div>
-
-            <p className="text-center text-sm text-muted-foreground italic">
-              "Na Muse, você não cria por obrigação. Cria porque o tempo também é uma obra de arte."
-            </p>
-
-            <div className="flex justify-center gap-4">
-              <Button variant="outline" onClick={handleBack}>
-                Voltar
-              </Button>
-              <Button onClick={handleContinue} className="min-w-[200px]">
-                Continuar
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Tela 3 - Sessões Criativas */}
-        {step === 3 && (
-          <div className="space-y-8 animate-fade-in max-w-2xl mx-auto">
-            <div className="text-center space-y-2">
-              <h2 className="text-3xl font-bold">Qual o tamanho da sua sessão padrão?</h2>
-              <p className="text-muted-foreground">
-                Você pode mudar isso depois. A constância está no recomeço.
-              </p>
-            </div>
-
-            <div className="flex gap-3 flex-wrap justify-center">
-              {sessionOptions.map((minutes) => (
-                <Button
-                  key={minutes}
-                  variant={sessionMinutes === minutes ? "default" : "outline"}
-                  size="lg"
-                  onClick={() => setSessionMinutes(minutes)}
-                  className="min-w-[100px]"
-                >
-                  {minutes} min
-                </Button>
-              ))}
-            </div>
-
-            <div className="flex justify-center gap-4 pt-8">
-              <Button variant="outline" onClick={handleBack}>
-                Voltar
-              </Button>
-              <Button onClick={handleContinue} className="min-w-[200px]">
-                Continuar
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Tela 4 - Lembretes */}
-        {step === 4 && (
-          <div className="space-y-8 animate-fade-in max-w-2xl mx-auto">
-            <div className="text-center space-y-2">
-              <h2 className="text-3xl font-bold">Quando quer que a Muse te lembre de criar?</h2>
-            </div>
-
-            <div className="space-y-6">
-              <div className="space-y-4">
-                <Label htmlFor="reminder-time">Horário do lembrete</Label>
-                <Input
-                  id="reminder-time"
-                  type="time"
-                  value={reminderTime}
-                  onChange={(e) => setReminderTime(e.target.value)}
-                  className="text-center text-lg"
-                />
-              </div>
-
-              <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-                <div className="space-y-1">
-                  <Label htmlFor="notifications">Receber lembrete diário</Label>
-                  <p className="text-sm text-muted-foreground">
-                    E recados do seu progresso
-                  </p>
-                </div>
-                <Switch
-                  id="notifications"
-                  checked={notificationsEnabled}
-                  onCheckedChange={setNotificationsEnabled}
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-center gap-4 pt-8">
-              <Button variant="outline" onClick={handleBack}>
-                Voltar
-              </Button>
-              <Button onClick={handleContinue} className="min-w-[200px]">
-                Continuar
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Tela 5 - Resumo */}
+        {/* Step 5 - Resumo */}
         {step === 5 && (
           <div className="space-y-8 animate-fade-in max-w-2xl mx-auto">
             <div className="text-center space-y-2">
@@ -330,26 +315,13 @@ const Onboarding = () => {
 
             <div className="grid gap-4">
               <Card className="p-6">
-                <h3 className="font-semibold mb-2">Workflow escolhido</h3>
-                <div className="flex items-center gap-3">
-                  <div className="text-3xl">{WORKFLOWS[selectedWorkflow].icon}</div>
-                  <div>
-                    <p className="font-medium">{WORKFLOWS[selectedWorkflow].name}</p>
-                    <p className="text-sm text-muted-foreground">{WORKFLOWS[selectedWorkflow].description}</p>
-                  </div>
-                </div>
+                <h3 className="font-semibold mb-2">Meta diária</h3>
+                <p className="text-muted-foreground">{dailyGoalMinutes} minutos por dia</p>
               </Card>
 
               <Card className="p-6">
-                <h3 className="font-semibold mb-2">Metas de tempo</h3>
-                <p className="text-muted-foreground">
-                  {dailyGoal} minutos por dia • {(weeklyGoal / 60).toFixed(1)}h por semana
-                </p>
-              </Card>
-
-              <Card className="p-6">
-                <h3 className="font-semibold mb-2">Sessão padrão</h3>
-                <p className="text-muted-foreground">{sessionMinutes} minutos</p>
+                <h3 className="font-semibold mb-2">Plataforma principal</h3>
+                <p className="text-muted-foreground capitalize">{platform}</p>
               </Card>
 
               <Card className="p-6">
@@ -360,12 +332,16 @@ const Onboarding = () => {
               </Card>
             </div>
 
+            <p className="text-center text-sm text-muted-foreground">
+              Você pode mudar tudo isso depois em Ajustes.
+            </p>
+
             <div className="flex justify-center gap-4 pt-4">
               <Button variant="outline" onClick={handleBack}>
                 Voltar
               </Button>
-              <Button onClick={handleContinue} className="min-w-[200px]" size="lg">
-                Entrar na Muse
+              <Button onClick={handleContinue} size="lg" className="min-w-[200px]">
+                Entrar na Muzze
               </Button>
             </div>
           </div>
