@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { awardPoints, POINTS, getUserStats, saveUserStats } from "@/lib/gamification";
+import { addXP, POINTS, getUserStats, saveUserStats } from "@/lib/gamification";
 
 export type SessionStage = "idea" | "ideation" | "script" | "review" | "record" | "edit";
 
@@ -228,8 +228,8 @@ export const useSession = () => {
         isOvertime: false,
       }));
 
-      // Award points for stage change
-      awardPoints(POINTS.CREATE_IDEA, `Mudou para etapa: ${newStage}`);
+      // Award XP for stage change
+      addXP(POINTS.CREATE_IDEA);
 
       toast({
         title: "Etapa alterada",
@@ -269,11 +269,12 @@ export const useSession = () => {
       
       // Add to total hours
       stats.totalHours += sessionMinutes / 60;
+      saveUserStats(stats);
       
-      // Award points for completing session
-      const updatedStats = awardPoints(POINTS.COMPLETE_SESSION, "Sessão concluída");
+      // Award XP for completing session
+      addXP(POINTS.COMPLETE_SESSION);
       
-      // Calculate XP based on daily goal
+      // Calculate additional XP based on daily goal
       const { data: profile } = await supabase
         .from('profiles')
         .select('daily_goal_minutes')
@@ -281,10 +282,9 @@ export const useSession = () => {
         .single();
 
       const dailyGoal = profile?.daily_goal_minutes || 60;
-      const xpGained = Math.min(100, (sessionMinutes / dailyGoal) * 100);
-      updatedStats.totalPoints += Math.floor(xpGained);
+      const bonusXP = Math.min(100, (sessionMinutes / dailyGoal) * 100);
       
-      saveUserStats(updatedStats);
+      const { stats: updatedStats } = addXP(Math.floor(bonusXP));
 
       // Track analytics
       await supabase.from('analytics_events').insert({
@@ -293,7 +293,7 @@ export const useSession = () => {
         payload: { 
           duration_seconds: session.totalElapsedSeconds,
           final_stage: session.stage,
-          xp_gained: Math.floor(xpGained)
+          xp_gained: POINTS.COMPLETE_SESSION + Math.floor(bonusXP)
         }
       });
 
@@ -303,7 +303,7 @@ export const useSession = () => {
       const summary = {
         duration: session.totalElapsedSeconds,
         stage: session.stage,
-        xpGained: Math.floor(xpGained),
+        xpGained: POINTS.COMPLETE_SESSION + Math.floor(bonusXP),
         streakAchieved: streakResult.streakAchieved || false,
         newStreak: streakResult.newStreak,
         creativeMinutesToday: streakResult.creativeMinutesToday,
@@ -432,9 +432,9 @@ export const useSession = () => {
           }
         });
 
-        // Award streak milestone points
+        // Award streak milestone XP
         if (newCurrentStreak % 7 === 0) {
-          awardPoints(POINTS.STREAK_MILESTONE, `${newCurrentStreak} dias de sequência!`);
+          addXP(POINTS.STREAK_MILESTONE);
         }
 
         return { 

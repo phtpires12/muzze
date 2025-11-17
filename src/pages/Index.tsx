@@ -4,7 +4,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { useSessionContext } from "@/contexts/SessionContext";
 import { supabase } from "@/integrations/supabase/client";
-import { getUserStats, awardPoints, TROPHIES } from "@/lib/gamification";
+import { getUserStats, awardPoints, TROPHIES, getLevelByXP } from "@/lib/gamification";
 import { getWorkflow, getUserWorkflow } from "@/lib/workflows";
 import { BottomNav } from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
@@ -349,6 +349,7 @@ const Index = () => {
 
   
   const currentLevel = stats?.level ?? 1;
+  const currentLevelInfo = getLevelByXP(stats?.totalXP ?? 0);
   const xpProgress = (((stats?.totalPoints ?? 0) % 1000) / 1000) * 100;
   const totalHours = Math.floor(stats?.totalHours ?? 0);
   const totalMinutes = Math.round(((stats?.totalHours ?? 0) - totalHours) * 60);
@@ -428,10 +429,13 @@ const Index = () => {
         </h3>
 
         <div className="space-y-4">
-          <div className="p-4 bg-card rounded-2xl border border-border/20 shadow-sm">
+          <button 
+            onClick={() => navigate('/levels')}
+            className="w-full p-4 bg-card rounded-2xl border border-border/20 shadow-sm hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+          >
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-foreground">
-                Nível {currentLevel} — Criador Focado
+                Nível {currentLevel} — {currentLevelInfo?.name || "Criador Iniciante"}
               </span>
               <span className="text-xs text-muted-foreground">
                 {Math.round(xpProgress)}%
@@ -441,7 +445,7 @@ const Index = () => {
               value={xpProgress} 
               className="h-2 bg-secondary"
             />
-          </div>
+          </button>
 
           <div className="grid grid-cols-3 gap-3">
             <button 
