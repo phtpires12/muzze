@@ -1,10 +1,12 @@
 import { Trophy, Zap } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { getUserStats, getLevelInfo, getProgressToNextLevel, getNextLevelInfo } from "@/lib/gamification";
+import { getUserStats, getLevelByXP, getProgressToNextLevelByXP, getNextLevelInfo } from "@/lib/gamification";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 export const GamificationBadge = () => {
   const [stats, setStats] = useState(getUserStats());
+  const navigate = useNavigate();
   
   useEffect(() => {
     const handleStorageChange = () => {
@@ -20,12 +22,15 @@ export const GamificationBadge = () => {
     };
   }, []);
   
-  const levelInfo = getLevelInfo(stats.level);
-  const nextLevel = getNextLevelInfo(stats.level);
-  const progress = getProgressToNextLevel(stats.totalPoints, stats.level);
+  const levelInfo = getLevelByXP(stats.totalXP);
+  const nextLevel = getNextLevelInfo(levelInfo.level);
+  const progress = getProgressToNextLevelByXP(stats.totalXP);
   
   return (
-    <Card className="p-6 bg-gradient-to-br from-card to-muted/20 border-2 border-primary/20">
+    <Card 
+      className="p-6 bg-gradient-to-br from-card to-muted/20 border-2 border-primary/20 cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
+      onClick={() => navigate('/levels')}
+    >
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -36,20 +41,13 @@ export const GamificationBadge = () => {
               {stats.level}
             </div>
             <div>
-              <h3 className="font-bold text-lg">{levelInfo.name}</h3>
-              <p className="text-sm text-muted-foreground">{stats.totalPoints} pontos</p>
+              <h3 className="font-bold text-lg">Nível {levelInfo.level} — {levelInfo.name}</h3>
+              <p className="text-sm text-muted-foreground">{stats.totalXP} XP</p>
             </div>
           </div>
           
-          <div className="flex items-center gap-4 text-sm">
-            <div className="flex items-center gap-1">
-              <Zap className="w-4 h-4 text-accent" />
-              <span className="font-semibold">{stats.totalPoints}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Trophy className="w-4 h-4 text-primary" />
-              <span className="font-semibold">{stats.trophies.length}</span>
-            </div>
+          <div className="text-2xl font-bold text-primary">
+            {Math.round(progress)}%
           </div>
         </div>
         
