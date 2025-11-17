@@ -1,16 +1,5 @@
 // Sistema de gamificação - pontos, níveis e troféus
 
-export interface UserStats {
-  totalPoints: number;
-  level: number;
-  streak: number;
-  totalHours: number;
-  scriptsCreated: number;
-  shotListsCreated: number;
-  ideasCreated: number;
-  trophies: string[];
-}
-
 export interface Trophy {
   id: string;
   name: string;
