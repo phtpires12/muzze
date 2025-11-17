@@ -14,6 +14,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
+import { useDeviceType } from "@/hooks/useDeviceType";
 import { cn } from "@/lib/utils";
 
 interface Idea {
@@ -28,12 +36,15 @@ interface Idea {
 
 interface CompactCalendarProps {
   scheduledIdeas: Record<string, Idea[]>;
+  onDayClick?: (dateStr: string, ideas: Idea[]) => void;
 }
 
-export const CompactCalendar = ({ scheduledIdeas }: CompactCalendarProps) => {
+export const CompactCalendar = ({ scheduledIdeas, onDayClick }: CompactCalendarProps) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedIdeas, setSelectedIdeas] = useState<Idea[]>([]);
+  const deviceType = useDeviceType();
+  const isMobile = deviceType === "mobile";
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
@@ -46,6 +57,7 @@ export const CompactCalendar = ({ scheduledIdeas }: CompactCalendarProps) => {
     if (ideas.length > 0) {
       setSelectedDate(dateStr);
       setSelectedIdeas(ideas);
+      onDayClick?.(dateStr, ideas);
     }
   };
 
@@ -89,28 +101,48 @@ export const CompactCalendar = ({ scheduledIdeas }: CompactCalendarProps) => {
         })}
       </div>
 
-      <Dialog open={!!selectedDate} onOpenChange={() => setSelectedDate(null)}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>
-              Ideias Agendadas - {selectedDate && format(new Date(selectedDate), "dd/MM/yyyy")}
-            </DialogTitle>
-            <DialogDescription>
-              Visualize e roteirize suas ideias agendadas para este dia
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 max-h-[60vh] overflow-y-auto">
-            {selectedIdeas.map((idea) => (
-              <IdeaPreview key={idea.id} idea={idea} />
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
+      {isMobile ? (
+        <Drawer open={!!selectedDate} onOpenChange={() => setSelectedDate(null)}>
+          <DrawerContent>
+            <DrawerHeader className="text-left">
+              <DrawerTitle>
+                Ideias Agendadas - {selectedDate && format(new Date(selectedDate), "dd/MM/yyyy")}
+              </DrawerTitle>
+              <DrawerDescription>
+                Visualize e roteirize suas ideias agendadas para este dia
+              </DrawerDescription>
+            </DrawerHeader>
+            <div className="space-y-3 p-4 max-h-[60vh] overflow-y-auto">
+              {selectedIdeas.map((idea) => (
+                <IdeaPreview key={idea.id} idea={idea} compact />
+              ))}
+            </div>
+          </DrawerContent>
+        </Drawer>
+      ) : (
+        <Dialog open={!!selectedDate} onOpenChange={() => setSelectedDate(null)}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>
+                Ideias Agendadas - {selectedDate && format(new Date(selectedDate), "dd/MM/yyyy")}
+              </DialogTitle>
+              <DialogDescription>
+                Visualize e roteirize suas ideias agendadas para este dia
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+              {selectedIdeas.map((idea) => (
+                <IdeaPreview key={idea.id} idea={idea} />
+              ))}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </Card>
   );
 };
 
-const IdeaPreview = ({ idea }: { idea: Idea }) => {
+const IdeaPreview = ({ idea, compact = false }: { idea: Idea; compact?: boolean }) => {
   const navigate = useNavigate();
 
   const handleRoteirizar = () => {
@@ -118,12 +150,14 @@ const IdeaPreview = ({ idea }: { idea: Idea }) => {
   };
 
   return (
-    <Card className="p-4">
-      <div className="space-y-3">
+    <Card className={cn("p-4", compact && "p-3")}>
+      <div className={cn("space-y-3", compact && "space-y-2")}>
         <div>
-          <h4 className="font-semibold text-lg">{idea.title || "Sem título"}</h4>
+          <h4 className={cn("font-semibold", compact ? "text-base" : "text-lg")}>
+            {idea.title || "Sem título"}
+          </h4>
           {idea.content_type && (
-            <Badge variant="secondary" className="mt-1">
+            <Badge variant="secondary" className={cn("mt-1", compact && "text-xs")}>
               {idea.content_type}
             </Badge>
           )}
@@ -131,26 +165,33 @@ const IdeaPreview = ({ idea }: { idea: Idea }) => {
         
         {idea.central_idea && (
           <div>
-            <p className="text-sm text-muted-foreground mb-1">Ideia Central:</p>
-            <p className="text-sm">{idea.central_idea}</p>
+            <p className={cn("text-muted-foreground mb-1", compact ? "text-xs" : "text-sm")}>
+              Ideia Central:
+            </p>
+            <p className={cn(compact ? "text-xs" : "text-sm")}>{idea.central_idea}</p>
           </div>
         )}
         
         {idea.reference_url && (
           <div>
-            <p className="text-sm text-muted-foreground mb-1">Referência:</p>
+            <p className={cn("text-muted-foreground mb-1", compact ? "text-xs" : "text-sm")}>
+              Referência:
+            </p>
             <a 
               href={idea.reference_url} 
               target="_blank" 
               rel="noopener noreferrer"
-              className="text-sm text-primary hover:underline"
+              className={cn("text-primary hover:underline", compact ? "text-xs" : "text-sm")}
             >
               {idea.reference_url}
             </a>
           </div>
         )}
 
-        <Button onClick={handleRoteirizar} className="w-full mt-2">
+        <Button 
+          onClick={handleRoteirizar} 
+          className={cn("w-full mt-2", compact && "h-9 text-sm")}
+        >
           Roteirizar essa ideia
         </Button>
       </div>
