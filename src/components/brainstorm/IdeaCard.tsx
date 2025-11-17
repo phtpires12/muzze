@@ -8,6 +8,8 @@ import { X, GripVertical, Video, Clapperboard, Music, FileText } from "lucide-re
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { cn } from "@/lib/utils";
+import { DatePickerModal } from "./DatePickerModal";
+import { useDeviceType } from "@/hooks/useDeviceType";
 
 const CONTENT_TYPES = [
   { value: "video", label: "Vídeo", icon: Video },
@@ -26,7 +28,9 @@ interface IdeaCardProps {
   referenceUrl?: string;
   onUpdate: (id: string, data: { title?: string; content_type?: string; central_idea?: string; reference_url?: string }) => void;
   onDelete: (id: string) => void;
+  onSchedule?: () => void;
   isDragging?: boolean;
+  compact?: boolean;
 }
 
 export const IdeaCard = ({
@@ -37,8 +41,11 @@ export const IdeaCard = ({
   referenceUrl = "",
   onUpdate,
   onDelete,
+  onSchedule,
   isDragging = false,
+  compact = false,
 }: IdeaCardProps) => {
+  const deviceType = useDeviceType();
   const [localTitle, setLocalTitle] = useState(title || "");
   const [localContentType, setLocalContentType] = useState(contentType || "");
   const [localCentralIdea, setLocalCentralIdea] = useState(centralIdea || "");
@@ -66,44 +73,48 @@ export const IdeaCard = ({
 
   const isComplete = !!localContentType && !!localCentralIdea && localCentralIdea.length >= 20;
   const ContentIcon = CONTENT_TYPES.find(t => t.value === localContentType)?.icon || FileText;
+  const isMobile = deviceType === "mobile";
 
   return (
     <div ref={setNodeRef} style={style} className={cn("h-full", isDragging && "opacity-50")}>
       <Card className={cn(
         "h-full flex flex-col transition-all",
-        isComplete ? "border-primary/50 shadow-md" : "border-dashed border-muted-foreground/30"
+        isComplete ? "border-primary/50 shadow-md" : "border-dashed border-muted-foreground/30",
+        compact && "min-h-[320px]"
       )}>
-        <div className="flex items-center gap-2 p-4 pb-2">
-          <div {...attributes} {...listeners} className={cn(
-            "cursor-grab active:cursor-grabbing text-muted-foreground",
-            (!isComplete) && "opacity-30 cursor-not-allowed"
-          )}>
-            <GripVertical className="w-4 h-4" />
-          </div>
-          {localContentType && <ContentIcon className="w-4 h-4 text-primary" />}
+        <div className={cn("flex items-center gap-2 pb-2", compact ? "p-3" : "p-4")}>
+          {!isMobile && (
+            <div {...attributes} {...listeners} className={cn(
+              "cursor-grab active:cursor-grabbing text-muted-foreground",
+              (!isComplete) && "opacity-30 cursor-not-allowed"
+            )}>
+              <GripVertical className="w-4 h-4" />
+            </div>
+          )}
+          {localContentType && <ContentIcon className={cn("w-4 h-4 text-primary", compact && "w-3.5 h-3.5")} />}
           <Input
             placeholder="Título (opcional)"
             value={localTitle}
             onChange={(e) => setLocalTitle(e.target.value)}
             onBlur={(e) => handleBlur("title", e.target.value)}
-            className="flex-1 h-8 text-sm border-0 bg-transparent focus-visible:ring-0 px-1"
+            className={cn("flex-1 border-0 bg-transparent focus-visible:ring-0 px-1", compact ? "h-7 text-xs" : "h-8 text-sm")}
           />
           <Button
             variant="ghost"
             size="icon"
-            className="h-6 w-6"
+            className={cn(compact ? "h-5 w-5" : "h-6 w-6")}
             onClick={() => onDelete(id)}
           >
-            <X className="w-3 h-3" />
+            <X className={cn(compact ? "w-3 h-3" : "w-3.5 h-3.5")} />
           </Button>
         </div>
 
-        <div className="flex-1 flex flex-col gap-3 px-4 pb-4">
+        <div className={cn("flex-1 flex flex-col pb-4", compact ? "gap-2 px-3" : "gap-3 px-4")}>
           <Select value={localContentType} onValueChange={(value) => {
             setLocalContentType(value);
             handleBlur("content_type", value);
           }}>
-            <SelectTrigger className="h-9">
+            <SelectTrigger className={cn(compact ? "h-8 text-xs" : "h-9")}>
               <SelectValue placeholder="Tipo de Conteúdo *" />
             </SelectTrigger>
             <SelectContent>
@@ -124,10 +135,11 @@ export const IdeaCard = ({
               value={localCentralIdea}
               onChange={(e) => setLocalCentralIdea(e.target.value)}
               onBlur={(e) => handleBlur("central_idea", e.target.value)}
-              className="flex-1 min-h-[120px] resize-none"
+              className={cn("flex-1 resize-none", compact ? "min-h-[80px]" : "min-h-[120px]")}
             />
             <span className={cn(
-              "text-xs mt-1 text-right",
+              "mt-1 text-right",
+              compact ? "text-[10px]" : "text-xs",
               localCentralIdea.length < 20 ? "text-destructive" : "text-muted-foreground"
             )}>
               {localCentralIdea.length}/20 caracteres
@@ -139,9 +151,13 @@ export const IdeaCard = ({
             value={localReferenceUrl}
             onChange={(e) => setLocalReferenceUrl(e.target.value)}
             onBlur={(e) => handleBlur("reference_url", e.target.value)}
-            className="h-9"
+            className={cn(compact ? "h-8 text-xs" : "h-9")}
             type="url"
           />
+
+          {isMobile && isComplete && onSchedule && (
+            <DatePickerModal onDateSelect={onSchedule} triggerClassName="w-full" />
+          )}
         </div>
 
         {isComplete && (
