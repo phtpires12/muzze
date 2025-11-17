@@ -23,6 +23,8 @@ import Help from "./pages/Help";
 import TermsOfUse from "./pages/TermsOfUse";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import NotFound from "./pages/NotFound";
+import Levels from "./pages/Levels";
+import { LevelUpModal } from "./components/LevelUpModal";
 
 const queryClient = new QueryClient();
 
@@ -136,6 +138,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <LevelUpModal />
       <BrowserRouter>
         <Routes>
           <Route path="/auth" element={<Auth />} />
@@ -154,6 +157,7 @@ const App = () => (
           <Route path="/help" element={<ProtectedRoute><Layout><Help /></Layout></ProtectedRoute>} />
           <Route path="/terms" element={<ProtectedRoute><Layout><TermsOfUse /></Layout></ProtectedRoute>} />
           <Route path="/privacy" element={<ProtectedRoute><Layout><PrivacyPolicy /></Layout></ProtectedRoute>} />
+          <Route path="/levels" element={<ProtectedRoute><Levels /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

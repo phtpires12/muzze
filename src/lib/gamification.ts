@@ -71,7 +71,7 @@ export const TROPHIES: Trophy[] = [
     description: "Criou 10 roteiros",
     icon: "📝",
     requirement: (stats) => stats.scriptsCreated >= 10,
-    points: 200,
+    points: 150,
   },
   {
     id: "scripts_50",
@@ -111,25 +111,111 @@ export const TROPHIES: Trophy[] = [
     description: "Salvou 20 ideias",
     icon: "💡",
     requirement: (stats) => stats.ideasCreated >= 20,
-    points: 150,
+    points: 120,
+  },
+];
+
+export interface LevelDefinition {
+  level: number;
+  name: string;
+  xpRequired: number;
+  description: string;
+  color: string;
+  rewards: string[];
+}
+
+export const XP_LEVELS: LevelDefinition[] = [
+  { 
+    level: 1, 
+    name: "Criador Iniciante", 
+    xpRequired: 0, 
+    description: "Você começou sua jornada na Muzze.",
+    color: "hsl(240 5.9% 64%)",
+    rewards: []
+  },
+  { 
+    level: 2, 
+    name: "Criador Focado", 
+    xpRequired: 1000, 
+    description: "Você está construindo sua constância.",
+    color: "hsl(142 76% 36%)",
+    rewards: ["Badge exclusivo"]
+  },
+  { 
+    level: 3, 
+    name: "Criador Consistente", 
+    xpRequired: 3000, 
+    description: "Você cria mesmo sem motivação.",
+    color: "hsl(217 91% 60%)",
+    rewards: ["3 dias de Muzze PRO grátis"]
+  },
+  { 
+    level: 4, 
+    name: "Artista", 
+    xpRequired: 7000, 
+    description: "Você transforma processo em hábito.",
+    color: "hsl(262 83% 58%)",
+    rewards: ["7 dias de Muzze PRO grátis"]
+  },
+  { 
+    level: 5, 
+    name: "Mestre da Criatividade", 
+    xpRequired: 15000, 
+    description: "Você cria sem falhar. Um exemplo raro.",
+    color: "hsl(33 100% 50%)",
+    rewards: ["15 dias de Muzze PRO grátis"]
+  },
+  { 
+    level: 6, 
+    name: "Talento Natural", 
+    xpRequired: 30000, 
+    description: "Criar é seu estado natural.",
+    color: "hsl(0 84% 60%)",
+    rewards: ["Acesso a material exclusivo"]
+  },
+  { 
+    level: 7, 
+    name: "Lenda Absoluta", 
+    xpRequired: 60000, 
+    description: "Você inspira milhares.",
+    color: "hsl(280 100% 70%)",
+    rewards: ["Call exclusiva com o fundador", "Badge dourado", "Desconto vitalício progressivo"]
   },
 ];
 
 export function calculateLevel(points: number): number {
-  for (let i = LEVELS.length - 1; i >= 0; i--) {
-    if (points >= LEVELS[i].minPoints) {
-      return LEVELS[i].level;
+  for (let i = XP_LEVELS.length - 1; i >= 0; i--) {
+    if (points >= XP_LEVELS[i].xpRequired) {
+      return XP_LEVELS[i].level;
+    }
+  }
+  return 1;
+}
+
+export function calculateLevelByXP(xp: number): number {
+  for (let i = XP_LEVELS.length - 1; i >= 0; i--) {
+    if (xp >= XP_LEVELS[i].xpRequired) {
+      return XP_LEVELS[i].level;
     }
   }
   return 1;
 }
 
 export function getLevelInfo(level: number) {
-  return LEVELS.find((l) => l.level === level) || LEVELS[0];
+  return XP_LEVELS.find((l) => l.level === level) || XP_LEVELS[0];
 }
 
 export function getNextLevelInfo(currentLevel: number) {
-  return LEVELS.find((l) => l.level === currentLevel + 1);
+  return XP_LEVELS.find((l) => l.level === currentLevel + 1);
+}
+
+export function getLevelByXP(xp: number): LevelDefinition {
+  for (let i = XP_LEVELS.length - 1; i >= 0; i--) {
+    if (xp >= XP_LEVELS[i].xpRequired) {
+      return XP_LEVELS[i];
+    }
+  }
+  return XP_LEVELS[0];
 }
 
 export function getProgressToNextLevel(points: number, currentLevel: number): number {
@@ -138,10 +224,23 @@ export function getProgressToNextLevel(points: number, currentLevel: number): nu
   
   if (!nextLevelInfo) return 100;
   
-  const pointsInCurrentLevel = points - currentLevelInfo.minPoints;
-  const pointsNeededForNext = nextLevelInfo.minPoints - currentLevelInfo.minPoints;
+  const pointsInCurrentLevel = points - currentLevelInfo.xpRequired;
+  const pointsNeededForNext = nextLevelInfo.xpRequired - currentLevelInfo.xpRequired;
   
   return Math.min(100, (pointsInCurrentLevel / pointsNeededForNext) * 100);
+}
+
+export function getProgressToNextLevelByXP(xp: number): number {
+  const currentLevel = calculateLevelByXP(xp);
+  const currentLevelInfo = getLevelInfo(currentLevel);
+  const nextLevelInfo = getNextLevelInfo(currentLevel);
+  
+  if (!nextLevelInfo) return 100;
+  
+  const xpInCurrentLevel = xp - currentLevelInfo.xpRequired;
+  const xpNeededForNext = nextLevelInfo.xpRequired - currentLevelInfo.xpRequired;
+  
+  return Math.min(100, (xpInCurrentLevel / xpNeededForNext) * 100);
 }
 
 export function checkNewTrophies(stats: UserStats): Trophy[] {
@@ -154,10 +253,27 @@ export function addPoints(currentPoints: number, pointsToAdd: number): number {
   return currentPoints + pointsToAdd;
 }
 
+export interface UserStats {
+  totalPoints: number;
+  level: number;
+  streak: number;
+  totalHours: number;
+  scriptsCreated: number;
+  shotListsCreated: number;
+  ideasCreated: number;
+  trophies: string[];
+  totalXP: number;
+}
+
 export function getUserStats(): UserStats {
   const stored = localStorage.getItem("userStats");
   if (stored) {
-    return JSON.parse(stored);
+    const stats = JSON.parse(stored);
+    // Ensure totalXP exists
+    if (stats.totalXP === undefined) {
+      stats.totalXP = stats.totalPoints || 0;
+    }
+    return stats;
   }
   
   return {
@@ -169,6 +285,7 @@ export function getUserStats(): UserStats {
     shotListsCreated: 0,
     ideasCreated: 0,
     trophies: [],
+    totalXP: 0,
   };
 }
 
@@ -190,4 +307,46 @@ export function awardPoints(points: number, reason: string): UserStats {
   
   saveUserStats(stats);
   return stats;
+}
+
+export function addXP(amount: number): { stats: UserStats; leveledUp: boolean; newLevel?: LevelDefinition } {
+  const stats = getUserStats();
+  const previousLevel = calculateLevelByXP(stats.totalXP);
+  
+  stats.totalXP += amount;
+  stats.totalPoints = stats.totalXP; // Keep in sync
+  const newLevel = calculateLevelByXP(stats.totalXP);
+  stats.level = newLevel;
+  
+  // Check for new trophies
+  const newTrophies = checkNewTrophies(stats);
+  newTrophies.forEach((trophy) => {
+    if (!stats.trophies.includes(trophy.id)) {
+      stats.trophies.push(trophy.id);
+      stats.totalXP += trophy.points;
+      stats.totalPoints += trophy.points;
+    }
+  });
+  
+  // Recalculate level after trophy bonuses
+  const finalLevel = calculateLevelByXP(stats.totalXP);
+  stats.level = finalLevel;
+  
+  saveUserStats(stats);
+  
+  const leveledUp = finalLevel > previousLevel;
+  const levelInfo = leveledUp ? getLevelInfo(finalLevel) : undefined;
+  
+  // Dispatch custom event for level up
+  if (leveledUp && levelInfo) {
+    window.dispatchEvent(new CustomEvent('levelUp', { 
+      detail: { level: finalLevel, levelInfo } 
+    }));
+  }
+  
+  return { 
+    stats, 
+    leveledUp, 
+    newLevel: levelInfo 
+  };
 }
