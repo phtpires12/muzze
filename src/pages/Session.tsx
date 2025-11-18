@@ -67,10 +67,14 @@ const Session = () => {
   useEffect(() => {
     const handleRecordStage = async () => {
       if (session.stage === "record") {
-        if (scriptId) {
+        console.log('[Session] Record stage detected, scriptId:', scriptId);
+        
+        if (scriptId && scriptId !== 'null' && scriptId !== 'undefined') {
           // Already has scriptId (coming from Review), redirect directly
+          console.log('[Session] Valid scriptId found, navigating...');
           navigate(`/shot-list/record?scriptId=${scriptId}`);
         } else {
+          console.log('[Session] No valid scriptId, fetching latest script...');
           // No scriptId, fetch the latest script from the user
           try {
             const { data: { user } } = await supabase.auth.getUser();

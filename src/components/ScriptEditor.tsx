@@ -248,9 +248,17 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
     // Preserve scriptId in the URL
     const params = new URLSearchParams(window.location.search);
     const currentScriptId = scriptId || params.get('scriptId');
-    const url = currentScriptId 
-      ? `/session?stage=${nextStage}&scriptId=${currentScriptId}`
-      : `/session?stage=${nextStage}`;
+    
+    if (!currentScriptId) {
+      toast({
+        title: "Erro ao avançar",
+        description: "Não foi possível identificar o roteiro. Tente salvar novamente.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const url = `/session?stage=${nextStage}&scriptId=${currentScriptId}`;
     
     console.log('[DEBUG - ScriptEditor] Navegando para:', url);
     navigate(url);
@@ -438,7 +446,17 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                   onClick={() => {
                     const params = new URLSearchParams(window.location.search);
                     const currentScriptId = scriptId || params.get('scriptId');
-                    navigate(`/shot-list?scriptId=${currentScriptId}`);
+                    
+                    if (!currentScriptId) {
+                      toast({
+                        title: "Erro",
+                        description: "Salve o roteiro antes de abrir a Shot List",
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+                    
+                    navigate(`/shot-list/review?scriptId=${currentScriptId}`);
                   }}
                   className="gap-2"
                 >
