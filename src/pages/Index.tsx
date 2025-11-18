@@ -4,7 +4,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { useSessionContext } from "@/contexts/SessionContext";
 import { supabase } from "@/integrations/supabase/client";
-import { getUserStats, awardPoints, TROPHIES, getLevelByXP } from "@/lib/gamification";
+import { getUserStats, awardPoints, TROPHIES, getLevelByXP, checkAndAwardTrophies } from "@/lib/gamification";
 import { getWorkflow, getUserWorkflow } from "@/lib/workflows";
 import { BottomNav } from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
@@ -74,6 +74,9 @@ const Index = () => {
 
   useEffect(() => {
     if (profile && !profileLoading) {
+      // Check for trophies on initial load
+      checkAndAwardTrophies();
+      
       fetchStreakData();
       fetchWeeklySessions();
       fetchLastActivity();

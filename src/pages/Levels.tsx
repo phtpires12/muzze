@@ -4,7 +4,7 @@ import { ArrowLeft, Trophy, Gift, Lock, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { getUserStats, XP_LEVELS, getLevelByXP, getProgressToNextLevelByXP, getNextLevelInfo } from "@/lib/gamification";
+import { getUserStats, XP_LEVELS, getLevelByXP, getProgressToNextLevelByXP, getNextLevelInfo, TROPHIES } from "@/lib/gamification";
 
 export default function Levels() {
   const [stats, setStats] = useState(getUserStats());
@@ -156,6 +156,109 @@ export default function Levels() {
                           </span>
                         )}
                       </div>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Trophies Section */}
+        <div className="space-y-4">
+          <h2 className="text-xl font-bold flex items-center gap-2">
+            <Trophy className="w-5 h-5 text-primary" />
+            Conquistas Desbloqueadas
+          </h2>
+
+          <div className="grid gap-3">
+            {/* Unlocked Trophies */}
+            {TROPHIES.filter(trophy => stats.trophies.includes(trophy.id)).map((trophy) => (
+              <Card
+                key={trophy.id}
+                className="p-4 bg-gradient-to-r from-primary/5 to-accent/5 border-primary/20"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="text-3xl">{trophy.icon}</div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-semibold">{trophy.name}</h3>
+                      <CheckCircle2 className="w-4 h-4 text-primary" />
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-2">{trophy.description}</p>
+                    <Badge variant="secondary" className="text-xs">
+                      +{trophy.points} XP
+                    </Badge>
+                  </div>
+                </div>
+              </Card>
+            ))}
+
+            {/* Locked Trophies with Progress */}
+            {TROPHIES.filter(trophy => !stats.trophies.includes(trophy.id)).map((trophy) => {
+              // Calculate progress towards trophy
+              let progress = 0;
+              let progressText = "";
+              
+              if (trophy.id === 'first_script') {
+                progress = Math.min(100, (stats.scriptsCreated / 1) * 100);
+                progressText = `${stats.scriptsCreated}/1 roteiro`;
+              } else if (trophy.id === 'scripts_10') {
+                progress = Math.min(100, (stats.scriptsCreated / 10) * 100);
+                progressText = `${stats.scriptsCreated}/10 roteiros`;
+              } else if (trophy.id === 'scripts_50') {
+                progress = Math.min(100, (stats.scriptsCreated / 50) * 100);
+                progressText = `${stats.scriptsCreated}/50 roteiros`;
+              } else if (trophy.id === 'ideas_20') {
+                progress = Math.min(100, (stats.ideasCreated / 20) * 100);
+                progressText = `${stats.ideasCreated}/20 ideias`;
+              } else if (trophy.id === 'streak_7') {
+                progress = Math.min(100, (stats.streak / 7) * 100);
+                progressText = `${stats.streak}/7 dias`;
+              } else if (trophy.id === 'streak_30') {
+                progress = Math.min(100, (stats.streak / 30) * 100);
+                progressText = `${stats.streak}/30 dias`;
+              } else if (trophy.id === 'hours_10') {
+                progress = Math.min(100, (stats.totalHours / 10) * 100);
+                progressText = `${Math.floor(stats.totalHours)}/10 horas`;
+              } else if (trophy.id === 'hours_50') {
+                progress = Math.min(100, (stats.totalHours / 50) * 100);
+                progressText = `${Math.floor(stats.totalHours)}/50 horas`;
+              } else if (trophy.id === 'hours_100') {
+                progress = Math.min(100, (stats.totalHours / 100) * 100);
+                progressText = `${Math.floor(stats.totalHours)}/100 horas`;
+              }
+
+              return (
+                <Card
+                  key={trophy.id}
+                  className="p-4 bg-muted/30 opacity-60"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="text-3xl grayscale">{trophy.icon}</div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-semibold">{trophy.name}</h3>
+                        <Lock className="w-3 h-3 text-muted-foreground" />
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-2">{trophy.description}</p>
+                      {progressText && (
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-muted-foreground">{progressText}</span>
+                            <span className="font-semibold">{Math.floor(progress)}%</span>
+                          </div>
+                          <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-primary transition-all duration-300"
+                              style={{ width: `${progress}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                      <Badge variant="outline" className="text-xs mt-2">
+                        +{trophy.points} XP ao desbloquear
+                      </Badge>
                     </div>
                   </div>
                 </Card>

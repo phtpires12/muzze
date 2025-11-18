@@ -339,3 +339,41 @@ export function addXP(amount: number): { stats: UserStats; leveledUp: boolean; n
     newLevel: levelInfo 
   };
 }
+
+export function checkAndAwardTrophies(): Trophy[] {
+  const stats = getUserStats();
+  const newTrophies = checkNewTrophies(stats);
+  
+  if (newTrophies.length === 0) return [];
+  
+  const previousLevel = calculateLevelByXP(stats.totalXP);
+  
+  // Award each new trophy
+  newTrophies.forEach((trophy) => {
+    stats.trophies.push(trophy.id);
+    stats.totalXP += trophy.points;
+    stats.totalPoints += trophy.points;
+    
+    // Dispatch trophy unlocked event
+    window.dispatchEvent(new CustomEvent('trophyUnlocked', { 
+      detail: { trophy, xpGained: trophy.points } 
+    }));
+  });
+  
+  // Recalculate level after trophy bonuses
+  const finalLevel = calculateLevelByXP(stats.totalXP);
+  stats.level = finalLevel;
+  
+  saveUserStats(stats);
+  
+  // Check if user leveled up from trophies
+  const leveledUp = finalLevel > previousLevel;
+  if (leveledUp) {
+    const levelInfo = getLevelInfo(finalLevel);
+    window.dispatchEvent(new CustomEvent('levelUp', { 
+      detail: { level: finalLevel, levelInfo } 
+    }));
+  }
+  
+  return newTrophies;
+}

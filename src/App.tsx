@@ -25,6 +25,7 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import NotFound from "./pages/NotFound";
 import Levels from "./pages/Levels";
 import { LevelUpModal } from "./components/LevelUpModal";
+import { TrophyUnlockedModal } from "./components/TrophyUnlockedModal";
 
 const queryClient = new QueryClient();
 
@@ -139,6 +140,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <LevelUpModal />
+      <TrophyUnlockedModal />
       <BrowserRouter>
         <Routes>
           <Route path="/auth" element={<Auth />} />

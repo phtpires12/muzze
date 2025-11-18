@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { addXP, POINTS, getUserStats, saveUserStats } from "@/lib/gamification";
+import { addXP, POINTS, getUserStats, saveUserStats, checkAndAwardTrophies } from "@/lib/gamification";
 
 export type SessionStage = "idea" | "ideation" | "script" | "review" | "record" | "edit";
 
@@ -299,6 +299,9 @@ export const useSession = () => {
 
       // Update streak and check if achieved
       const streakResult = await updateStreak(user.id, sessionMinutes);
+      
+      // Check for trophies after session completion
+      checkAndAwardTrophies();
 
       const summary = {
         duration: session.totalElapsedSeconds,
