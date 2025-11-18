@@ -351,9 +351,9 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
               <span>Tipo de Conteúdo</span>
             </div>
             <Select value={contentType} onValueChange={setContentType}>
-              <SelectTrigger className="flex-1 border-none bg-transparent focus:ring-0 focus:ring-offset-0">
-                <SelectValue placeholder="Selecione o tipo de conteúdo" />
-              </SelectTrigger>
+                  <SelectTrigger className="flex-1 border-none bg-transparent focus:ring-0 focus:ring-offset-0 text-foreground">
+                    <SelectValue placeholder="Selecione o tipo de conteúdo" />
+                  </SelectTrigger>
               <SelectContent>
                 <SelectItem value="Reels">Reels</SelectItem>
                 <SelectItem value="YouTube">YouTube</SelectItem>

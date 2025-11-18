@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Plus, Play, Pause } from "lucide-react";
+import { ArrowLeft, Plus } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ShotListTable, ShotItem } from "@/components/shotlist/ShotListTable";
 import { DragEndEvent } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
+import { DraggableTimer } from "@/components/DraggableTimer";
 
 const ShotListRecord = () => {
   const navigate = useNavigate();
@@ -295,31 +296,21 @@ const ShotListRecord = () => {
           </Button>
         </div>
 
-        {/* Timer and Progress */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          <div className="bg-card p-6 rounded-lg border border-border">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-foreground">Timer de Gravação</h3>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setTimerRunning(!timerRunning)}
-              >
-                {timerRunning ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
-              </Button>
-            </div>
-            <p className="text-4xl font-bold text-primary font-mono">
-              {formatTime(elapsedTime)}
-            </p>
-          </div>
+        {/* Timer flutuante arrastável */}
+        <DraggableTimer
+          elapsedTime={elapsedTime}
+          isRunning={timerRunning}
+          onToggle={() => setTimerRunning(!timerRunning)}
+          scriptGoal="2:45"
+        />
 
-          <div className="bg-card p-6 rounded-lg border border-border">
-            <h3 className="font-semibold text-foreground mb-4">Progresso</h3>
-            <Progress value={progressPercentage} className="mb-2" />
-            <p className="text-sm text-muted-foreground">
-              {shots.filter(s => s.isCompleted).length} de {shots.length} takes concluídos ({progressPercentage}%)
-            </p>
-          </div>
+        {/* Progress */}
+        <div className="bg-card p-6 rounded-lg border border-border mb-6">
+          <h3 className="font-semibold text-foreground mb-4">Progresso</h3>
+          <Progress value={progressPercentage} className="mb-2" />
+          <p className="text-sm text-muted-foreground">
+            {shots.filter(s => s.isCompleted).length} de {shots.length} takes concluídos ({progressPercentage}%)
+          </p>
         </div>
 
         {/* Filters */}
