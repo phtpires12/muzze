@@ -63,51 +63,52 @@ const Session = () => {
     }
   }, [scriptIdParam]);
 
-  // Fetch latest script when entering record stage without scriptId
+  // Handle record stage - redirect to shot list
   useEffect(() => {
-    const fetchLatestScript = async () => {
-      if (session.stage === "record" && !scriptId) {
-        try {
-          const { data: { user } } = await supabase.auth.getUser();
-          if (!user) return;
+    const handleRecordStage = async () => {
+      if (session.stage === "record") {
+        if (scriptId) {
+          // Already has scriptId (coming from Review), redirect directly
+          navigate(`/shot-list?scriptId=${scriptId}`);
+        } else {
+          // No scriptId, fetch the latest script from the user
+          try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
 
-          // Fetch the latest script from the user
-          const { data: latestScript, error } = await supabase
-            .from('scripts')
-            .select('id, title')
-            .eq('user_id', user.id)
-            .order('updated_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
+            const { data: latestScript, error } = await supabase
+              .from('scripts')
+              .select('id, title')
+              .eq('user_id', user.id)
+              .order('updated_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
 
-          if (error) throw error;
+            if (error) throw error;
 
-          if (latestScript) {
-            // Redirect to shot list with the scriptId
-            navigate(`/shot-list?scriptId=${latestScript.id}`);
-          } else {
-            // No script found
+            if (latestScript) {
+              navigate(`/shot-list?scriptId=${latestScript.id}`);
+            } else {
+              toast({
+                title: "Nenhum roteiro encontrado",
+                description: "Crie um roteiro primeiro antes de iniciar a gravação",
+                variant: "destructive",
+              });
+              navigate("/");
+            }
+          } catch (error) {
+            console.error('Error fetching latest script:', error);
             toast({
-              title: "Nenhum roteiro encontrado",
-              description: "Crie um roteiro primeiro antes de iniciar a gravação",
+              title: "Erro",
+              description: "Não foi possível carregar o roteiro",
               variant: "destructive",
             });
-            navigate("/");
           }
-        } catch (error) {
-          console.error('Error fetching latest script:', error);
-          toast({
-            title: "Erro",
-            description: "Não foi possível carregar o roteiro",
-            variant: "destructive",
-          });
         }
       }
     };
 
-    if (session.stage === "record") {
-      fetchLatestScript();
-    }
+    handleRecordStage();
   }, [session.stage, scriptId, navigate, toast]);
 
   const formatTime = (seconds: number) => {
