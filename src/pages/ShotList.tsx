@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { useSession } from "@/hooks/useSession";
 import { useToast } from "@/hooks/use-toast";
 import {
   DndContext,
@@ -38,13 +39,14 @@ interface ShotItem {
   isCompleted?: boolean; // Se o take foi gravado
 }
 
-const SortableRow = ({ shot, index, onUpdate, onRemove, onImageUpload, onSplitAtCursor }: {
+const SortableRow = ({ shot, index, onUpdate, onRemove, onImageUpload, onSplitAtCursor, isRecordingStage }: {
   shot: ShotItem;
   index: number;
   onUpdate: (id: string, field: keyof ShotItem, value: string) => void;
   onRemove: (id: string) => void;
   onImageUpload: (id: string, file: File) => void;
   onSplitAtCursor: (id: string, cursorPosition: number) => void;
+  isRecordingStage: boolean;
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editableDivRef = useRef<HTMLDivElement>(null);
@@ -121,25 +123,20 @@ const SortableRow = ({ shot, index, onUpdate, onRemove, onImageUpload, onSplitAt
       style={style} 
       className={cn(
         "border-t border-border hover:bg-muted/20 transition-all relative",
-        shot.isCompleted && "bg-green-50 dark:bg-green-950/20 opacity-75"
+        isRecordingStage && shot.isCompleted && "bg-green-50 dark:bg-green-950/20 opacity-75"
       )}
     >
-      <td className="p-4 w-16">
-        <Checkbox
-          checked={shot.isCompleted || false}
-          onCheckedChange={(checked) => 
-            onUpdate(shot.id, 'isCompleted', checked.toString())
-          }
-          className="h-5 w-5"
-        />
-        {shot.isCompleted && (
-          <div className="absolute top-2 right-2">
-            <div className="bg-green-500 rounded-full p-1">
-              <Check className="w-3 h-3 text-white" />
-            </div>
-          </div>
-        )}
-      </td>
+      {isRecordingStage && (
+        <td className="p-4 w-16">
+          <Checkbox
+            checked={shot.isCompleted || false}
+            onCheckedChange={(checked) => 
+              onUpdate(shot.id, 'isCompleted', checked.toString())
+            }
+            className="h-5 w-5"
+          />
+        </td>
+      )}
       <td className="p-4 w-20">
         <div className="flex flex-col gap-2 items-center">
           <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
@@ -176,7 +173,14 @@ const SortableRow = ({ shot, index, onUpdate, onRemove, onImageUpload, onSplitAt
           className="text-sm"
         />
       </td>
-      <td className="p-4 w-48">
+      <td className="p-4 w-48 relative">
+        {isRecordingStage && shot.isCompleted && (
+          <div className="absolute top-2 right-2 z-10">
+            <div className="bg-green-500 rounded-full p-1">
+              <Check className="w-4 h-4 text-white" />
+            </div>
+          </div>
+        )}
         <div className="flex flex-col gap-2">
           <input
             ref={fileInputRef}
@@ -242,6 +246,8 @@ const ShotList = () => {
   const [searchParams] = useSearchParams();
   const scriptId = searchParams.get("scriptId");
   const { toast } = useToast();
+  const { session } = useSession();
+  const isRecordingStage = session.stage === "record";
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout>();
   
   const [shots, setShots] = useState<ShotItem[]>([]);
@@ -266,8 +272,10 @@ const ShotList = () => {
     })
   );
 
-  // Timer effect
+  // Timer effect - Only in recording stage
   useEffect(() => {
+    if (!isRecordingStage) return;
+    
     let interval: NodeJS.Timeout;
     
     if (isRecording) {
@@ -279,17 +287,19 @@ const ShotList = () => {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isRecording]);
+  }, [isRecording, isRecordingStage]);
 
-  // Alert when target time is reached
+  // Alert when target time is reached - Only in recording stage
   useEffect(() => {
+    if (!isRecordingStage) return;
+    
     if (sessionTime === targetTime && isRecording) {
       toast({
         title: "⏰ Meta de tempo atingida!",
         description: "Você completou 45 minutos de gravação",
       });
     }
-  }, [sessionTime, targetTime, isRecording, toast]);
+  }, [sessionTime, targetTime, isRecording, toast, isRecordingStage]);
 
   useEffect(() => {
     if (scriptId) {
@@ -578,8 +588,10 @@ const ShotList = () => {
     return Array.from(sections);
   }, [shots]);
 
-  // Filter shots
+  // Filter shots - Only apply in recording stage
   const filteredShots = useMemo(() => {
+    if (!isRecordingStage) return shots;
+    
     return shots.filter(shot => {
       if (filterLocation !== "all" && shot.location !== filterLocation) {
         return false;
@@ -595,25 +607,29 @@ const ShotList = () => {
       
       return true;
     });
-  }, [shots, filterLocation, filterSection, showOnlyIncomplete]);
+  }, [shots, filterLocation, filterSection, showOnlyIncomplete, isRecordingStage]);
 
-  // Sort to show incomplete first
+  // Sort to show incomplete first - Only in recording stage
   const sortedShots = useMemo(() => {
+    if (!isRecordingStage) return filteredShots;
+    
     return [...filteredShots].sort((a, b) => {
       if (a.isCompleted === b.isCompleted) return 0;
       return a.isCompleted ? 1 : -1;
     });
-  }, [filteredShots]);
+  }, [filteredShots, isRecordingStage]);
 
-  // Celebrate when all done
+  // Celebrate when all done - Only in recording stage
   useEffect(() => {
+    if (!isRecordingStage) return;
+    
     if (totalShots > 0 && completedShots === totalShots) {
       toast({
         title: "🎉 Parabéns!",
         description: "Você completou todos os takes!",
       });
     }
-  }, [completedShots, totalShots, toast]);
+  }, [completedShots, totalShots, toast, isRecordingStage]);
 
   const formatTime = (seconds: number) => {
     const hrs = Math.floor(seconds / 3600);
@@ -797,6 +813,157 @@ const ShotList = () => {
           </div>
         </div>
 
+        {/* Timer and Progress - Only in recording stage */}
+        {isRecordingStage && (
+          <div className="bg-card border rounded-lg p-6 mb-6 shadow-lg">
+            <div className="flex items-center justify-between gap-6 flex-wrap">
+              {/* Timer Section */}
+              <div className="flex items-center gap-6 flex-1">
+                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-pink-400 via-purple-400 to-purple-500 flex items-center justify-center shadow-lg flex-shrink-0">
+                  <Camera className="w-10 h-10 text-white" />
+                </div>
+                
+                <div className="flex-1">
+                  <h3 className="text-sm text-muted-foreground font-medium mb-1">Gravação</h3>
+                  <div className="text-5xl font-bold font-mono tracking-tight">
+                    {formatTime(sessionTime)}
+                  </div>
+                  <div className="text-sm text-muted-foreground mt-1">
+                    Meta: {formatTime(targetTime)}
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <Button
+                    onClick={() => setIsRecording(!isRecording)}
+                    variant="ghost"
+                    size="icon"
+                    className={cn(
+                      "w-14 h-14 rounded-full shadow-md transition-all bg-background hover:bg-muted border-2 border-border"
+                    )}
+                  >
+                    {isRecording ? (
+                      <Pause className="w-6 h-6" />
+                    ) : (
+                      <Play className="w-6 h-6" />
+                    )}
+                  </Button>
+
+                  <Button
+                    onClick={async () => {
+                      setIsRecording(false);
+                      setSessionTime(0);
+                      await handleSave(false);
+                    }}
+                    variant="ghost"
+                    size="icon"
+                    className="w-14 h-14 rounded-full bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-md"
+                  >
+                    <X className="w-6 h-6" />
+                  </Button>
+                </div>
+              </div>
+              
+              {/* Progress Circle */}
+              <div className="flex items-center gap-6">
+                <div className="text-right">
+                  <div className="text-4xl font-bold">
+                    {completedShots}/{totalShots}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    takes completos
+                  </div>
+                </div>
+                
+                <div className="w-32 h-32 relative flex-shrink-0">
+                  <svg className="transform -rotate-90" width="128" height="128">
+                    <circle
+                      cx="64"
+                      cy="64"
+                      r="58"
+                      stroke="currentColor"
+                      strokeWidth="8"
+                      fill="none"
+                      className="text-muted"
+                    />
+                    <circle
+                      cx="64"
+                      cy="64"
+                      r="58"
+                      stroke="currentColor"
+                      strokeWidth="8"
+                      fill="none"
+                      strokeDasharray={2 * Math.PI * 58}
+                      strokeDashoffset={2 * Math.PI * 58 - (progressPercentage / 100) * 2 * Math.PI * 58}
+                      className="text-primary transition-all duration-300"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-2xl font-bold">{Math.round(progressPercentage)}%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="mt-6">
+              <Progress 
+                value={sessionTime > 0 ? Math.min((sessionTime / targetTime) * 100, 100) : 0} 
+                className="h-2" 
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Filters - Only in recording stage */}
+        {isRecordingStage && (
+          <div className="flex flex-wrap gap-4 mb-6 p-4 bg-muted/30 rounded-lg">
+            <div className="flex-1 min-w-[200px]">
+              <label className="text-sm font-medium mb-2 block">Filtrar por localização</label>
+              <Select value={filterLocation} onValueChange={setFilterLocation}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todas as localizações" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as localizações</SelectItem>
+                  {uniqueLocations.map(location => (
+                    <SelectItem key={location} value={location}>
+                      {location}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex-1 min-w-[200px]">
+              <label className="text-sm font-medium mb-2 block">Filtrar por seção</label>
+              <Select value={filterSection} onValueChange={setFilterSection}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todas as seções" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as seções</SelectItem>
+                  {uniqueSections.map(section => (
+                    <SelectItem key={section} value={section}>
+                      {section}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-end">
+              <label className="flex items-center gap-2 cursor-pointer p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                <Switch
+                  checked={showOnlyIncomplete}
+                  onCheckedChange={setShowOnlyIncomplete}
+                />
+                <span className="text-sm font-medium">Apenas pendentes</span>
+              </label>
+            </div>
+          </div>
+        )}
+
         {/* Table */}
         <DndContext
           sensors={sensors}
@@ -807,7 +974,7 @@ const ShotList = () => {
             <table className="w-full table-fixed">
               <thead className="bg-muted/50">
                 <tr>
-                  <th className="w-16 text-left p-4 font-semibold text-sm">✓</th>
+                  {isRecordingStage && <th className="w-16 text-left p-4 font-semibold text-sm">✓</th>}
                   <th className="w-20"></th>
                   <th className="text-left p-4 font-semibold text-sm w-80">Roteiro</th>
                   <th className="text-left p-4 font-semibold text-sm w-48">Cena</th>
@@ -828,11 +995,12 @@ const ShotList = () => {
                         onRemove={removeShot}
                         onImageUpload={handleImageUpload}
                         onSplitAtCursor={splitShotAtCursor}
+                        isRecordingStage={isRecordingStage}
                       />
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={7} className="p-8 text-center text-muted-foreground">
+                      <td colSpan={isRecordingStage ? 7 : 6} className="p-8 text-center text-muted-foreground">
                         Nenhuma linha criada. Clique em "Adicionar Linha".
                       </td>
                     </tr>
