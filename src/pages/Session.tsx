@@ -63,13 +63,13 @@ const Session = () => {
     }
   }, [scriptIdParam]);
 
-  // Handle record stage - redirect to shot list
+  // Handle record stage - redirect to shot list record
   useEffect(() => {
     const handleRecordStage = async () => {
       if (session.stage === "record") {
         if (scriptId) {
           // Already has scriptId (coming from Review), redirect directly
-          navigate(`/shot-list?scriptId=${scriptId}`);
+          navigate(`/shot-list/record?scriptId=${scriptId}`);
         } else {
           // No scriptId, fetch the latest script from the user
           try {
@@ -87,7 +87,7 @@ const Session = () => {
             if (error) throw error;
 
             if (latestScript) {
-              navigate(`/shot-list?scriptId=${latestScript.id}`);
+              navigate(`/shot-list/record?scriptId=${latestScript.id}`);
             } else {
               toast({
                 title: "Nenhum roteiro encontrado",

@@ -14,6 +14,8 @@ import Novidades from "./pages/Novidades";
 import CalendarioEditorial from "./pages/CalendarioEditorial";
 import Session from "./pages/Session";
 import ShotList from "./pages/ShotList";
+import ShotListReview from "./pages/ShotListReview";
+import ShotListRecord from "./pages/ShotListRecord";
 import Profile from "./pages/Profile";
 import EditProfile from "./pages/EditProfile";
 import MyProgress from "./pages/MyProgress";
@@ -151,6 +153,8 @@ const App = () => (
           <Route path="/calendario" element={<ProtectedRoute><Layout><CalendarioEditorial /></Layout></ProtectedRoute>} />
           <Route path="/session" element={<ProtectedRoute><Session /></ProtectedRoute>} />
           <Route path="/shot-list" element={<ProtectedRoute><ShotList /></ProtectedRoute>} />
+          <Route path="/shot-list/review" element={<ProtectedRoute><ShotListReview /></ProtectedRoute>} />
+          <Route path="/shot-list/record" element={<ProtectedRoute><ShotListRecord /></ProtectedRoute>} />
           <Route path="/stats" element={<ProtectedRoute><Layout><Stats /></Layout></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Layout><Profile /></Layout></ProtectedRoute>} />
           <Route path="/edit-profile" element={<ProtectedRoute><Layout><EditProfile /></Layout></ProtectedRoute>} />
