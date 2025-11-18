@@ -1,8 +1,13 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Plus, Trash2, Camera, Upload, GripVertical, X } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Camera, Upload, GripVertical, X, Check, Play, Pause } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Progress } from "@/components/ui/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -30,6 +35,7 @@ interface ShotItem {
   shotImageUrl: string;
   location: string;
   sectionName?: string; // Nome da seção (Gancho, Setup, etc.)
+  isCompleted?: boolean; // Se o take foi gravado
 }
 
 const SortableRow = ({ shot, index, onUpdate, onRemove, onImageUpload, onSplitAtCursor }: {
@@ -110,7 +116,30 @@ const SortableRow = ({ shot, index, onUpdate, onRemove, onImageUpload, onSplitAt
   };
 
   return (
-    <tr ref={setNodeRef} style={style} className="border-t border-border hover:bg-muted/20">
+    <tr 
+      ref={setNodeRef} 
+      style={style} 
+      className={cn(
+        "border-t border-border hover:bg-muted/20 transition-all relative",
+        shot.isCompleted && "bg-green-50 dark:bg-green-950/20 opacity-75"
+      )}
+    >
+      <td className="p-4 w-16">
+        <Checkbox
+          checked={shot.isCompleted || false}
+          onCheckedChange={(checked) => 
+            onUpdate(shot.id, 'isCompleted', checked.toString())
+          }
+          className="h-5 w-5"
+        />
+        {shot.isCompleted && (
+          <div className="absolute top-2 right-2">
+            <div className="bg-green-500 rounded-full p-1">
+              <Check className="w-3 h-3 text-white" />
+            </div>
+          </div>
+        )}
+      </td>
       <td className="p-4 w-20">
         <div className="flex flex-col gap-2 items-center">
           <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
@@ -219,6 +248,16 @@ const ShotList = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [history, setHistory] = useState<ShotItem[][]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
+  
+  // Timer states
+  const [sessionTime, setSessionTime] = useState(0);
+  const [targetTime] = useState(45 * 60); // 45 minutos
+  const [isRecording, setIsRecording] = useState(false);
+  
+  // Filter states
+  const [filterLocation, setFilterLocation] = useState<string>("all");
+  const [filterSection, setFilterSection] = useState<string>("all");
+  const [showOnlyIncomplete, setShowOnlyIncomplete] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -226,6 +265,31 @@ const ShotList = () => {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
+
+  // Timer effect
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    if (isRecording) {
+      interval = setInterval(() => {
+        setSessionTime(prev => prev + 1);
+      }, 1000);
+    }
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isRecording]);
+
+  // Alert when target time is reached
+  useEffect(() => {
+    if (sessionTime === targetTime && isRecording) {
+      toast({
+        title: "⏰ Meta de tempo atingida!",
+        description: "Você completou 45 minutos de gravação",
+      });
+    }
+  }, [sessionTime, targetTime, isRecording, toast]);
 
   useEffect(() => {
     if (scriptId) {
@@ -292,7 +356,8 @@ const ShotList = () => {
               scene: parsedShot.scene || "",
               shotImageUrl: parsedShot.shotImageUrl || "",
               location: parsedShot.location || "",
-              sectionName: parsedShot.sectionName || ""
+              sectionName: parsedShot.sectionName || "",
+              isCompleted: parsedShot.isCompleted || false
             };
           } catch {
             return {
@@ -301,7 +366,8 @@ const ShotList = () => {
               scene: "",
               shotImageUrl: "",
               location: "",
-              sectionName: ""
+              sectionName: "",
+              isCompleted: false
             };
           }
         });
@@ -494,6 +560,72 @@ const ShotList = () => {
     }
   };
 
+  // Calculate statistics
+  const totalShots = shots.length;
+  const completedShots = shots.filter(s => s.isCompleted).length;
+  const progressPercentage = totalShots > 0 
+    ? Math.round((completedShots / totalShots) * 100) 
+    : 0;
+
+  // Extract unique locations and sections
+  const uniqueLocations = useMemo(() => {
+    const locations = new Set(shots.map(s => s.location).filter(Boolean));
+    return Array.from(locations);
+  }, [shots]);
+
+  const uniqueSections = useMemo(() => {
+    const sections = new Set(shots.map(s => s.sectionName).filter(Boolean));
+    return Array.from(sections);
+  }, [shots]);
+
+  // Filter shots
+  const filteredShots = useMemo(() => {
+    return shots.filter(shot => {
+      if (filterLocation !== "all" && shot.location !== filterLocation) {
+        return false;
+      }
+      
+      if (filterSection !== "all" && shot.sectionName !== filterSection) {
+        return false;
+      }
+      
+      if (showOnlyIncomplete && shot.isCompleted) {
+        return false;
+      }
+      
+      return true;
+    });
+  }, [shots, filterLocation, filterSection, showOnlyIncomplete]);
+
+  // Sort to show incomplete first
+  const sortedShots = useMemo(() => {
+    return [...filteredShots].sort((a, b) => {
+      if (a.isCompleted === b.isCompleted) return 0;
+      return a.isCompleted ? 1 : -1;
+    });
+  }, [filteredShots]);
+
+  // Celebrate when all done
+  useEffect(() => {
+    if (totalShots > 0 && completedShots === totalShots) {
+      toast({
+        title: "🎉 Parabéns!",
+        description: "Você completou todos os takes!",
+      });
+    }
+  }, [completedShots, totalShots, toast]);
+
+  const formatTime = (seconds: number) => {
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    
+    if (hrs > 0) {
+      return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-6xl mx-auto">
@@ -517,11 +649,123 @@ const ShotList = () => {
         </div>
 
         {/* Title */}
-        <div className="flex items-center gap-3 mb-8">
+        <div className="flex items-center gap-3 mb-6">
           <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center">
             <Camera className="w-6 h-6 text-white" />
           </div>
           <h1 className="text-4xl font-bold">Shot List</h1>
+        </div>
+
+        {/* Timer and Progress */}
+        <div className="bg-card border rounded-lg p-6 mb-6">
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-4">
+            {/* Timer */}
+            <div className="flex items-center gap-4">
+              <div className="text-center">
+                <div className="text-3xl font-mono font-bold">
+                  {formatTime(sessionTime)}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Meta: {formatTime(targetTime)}
+                </div>
+              </div>
+              
+              <Button
+                onClick={() => setIsRecording(!isRecording)}
+                variant={isRecording ? "destructive" : "default"}
+                className="gap-2"
+              >
+                {isRecording ? (
+                  <>
+                    <Pause className="w-4 h-4" />
+                    Pausar Sessão
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-4 h-4" />
+                    Iniciar Sessão
+                  </>
+                )}
+              </Button>
+            </div>
+            
+            {/* Progress */}
+            <div className="flex items-center gap-4">
+              <div className="text-right">
+                <div className="text-2xl font-bold">
+                  {completedShots}/{totalShots}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Takes gravados
+                </div>
+              </div>
+              
+              <div className="w-32 h-32 relative">
+                <svg className="transform -rotate-90" width="128" height="128">
+                  <circle
+                    cx="64"
+                    cy="64"
+                    r="56"
+                    stroke="currentColor"
+                    strokeWidth="8"
+                    fill="none"
+                    className="text-muted"
+                  />
+                  <circle
+                    cx="64"
+                    cy="64"
+                    r="56"
+                    stroke="currentColor"
+                    strokeWidth="8"
+                    fill="none"
+                    strokeDasharray={`${2 * Math.PI * 56}`}
+                    strokeDashoffset={`${2 * Math.PI * 56 * (1 - progressPercentage / 100)}`}
+                    className="text-primary transition-all duration-300"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-2xl font-bold">{progressPercentage}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <Progress value={progressPercentage} className="h-2" />
+        </div>
+
+        {/* Filters */}
+        <div className="flex flex-wrap gap-4 mb-6 p-4 bg-muted/30 rounded-lg">
+          <Select value={filterLocation} onValueChange={setFilterLocation}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Todas as locações" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as locações</SelectItem>
+              {uniqueLocations.map(loc => (
+                <SelectItem key={loc} value={loc}>{loc}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={filterSection} onValueChange={setFilterSection}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Todas as seções" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as seções</SelectItem>
+              {uniqueSections.map(sec => (
+                <SelectItem key={sec} value={sec}>{sec}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <div className="flex items-center gap-2">
+            <Switch
+              checked={showOnlyIncomplete}
+              onCheckedChange={setShowOnlyIncomplete}
+            />
+            <label className="text-sm">Apenas pendentes</label>
+          </div>
         </div>
 
         {/* Table */}
@@ -534,6 +778,7 @@ const ShotList = () => {
             <table className="w-full table-fixed">
               <thead className="bg-muted/50">
                 <tr>
+                  <th className="w-16 text-left p-4 font-semibold text-sm">✓</th>
                   <th className="w-20"></th>
                   <th className="text-left p-4 font-semibold text-sm w-80">Roteiro</th>
                   <th className="text-left p-4 font-semibold text-sm w-48">Cena</th>
@@ -543,9 +788,9 @@ const ShotList = () => {
                 </tr>
               </thead>
               <tbody>
-                <SortableContext items={shots.map(s => s.id)} strategy={verticalListSortingStrategy}>
-                  {shots.length > 0 ? (
-                    shots.map((shot, index) => (
+                <SortableContext items={sortedShots.map(s => s.id)} strategy={verticalListSortingStrategy}>
+                  {sortedShots.length > 0 ? (
+                    sortedShots.map((shot, index) => (
                       <SortableRow
                         key={shot.id}
                         shot={shot}
@@ -558,7 +803,7 @@ const ShotList = () => {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={6} className="p-8 text-center text-muted-foreground">
+                      <td colSpan={7} className="p-8 text-center text-muted-foreground">
                         Nenhuma linha criada. Clique em "Adicionar Linha".
                       </td>
                     </tr>
