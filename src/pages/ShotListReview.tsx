@@ -20,9 +20,17 @@ const ShotListReview = () => {
   const [uploadingImages, setUploadingImages] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    if (scriptId) {
-      loadShotList();
+    if (!scriptId || scriptId === 'null' || scriptId === 'undefined') {
+      toast({
+        title: "Erro",
+        description: "ID do roteiro inválido. Redirecionando...",
+        variant: "destructive",
+      });
+      navigate('/calendario');
+      return;
     }
+    
+    loadShotList();
   }, [scriptId]);
 
   const loadShotList = async () => {

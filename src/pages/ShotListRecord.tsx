@@ -32,9 +32,17 @@ const ShotListRecord = () => {
   const [showOnlyIncomplete, setShowOnlyIncomplete] = useState(false);
 
   useEffect(() => {
-    if (scriptId) {
-      loadShotList();
+    if (!scriptId || scriptId === 'null' || scriptId === 'undefined') {
+      toast({
+        title: "Erro",
+        description: "ID do roteiro inválido. Redirecionando...",
+        variant: "destructive",
+      });
+      navigate('/calendario');
+      return;
     }
+    
+    loadShotList();
   }, [scriptId]);
 
   // Timer effect
