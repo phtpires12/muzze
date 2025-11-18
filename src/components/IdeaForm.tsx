@@ -31,6 +31,7 @@ export const IdeaForm = ({ scriptId }: IdeaFormProps) => {
   const [title, setTitle] = useState("");
   const [contentType, setContentType] = useState("");
   const [centralIdea, setCentralIdea] = useState("");
+  const [referenceUrl, setReferenceUrl] = useState("");
   const [publishDate, setPublishDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [currentScriptId, setCurrentScriptId] = useState<string | undefined>(scriptId);
@@ -65,6 +66,7 @@ export const IdeaForm = ({ scriptId }: IdeaFormProps) => {
         setContentType(data.content_type || "");
         // @ts-ignore - central_idea will be available after types regenerate
         setCentralIdea(data.central_idea || "");
+        setReferenceUrl(data.reference_url || "");
         if (data.publish_date) {
           setPublishDate(data.publish_date);
         }
@@ -99,6 +101,7 @@ export const IdeaForm = ({ scriptId }: IdeaFormProps) => {
         title: title.trim() || "Nova Ideia",
         content_type: contentType,
         central_idea: centralIdea.trim(),
+        reference_url: referenceUrl.trim() || null,
         user_id: user.id,
         publish_date: publishDate,
       };
@@ -202,6 +205,22 @@ export const IdeaForm = ({ scriptId }: IdeaFormProps) => {
         />
         <p className="text-sm text-muted-foreground">
           Explique minimamente sua ideia para poder avançar para o roteiro.
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="reference-url">
+          Referência (Opcional)
+        </Label>
+        <Input
+          id="reference-url"
+          type="url"
+          placeholder="Cole aqui o link de referência para esta ideia..."
+          value={referenceUrl}
+          onChange={(e) => setReferenceUrl(e.target.value)}
+        />
+        <p className="text-sm text-muted-foreground">
+          Ex: vídeo inspiração, artigo, post de exemplo, etc.
         </p>
       </div>
 
