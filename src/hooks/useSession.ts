@@ -186,6 +186,7 @@ export const useSession = () => {
           started_at: currentStageStartRef.current.toISOString(),
           ended_at: now.toISOString(),
           duration_seconds: durationSeconds,
+          content_item_id: (window as any).__muzzeSessionContentId || null,
         });
       }
 
@@ -260,6 +261,7 @@ export const useSession = () => {
           started_at: currentStageStartRef.current.toISOString(),
           ended_at: now.toISOString(),
           duration_seconds: durationSeconds,
+          content_item_id: (window as any).__muzzeSessionContentId || null,
         });
       }
 

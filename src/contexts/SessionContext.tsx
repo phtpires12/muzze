@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 
 export interface MuzzeSessionType {
   stage: "" | "ideation" | "script" | "record" | "edit";
@@ -32,6 +32,11 @@ const initialContext: MuzzeSessionType = {
 
 export const SessionContextProvider = ({ children }: SessionContextProviderProps) => {
   const [muzzeSession, setMuzzeSessionState] = useState<MuzzeSessionType>(initialContext);
+
+  // Sync contentId to global window object for useSession hook
+  useEffect(() => {
+    (window as any).__muzzeSessionContentId = muzzeSession.contentId;
+  }, [muzzeSession.contentId]);
 
   const setMuzzeSession = (context: Partial<MuzzeSessionType>) => {
     setMuzzeSessionState((prev) => ({ ...prev, ...context }));
