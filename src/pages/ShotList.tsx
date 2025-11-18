@@ -672,146 +672,47 @@ const ShotList = () => {
           <h1 className="text-4xl font-bold">Shot List</h1>
         </div>
 
-        {/* Timer and Progress */}
-        <div className="bg-card border rounded-lg p-6 mb-6 shadow-lg">
-          <div className="flex items-center justify-between gap-6 flex-wrap">
-            {/* Timer Section - Same style as Session stages */}
-            <div className="flex items-center gap-6 flex-1">
-              {/* Icon */}
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-pink-400 via-purple-400 to-purple-500 flex items-center justify-center shadow-lg flex-shrink-0">
-                <Camera className="w-10 h-10 text-white" />
-              </div>
-              
-              {/* Timer Info */}
-              <div className="flex-1">
-                <h3 className="text-sm text-muted-foreground font-medium mb-1">Gravação</h3>
-                <div className="text-5xl font-bold font-mono tracking-tight">
-                  {formatTime(sessionTime)}
-                </div>
-                <div className="text-sm text-muted-foreground mt-1">
-                  Meta: {formatTime(targetTime)}
-                </div>
-              </div>
-
-              {/* Controls */}
-              <div className="flex gap-3">
-                <Button
-                  onClick={() => setIsRecording(!isRecording)}
-                  variant={isRecording ? "ghost" : "ghost"}
-                  size="icon"
-                  className={cn(
-                    "w-14 h-14 rounded-full shadow-md transition-all",
-                    isRecording 
-                      ? "bg-background hover:bg-muted border-2 border-border" 
-                      : "bg-background hover:bg-muted border-2 border-border"
-                  )}
-                >
-                  {isRecording ? (
-                    <Pause className="w-6 h-6" />
-                  ) : (
-                    <Play className="w-6 h-6" />
-                  )}
-                </Button>
-
-                <Button
-                  onClick={async () => {
-                    setIsRecording(false);
-                    setSessionTime(0);
-                    await handleSave(false);
-                  }}
-                  variant="ghost"
-                  size="icon"
-                  className="w-14 h-14 rounded-full bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-md"
-                >
-                  <X className="w-6 h-6" />
-                </Button>
-              </div>
-            </div>
-            
-            {/* Progress Circle */}
-            <div className="flex items-center gap-6">
-              <div className="text-right">
-                <div className="text-4xl font-bold">
-                  {completedShots}/{totalShots}
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  Takes gravados
-                </div>
-              </div>
-              
-              <div className="w-32 h-32 relative flex-shrink-0">
-                <svg className="transform -rotate-90" width="128" height="128">
-                  <circle
-                    cx="64"
-                    cy="64"
-                    r="56"
-                    stroke="currentColor"
-                    strokeWidth="8"
-                    fill="none"
-                    className="text-muted"
-                  />
-                  <circle
-                    cx="64"
-                    cy="64"
-                    r="56"
-                    stroke="currentColor"
-                    strokeWidth="8"
-                    fill="none"
-                    strokeDasharray={`${2 * Math.PI * 56}`}
-                    strokeDashoffset={`${2 * Math.PI * 56 * (1 - progressPercentage / 100)}`}
-                    className="text-primary transition-all duration-300"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-2xl font-bold">{progressPercentage}%</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          {/* Progress Bar */}
-          <div className="mt-6">
-            <Progress 
-              value={sessionTime > 0 ? Math.min((sessionTime / targetTime) * 100, 100) : 0} 
-              className="h-2" 
-            />
-          </div>
-        </div>
 
         {/* Filters */}
-        <div className="flex flex-wrap gap-4 mb-6 p-4 bg-muted/30 rounded-lg">
-          <Select value={filterLocation} onValueChange={setFilterLocation}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="Todas as locações" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas as locações</SelectItem>
-              {uniqueLocations.map(loc => (
-                <SelectItem key={loc} value={loc}>{loc}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        {isRecordingStage && (
+          <div className="flex flex-wrap gap-4 mb-6 p-4 bg-muted/30 rounded-lg">
+            <Select value={filterLocation} onValueChange={setFilterLocation}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Todas as locações" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as locações</SelectItem>
+                {uniqueLocations.map((loc) => (
+                  <SelectItem key={loc} value={loc}>
+                    {loc}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-          <Select value={filterSection} onValueChange={setFilterSection}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="Todas as seções" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas as seções</SelectItem>
-              {uniqueSections.map(sec => (
-                <SelectItem key={sec} value={sec}>{sec}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            <Select value={filterSection} onValueChange={setFilterSection}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Todas as seções" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as seções</SelectItem>
+                {uniqueSections.map((sec) => (
+                  <SelectItem key={sec} value={sec}>
+                    {sec}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-          <div className="flex items-center gap-2">
-            <Switch
-              checked={showOnlyIncomplete}
-              onCheckedChange={setShowOnlyIncomplete}
-            />
-            <label className="text-sm">Apenas pendentes</label>
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={showOnlyIncomplete}
+                onCheckedChange={setShowOnlyIncomplete}
+              />
+              <label className="text-sm">Apenas pendentes</label>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Timer and Progress - Only in recording stage */}
         {isRecordingStage && (
