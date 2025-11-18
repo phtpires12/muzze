@@ -47,6 +47,7 @@ const Session = () => {
   const [summary, setSummary] = useState<any>(null);
   const [showStreakHalo, setShowStreakHalo] = useState(false);
   const [streakCount, setStreakCount] = useState(0);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
 
   useEffect(() => {
     if (stageParam) {
@@ -94,17 +95,37 @@ const Session = () => {
     navigate("/");
   };
 
+  const handleBackClick = () => {
+    if (session.isActive) {
+      setShowExitConfirm(true);
+    } else {
+      navigate("/");
+    }
+  };
+
+  const handleConfirmExit = async () => {
+    if (session.isActive) {
+      await handleEnd();
+    }
+    setShowExitConfirm(false);
+    navigate("/");
+  };
+
+  const handleCancelExit = () => {
+    setShowExitConfirm(false);
+  };
+
   if (!session.isActive) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-accent/10 via-background to-primary/10 p-6">
         <div className="max-w-2xl mx-auto">
           <Button
             variant="ghost"
-            onClick={() => navigate("/")}
-            className="mb-6"
+            onClick={handleBackClick}
+            className="mb-6 hover:bg-accent/10"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Voltar
+            Voltar ao Dashboard
           </Button>
 
           <Card className="p-8 backdrop-blur-md bg-card/85 border-border/20 shadow-lg rounded-[28px]">
@@ -167,14 +188,16 @@ const Session = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
         <div className="container mx-auto px-4 py-8">
-          <Button
-            variant="ghost"
-            onClick={() => navigate("/")}
-            className="mb-6"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Voltar
-          </Button>
+          <div className="flex items-center justify-between mb-6">
+            <Button
+              variant="ghost"
+              onClick={handleBackClick}
+              className="hover:bg-accent/10"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Voltar ao Dashboard
+            </Button>
+          </div>
 
           <BrainstormWorkspace />
         </div>
@@ -190,6 +213,18 @@ const Session = () => {
 
     return (
       <div className="relative">
+        {/* Back Button */}
+        <div className="fixed top-6 left-6 z-50">
+          <Button
+            variant="ghost"
+            onClick={handleBackClick}
+            className="bg-card/95 backdrop-blur-md hover:bg-accent/10 border border-border/20 shadow-lg"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Dashboard
+          </Button>
+        </div>
+
         {/* Floating Timer Pop-up */}
         <div className="fixed top-6 right-6 z-50">
           <Card className={cn(
@@ -453,6 +488,34 @@ const Session = () => {
               </Button>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Exit Confirmation Dialog */}
+      <Dialog open={showExitConfirm} onOpenChange={setShowExitConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Sair da sessão?</DialogTitle>
+            <DialogDescription>
+              Você tem uma sessão ativa em andamento. Deseja finalizar a sessão antes de voltar ao dashboard?
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex flex-col gap-3 pt-4">
+            <Button
+              onClick={handleConfirmExit}
+              className="w-full"
+            >
+              Finalizar sessão e voltar
+            </Button>
+            <Button
+              onClick={handleCancelExit}
+              variant="outline"
+              className="w-full"
+            >
+              Continuar na sessão
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
