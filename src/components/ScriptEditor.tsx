@@ -119,7 +119,14 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
         if (isReviewMode) {
           setOriginalContent(loadedContent);
         }
-        setReferences(data.reference_links || []);
+        
+        // Load references - prefer reference_links array, but fallback to reference_url from Ideas stage
+        const savedReferences = data.reference_links || [];
+        if (!savedReferences.length && data.reference_url) {
+          // If no reference_links but has reference_url (from IdeaForm), convert to array
+          savedReferences.push(data.reference_url);
+        }
+        setReferences(savedReferences);
         setContentType(data.content_type || "");
         setPublishDate(data.publish_date || "");
       }

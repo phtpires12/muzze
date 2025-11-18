@@ -139,7 +139,12 @@ export const BrainstormWorkspace = () => {
     setIdeas([...ideas, data]);
   };
 
-  const updateIdea = async (id: string, updates: any) => {
+  const updateIdea = async (id: string, updates: { 
+    title?: string; 
+    content_type?: string; 
+    central_idea?: string;
+    reference_url?: string;
+  }) => {
     const { error } = await supabase
       .from("scripts")
       .update(updates as any)
