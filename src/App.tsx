@@ -139,9 +139,10 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <LevelUpModal />
-      <TrophyUnlockedModal />
+      {/* Modals must be inside BrowserRouter to use useNavigate */}
       <BrowserRouter>
+        <LevelUpModal />
+        <TrophyUnlockedModal />
         <Routes>
           <Route path="/auth" element={<Auth />} />
           <Route path="/onboarding" element={<OnboardingRoute><Onboarding /></OnboardingRoute>} />
