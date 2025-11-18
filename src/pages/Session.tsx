@@ -26,6 +26,8 @@ import {
 import { StreakHalo } from "@/components/StreakHalo";
 import { ScriptEditor } from "@/components/ScriptEditor";
 import { BrainstormWorkspace } from "@/components/brainstorm/BrainstormWorkspace";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const STAGES: { id: SessionStage; label: string; icon: any; color: string }[] = [
   { id: "idea" as SessionStage, label: "Ideia", icon: Lightbulb, color: "text-yellow-500" },
@@ -40,6 +42,7 @@ const Session = () => {
   const [searchParams] = useSearchParams();
   const stageParam = searchParams.get("stage");
   const scriptIdParam = searchParams.get("scriptId");
+  const { toast } = useToast();
   
   const [scriptId, setScriptId] = useState<string | undefined>(scriptIdParam || undefined);
   const { session, startSession, pauseSession, resumeSession, changeStage, endSession } = useSession();
@@ -59,6 +62,53 @@ const Session = () => {
       setScriptId(scriptIdParam);
     }
   }, [scriptIdParam]);
+
+  // Fetch latest script when entering record stage without scriptId
+  useEffect(() => {
+    const fetchLatestScript = async () => {
+      if (session.stage === "record" && !scriptId) {
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) return;
+
+          // Fetch the latest script from the user
+          const { data: latestScript, error } = await supabase
+            .from('scripts')
+            .select('id, title')
+            .eq('user_id', user.id)
+            .order('updated_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (error) throw error;
+
+          if (latestScript) {
+            // Redirect to shot list with the scriptId
+            navigate(`/shot-list?scriptId=${latestScript.id}`);
+          } else {
+            // No script found
+            toast({
+              title: "Nenhum roteiro encontrado",
+              description: "Crie um roteiro primeiro antes de iniciar a gravação",
+              variant: "destructive",
+            });
+            navigate("/");
+          }
+        } catch (error) {
+          console.error('Error fetching latest script:', error);
+          toast({
+            title: "Erro",
+            description: "Não foi possível carregar o roteiro",
+            variant: "destructive",
+          });
+        }
+      }
+    };
+
+    if (session.stage === "record") {
+      fetchLatestScript();
+    }
+  }, [session.stage, scriptId, navigate, toast]);
 
   const formatTime = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
@@ -157,10 +207,15 @@ const Session = () => {
   const currentStage = STAGES.find(s => s.id === session.stage)!;
   const CurrentIcon = currentStage.icon;
 
-  // If stage is "record", redirect to shot list
-  if (session.stage === "record" && scriptId) {
-    navigate(`/shot-list?scriptId=${scriptId}`);
-    return null;
+  // If stage is "record", show loading while fetching script
+  if (session.stage === "record") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5">
+        <div className="text-center">
+          <p className="text-lg text-muted-foreground">Carregando shot list...</p>
+        </div>
+      </div>
+    );
   }
 
   // If stage is "idea", show the brainstorm workspace
