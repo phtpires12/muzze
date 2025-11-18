@@ -127,19 +127,63 @@ const Index = () => {
     setWeeklySessionsCount(count || 0);
   };
 
-  const fetchLastActivity = async () => {
+  // Helper: Get last work in progress from scripts
+  const getLastWorkInProgress = async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) return null;
 
-    const { data } = await supabase
-      .from('stage_times')
+    const { data: scripts } = await supabase
+      .from('scripts')
       .select('*')
       .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
+      .in('status', ['draft_idea', 'ideia', 'roteiro-em-progresso', 'gravado', 'edição-pendente'])
+      .order('updated_at', { ascending: false })
       .limit(1)
       .maybeSingle();
 
-    setLastActivity(data);
+    return scripts;
+  };
+
+  // Helper: Map status to session stage
+  const getStageFromStatus = (status: string): string => {
+    const stageMap: Record<string, string> = {
+      'draft_idea': 'ideation',
+      'ideia': 'ideation',
+      'roteiro-em-progresso': 'script',
+      'roteiro-pronto': 'record',
+      'gravado': 'edit',
+      'edição-pendente': 'edit',
+    };
+    return stageMap[status] || 'ideation';
+  };
+
+  const fetchLastActivity = async () => {
+    const workInProgress = await getLastWorkInProgress();
+    
+    if (workInProgress) {
+      // Get total time spent on this item
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: stageTimes } = await supabase
+        .from('stage_times')
+        .select('duration_seconds')
+        .eq('user_id', user.id)
+        .eq('content_item_id', workInProgress.id);
+
+      const totalSeconds = stageTimes?.reduce((sum, st) => sum + (st.duration_seconds || 0), 0) || 0;
+
+      setLastActivity({
+        id: workInProgress.id,
+        title: workInProgress.title,
+        stage: getStageFromStatus(workInProgress.status),
+        status: workInProgress.status,
+        updated_at: workInProgress.updated_at,
+        totalSeconds,
+      });
+    } else {
+      setLastActivity(null);
+    }
   };
 
   const fetchRecentSessions = async () => {
@@ -389,18 +433,36 @@ const Index = () => {
           {lastActivity ? (
             <div className="space-y-4">
               <div className="p-4 bg-secondary/50 rounded-2xl">
-                <h3 className="font-semibold text-foreground mb-1">
-                  Sessão em {lastActivity.stage || "andamento"}
+                <h3 className="font-semibold text-foreground mb-2">
+                  📝 {lastActivity.title}
                 </h3>
-                <p className="text-sm text-muted-foreground">
-                  Você parou na etapa de {lastActivity.stage?.toLowerCase() || "criação"}.
-                </p>
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">
+                    Etapa: {lastActivity.stage === 'ideation' ? 'Ideação' : 
+                            lastActivity.stage === 'script' ? 'Roteiro em progresso' : 
+                            lastActivity.stage === 'record' ? 'Gravação pendente' : 
+                            lastActivity.stage === 'edit' ? 'Edição pendente' : lastActivity.stage}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Última edição: {new Date(lastActivity.updated_at).toLocaleString('pt-BR', { 
+                      day: '2-digit', 
+                      month: 'short', 
+                      hour: '2-digit', 
+                      minute: '2-digit' 
+                    })}
+                  </p>
+                  {lastActivity.totalSeconds > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      Tempo dedicado: {Math.floor(lastActivity.totalSeconds / 60)}min
+                    </p>
+                  )}
+                </div>
               </div>
               <Button
                 onClick={handleContinueActivity}
                 className="w-full bg-gradient-to-r from-primary to-accent hover:opacity-90 text-white shadow-lg h-12 rounded-xl font-semibold"
               >
-                Continuar criando
+                Continuar criando →
               </Button>
             </div>
           ) : (
