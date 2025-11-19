@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { GripVertical, X, Upload, Check } from "lucide-react";
@@ -54,6 +54,8 @@ const SortableRow = ({
 }: SortableRowProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editableDivRef = useRef<HTMLDivElement>(null);
+  const [localText, setLocalText] = useState(shot.scriptSegment);
+  const cursorPositionRef = useRef<number | null>(null);
   const {
     attributes,
     listeners,
@@ -62,6 +64,42 @@ const SortableRow = ({
     transition,
     isDragging,
   } = useSortable({ id: shot.id });
+
+  // Sincronizar mudanças externas
+  useEffect(() => {
+    if (shot.scriptSegment !== localText && document.activeElement !== editableDivRef.current) {
+      setLocalText(shot.scriptSegment);
+    }
+  }, [shot.scriptSegment, localText]);
+
+  // Restaurar posição do cursor
+  useEffect(() => {
+    if (cursorPositionRef.current !== null && editableDivRef.current) {
+      const element = editableDivRef.current;
+      const textNode = element.firstChild;
+      
+      if (textNode && textNode.nodeType === Node.TEXT_NODE) {
+        const selection = window.getSelection();
+        const range = document.createRange();
+        
+        const targetPosition = Math.min(
+          cursorPositionRef.current,
+          textNode.textContent?.length || 0
+        );
+        
+        try {
+          range.setStart(textNode, targetPosition);
+          range.setEnd(textNode, targetPosition);
+          selection?.removeAllRanges();
+          selection?.addRange(range);
+        } catch (error) {
+          console.error('Erro ao restaurar cursor:', error);
+        }
+      }
+      
+      cursorPositionRef.current = null;
+    }
+  }, [localText]);
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -118,6 +156,18 @@ const SortableRow = ({
 
   const handleInput = (e: React.FormEvent<HTMLDivElement>) => {
     const newText = e.currentTarget.textContent || '';
+    
+    // Salvar posição do cursor
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0 && editableDivRef.current) {
+      const range = selection.getRangeAt(0);
+      const preCaretRange = range.cloneRange();
+      preCaretRange.selectNodeContents(editableDivRef.current);
+      preCaretRange.setEnd(range.endContainer, range.endOffset);
+      cursorPositionRef.current = preCaretRange.toString().length;
+    }
+    
+    setLocalText(newText);
     onUpdate(shot.id, 'scriptSegment', newText);
   };
 
@@ -156,16 +206,21 @@ const SortableRow = ({
               {shot.sectionName}
             </span>
           )}
-          <div
-            ref={editableDivRef}
-            contentEditable
-            onInput={handleInput}
-            onKeyDown={handleKeyDown}
-            suppressContentEditableWarning
-            className="min-h-[80px] max-h-[160px] overflow-y-auto text-sm p-3 rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 whitespace-pre-wrap"
-          >
-            {shot.scriptSegment}
-          </div>
+              <div
+                ref={editableDivRef}
+                contentEditable
+                onInput={handleInput}
+                onKeyDown={handleKeyDown}
+                onBlur={() => {
+                  if (localText !== shot.scriptSegment) {
+                    onUpdate(shot.id, 'scriptSegment', localText);
+                  }
+                }}
+                suppressContentEditableWarning
+                className="min-h-[80px] max-h-[160px] overflow-y-auto text-sm p-3 rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 whitespace-pre-wrap"
+              >
+                {localText}
+              </div>
           <span className="text-xs text-muted-foreground">Pressione Enter para dividir</span>
         </div>
       </td>
