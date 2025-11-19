@@ -299,9 +299,14 @@ const ShotListRecord = () => {
         {/* Timer flutuante arrastável */}
         <DraggableTimer
           elapsedTime={elapsedTime}
+          targetTime={165} // 2:45 em segundos
           isRunning={timerRunning}
           onToggle={() => setTimerRunning(!timerRunning)}
-          scriptGoal="2:45"
+          onStop={() => {
+            setTimerRunning(false);
+            setElapsedTime(0);
+          }}
+          progress={(elapsedTime / 165) * 100}
         />
 
         {/* Progress */}

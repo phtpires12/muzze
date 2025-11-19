@@ -1,20 +1,26 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, GripVertical } from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+import { Play, Pause, Square, GripVertical, Camera } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface DraggableTimerProps {
   elapsedTime: number;
+  targetTime?: number;
   isRunning: boolean;
   onToggle: () => void;
-  scriptGoal?: string;
+  onStop: () => void;
+  progress: number;
 }
 
 export const DraggableTimer = ({ 
   elapsedTime, 
+  targetTime,
   isRunning, 
   onToggle,
-  scriptGoal 
+  onStop,
+  progress
 }: DraggableTimerProps) => {
   const [position, setPosition] = useState({ x: 20, y: 20 });
   const [isDragging, setIsDragging] = useState(false);
@@ -39,9 +45,14 @@ export const DraggableTimer = ({
   }, [position]);
 
   const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    
+    if (h > 0) {
+      return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    }
+    return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -72,8 +83,8 @@ export const DraggableTimer = ({
       const newY = clientY - startPos.current.y;
 
       // Constrain to viewport bounds
-      const maxX = window.innerWidth - 200; // timer width
-      const maxY = window.innerHeight - 120; // timer height
+      const maxX = window.innerWidth - 340;
+      const maxY = window.innerHeight - 150;
 
       setPosition({
         x: Math.max(0, Math.min(newX, maxX)),
@@ -104,50 +115,82 @@ export const DraggableTimer = ({
     <div
       ref={dragRef}
       className={cn(
-        "fixed bg-card border-2 border-primary/20 rounded-lg shadow-2xl z-50",
-        "min-w-[180px] max-w-[200px]",
-        isDragging && "cursor-grabbing shadow-2xl ring-2 ring-primary/50"
+        "fixed z-50 transition-shadow duration-200",
+        isDragging && "shadow-2xl ring-2 ring-primary/50"
       )}
       style={{
         left: `${position.x}px`,
         top: `${position.y}px`,
       }}
     >
-      {/* Drag Handle */}
-      <div
-        className="flex items-center justify-between p-2 bg-primary/10 rounded-t-lg cursor-grab active:cursor-grabbing"
-        onMouseDown={handleMouseDown}
-        onTouchStart={handleTouchStart}
-      >
-        <span className="text-xs font-semibold text-muted-foreground">Roteiro</span>
-        <GripVertical className="w-4 h-4 text-muted-foreground" />
-      </div>
-
-      {/* Timer Content */}
-      <div className="p-4 space-y-2">
-        <div className="flex items-center justify-between">
-          <div className="text-3xl font-bold text-primary font-mono">
-            {formatTime(elapsedTime)}
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onToggle}
-            className="h-8 w-8"
-          >
-            {isRunning ? (
-              <Pause className="w-4 h-4" />
-            ) : (
-              <Play className="w-4 h-4" />
-            )}
-          </Button>
+      <Card className="backdrop-blur-md bg-card/95 border-border/20 shadow-xl rounded-2xl transition-all duration-300">
+        {/* Drag Handle */}
+        <div
+          className="flex items-center justify-between px-4 py-2 bg-primary/10 rounded-t-2xl cursor-grab active:cursor-grabbing"
+          onMouseDown={handleMouseDown}
+          onTouchStart={handleTouchStart}
+        >
+          <span className="text-xs font-semibold text-muted-foreground">
+            Gravação
+          </span>
+          <GripVertical className="w-4 h-4 text-muted-foreground" />
         </div>
-        {scriptGoal && (
-          <div className="text-xs text-muted-foreground">
-            Meta: {scriptGoal}
+
+        {/* Timer Content */}
+        <div className="p-4">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-accent to-primary flex items-center justify-center shadow-lg">
+              <Camera className="w-6 h-6 text-white" />
+            </div>
+            
+            <div className="min-w-[140px]">
+              <div className="text-2xl font-bold text-foreground tabular-nums">
+                {formatTime(elapsedTime)}
+              </div>
+              {targetTime && (
+                <div className="text-xs text-muted-foreground">
+                  Meta: {formatTime(targetTime)}
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-2">
+              {!isRunning ? (
+                <Button
+                  onClick={onToggle}
+                  variant="outline"
+                  size="sm"
+                >
+                  <Play className="w-4 h-4" />
+                </Button>
+              ) : (
+                <Button
+                  onClick={onToggle}
+                  variant="default"
+                  size="sm"
+                >
+                  <Pause className="w-4 h-4" />
+                </Button>
+              )}
+              <Button
+                onClick={onStop}
+                variant="outline"
+                size="sm"
+              >
+                <Square className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
-        )}
-      </div>
+
+          {/* Progress bar */}
+          {targetTime && (
+            <Progress 
+              value={progress} 
+              className="mt-3 h-1.5"
+            />
+          )}
+        </div>
+      </Card>
     </div>
   );
 };
