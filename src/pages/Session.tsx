@@ -26,6 +26,7 @@ import {
 import { StreakHalo } from "@/components/StreakHalo";
 import { ScriptEditor } from "@/components/ScriptEditor";
 import { BrainstormWorkspace } from "@/components/brainstorm/BrainstormWorkspace";
+import { DraggableSessionTimer } from "@/components/DraggableSessionTimer";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -263,90 +264,19 @@ const Session = () => {
           </Button>
         </div>
 
-        {/* Floating Timer Pop-up */}
-        <div className="fixed top-6 right-6 z-50">
-          <Card className={cn(
-            "p-4 backdrop-blur-md border-border/20 shadow-xl rounded-2xl transition-all duration-300",
-            session.isOvertime 
-              ? "bg-destructive/95 border-destructive animate-pulse" 
-              : "bg-card/95"
-          )}>
-            <div className="flex items-center gap-4">
-              <div className={cn(
-                "w-12 h-12 rounded-full flex items-center justify-center shadow-lg",
-                session.isOvertime
-                  ? "bg-destructive-foreground/20"
-                  : "bg-gradient-to-br from-accent to-primary"
-              )}>
-                <CurrentIcon className={cn(
-                  "w-6 h-6",
-                  session.isOvertime ? "text-destructive-foreground" : "text-white"
-                )} />
-              </div>
-              
-              <div className="min-w-[140px]">
-                <div className={cn(
-                  "text-sm",
-                  session.isOvertime ? "text-destructive-foreground/80" : "text-muted-foreground"
-                )}>
-                  {currentStage.label}
-                </div>
-                <div className={cn(
-                  "text-2xl font-bold tabular-nums",
-                  session.isOvertime ? "text-destructive-foreground" : "text-foreground"
-                )}>
-                  {formatTime(session.elapsedSeconds)}
-                </div>
-                {session.targetSeconds && (
-                  <div className={cn(
-                    "text-xs",
-                    session.isOvertime ? "text-destructive-foreground/70" : "text-muted-foreground"
-                  )}>
-                    {session.isOvertime ? "Tempo esgotado!" : `Meta: ${formatTime(session.targetSeconds)}`}
-                  </div>
-                )}
-              </div>
-
-              <div className="flex flex-col gap-2">
-                {!session.isPaused ? (
-                  <Button
-                    onClick={pauseSession}
-                    variant={session.isOvertime ? "secondary" : "outline"}
-                    size="sm"
-                  >
-                    <Pause className="w-4 h-4" />
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={resumeSession}
-                    size="sm"
-                  >
-                    <Play className="w-4 h-4" />
-                  </Button>
-                )}
-                
-                <Button
-                  onClick={handleEnd}
-                  variant="destructive"
-                  size="sm"
-                >
-                  <Square className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-
-            {/* Progress bar */}
-            {session.targetSeconds && (
-              <Progress 
-                value={progress} 
-                className={cn(
-                  "mt-3 h-1.5",
-                  session.isOvertime && "bg-destructive-foreground/20"
-                )}
-              />
-            )}
-          </Card>
-        </div>
+        {/* Floating Draggable Timer Pop-up */}
+        <DraggableSessionTimer
+          stage={currentStage.label}
+          icon={CurrentIcon}
+          elapsedSeconds={session.elapsedSeconds}
+          targetSeconds={session.targetSeconds}
+          isOvertime={session.isOvertime}
+          isPaused={session.isPaused}
+          onPause={pauseSession}
+          onResume={resumeSession}
+          onStop={handleEnd}
+          progress={progress}
+        />
 
         {/* Script Editor */}
         <ScriptEditor scriptId={scriptId} isReviewMode={session.stage === "review"} />
