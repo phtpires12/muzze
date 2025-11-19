@@ -56,6 +56,8 @@ const SortableRow = ({
   const editableDivRef = useRef<HTMLDivElement>(null);
   const [localText, setLocalText] = useState(shot.scriptSegment);
   const cursorPositionRef = useRef<number | null>(null);
+  const [history, setHistory] = useState<string[]>([shot.scriptSegment]);
+  const [historyIndex, setHistoryIndex] = useState(0);
   const {
     attributes,
     listeners,
@@ -69,6 +71,8 @@ const SortableRow = ({
   useEffect(() => {
     if (shot.scriptSegment !== localText && document.activeElement !== editableDivRef.current) {
       setLocalText(shot.scriptSegment);
+      setHistory([shot.scriptSegment]);
+      setHistoryIndex(0);
     }
   }, [shot.scriptSegment, localText]);
 
@@ -137,7 +141,98 @@ const SortableRow = ({
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+  const handleInput = (e: React.FormEvent<HTMLDivElement>) => {
+    const newText = e.currentTarget.textContent || '';
+    
+    // Salvar posição do cursor
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0 && editableDivRef.current) {
+      const range = selection.getRangeAt(0);
+      const preCaretRange = range.cloneRange();
+      preCaretRange.selectNodeContents(editableDivRef.current);
+      preCaretRange.setEnd(range.endContainer, range.endOffset);
+      cursorPositionRef.current = preCaretRange.toString().length;
+    }
+    
+    // Adicionar ao histórico (limitar a 50 itens)
+    setHistory(prev => {
+      const newHistory = [...prev.slice(0, historyIndex + 1), newText];
+      return newHistory.slice(-50);
+    });
+    setHistoryIndex(prev => Math.min(prev + 1, 49));
+    
+    setLocalText(newText);
+    onUpdate(shot.id, 'scriptSegment', newText);
+  };
+
+  const handleUndo = () => {
+    if (historyIndex > 0) {
+      const newIndex = historyIndex - 1;
+      const previousText = history[newIndex];
+      setHistoryIndex(newIndex);
+      setLocalText(previousText);
+      onUpdate(shot.id, 'scriptSegment', previousText);
+      
+      // Mover cursor para o final
+      setTimeout(() => {
+        if (editableDivRef.current) {
+          const textNode = editableDivRef.current.firstChild;
+          if (textNode && textNode.nodeType === Node.TEXT_NODE) {
+            const selection = window.getSelection();
+            const range = document.createRange();
+            const length = textNode.textContent?.length || 0;
+            range.setStart(textNode, length);
+            range.setEnd(textNode, length);
+            selection?.removeAllRanges();
+            selection?.addRange(range);
+          }
+        }
+      }, 0);
+    }
+  };
+
+  const handleRedo = () => {
+    if (historyIndex < history.length - 1) {
+      const newIndex = historyIndex + 1;
+      const nextText = history[newIndex];
+      setHistoryIndex(newIndex);
+      setLocalText(nextText);
+      onUpdate(shot.id, 'scriptSegment', nextText);
+      
+      // Mover cursor para o final
+      setTimeout(() => {
+        if (editableDivRef.current) {
+          const textNode = editableDivRef.current.firstChild;
+          if (textNode && textNode.nodeType === Node.TEXT_NODE) {
+            const selection = window.getSelection();
+            const range = document.createRange();
+            const length = textNode.textContent?.length || 0;
+            range.setStart(textNode, length);
+            range.setEnd(textNode, length);
+            selection?.removeAllRanges();
+            selection?.addRange(range);
+          }
+        }
+      }, 0);
+    }
+  };
+
+  const handleEditorKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    // Ctrl+Z / Cmd+Z para desfazer
+    if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+      e.preventDefault();
+      handleUndo();
+      return;
+    }
+    
+    // Ctrl+Shift+Z / Cmd+Shift+Z ou Ctrl+Y para refazer
+    if (((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'z') || (e.ctrlKey && e.key === 'y')) {
+      e.preventDefault();
+      handleRedo();
+      return;
+    }
+    
+    // Enter para dividir
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       
@@ -152,23 +247,6 @@ const SortableRow = ({
       
       onSplitAtCursor(shot.id, cursorPosition);
     }
-  };
-
-  const handleInput = (e: React.FormEvent<HTMLDivElement>) => {
-    const newText = e.currentTarget.textContent || '';
-    
-    // Salvar posição do cursor
-    const selection = window.getSelection();
-    if (selection && selection.rangeCount > 0 && editableDivRef.current) {
-      const range = selection.getRangeAt(0);
-      const preCaretRange = range.cloneRange();
-      preCaretRange.selectNodeContents(editableDivRef.current);
-      preCaretRange.setEnd(range.endContainer, range.endOffset);
-      cursorPositionRef.current = preCaretRange.toString().length;
-    }
-    
-    setLocalText(newText);
-    onUpdate(shot.id, 'scriptSegment', newText);
   };
 
   return (
@@ -210,7 +288,7 @@ const SortableRow = ({
                 ref={editableDivRef}
                 contentEditable
                 onInput={handleInput}
-                onKeyDown={handleKeyDown}
+                onKeyDown={handleEditorKeyDown}
                 onBlur={() => {
                   if (localText !== shot.scriptSegment) {
                     onUpdate(shot.id, 'scriptSegment', localText);
