@@ -391,6 +391,8 @@ const ShotListRecord = () => {
             onSplitAtCursor={splitShotAtCursor}
             onDragEnd={handleDragEnd}
             showCheckbox={true}
+            mode="record"
+            availableLocations={uniqueLocations}
           />
         ) : (
           <div className="text-center py-12 text-muted-foreground">
