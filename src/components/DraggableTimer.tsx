@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Play, Pause, Square, GripVertical, Camera } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface DraggableTimerProps {
   elapsedTime: number;
@@ -22,6 +23,7 @@ export const DraggableTimer = ({
   onStop,
   progress
 }: DraggableTimerProps) => {
+  const isMobile = useIsMobile();
   const [position, setPosition] = useState({ x: 20, y: 20 });
   const [isDragging, setIsDragging] = useState(false);
   const dragRef = useRef<HTMLDivElement>(null);
@@ -82,9 +84,11 @@ export const DraggableTimer = ({
       const newX = clientX - startPos.current.x;
       const newY = clientY - startPos.current.y;
 
-      // Constrain to viewport bounds
-      const maxX = window.innerWidth - 340;
-      const maxY = window.innerHeight - 150;
+      // Constrain to viewport bounds (ajustado para mobile)
+      const timerWidth = isMobile ? 280 : 340;
+      const timerHeight = isMobile ? 120 : 150;
+      const maxX = window.innerWidth - timerWidth;
+      const maxY = window.innerHeight - timerHeight;
 
       setPosition({
         x: Math.max(0, Math.min(newX, maxX)),
@@ -123,71 +127,147 @@ export const DraggableTimer = ({
         top: `${position.y}px`,
       }}
     >
-      <Card className="backdrop-blur-md bg-card/95 border-border/20 shadow-xl rounded-2xl transition-all duration-300">
+      <Card className={cn(
+        "backdrop-blur-md bg-card/95 border-border/20 shadow-xl rounded-2xl transition-all duration-300",
+        isMobile && "rounded-xl"
+      )}>
         {/* Drag Handle */}
         <div
-          className="flex items-center justify-between px-4 py-2 bg-primary/10 rounded-t-2xl cursor-grab active:cursor-grabbing"
+          className={cn(
+            "flex items-center justify-between px-4 py-2 bg-primary/10 cursor-grab active:cursor-grabbing",
+            isMobile ? "rounded-t-xl py-1.5" : "rounded-t-2xl"
+          )}
           onMouseDown={handleMouseDown}
           onTouchStart={handleTouchStart}
         >
-          <span className="text-xs font-semibold text-muted-foreground">
+          <span className={cn(
+            "font-semibold text-muted-foreground",
+            isMobile ? "text-xs" : "text-xs"
+          )}>
             Gravação
           </span>
-          <GripVertical className="w-4 h-4 text-muted-foreground" />
+          <GripVertical className={cn(
+            "text-muted-foreground",
+            isMobile ? "w-3.5 h-3.5" : "w-4 h-4"
+          )} />
         </div>
 
         {/* Timer Content */}
-        <div className="p-4">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-accent to-primary flex items-center justify-center shadow-lg">
-              <Camera className="w-6 h-6 text-white" />
-            </div>
-            
-            <div className="min-w-[140px]">
-              <div className="text-2xl font-bold text-foreground tabular-nums">
-                {formatTime(elapsedTime)}
-              </div>
-              {targetTime && (
-                <div className="text-xs text-muted-foreground">
-                  Meta: {formatTime(targetTime)}
+        <div className={cn(isMobile ? "p-3" : "p-4")}>
+          {isMobile ? (
+            // Layout compacto para mobile
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-accent to-primary flex items-center justify-center shadow-lg">
+                    <Camera className="w-4 h-4 text-white" />
+                  </div>
+                  <div>
+                    <div className="text-lg font-bold text-foreground tabular-nums">
+                      {formatTime(elapsedTime)}
+                    </div>
+                    {targetTime && (
+                      <div className="text-[10px] text-muted-foreground leading-none">
+                        Meta: {formatTime(targetTime)}
+                      </div>
+                    )}
+                  </div>
                 </div>
+
+                <div className="flex gap-1.5">
+                  {!isRunning ? (
+                    <Button
+                      onClick={onToggle}
+                      variant="outline"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                    >
+                      <Play className="w-3.5 h-3.5" />
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={onToggle}
+                      variant="default"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                    >
+                      <Pause className="w-3.5 h-3.5" />
+                    </Button>
+                  )}
+                  <Button
+                    onClick={onStop}
+                    variant="outline"
+                    size="sm"
+                    className="h-8 w-8 p-0"
+                  >
+                    <Square className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Progress bar mobile */}
+              {targetTime && (
+                <Progress 
+                  value={progress} 
+                  className="h-1"
+                />
               )}
             </div>
+          ) : (
+            // Layout desktop (original)
+            <div>
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-accent to-primary flex items-center justify-center shadow-lg">
+                  <Camera className="w-6 h-6 text-white" />
+                </div>
+                
+                <div className="min-w-[140px]">
+                  <div className="text-2xl font-bold text-foreground tabular-nums">
+                    {formatTime(elapsedTime)}
+                  </div>
+                  {targetTime && (
+                    <div className="text-xs text-muted-foreground">
+                      Meta: {formatTime(targetTime)}
+                    </div>
+                  )}
+                </div>
 
-            <div className="flex flex-col gap-2">
-              {!isRunning ? (
-                <Button
-                  onClick={onToggle}
-                  variant="outline"
-                  size="sm"
-                >
-                  <Play className="w-4 h-4" />
-                </Button>
-              ) : (
-                <Button
-                  onClick={onToggle}
-                  variant="default"
-                  size="sm"
-                >
-                  <Pause className="w-4 h-4" />
-                </Button>
+                <div className="flex flex-col gap-2">
+                  {!isRunning ? (
+                    <Button
+                      onClick={onToggle}
+                      variant="outline"
+                      size="sm"
+                    >
+                      <Play className="w-4 h-4" />
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={onToggle}
+                      variant="default"
+                      size="sm"
+                    >
+                      <Pause className="w-4 h-4" />
+                    </Button>
+                  )}
+                  <Button
+                    onClick={onStop}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <Square className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Progress bar desktop */}
+              {targetTime && (
+                <Progress 
+                  value={progress} 
+                  className="mt-3 h-1.5"
+                />
               )}
-              <Button
-                onClick={onStop}
-                variant="outline"
-                size="sm"
-              >
-                <Square className="w-4 h-4" />
-              </Button>
             </div>
-          </div>
-
-          {/* Progress bar */}
-          {targetTime && (
-            <Progress 
-              value={progress} 
-              className="mt-3 h-1.5"
-            />
           )}
         </div>
       </Card>

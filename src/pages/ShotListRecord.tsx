@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Plus } from "lucide-react";
+import { ArrowLeft, Plus, Filter } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -11,6 +11,8 @@ import { ShotListTable, ShotItem } from "@/components/shotlist/ShotListTable";
 import { DragEndEvent } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import { DraggableTimer } from "@/components/DraggableTimer";
+import { cn } from "@/lib/utils";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
 const ShotListRecord = () => {
   const navigate = useNavigate();
@@ -268,10 +270,94 @@ const ShotListRecord = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background p-6">
+    <div className="min-h-screen bg-background p-4 md:p-6 pb-24 md:pb-6">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        {/* Mobile Header */}
+        <div className="md:hidden mb-4 space-y-3">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate(`/shot-list/review?scriptId=${scriptId}`)}
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            <div className="flex-1">
+              <h1 className="text-lg font-bold text-foreground">Gravação</h1>
+              <p className="text-xs text-muted-foreground truncate">{scriptTitle}</p>
+            </div>
+            <Button
+              onClick={handleSave}
+              disabled={isSaving}
+              size="sm"
+              variant="outline"
+            >
+              {isSaving ? 'Salvando...' : 'Salvar'}
+            </Button>
+          </div>
+
+          {/* Mobile Progress Card */}
+          <div className="bg-card p-4 rounded-lg border border-border">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-semibold text-foreground">Progresso</span>
+              <span className="text-sm text-muted-foreground">{progressPercentage}%</span>
+            </div>
+            <Progress value={progressPercentage} className="mb-2" />
+            <p className="text-xs text-muted-foreground">
+              {shots.filter(s => s.isCompleted).length} de {shots.length} takes concluídos
+            </p>
+          </div>
+
+          {/* Mobile Filters Sheet */}
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="sm" className="w-full">
+                <Filter className="w-4 h-4 mr-2" />
+                Filtros
+                {(filterLocation !== "all" || showOnlyIncomplete) && (
+                  <span className="ml-2 px-2 py-0.5 bg-primary text-primary-foreground rounded-full text-xs">
+                    {[filterLocation !== "all" && "Locação", showOnlyIncomplete && "Incompletos"].filter(Boolean).length}
+                  </span>
+                )}
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="bottom" className="h-[300px]">
+              <SheetHeader>
+                <SheetTitle>Filtros</SheetTitle>
+              </SheetHeader>
+              <div className="space-y-4 mt-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">Locação:</label>
+                  <Select value={filterLocation} onValueChange={setFilterLocation}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Todas" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas</SelectItem>
+                      {uniqueLocations.map(loc => (
+                        <SelectItem key={loc} value={loc}>{loc}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <label htmlFor="incomplete-only-mobile" className="text-sm font-medium text-foreground">
+                    Apenas não gravados
+                  </label>
+                  <Switch
+                    checked={showOnlyIncomplete}
+                    onCheckedChange={setShowOnlyIncomplete}
+                    id="incomplete-only-mobile"
+                  />
+                </div>
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
+
+        {/* Desktop Header */}
+        <div className="hidden md:flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
@@ -307,8 +393,8 @@ const ShotListRecord = () => {
           progress={(elapsedTime / 165) * 100}
         />
 
-        {/* Progress */}
-        <div className="bg-card p-6 rounded-lg border border-border mb-6">
+        {/* Desktop Progress */}
+        <div className="hidden md:block bg-card p-6 rounded-lg border border-border mb-6">
           <h3 className="font-semibold text-foreground mb-4">Progresso</h3>
           <Progress value={progressPercentage} className="mb-2" />
           <p className="text-sm text-muted-foreground">
@@ -316,8 +402,8 @@ const ShotListRecord = () => {
           </p>
         </div>
 
-        {/* Filters */}
-        <div className="bg-card p-4 rounded-lg border border-border mb-4">
+        {/* Desktop Filters */}
+        <div className="hidden md:block bg-card p-4 rounded-lg border border-border mb-4">
           <div className="flex flex-wrap gap-4 items-center">
             <div className="flex items-center gap-2">
               <label className="text-sm font-medium text-foreground">Locação:</label>
@@ -347,8 +433,8 @@ const ShotListRecord = () => {
           </div>
         </div>
 
-        {/* Add Shot Button */}
-        <div className="mb-4">
+        {/* Desktop Add Shot Button */}
+        <div className="hidden md:block mb-4">
           <Button
             onClick={addShot}
             variant="outline"
@@ -358,6 +444,15 @@ const ShotListRecord = () => {
             Adicionar Take
           </Button>
         </div>
+
+        {/* Mobile FAB - Add Shot */}
+        <Button
+          onClick={addShot}
+          size="lg"
+          className="md:hidden fixed bottom-20 right-6 h-14 w-14 rounded-full shadow-lg z-40 p-0"
+        >
+          <Plus className="w-6 h-6" />
+        </Button>
 
         {/* Shot List Table */}
         {filteredShots.length > 0 ? (
