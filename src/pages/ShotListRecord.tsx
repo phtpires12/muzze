@@ -70,15 +70,20 @@ const ShotListRecord = () => {
       setScriptTitle(data.title);
 
       if (data.shot_list && Array.isArray(data.shot_list) && data.shot_list.length > 0) {
-        const parsedShots: ShotItem[] = data.shot_list.map((item: any) => ({
-          id: item.id || crypto.randomUUID(),
-          scriptSegment: item.scriptSegment || item.script_segment || '',
-          scene: item.scene || '',
-          shotImageUrl: item.shotImageUrl || item.shot_image_url || '',
-          location: item.location || '',
-          sectionName: item.sectionName || item.section_name || '',
-          isCompleted: item.isCompleted || item.is_completed || false,
-        }));
+        const parsedShots: ShotItem[] = data.shot_list.map((item: any) => {
+          // Se o item for uma string JSON, fazer parse primeiro
+          const shotData = typeof item === 'string' ? JSON.parse(item) : item;
+          
+          return {
+            id: shotData.id || crypto.randomUUID(),
+            scriptSegment: shotData.scriptSegment || shotData.script_segment || '',
+            scene: shotData.scene || '',
+            shotImageUrl: shotData.shotImageUrl || shotData.shot_image_url || '',
+            location: shotData.location || '',
+            sectionName: shotData.sectionName || shotData.section_name || '',
+            isCompleted: shotData.isCompleted || shotData.is_completed || false,
+          };
+        });
         setShots(parsedShots);
       } else {
         setShots([]);
