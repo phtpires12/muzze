@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Play, Pause, Square, GripVertical, LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface DraggableSessionTimerProps {
   stage: string;
@@ -30,7 +31,11 @@ export const DraggableSessionTimer = ({
   onStop,
   progress
 }: DraggableSessionTimerProps) => {
-  const [position, setPosition] = useState({ x: window.innerWidth - 370, y: 24 });
+  const isMobile = useIsMobile();
+  const [position, setPosition] = useState({ 
+    x: isMobile ? 16 : window.innerWidth - 370, 
+    y: isMobile ? 16 : 24 
+  });
   const [isDragging, setIsDragging] = useState(false);
   const dragRef = useRef<HTMLDivElement>(null);
   const startPos = useRef({ x: 0, y: 0 });
@@ -90,9 +95,11 @@ export const DraggableSessionTimer = ({
       const newX = clientX - startPos.current.x;
       const newY = clientY - startPos.current.y;
 
-      // Constrain to viewport bounds
-      const maxX = window.innerWidth - 340;
-      const maxY = window.innerHeight - 150;
+      // Constrain to viewport bounds - responsive
+      const cardWidth = isMobile ? 280 : 340;
+      const cardHeight = isMobile ? 120 : 150;
+      const maxX = window.innerWidth - cardWidth - 16;
+      const maxY = window.innerHeight - cardHeight - 16;
 
       setPosition({
         x: Math.max(0, Math.min(newX, maxX)),
@@ -135,96 +142,112 @@ export const DraggableSessionTimer = ({
         "backdrop-blur-md border-border/20 shadow-xl rounded-2xl transition-all duration-300",
         isOvertime 
           ? "bg-destructive/95 border-destructive animate-pulse" 
-          : "bg-card/95"
+          : "bg-card/95",
+        isMobile ? "w-[280px]" : "w-auto"
       )}>
-        {/* Drag Handle */}
+        {/* Drag Handle - Compacto em mobile */}
         <div
           className={cn(
-            "flex items-center justify-between px-4 py-2 rounded-t-2xl cursor-grab active:cursor-grabbing",
-            isOvertime ? "bg-destructive/20" : "bg-primary/10"
+            "flex items-center justify-between rounded-t-2xl cursor-grab active:cursor-grabbing",
+            isOvertime ? "bg-destructive/20" : "bg-primary/10",
+            isMobile ? "px-3 py-1.5" : "px-4 py-2"
           )}
           onMouseDown={handleMouseDown}
           onTouchStart={handleTouchStart}
         >
           <span className={cn(
-            "text-xs font-semibold",
-            isOvertime ? "text-destructive-foreground/80" : "text-muted-foreground"
+            "font-semibold",
+            isOvertime ? "text-destructive-foreground/80" : "text-muted-foreground",
+            isMobile ? "text-[10px]" : "text-xs"
           )}>
             {stage}
           </span>
           <GripVertical className={cn(
-            "w-4 h-4",
-            isOvertime ? "text-destructive-foreground/60" : "text-muted-foreground"
+            isOvertime ? "text-destructive-foreground/60" : "text-muted-foreground",
+            isMobile ? "w-3 h-3" : "w-4 h-4"
           )} />
         </div>
 
-        {/* Timer Content */}
-        <div className="p-4">
-          <div className="flex items-center gap-4">
+        {/* Timer Content - Layout compacto em mobile */}
+        <div className={cn(isMobile ? "p-3" : "p-4")}>
+          <div className={cn(
+            "flex items-center",
+            isMobile ? "gap-2" : "gap-4"
+          )}>
+            {/* Icon - Menor em mobile */}
             <div className={cn(
-              "w-12 h-12 rounded-full flex items-center justify-center shadow-lg",
+              "rounded-full flex items-center justify-center shadow-lg flex-shrink-0",
               isOvertime
                 ? "bg-destructive-foreground/20"
-                : "bg-gradient-to-br from-accent to-primary"
+                : "bg-gradient-to-br from-accent to-primary",
+              isMobile ? "w-10 h-10" : "w-12 h-12"
             )}>
               <Icon className={cn(
-                "w-6 h-6",
-                isOvertime ? "text-destructive-foreground" : "text-white"
+                isOvertime ? "text-destructive-foreground" : "text-white",
+                isMobile ? "w-5 h-5" : "w-6 h-6"
               )} />
             </div>
             
-            <div className="min-w-[140px]">
+            <div className={cn(isMobile ? "min-w-[100px]" : "min-w-[140px]")}>
               <div className={cn(
-                "text-2xl font-bold tabular-nums",
-                isOvertime ? "text-destructive-foreground" : "text-foreground"
+                "font-bold tabular-nums",
+                isOvertime ? "text-destructive-foreground" : "text-foreground",
+                isMobile ? "text-xl" : "text-2xl"
               )}>
                 {formatTime(elapsedSeconds)}
               </div>
               {targetSeconds && (
                 <div className={cn(
-                  "text-xs",
-                  isOvertime ? "text-destructive-foreground/70" : "text-muted-foreground"
+                  isOvertime ? "text-destructive-foreground/70" : "text-muted-foreground",
+                  isMobile ? "text-[10px]" : "text-xs"
                 )}>
                   {isOvertime ? "Tempo esgotado!" : `Meta: ${formatTime(targetSeconds)}`}
                 </div>
               )}
             </div>
 
-            <div className="flex flex-col gap-2">
+            {/* Controls - Mais compactos em mobile */}
+            <div className={cn(
+              "flex gap-2",
+              isMobile ? "flex-row" : "flex-col"
+            )}>
               {!isPaused ? (
                 <Button
                   onClick={onPause}
                   variant={isOvertime ? "secondary" : "outline"}
-                  size="sm"
+                  size={isMobile ? "icon" : "sm"}
+                  className={cn(isMobile && "h-8 w-8")}
                 >
-                  <Pause className="w-4 h-4" />
+                  <Pause className={cn(isMobile ? "w-3 h-3" : "w-4 h-4")} />
                 </Button>
               ) : (
                 <Button
                   onClick={onResume}
                   variant={isOvertime ? "secondary" : "default"}
-                  size="sm"
+                  size={isMobile ? "icon" : "sm"}
+                  className={cn(isMobile && "h-8 w-8")}
                 >
-                  <Play className="w-4 h-4" />
+                  <Play className={cn(isMobile ? "w-3 h-3" : "w-4 h-4")} />
                 </Button>
               )}
               <Button
                 onClick={onStop}
                 variant={isOvertime ? "secondary" : "outline"}
-                size="sm"
+                size={isMobile ? "icon" : "sm"}
+                className={cn(isMobile && "h-8 w-8")}
               >
-                <Square className="w-4 h-4" />
+                <Square className={cn(isMobile ? "w-3 h-3" : "w-4 h-4")} />
               </Button>
             </div>
           </div>
 
-          {/* Progress bar */}
+          {/* Progress bar - Mais fino em mobile */}
           {targetSeconds && (
             <Progress 
               value={progress} 
               className={cn(
-                "mt-3 h-1.5",
-                isOvertime && "bg-destructive-foreground/20"
+                isOvertime && "bg-destructive-foreground/20",
+                isMobile ? "mt-2 h-1" : "mt-3 h-1.5"
               )}
             />
           )}
