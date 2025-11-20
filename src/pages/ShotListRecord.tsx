@@ -29,7 +29,6 @@ const ShotListRecord = () => {
 
   // Filter states
   const [filterLocation, setFilterLocation] = useState<string>("all");
-  const [filterSection, setFilterSection] = useState<string>("all");
   const [showOnlyIncomplete, setShowOnlyIncomplete] = useState(false);
 
   useEffect(() => {
@@ -246,20 +245,14 @@ const ShotListRecord = () => {
   const filteredShots = useMemo(() => {
     return shots.filter(shot => {
       if (filterLocation !== "all" && shot.location !== filterLocation) return false;
-      if (filterSection !== "all" && shot.sectionName !== filterSection) return false;
       if (showOnlyIncomplete && shot.isCompleted) return false;
       return true;
     });
-  }, [shots, filterLocation, filterSection, showOnlyIncomplete]);
+  }, [shots, filterLocation, showOnlyIncomplete]);
 
-  // Get unique locations and sections for filters
+  // Get unique locations for filters
   const uniqueLocations = useMemo(() => 
     Array.from(new Set(shots.map(s => s.location).filter(Boolean))),
-    [shots]
-  );
-
-  const uniqueSections = useMemo(() => 
-    Array.from(new Set(shots.map(s => s.sectionName).filter(Boolean))),
     [shots]
   );
 
@@ -336,21 +329,6 @@ const ShotListRecord = () => {
                   <SelectItem value="all">Todas</SelectItem>
                   {uniqueLocations.map(loc => (
                     <SelectItem key={loc} value={loc}>{loc}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-foreground">Seção:</label>
-              <Select value={filterSection} onValueChange={setFilterSection}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Todas" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas</SelectItem>
-                  {uniqueSections.map(sec => (
-                    <SelectItem key={sec} value={sec}>{sec}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

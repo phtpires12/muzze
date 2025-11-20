@@ -311,7 +311,7 @@ const SortableRow = ({
         <Input
           value={shot.scene}
           onChange={(e) => onUpdate(shot.id, 'scene', e.target.value)}
-          placeholder="Ex: Tarde na garagem"
+          placeholder="Descreva movimento/técnica de câmera (ex: Tracking, Dolly zoom)"
           className="text-sm"
         />
       </td>
