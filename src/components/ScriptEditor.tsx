@@ -298,23 +298,23 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
   };
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-background p-4 md:p-6 pb-24 md:pb-6">
+      <div className="max-w-4xl mx-auto w-full">
         {/* Header with action buttons */}
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3 mb-4">
           <Button 
             variant="ghost" 
             size="sm"
             onClick={handleBack}
-            className="gap-2"
+            className="gap-2 self-start"
           >
             <ArrowLeft className="w-4 h-4" />
             Voltar
           </Button>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 justify-between md:justify-end">
             {lastSaved && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Check className="w-4 h-4 text-green-500" />
+              <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground">
+                <Check className="w-3 h-3 md:w-4 md:h-4 text-green-500" />
                 Salvo {new Date(lastSaved).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
               </div>
             )}
@@ -323,49 +323,81 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                 variant="ghost" 
                 size="icon"
                 onClick={onClose}
-                className="rounded-full"
+                className="rounded-full h-8 w-8 md:h-10 md:w-10"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4 md:w-5 md:h-5" />
               </Button>
             )}
           </div>
         </div>
 
         {/* Title */}
-        <div className="mb-6">
+        <div className="mb-4 md:mb-6">
           <input
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full text-4xl font-bold bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground"
+            className="w-full text-2xl md:text-4xl font-bold bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground"
             placeholder="Título do Roteiro"
           />
         </div>
 
         {/* Properties Grid */}
-        <div className="mb-8 space-y-3">
+        <div className="mb-6 md:mb-8 space-y-3">
           {/* Content Type */}
-          <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent/10 transition-colors group">
-            <div className="flex items-center gap-2 min-w-[180px] text-sm text-muted-foreground">
+          <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3 p-3 rounded-lg hover:bg-accent/10 transition-colors group">
+            <div className="flex items-center gap-2 md:min-w-[180px] text-sm text-muted-foreground">
               <FileText className="w-4 h-4" />
               <span>Tipo de Conteúdo</span>
             </div>
             <Select value={contentType} onValueChange={setContentType}>
-                  <SelectTrigger className="flex-1 border-none bg-transparent focus:ring-0 focus:ring-offset-0 text-foreground">
-                    <SelectValue placeholder="Selecione o tipo de conteúdo" />
-                  </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Reels">Reels</SelectItem>
-                <SelectItem value="YouTube">YouTube</SelectItem>
-                <SelectItem value="TikTok">TikTok</SelectItem>
-                <SelectItem value="X (Twitter)">X (Twitter)</SelectItem>
+              <SelectTrigger className="w-full md:flex-1 border-none bg-transparent focus:ring-0 focus:ring-offset-0 text-foreground">
+                <SelectValue placeholder="Selecione o tipo de conteúdo">
+                  {contentType && (
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                        {contentType}
+                      </span>
+                    </div>
+                  )}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent className="bg-popover z-[100]">
+                <SelectItem value="Reels">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                      Reels
+                    </span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="YouTube">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                      YouTube
+                    </span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="TikTok">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                      TikTok
+                    </span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="X (Twitter)">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                      X (Twitter)
+                    </span>
+                  </div>
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           {/* Publish Date */}
-          <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent/10 transition-colors group">
-            <div className="flex items-center gap-2 min-w-[180px] text-sm text-muted-foreground">
+          <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3 p-3 rounded-lg hover:bg-accent/10 transition-colors group">
+            <div className="flex items-center gap-2 md:min-w-[180px] text-sm text-muted-foreground">
               <Calendar className="w-4 h-4" />
               <span>Data de Publicação</span>
             </div>
@@ -373,37 +405,37 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
               type="date"
               value={publishDate}
               onChange={(e) => setPublishDate(e.target.value)}
-              className="flex-1 border-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
+              className="w-full md:flex-1 border-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
             />
           </div>
 
           {/* References */}
-          <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-accent/10 transition-colors group">
-            <div className="flex items-center gap-2 min-w-[180px] text-sm text-muted-foreground pt-2">
+          <div className="flex flex-col md:flex-row md:items-start gap-2 md:gap-3 p-3 rounded-lg hover:bg-accent/10 transition-colors group">
+            <div className="flex items-center gap-2 md:min-w-[180px] text-sm text-muted-foreground md:pt-2">
               <LinkIcon className="w-4 h-4" />
               <span>Referências</span>
             </div>
-            <div className="flex-1 space-y-2">
+            <div className="w-full md:flex-1 space-y-2">
               {/* Display confirmed references as clickable buttons */}
               {references.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {references.map((ref, index) => (
-                    <div key={index} className="flex items-center gap-1 group/ref">
+                    <div key={index} className="flex items-center gap-1 group/ref max-w-full">
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-8 gap-2 pr-1"
+                        className="h-8 gap-2 pr-1 max-w-full"
                         asChild
                       >
-                        <a href={ref} target="_blank" rel="noopener noreferrer">
-                          <LinkIcon className="w-3 h-3" />
-                          <span className="max-w-[200px] truncate text-xs">
+                        <a href={ref} target="_blank" rel="noopener noreferrer" className="truncate">
+                          <LinkIcon className="w-3 h-3 flex-shrink-0" />
+                          <span className="max-w-[150px] md:max-w-[200px] truncate text-xs">
                             {ref}
                           </span>
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-6 w-6 ml-1 opacity-0 group-hover/ref:opacity-100 transition-opacity"
+                            className="h-6 w-6 ml-1 flex-shrink-0 opacity-0 group-hover/ref:opacity-100 transition-opacity"
                             onClick={(e) => {
                               e.preventDefault();
                               setReferences(references.filter((_, i) => i !== index));
@@ -432,7 +464,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                   size="sm"
                   onClick={handleAddReference}
                   disabled={!newReference.trim()}
-                  className="h-8 text-xs"
+                  className="h-8 text-xs flex-shrink-0"
                 >
                   Link
                 </Button>
@@ -442,12 +474,12 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
 
           {/* Shot List - Only in Review Mode */}
           {isReviewMode && (
-            <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-accent/10 transition-colors group">
-              <div className="flex items-center gap-2 min-w-[180px] text-sm text-muted-foreground pt-2">
+            <div className="flex flex-col md:flex-row md:items-start gap-2 md:gap-3 p-3 rounded-lg hover:bg-accent/10 transition-colors group">
+              <div className="flex items-center gap-2 md:min-w-[180px] text-sm text-muted-foreground md:pt-2">
                 <ListChecks className="w-4 h-4" />
                 <span>Shot List</span>
               </div>
-              <div className="flex-1">
+              <div className="w-full md:flex-1">
                 <Button
                   variant="outline"
                   onClick={() => {
@@ -465,7 +497,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                     
                     navigate(`/shot-list/review?scriptId=${currentScriptId}`);
                   }}
-                  className="gap-2"
+                  className="gap-2 w-full md:w-auto"
                 >
                   <ListChecks className="w-4 h-4" />
                   Abrir Shot List
@@ -477,16 +509,30 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
 
         {/* Content Editor */}
         <div className="space-y-4">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
             <div className="border-l-4 border-primary/30 pl-4">
-              <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+              <h3 className="text-base md:text-lg font-semibold text-foreground flex items-center gap-2">
                 {isReviewMode ? '👁️ REVISÃO' : '📝 ROTEIRO'}
               </h3>
             </div>
             
+            {/* Desktop: Button inline */}
             <Button
               onClick={handleNextStage}
-              className="gap-2 bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-opacity"
+              className="hidden md:flex gap-2 bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-opacity"
+              size="lg"
+            >
+              {isReviewMode ? 'Avançar para Gravação' : 'Avançar para Revisão'}
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          </div>
+
+          {/* Mobile: Fixed Bottom Button */}
+          <div className="md:hidden fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background via-background to-transparent z-40">
+            <Button
+              onClick={handleNextStage}
+              className="w-full gap-2 bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-opacity shadow-lg"
+              size="lg"
             >
               {isReviewMode ? 'Avançar para Gravação' : 'Avançar para Revisão'}
               <ArrowRight className="w-4 h-4" />
@@ -526,7 +572,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                     <Textarea
                       value={originalContent.gancho}
                       readOnly
-                      className="min-h-[100px] text-base leading-relaxed resize-none border-border/40 bg-muted/20 focus-visible:ring-0"
+                      className="min-h-[100px] md:min-h-[120px] text-sm md:text-base leading-relaxed resize-none border-border/40 bg-muted/20 focus-visible:ring-0"
                     />
                   </div>
 
@@ -537,7 +583,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                     <Textarea
                       value={originalContent.setup}
                       readOnly
-                      className="min-h-[100px] text-base leading-relaxed resize-none border-border/40 bg-muted/20 focus-visible:ring-0"
+                      className="min-h-[100px] md:min-h-[120px] text-sm md:text-base leading-relaxed resize-none border-border/40 bg-muted/20 focus-visible:ring-0"
                     />
                   </div>
 
@@ -548,7 +594,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                     <Textarea
                       value={originalContent.desenvolvimento}
                       readOnly
-                      className="min-h-[100px] text-base leading-relaxed resize-none border-border/40 bg-muted/20 focus-visible:ring-0"
+                      className="min-h-[100px] md:min-h-[120px] text-sm md:text-base leading-relaxed resize-none border-border/40 bg-muted/20 focus-visible:ring-0"
                     />
                   </div>
 
@@ -559,7 +605,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                     <Textarea
                       value={originalContent.conclusao}
                       readOnly
-                      className="min-h-[100px] text-base leading-relaxed resize-none border-border/40 bg-muted/20 focus-visible:ring-0"
+                      className="min-h-[100px] md:min-h-[120px] text-sm md:text-base leading-relaxed resize-none border-border/40 bg-muted/20 focus-visible:ring-0"
                     />
                   </div>
                 </div>
@@ -588,7 +634,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                     <Textarea
                       value={content.gancho}
                       onChange={(e) => setContent({...content, gancho: e.target.value})}
-                      className="min-h-[100px] text-base leading-relaxed resize-none border-primary/40 bg-background focus-visible:ring-1 focus-visible:ring-primary"
+                      className="min-h-[100px] md:min-h-[120px] text-sm md:text-base leading-relaxed resize-none border-primary/40 bg-background focus-visible:ring-1 focus-visible:ring-primary"
                     />
                   </div>
 
@@ -608,7 +654,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                     <Textarea
                       value={content.setup}
                       onChange={(e) => setContent({...content, setup: e.target.value})}
-                      className="min-h-[100px] text-base leading-relaxed resize-none border-primary/40 bg-background focus-visible:ring-1 focus-visible:ring-primary"
+                      className="min-h-[100px] md:min-h-[120px] text-sm md:text-base leading-relaxed resize-none border-primary/40 bg-background focus-visible:ring-1 focus-visible:ring-primary"
                     />
                   </div>
 
@@ -628,7 +674,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                     <Textarea
                       value={content.desenvolvimento}
                       onChange={(e) => setContent({...content, desenvolvimento: e.target.value})}
-                      className="min-h-[100px] text-base leading-relaxed resize-none border-primary/40 bg-background focus-visible:ring-1 focus-visible:ring-primary"
+                      className="min-h-[100px] md:min-h-[120px] text-sm md:text-base leading-relaxed resize-none border-primary/40 bg-background focus-visible:ring-1 focus-visible:ring-primary"
                     />
                   </div>
 
@@ -648,7 +694,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                     <Textarea
                       value={content.conclusao}
                       onChange={(e) => setContent({...content, conclusao: e.target.value})}
-                      className="min-h-[100px] text-base leading-relaxed resize-none border-primary/40 bg-background focus-visible:ring-1 focus-visible:ring-primary"
+                      className="min-h-[100px] md:min-h-[120px] text-sm md:text-base leading-relaxed resize-none border-primary/40 bg-background focus-visible:ring-1 focus-visible:ring-primary"
                     />
                   </div>
                 </div>
@@ -676,7 +722,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                   value={content.gancho}
                   onChange={(e) => setContent({...content, gancho: e.target.value})}
                   placeholder="Escreva o gancho inicial..."
-                  className="min-h-[100px] text-base leading-relaxed resize-none border-none focus-visible:ring-0 bg-transparent"
+                  className="min-h-[100px] md:min-h-[120px] text-sm md:text-base leading-relaxed resize-none border-none focus-visible:ring-0 bg-transparent"
                 />
               </div>
 
@@ -699,7 +745,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                   value={content.setup}
                   onChange={(e) => setContent({...content, setup: e.target.value})}
                   placeholder="Forneça o contexto necessário..."
-                  className="min-h-[100px] text-base leading-relaxed resize-none border-none focus-visible:ring-0 bg-transparent"
+                  className="min-h-[100px] md:min-h-[120px] text-sm md:text-base leading-relaxed resize-none border-none focus-visible:ring-0 bg-transparent"
                 />
               </div>
 
@@ -722,7 +768,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                   value={content.desenvolvimento}
                   onChange={(e) => setContent({...content, desenvolvimento: e.target.value})}
                   placeholder="Desenvolva o conteúdo principal..."
-                  className="min-h-[100px] text-base leading-relaxed resize-none border-none focus-visible:ring-0 bg-transparent"
+                  className="min-h-[100px] md:min-h-[120px] text-sm md:text-base leading-relaxed resize-none border-none focus-visible:ring-0 bg-transparent"
                 />
               </div>
 
@@ -745,7 +791,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                   value={content.conclusao}
                   onChange={(e) => setContent({...content, conclusao: e.target.value})}
                   placeholder="Conclua e feche o loop..."
-                  className="min-h-[100px] text-base leading-relaxed resize-none border-none focus-visible:ring-0 bg-transparent"
+                  className="min-h-[100px] md:min-h-[120px] text-sm md:text-base leading-relaxed resize-none border-none focus-visible:ring-0 bg-transparent"
                 />
               </div>
             </div>

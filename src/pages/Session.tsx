@@ -252,15 +252,15 @@ const Session = () => {
 
     return (
       <div className="relative">
-        {/* Back Button */}
-        <div className="fixed top-6 left-6 z-50">
+        {/* Back Button - Mobile friendly */}
+        <div className="fixed top-4 left-4 md:top-6 md:left-6 z-50">
           <Button
             variant="ghost"
             onClick={() => navigate("/")}
-            className="bg-card/95 backdrop-blur-md hover:bg-accent/10 border border-border/20 shadow-lg"
+            className="bg-card/95 backdrop-blur-md hover:bg-accent/10 border border-border/20 shadow-lg h-9 md:h-10 text-sm"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Dashboard
+            <span className="hidden sm:inline">Dashboard</span>
           </Button>
         </div>
 
