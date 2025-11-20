@@ -5,6 +5,7 @@ import { GripVertical, X, Upload, Check } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   DndContext,
   closestCenter,
@@ -41,6 +42,8 @@ interface SortableRowProps {
   onImageUpload: (id: string, file: File) => void;
   onSplitAtCursor: (id: string, cursorPosition: number) => void;
   showCheckbox?: boolean;
+  mode?: 'review' | 'record';
+  availableLocations?: string[];
 }
 
 const SortableRow = ({ 
@@ -50,7 +53,9 @@ const SortableRow = ({
   onRemove, 
   onImageUpload, 
   onSplitAtCursor,
-  showCheckbox = false 
+  showCheckbox = false,
+  mode = 'review',
+  availableLocations = []
 }: SortableRowProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editableDivRef = useRef<HTMLDivElement>(null);
@@ -357,12 +362,34 @@ const SortableRow = ({
         </div>
       </td>
       <td className="p-4 w-48">
-        <Input
-          value={shot.location}
-          onChange={(e) => onUpdate(shot.id, 'location', e.target.value)}
-          placeholder="Ex: Casa do João"
-          className="text-sm"
-        />
+        {mode === 'record' && availableLocations.length > 0 ? (
+          <Select
+            value={shot.location}
+            onValueChange={(value) => onUpdate(shot.id, 'location', value)}
+          >
+            <SelectTrigger className="text-sm">
+              <SelectValue placeholder="Selecione a locação" />
+            </SelectTrigger>
+            <SelectContent>
+              {availableLocations.map(loc => (
+                <SelectItem key={loc} value={loc}>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                      {loc}
+                    </span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          <Input
+            value={shot.location}
+            onChange={(e) => onUpdate(shot.id, 'location', e.target.value)}
+            placeholder="Ex: Casa do João"
+            className="text-sm"
+          />
+        )}
       </td>
       <td className="p-4 w-24">
         <Button
@@ -386,6 +413,8 @@ interface ShotListTableProps {
   onSplitAtCursor: (id: string, cursorPosition: number) => void;
   onDragEnd: (event: DragEndEvent) => void;
   showCheckbox?: boolean;
+  mode?: 'review' | 'record';
+  availableLocations?: string[];
 }
 
 export const ShotListTable = ({
@@ -395,7 +424,9 @@ export const ShotListTable = ({
   onImageUpload,
   onSplitAtCursor,
   onDragEnd,
-  showCheckbox = false
+  showCheckbox = false,
+  mode = 'review',
+  availableLocations = []
 }: ShotListTableProps) => {
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -438,6 +469,8 @@ export const ShotListTable = ({
                   onImageUpload={onImageUpload}
                   onSplitAtCursor={onSplitAtCursor}
                   showCheckbox={showCheckbox}
+                  mode={mode}
+                  availableLocations={availableLocations}
                 />
               ))}
             </SortableContext>

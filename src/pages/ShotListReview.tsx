@@ -331,6 +331,7 @@ const ShotListReview = () => {
             onSplitAtCursor={splitShotAtCursor}
             onDragEnd={handleDragEnd}
             showCheckbox={false}
+            mode="review"
           />
         ) : (
           <div className="text-center py-12 text-muted-foreground">
