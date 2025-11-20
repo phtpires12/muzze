@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { GripVertical, X, Upload, Check } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
@@ -300,19 +301,19 @@ const SortableRow = ({
                   }
                 }}
                 suppressContentEditableWarning
-                className="min-h-[80px] max-h-[160px] overflow-y-auto text-sm p-3 rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 whitespace-pre-wrap"
+                className="min-h-[80px] max-h-[160px] overflow-y-auto overflow-x-hidden text-sm p-3 rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 whitespace-pre-wrap break-words"
               >
                 {localText}
               </div>
           <span className="text-xs text-muted-foreground">Pressione Enter para dividir</span>
         </div>
       </td>
-      <td className="p-4 w-48">
-        <Input
+      <td className="p-4 w-64">
+        <Textarea
           value={shot.scene}
           onChange={(e) => onUpdate(shot.id, 'scene', e.target.value)}
           placeholder="Descreva movimento/técnica de câmera (ex: Tracking, Dolly zoom)"
-          className="text-sm"
+          className="text-sm min-h-[80px] max-h-[120px] overflow-y-auto resize-none break-words"
         />
       </td>
       <td className="p-4 w-48 relative">
@@ -393,7 +394,7 @@ const SortableRow = ({
             value={shot.location}
             onChange={(e) => onUpdate(shot.id, 'location', e.target.value)}
             placeholder="Ex: Casa do João"
-            className="text-sm"
+            className="text-sm break-words"
           />
         )}
       </td>
@@ -454,7 +455,7 @@ export const ShotListTable = ({
               {showCheckbox && <th className="p-4 text-left text-sm font-semibold text-foreground w-16">✓</th>}
               <th className="p-4 text-left text-sm font-semibold text-foreground w-20">#</th>
               <th className="p-4 text-left text-sm font-semibold text-foreground w-80">Trecho do Roteiro</th>
-              <th className="p-4 text-left text-sm font-semibold text-foreground w-48">Cena</th>
+              <th className="p-4 text-left text-sm font-semibold text-foreground w-64">Cena</th>
               <th className="p-4 text-left text-sm font-semibold text-foreground w-48">Imagem de Ref.</th>
               <th className="p-4 text-left text-sm font-semibold text-foreground w-48">Locação</th>
               <th className="p-4 text-left text-sm font-semibold text-foreground w-24">Ações</th>
