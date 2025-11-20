@@ -250,9 +250,10 @@ const Session = () => {
       ? Math.min(100, (session.elapsedSeconds / session.targetSeconds) * 100)
       : 0;
 
-    return (
-      <div className="relative">
-        {/* Back Button - Mobile friendly */}
+  return (
+    <div className="relative">
+      {/* ScriptEditor has its own back button, don't render here for script/review stages */}
+      {session.stage !== 'script' && session.stage !== 'review' && (
         <div className="fixed top-4 left-4 md:top-6 md:left-6 z-50">
           <Button
             variant="ghost"
@@ -263,6 +264,7 @@ const Session = () => {
             <span className="hidden sm:inline">Dashboard</span>
           </Button>
         </div>
+      )}
 
         {/* Floating Draggable Timer Pop-up */}
         <DraggableSessionTimer
