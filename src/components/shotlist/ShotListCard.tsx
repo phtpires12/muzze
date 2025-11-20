@@ -30,6 +30,7 @@ interface ShotListCardProps {
   showCheckbox?: boolean;
   mode?: 'review' | 'record';
   availableLocations?: string[];
+  onImageClick?: (shotId: string) => void;
 }
 
 export const ShotListCard = ({
@@ -41,7 +42,8 @@ export const ShotListCard = ({
   onSplitAtCursor,
   showCheckbox = false,
   mode = 'review',
-  availableLocations = []
+  availableLocations = [],
+  onImageClick
 }: ShotListCardProps) => {
   const [localText, setLocalText] = useState(shot.scriptSegment);
   const [history, setHistory] = useState<string[]>([shot.scriptSegment]);
@@ -247,7 +249,11 @@ export const ShotListCard = ({
               <img
                 src={shot.shotImageUrl}
                 alt="Referência"
-                className="w-full h-48 object-cover rounded-lg border border-input"
+                className={cn(
+                  "w-full h-48 object-cover rounded-lg border border-input",
+                  onImageClick && "cursor-pointer hover:opacity-90 transition-opacity"
+                )}
+                onClick={() => onImageClick?.(shot.id)}
               />
               <Button
                 variant="secondary"
