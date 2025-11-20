@@ -5,6 +5,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { GripVertical, X, Upload, Check } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { ShotListCard } from "./ShotListCard";
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
@@ -435,6 +437,7 @@ export const ShotListTable = ({
   mode = 'review',
   availableLocations = []
 }: ShotListTableProps) => {
+  const isMobile = useIsMobile();
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -442,6 +445,34 @@ export const ShotListTable = ({
     })
   );
 
+  // Mobile: Renderizar cards verticais
+  if (isMobile) {
+    return (
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={onDragEnd}
+      >
+        <SortableContext items={shots.map(s => s.id)} strategy={verticalListSortingStrategy}>
+          <div className="space-y-4">
+            {shots.map((shot, index) => (
+              <ShotListCard
+                key={shot.id}
+                shot={shot}
+                index={index}
+                onUpdate={onUpdate}
+                onRemove={onRemove}
+                onImageUpload={onImageUpload}
+                onSplitAtCursor={onSplitAtCursor}
+              />
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
+    );
+  }
+
+  // Desktop: Renderizar tabela horizontal
   return (
     <DndContext
       sensors={sensors}
