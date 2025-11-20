@@ -282,11 +282,11 @@ const ShotListRecord = () => {
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
-              onClick={() => navigate(-1)}
+              onClick={() => navigate(`/shot-list/review?scriptId=${scriptId}`)}
               className="hover:bg-accent/10"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Voltar
+              Voltar para Revisão
             </Button>
             <div>
               <h1 className="text-2xl font-bold text-foreground">Shot List - Gravação</h1>
