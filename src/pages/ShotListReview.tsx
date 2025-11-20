@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ShotListTable, ShotItem } from "@/components/shotlist/ShotListTable";
 import { DragEndEvent } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
+import { cn } from "@/lib/utils";
 
 const ShotListReview = () => {
   const navigate = useNavigate();
@@ -273,10 +274,49 @@ const ShotListReview = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background p-6">
+    <div className="min-h-screen bg-background p-4 md:p-6 pb-24 md:pb-6">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        {/* Mobile Header */}
+        <div className="md:hidden mb-6 space-y-4">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate(`/session?stage=review&scriptId=${scriptId}`)}
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            <div className="flex-1">
+              <h1 className="text-lg font-bold text-foreground">Shot List</h1>
+              <p className="text-xs text-muted-foreground truncate">{scriptTitle}</p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              onClick={handleSave}
+              disabled={isSaving || !hasUnsavedChanges}
+              size="sm"
+              variant="outline"
+              className={cn(
+                "flex-1",
+                hasUnsavedChanges && "border-orange-500 text-orange-500"
+              )}
+            >
+              {isSaving ? 'Salvando...' : hasUnsavedChanges ? '● Salvar' : 'Salvo ✓'}
+            </Button>
+            <Button
+              onClick={handleAdvanceToRecord}
+              disabled={isSaving}
+              size="sm"
+              className="flex-1"
+            >
+              Avançar
+            </Button>
+          </div>
+        </div>
+
+        {/* Desktop Header */}
+        <div className="hidden md:flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
@@ -309,8 +349,8 @@ const ShotListReview = () => {
           </div>
         </div>
 
-        {/* Add Shot Button */}
-        <div className="mb-4">
+        {/* Desktop Add Shot Button */}
+        <div className="hidden md:block mb-4">
           <Button
             onClick={addShot}
             variant="outline"
@@ -320,6 +360,15 @@ const ShotListReview = () => {
             Adicionar Take
           </Button>
         </div>
+
+        {/* Mobile FAB - Add Shot */}
+        <Button
+          onClick={addShot}
+          size="lg"
+          className="md:hidden fixed bottom-20 right-6 h-14 w-14 rounded-full shadow-lg z-40 p-0"
+        >
+          <Plus className="w-6 h-6" />
+        </Button>
 
         {/* Shot List Table */}
         {shots.length > 0 ? (
