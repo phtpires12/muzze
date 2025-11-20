@@ -464,6 +464,9 @@ export const ShotListTable = ({
                 onRemove={onRemove}
                 onImageUpload={onImageUpload}
                 onSplitAtCursor={onSplitAtCursor}
+                showCheckbox={showCheckbox}
+                mode={mode}
+                availableLocations={availableLocations}
               />
             ))}
           </div>
