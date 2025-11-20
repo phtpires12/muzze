@@ -362,24 +362,30 @@ const SortableRow = ({
         </div>
       </td>
       <td className="p-4 w-48">
-        {mode === 'record' && availableLocations.length > 0 ? (
+        {mode === 'record' ? (
           <Select
-            value={shot.location}
+            value={shot.location || undefined}
             onValueChange={(value) => onUpdate(shot.id, 'location', value)}
           >
             <SelectTrigger className="text-sm">
               <SelectValue placeholder="Selecione a locação" />
             </SelectTrigger>
             <SelectContent>
-              {availableLocations.map(loc => (
-                <SelectItem key={loc} value={loc}>
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                      {loc}
-                    </span>
-                  </div>
+              {availableLocations.length > 0 ? (
+                availableLocations.map(loc => (
+                  <SelectItem key={loc} value={loc}>
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                        {loc}
+                      </span>
+                    </div>
+                  </SelectItem>
+                ))
+              ) : (
+                <SelectItem value="sem-locacao" disabled>
+                  Nenhuma locação disponível
                 </SelectItem>
-              ))}
+              )}
             </SelectContent>
           </Select>
         ) : (
