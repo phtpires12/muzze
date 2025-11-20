@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Plus } from "lucide-react";
@@ -18,6 +18,8 @@ const ShotListReview = () => {
   const [scriptTitle, setScriptTitle] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [uploadingImages, setUploadingImages] = useState<Set<string>>(new Set());
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [lastSavedShots, setLastSavedShots] = useState<ShotItem[]>([]);
 
   useEffect(() => {
     if (!scriptId || scriptId === 'null' || scriptId === 'undefined') {
@@ -74,13 +76,23 @@ const ShotListReview = () => {
     
     setIsSaving(true);
     try {
+      // Usar uma Promise para garantir que pegamos o estado mais recente
+      const currentShots = await new Promise<ShotItem[]>((resolve) => {
+        setShots((prevShots) => {
+          resolve(prevShots);
+          return prevShots;
+        });
+      });
+
       const { error } = await supabase
         .from('scripts')
-        .update({ shot_list: shots as any })
+        .update({ shot_list: currentShots as any })
         .eq('id', scriptId);
 
-
       if (error) throw error;
+
+      setLastSavedShots(currentShots);
+      setHasUnsavedChanges(false);
 
       toast({
         title: "Shot List salva!",
@@ -97,6 +109,48 @@ const ShotListReview = () => {
       setIsSaving(false);
     }
   };
+
+  // Auto-save com debounce
+  const autoSave = useCallback(
+    async (shotsToSave: ShotItem[]) => {
+      if (!scriptId || shotsToSave.length === 0) return;
+      
+      try {
+        const { error } = await supabase
+          .from('scripts')
+          .update({ shot_list: shotsToSave as any })
+          .eq('id', scriptId);
+
+        if (error) throw error;
+        
+        setLastSavedShots(shotsToSave);
+        setHasUnsavedChanges(false);
+        console.log('Auto-saved successfully');
+      } catch (error) {
+        console.error('Auto-save failed:', error);
+      }
+    },
+    [scriptId]
+  );
+
+  // Debounce manual sem lodash
+  useEffect(() => {
+    if (shots.length === 0) return;
+    
+    const timeoutId = setTimeout(() => {
+      autoSave(shots);
+    }, 2000); // Auto-save 2 segundos após parar de editar
+
+    return () => clearTimeout(timeoutId);
+  }, [shots, autoSave]);
+
+  // Detectar mudanças não salvas
+  useEffect(() => {
+    if (lastSavedShots.length > 0) {
+      const hasChanges = JSON.stringify(shots) !== JSON.stringify(lastSavedShots);
+      setHasUnsavedChanges(hasChanges);
+    }
+  }, [shots, lastSavedShots]);
 
   const addShot = () => {
     const newShot: ShotItem = {
@@ -233,10 +287,11 @@ const ShotListReview = () => {
           <div className="flex gap-2">
             <Button
               onClick={handleSave}
-              disabled={isSaving}
+              disabled={isSaving || !hasUnsavedChanges}
               variant="outline"
+              className={hasUnsavedChanges ? "border-orange-500 text-orange-500" : ""}
             >
-              {isSaving ? 'Salvando...' : 'Salvar'}
+              {isSaving ? 'Salvando...' : hasUnsavedChanges ? '● Salvar' : 'Salvo ✓'}
             </Button>
             <Button
               onClick={handleAdvanceToRecord}
