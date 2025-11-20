@@ -424,6 +424,7 @@ interface ShotListTableProps {
   showCheckbox?: boolean;
   mode?: 'review' | 'record';
   availableLocations?: string[];
+  onImageClick?: (shotId: string) => void;
 }
 
 export const ShotListTable = ({
@@ -435,7 +436,8 @@ export const ShotListTable = ({
   onDragEnd,
   showCheckbox = false,
   mode = 'review',
-  availableLocations = []
+  availableLocations = [],
+  onImageClick
 }: ShotListTableProps) => {
   const isMobile = useIsMobile();
   const sensors = useSensors(
@@ -467,6 +469,7 @@ export const ShotListTable = ({
                 showCheckbox={showCheckbox}
                 mode={mode}
                 availableLocations={availableLocations}
+                onImageClick={onImageClick}
               />
             ))}
           </div>

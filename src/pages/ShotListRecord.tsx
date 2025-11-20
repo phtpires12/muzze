@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ShotListTable, ShotItem } from "@/components/shotlist/ShotListTable";
+import { ImageGalleryModal } from "@/components/shotlist/ImageGalleryModal";
 import { DragEndEvent } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import { DraggableTimer } from "@/components/DraggableTimer";
@@ -24,6 +25,7 @@ const ShotListRecord = () => {
   const [scriptTitle, setScriptTitle] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [uploadingImages, setUploadingImages] = useState<Set<string>>(new Set());
+  const [galleryOpenShotId, setGalleryOpenShotId] = useState<string | null>(null);
 
   // Timer states
   const [timerRunning, setTimerRunning] = useState(false);
@@ -432,12 +434,20 @@ const ShotListRecord = () => {
             showCheckbox={true}
             mode="record"
             availableLocations={uniqueLocations}
+            onImageClick={(shotId) => setGalleryOpenShotId(shotId)}
           />
         ) : (
           <div className="text-center py-12 text-muted-foreground">
             <p>Nenhum take para mostrar com os filtros selecionados.</p>
           </div>
         )}
+
+        {/* Image Gallery Modal */}
+        <ImageGalleryModal
+          shots={shots}
+          currentShotId={galleryOpenShotId}
+          onClose={() => setGalleryOpenShotId(null)}
+        />
       </div>
     </div>
   );
