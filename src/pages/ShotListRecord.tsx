@@ -128,19 +128,6 @@ const ShotListRecord = () => {
     }
   };
 
-  const addShot = () => {
-    const newShot: ShotItem = {
-      id: crypto.randomUUID(),
-      scriptSegment: '',
-      scene: '',
-      shotImageUrl: '',
-      location: '',
-      sectionName: '',
-      isCompleted: false,
-    };
-    setShots([...shots, newShot]);
-  };
-
   const splitShotAtCursor = (shotId: string, cursorPosition: number) => {
     setShots(currentShots => {
       const shotIndex = currentShots.findIndex(s => s.id === shotId);
@@ -270,7 +257,7 @@ const ShotListRecord = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-6 pb-24 md:pb-6">
+    <div className="min-h-screen bg-background p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
         {/* Mobile Header */}
         <div className="md:hidden mb-4 space-y-3">
@@ -296,15 +283,15 @@ const ShotListRecord = () => {
             </Button>
           </div>
 
-          {/* Mobile Progress Card */}
-          <div className="bg-card p-4 rounded-lg border border-border">
-            <div className="flex items-center justify-between mb-2">
+          {/* Mobile Progress Card - Compacto */}
+          <div className="bg-card p-3 rounded-lg border border-border">
+            <div className="flex items-center justify-between mb-1.5">
               <span className="text-sm font-semibold text-foreground">Progresso</span>
-              <span className="text-sm text-muted-foreground">{progressPercentage}%</span>
+              <span className="text-lg font-bold text-primary">{progressPercentage}%</span>
             </div>
-            <Progress value={progressPercentage} className="mb-2" />
+            <Progress value={progressPercentage} className="h-2 mb-1.5" />
             <p className="text-xs text-muted-foreground">
-              {shots.filter(s => s.isCompleted).length} de {shots.length} takes concluídos
+              {shots.filter(s => s.isCompleted).length}/{shots.length} takes
             </p>
           </div>
 
@@ -432,27 +419,6 @@ const ShotListRecord = () => {
             </div>
           </div>
         </div>
-
-        {/* Desktop Add Shot Button */}
-        <div className="hidden md:block mb-4">
-          <Button
-            onClick={addShot}
-            variant="outline"
-            className="gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            Adicionar Take
-          </Button>
-        </div>
-
-        {/* Mobile FAB - Add Shot */}
-        <Button
-          onClick={addShot}
-          size="lg"
-          className="md:hidden fixed bottom-20 right-6 h-14 w-14 rounded-full shadow-lg z-40 p-0"
-        >
-          <Plus className="w-6 h-6" />
-        </Button>
 
         {/* Shot List Table */}
         {filteredShots.length > 0 ? (

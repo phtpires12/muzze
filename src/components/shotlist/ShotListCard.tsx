@@ -7,6 +7,8 @@ import { GripVertical, X, Upload, Image as ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export interface ShotItem {
   id: string;
@@ -25,6 +27,9 @@ interface ShotListCardProps {
   onRemove: (id: string) => void;
   onImageUpload: (shotId: string, file: File) => void;
   onSplitAtCursor: (shotId: string, cursorPosition: number) => void;
+  showCheckbox?: boolean;
+  mode?: 'review' | 'record';
+  availableLocations?: string[];
 }
 
 export const ShotListCard = ({
@@ -34,6 +39,9 @@ export const ShotListCard = ({
   onRemove,
   onImageUpload,
   onSplitAtCursor,
+  showCheckbox = false,
+  mode = 'review',
+  availableLocations = []
 }: ShotListCardProps) => {
   const [localText, setLocalText] = useState(shot.scriptSegment);
   const [history, setHistory] = useState<string[]>([shot.scriptSegment]);
@@ -146,11 +154,12 @@ export const ShotListCard = ({
       style={style}
       className={cn(
         "touch-none transition-shadow",
-        isDragging && "shadow-lg opacity-50"
+        isDragging && "shadow-lg opacity-50",
+        shot.isCompleted && "bg-green-50 dark:bg-green-950/20 border-green-500/50"
       )}
     >
       <CardContent className="p-4 space-y-4">
-        {/* Header com drag handle e remover */}
+        {/* Header com drag handle, checkbox e remover */}
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing touch-none">
@@ -159,6 +168,24 @@ export const ShotListCard = ({
             <span className="text-sm font-semibold text-muted-foreground">
               #{index + 1}
             </span>
+            {showCheckbox && (
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id={`shot-${shot.id}`}
+                  checked={shot.isCompleted || false}
+                  onCheckedChange={(checked) => 
+                    onUpdate(shot.id, 'isCompleted', checked.toString())
+                  }
+                  className="h-5 w-5"
+                />
+                <label 
+                  htmlFor={`shot-${shot.id}`} 
+                  className="text-xs text-muted-foreground cursor-pointer"
+                >
+                  {shot.isCompleted ? 'Gravado ✓' : 'Gravar'}
+                </label>
+              </div>
+            )}
           </div>
           <Button
             variant="ghost"
@@ -250,12 +277,34 @@ export const ShotListCard = ({
           <label className="text-sm font-medium text-foreground">
             📍 Locação
           </label>
-          <Input
-            value={shot.location}
-            onChange={(e) => onUpdate(shot.id, 'location', e.target.value)}
-            placeholder="Ex: Casa do João"
-            className="text-sm break-words"
-          />
+          {mode === 'record' && availableLocations.length > 0 ? (
+            <Select
+              value={shot.location || undefined}
+              onValueChange={(value) => onUpdate(shot.id, 'location', value)}
+            >
+              <SelectTrigger className="text-sm">
+                <SelectValue placeholder="Selecione a locação" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableLocations.map(loc => (
+                  <SelectItem key={loc} value={loc}>
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                        {loc}
+                      </span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input
+              value={shot.location}
+              onChange={(e) => onUpdate(shot.id, 'location', e.target.value)}
+              placeholder="Ex: Casa do João"
+              className="text-sm break-words"
+            />
+          )}
         </div>
       </CardContent>
     </Card>
