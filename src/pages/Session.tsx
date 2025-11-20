@@ -26,6 +26,7 @@ import {
 import { StreakHalo } from "@/components/StreakHalo";
 import { ScriptEditor } from "@/components/ScriptEditor";
 import { BrainstormWorkspace } from "@/components/brainstorm/BrainstormWorkspace";
+import { EditingChecklist } from "@/components/EditingChecklist";
 import { DraggableSessionTimer } from "@/components/DraggableSessionTimer";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -147,7 +148,16 @@ const Session = () => {
 
   const handleCloseSummary = () => {
     setShowSummary(false);
+    setShowStreakHalo(false);
     navigate("/");
+  };
+
+  const handleEditingCompleted = async () => {
+    toast({
+      title: "🎉 Edição Concluída!",
+      description: "Todas as etapas foram completadas com sucesso!",
+    });
+    await handleEnd();
   };
 
 
@@ -375,43 +385,54 @@ const Session = () => {
             </Button>
           </div>
 
-          {/* Stage Selection */}
-          <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-              Mudar Etapa
-            </h3>
-            <div className="grid grid-cols-2 gap-3">
-              {STAGES.map((stage) => {
-                const Icon = stage.icon;
-                const isActive = stage.id === session.stage;
-                return (
-                  <button
-                    key={stage.id}
-                    onClick={() => !isActive && changeStage(stage.id)}
-                    disabled={isActive}
-                    className={cn(
-                      "p-4 rounded-xl border-2 transition-all duration-200",
-                      "flex flex-col items-center gap-2",
-                      isActive 
-                        ? "bg-gradient-to-br from-accent to-primary border-transparent text-white shadow-lg" 
-                        : "bg-card border-border/20 hover:border-primary/50 hover:bg-accent/10"
-                    )}
-                  >
-                    <Icon className={cn(
-                      "w-6 h-6",
-                      isActive ? "text-white" : stage.color
-                    )} />
-                    <span className={cn(
-                      "text-sm font-medium",
-                      isActive ? "text-white" : "text-foreground"
-                    )}>
-                      {stage.label}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+              {/* Stage Selection OR Editing Checklist */}
+              {session.stage === "edit" ? (
+                // Checklist para etapa de Edição
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                    Etapas de Edição
+                  </h3>
+                  <EditingChecklist onAllCompleted={handleEditingCompleted} />
+                </div>
+              ) : (
+                // Botões de mudança de etapa para outras etapas
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                    Mudar Etapa
+                  </h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    {STAGES.map((stage) => {
+                      const Icon = stage.icon;
+                      const isActive = stage.id === session.stage;
+                      return (
+                        <button
+                          key={stage.id}
+                          onClick={() => !isActive && changeStage(stage.id)}
+                          disabled={isActive}
+                          className={cn(
+                            "p-4 rounded-xl border-2 transition-all duration-200",
+                            "flex flex-col items-center gap-2",
+                            isActive 
+                              ? "bg-gradient-to-br from-accent to-primary border-transparent text-white shadow-lg" 
+                              : "bg-card border-border/20 hover:border-primary/50 hover:bg-accent/10"
+                          )}
+                        >
+                          <Icon className={cn(
+                            "w-6 h-6",
+                            isActive ? "text-white" : stage.color
+                          )} />
+                          <span className={cn(
+                            "text-sm font-medium",
+                            isActive ? "text-white" : "text-foreground"
+                          )}>
+                            {stage.label}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
         </Card>
       </div>
 
