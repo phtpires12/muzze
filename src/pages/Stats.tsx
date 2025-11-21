@@ -2,12 +2,12 @@ import { Award, Target, Zap, TrendingUp, TrendingDown } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
 import { Card } from "@/components/ui/card";
 import { useStats } from "@/hooks/useStats";
-import { getUserStats } from "@/lib/gamification";
 import { useDailyGoalProgress } from "@/hooks/useDailyGoalProgress";
+import { useProfile } from "@/hooks/useProfile";
 
 const Stats = () => {
   const { weeklyData, totalSessions, totalHours, weeklyAverage, achievements, loading } = useStats();
-  const gamificationStats = getUserStats();
+  const { profile } = useProfile();
   const { progress: dailyGoal, loading: loadingGoal } = useDailyGoalProgress();
   
   const maxHours = Math.max(...weeklyData.map((d) => d.hours), 0.1);
@@ -56,7 +56,7 @@ const Stats = () => {
         />
         <StatCard
           title="Total de XP"
-          value={gamificationStats.totalXP}
+          value={profile?.xp_points ?? 0}
           icon={Zap}
           gradient
           description="pontos de experiência"
@@ -120,9 +120,9 @@ const Stats = () => {
           <h3 className="text-lg font-semibold mb-4">Próximas Metas</h3>
           <div className="space-y-4">
             {[
-              { goal: "Sequência de 30 dias", current: gamificationStats.streak, target: 30 },
+              { goal: "Sequência de 30 dias", current: profile?.streak_freezes ?? 0, target: 30 },
               { goal: "200 horas totais", current: Math.floor(totalHours), target: 200 },
-              { goal: "500 XP", current: gamificationStats.totalXP, target: 500 },
+              { goal: "500 XP", current: profile?.xp_points ?? 0, target: 500 },
             ].map((item, i) => {
               const progress = Math.min((item.current / item.target) * 100, 100);
               return (
