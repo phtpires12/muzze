@@ -1,19 +1,25 @@
 import { Award, Target, Zap } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
 import { Card } from "@/components/ui/card";
+import { useStats } from "@/hooks/useStats";
+import { getUserStats } from "@/lib/gamification";
 
 const Stats = () => {
-  const weeklyData = [
-    { day: "Seg", hours: 3 },
-    { day: "Ter", hours: 5 },
-    { day: "Qua", hours: 2 },
-    { day: "Qui", hours: 4 },
-    { day: "Sex", hours: 6 },
-    { day: "Sáb", hours: 3 },
-    { day: "Dom", hours: 1 },
-  ];
+  const { weeklyData, totalSessions, totalHours, weeklyAverage, achievements, loading } = useStats();
+  const gamificationStats = getUserStats();
+  
+  const maxHours = Math.max(...weeklyData.map((d) => d.hours), 0.1);
 
-  const maxHours = Math.max(...weeklyData.map((d) => d.hours));
+  if (loading) {
+    return (
+      <div className="p-8 space-y-8">
+        <div>
+          <h1 className="text-4xl font-bold mb-2">Estatísticas</h1>
+          <p className="text-muted-foreground">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 space-y-8">
@@ -25,22 +31,22 @@ const Stats = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <StatCard
           title="Média Semanal"
-          value="24h"
+          value={`${weeklyAverage}h`}
           icon={Target}
           description="horas de trabalho"
         />
         <StatCard
-          title="Produtividade"
-          value="92%"
+          title="Total de XP"
+          value={gamificationStats.totalXP}
           icon={Zap}
           gradient
-          description="acima da meta"
+          description="pontos de experiência"
         />
         <StatCard
-          title="Conquistas"
-          value="12"
+          title="Sessões"
+          value={totalSessions}
           icon={Award}
-          description="badges desbloqueados"
+          description="sessões completadas"
         />
       </div>
 
@@ -70,34 +76,24 @@ const Stats = () => {
         <Card className="p-6">
           <h3 className="text-lg font-semibold mb-4">Conquistas Recentes</h3>
           <div className="space-y-4">
-            {[
-              {
-                badge: "🔥",
-                title: "Sequência de 7 dias",
-                description: "Trabalhou 7 dias seguidos",
-              },
-              {
-                badge: "⭐",
-                title: "100 horas",
-                description: "Alcançou 100 horas totais",
-              },
-              {
-                badge: "📝",
-                title: "Escritor Dedicado",
-                description: "Criou 10 roteiros",
-              },
-            ].map((achievement, i) => (
-              <div
-                key={i}
-                className="flex items-center gap-4 p-4 rounded-lg bg-gradient-to-r from-accent/10 to-primary/10 border border-primary/20"
-              >
-                <div className="text-3xl">{achievement.badge}</div>
-                <div>
-                  <p className="font-semibold">{achievement.title}</p>
-                  <p className="text-sm text-muted-foreground">{achievement.description}</p>
+            {achievements.length > 0 ? (
+              achievements.map((achievement, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-4 p-4 rounded-lg bg-gradient-to-r from-accent/10 to-primary/10 border border-primary/20"
+                >
+                  <div className="text-3xl">{achievement.badge}</div>
+                  <div>
+                    <p className="font-semibold">{achievement.title}</p>
+                    <p className="text-sm text-muted-foreground">{achievement.description}</p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-8">
+                Continue trabalhando para desbloquear conquistas!
+              </p>
+            )}
           </div>
         </Card>
 
@@ -105,11 +101,11 @@ const Stats = () => {
           <h3 className="text-lg font-semibold mb-4">Próximas Metas</h3>
           <div className="space-y-4">
             {[
-              { goal: "Sequência de 30 dias", current: 7, target: 30 },
-              { goal: "200 horas totais", current: 124, target: 200 },
-              { goal: "20 roteiros criados", current: 8, target: 20 },
+              { goal: "Sequência de 30 dias", current: gamificationStats.streak, target: 30 },
+              { goal: "200 horas totais", current: Math.floor(totalHours), target: 200 },
+              { goal: "500 XP", current: gamificationStats.totalXP, target: 500 },
             ].map((item, i) => {
-              const progress = (item.current / item.target) * 100;
+              const progress = Math.min((item.current / item.target) * 100, 100);
               return (
                 <div key={i} className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
