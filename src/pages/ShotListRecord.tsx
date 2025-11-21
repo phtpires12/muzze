@@ -384,9 +384,10 @@ const ShotListRecord = () => {
                 onClick={handleAdvanceToEdit}
                 disabled={autoSaveStatus === 'saving'}
                 size="sm"
-                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 whitespace-nowrap"
               >
-                Editar
+                <ArrowRight className="w-4 h-4 mr-1.5" />
+                Avançar para Edição
               </Button>
             </div>
           </div>
