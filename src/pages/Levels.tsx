@@ -1,28 +1,22 @@
-import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Trophy, Gift, Lock, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { getUserStats, XP_LEVELS, getLevelByXP, getProgressToNextLevelByXP, getNextLevelInfo, TROPHIES } from "@/lib/gamification";
+import { XP_LEVELS, getLevelByXP, getProgressToNextLevelByXP, getNextLevelInfo, TROPHIES } from "@/lib/gamification";
+import { useGamification } from "@/hooks/useGamification";
 
 export default function Levels() {
-  const [stats, setStats] = useState(getUserStats());
+  const { stats, loading } = useGamification();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const handleStorageChange = () => {
-      setStats(getUserStats());
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    const interval = setInterval(handleStorageChange, 1000);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      clearInterval(interval);
-    };
-  }, []);
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">Carregando...</p>
+      </div>
+    );
+  }
 
   const currentLevelInfo = getLevelByXP(stats.totalXP);
   const nextLevel = getNextLevelInfo(currentLevelInfo.level);

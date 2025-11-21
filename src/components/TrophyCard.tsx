@@ -1,30 +1,18 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { TROPHIES, getUserStats } from "@/lib/gamification";
-import { useEffect, useState } from "react";
+import { TROPHIES } from "@/lib/gamification";
 import { Lock, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { useGamification } from "@/hooks/useGamification";
 
 export const TrophyCard = () => {
   const navigate = useNavigate();
-  const [stats, setStats] = useState(getUserStats());
+  const { stats, loading } = useGamification();
   
-  useEffect(() => {
-    const handleStorageChange = () => {
-      setStats(getUserStats());
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('trophyUnlocked', handleStorageChange);
-    const interval = setInterval(handleStorageChange, 1000);
-    
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('trophyUnlocked', handleStorageChange);
-      clearInterval(interval);
-    };
-  }, []);
+  if (loading) {
+    return null;
+  }
   
   const unlockedTrophies = TROPHIES.filter(t => stats.trophies.includes(t.id));
   const lockedTrophies = TROPHIES.filter(t => !stats.trophies.includes(t.id));
