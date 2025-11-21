@@ -229,8 +229,7 @@ export const useSession = () => {
         isOvertime: false,
       }));
 
-      // Award XP for stage change
-      addXP(POINTS.CREATE_IDEA);
+      // XP for stage change is now tracked automatically through session duration
 
       toast({
         title: "Etapa alterada",
@@ -283,13 +282,6 @@ export const useSession = () => {
           .eq('user_id', user.id);
       }
 
-      // Award points for stage completion
-      if (session.stage === "ideation") {
-        addXP(POINTS.CREATE_IDEA);
-      } else if (session.stage === "script") {
-        addXP(POINTS.CREATE_SCRIPT);
-      }
-
       // Show XP gained toast
       if (xpGained > 0) {
         toast({
@@ -297,12 +289,6 @@ export const useSession = () => {
           description: `${durationMinutes} minutos de criação!`
         });
       }
-
-      // Get updated stats for streak tracking
-      const stats = getUserStats();
-      const sessionMinutes = session.totalElapsedSeconds / 60;
-      stats.totalHours += sessionMinutes / 60;
-      saveUserStats(stats);
 
       // Track analytics
       await supabase.from('analytics_events').insert({
@@ -316,10 +302,8 @@ export const useSession = () => {
       });
 
       // Update streak and check if achieved
+      const sessionMinutes = session.totalElapsedSeconds / 60;
       const streakResult = await updateStreak(user.id, sessionMinutes);
-      
-      // Check for trophies after session completion
-      checkAndAwardTrophies();
 
       const summary = {
         duration: session.totalElapsedSeconds,
@@ -453,9 +437,20 @@ export const useSession = () => {
           }
         });
 
-        // Award streak milestone XP
+        // Award streak milestone XP to database
         if (newCurrentStreak % 7 === 0) {
-          addXP(POINTS.STREAK_MILESTONE);
+          const { data: currentProfile } = await supabase
+            .from('profiles')
+            .select('xp_points')
+            .eq('user_id', userId)
+            .single();
+          
+          if (currentProfile) {
+            await supabase
+              .from('profiles')
+              .update({ xp_points: (currentProfile.xp_points || 0) + POINTS.STREAK_MILESTONE })
+              .eq('user_id', userId);
+          }
         }
 
         return { 

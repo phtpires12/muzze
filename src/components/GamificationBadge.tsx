@@ -1,26 +1,15 @@
-import { Trophy, Zap } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { getUserStats, getLevelByXP, getProgressToNextLevelByXP, getNextLevelInfo } from "@/lib/gamification";
-import { useEffect, useState } from "react";
+import { getLevelByXP, getProgressToNextLevelByXP, getNextLevelInfo } from "@/lib/gamification";
 import { useNavigate } from "react-router-dom";
+import { useGamification } from "@/hooks/useGamification";
 
 export const GamificationBadge = () => {
-  const [stats, setStats] = useState(getUserStats());
+  const { stats, loading } = useGamification();
   const navigate = useNavigate();
   
-  useEffect(() => {
-    const handleStorageChange = () => {
-      setStats(getUserStats());
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
-    const interval = setInterval(handleStorageChange, 1000);
-    
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      clearInterval(interval);
-    };
-  }, []);
+  if (loading) {
+    return null;
+  }
   
   const levelInfo = getLevelByXP(stats.totalXP);
   const nextLevel = getNextLevelInfo(levelInfo.level);

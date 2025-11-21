@@ -267,17 +267,12 @@ export interface UserStats {
   totalXP: number;
 }
 
+// DEPRECATED: These functions are kept for backwards compatibility only
+// All new code should use Supabase directly via useGamification hook
+
 export function getUserStats(): UserStats {
-  const stored = localStorage.getItem("userStats");
-  if (stored) {
-    const stats = JSON.parse(stored);
-    // Ensure totalXP exists
-    if (stats.totalXP === undefined) {
-      stats.totalXP = stats.totalPoints || 0;
-    }
-    return stats;
-  }
-  
+  // Return empty stats - all data should come from Supabase now
+  console.warn('getUserStats is deprecated - use useGamification hook instead');
   return {
     totalPoints: 0,
     level: 1,
@@ -292,101 +287,27 @@ export function getUserStats(): UserStats {
 }
 
 export function saveUserStats(stats: UserStats): void {
-  localStorage.setItem("userStats", JSON.stringify(stats));
+  // No-op - kept for backwards compatibility
+  console.warn('saveUserStats is deprecated - XP is now saved directly to Supabase');
 }
 
 export function awardPoints(points: number, reason: string): UserStats {
-  const stats = getUserStats();
-  stats.totalPoints = addPoints(stats.totalPoints, points);
-  stats.level = calculateLevel(stats.totalPoints);
-  
-  // Check for new trophies
-  const newTrophies = checkNewTrophies(stats);
-  newTrophies.forEach((trophy) => {
-    stats.trophies.push(trophy.id);
-    stats.totalPoints += trophy.points;
-  });
-  
-  saveUserStats(stats);
-  return stats;
+  // No-op - kept for backwards compatibility
+  console.warn('awardPoints is deprecated - use useProfile().addXP() instead');
+  return getUserStats();
 }
 
 export function addXP(amount: number): { stats: UserStats; leveledUp: boolean; newLevel?: LevelDefinition } {
-  const stats = getUserStats();
-  const previousLevel = calculateLevelByXP(stats.totalXP);
-  
-  stats.totalXP += amount;
-  stats.totalPoints = stats.totalXP; // Keep in sync
-  const newLevel = calculateLevelByXP(stats.totalXP);
-  stats.level = newLevel;
-  
-  // Check for new trophies
-  const newTrophies = checkNewTrophies(stats);
-  newTrophies.forEach((trophy) => {
-    if (!stats.trophies.includes(trophy.id)) {
-      stats.trophies.push(trophy.id);
-      stats.totalXP += trophy.points;
-      stats.totalPoints += trophy.points;
-    }
-  });
-  
-  // Recalculate level after trophy bonuses
-  const finalLevel = calculateLevelByXP(stats.totalXP);
-  stats.level = finalLevel;
-  
-  saveUserStats(stats);
-  
-  const leveledUp = finalLevel > previousLevel;
-  const levelInfo = leveledUp ? getLevelInfo(finalLevel) : undefined;
-  
-  // Dispatch custom event for level up
-  if (leveledUp && levelInfo) {
-    window.dispatchEvent(new CustomEvent('levelUp', { 
-      detail: { level: finalLevel, levelInfo } 
-    }));
-  }
-  
+  // No-op - kept for backwards compatibility
+  console.warn('addXP is deprecated - XP is now managed through Supabase in useSession');
   return { 
-    stats, 
-    leveledUp, 
-    newLevel: levelInfo 
+    stats: getUserStats(), 
+    leveledUp: false
   };
 }
 
 export function checkAndAwardTrophies(): Trophy[] {
-  const stats = getUserStats();
-  const newTrophies = checkNewTrophies(stats);
-  
-  if (newTrophies.length === 0) return [];
-  
-  const previousLevel = calculateLevelByXP(stats.totalXP);
-  
-  // Award each new trophy
-  newTrophies.forEach((trophy) => {
-    stats.trophies.push(trophy.id);
-    stats.totalXP += trophy.points;
-    stats.totalPoints += trophy.points;
-    
-    // Dispatch trophy unlocked event
-    window.dispatchEvent(new CustomEvent('trophyUnlocked', { 
-      detail: { trophy, xpGained: trophy.points } 
-    }));
-  });
-  
-  // Recalculate level after trophy bonuses
-  const finalLevel = calculateLevelByXP(stats.totalXP);
-  stats.level = finalLevel;
-  
-  saveUserStats(stats);
-  
-  // Check if user leveled up from trophies
-  const leveledUp = finalLevel > previousLevel;
-  if (leveledUp) {
-    const levelInfo = getLevelInfo(finalLevel);
-    window.dispatchEvent(new CustomEvent('levelUp', { 
-      detail: { level: finalLevel, levelInfo } 
-    }));
-  }
-  
-  return newTrophies;
+  // No-op - kept for backwards compatibility
+  console.warn('checkAndAwardTrophies is deprecated - trophies are now calculated from Supabase data');
+  return [];
 }
