@@ -7,6 +7,31 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { useDeviceType } from "@/hooks/useDeviceType";
 
+const getScriptPreview = (content: string | null) => {
+  if (!content) return null;
+  const trimmed = content.trim();
+  if (!trimmed) return null;
+
+  try {
+    const parsed = JSON.parse(trimmed);
+    
+    // Se for objeto/array (caso do JSON com gancho/setup/etc), não mostra nada
+    if (typeof parsed === "object") {
+      return null;
+    }
+    
+    // Se por acaso for um JSON de string simples, usamos essa string
+    if (typeof parsed === "string") {
+      return parsed;
+    }
+    
+    return null;
+  } catch {
+    // Se não for JSON válido, tratamos como texto normal
+    return trimmed;
+  }
+};
+
 interface Script {
   id: string;
   title: string;
@@ -51,41 +76,45 @@ export function DayContentModal({
       ) : (
         <>
           <div className="space-y-3">
-            {scripts.map((script) => (
-              <div
-                key={script.id}
-                className="p-4 rounded-lg border border-border bg-card hover:bg-accent/5 transition-colors"
-              >
-                <div className="flex items-start justify-between gap-3 mb-3">
-                  <h3 className="font-semibold text-foreground line-clamp-2">{script.title}</h3>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => onViewScript(script.id)}
-                    className="shrink-0"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                  </Button>
-                </div>
+            {scripts.map((script) => {
+              const preview = getScriptPreview(script.content);
+              
+              return (
+                <div
+                  key={script.id}
+                  className="p-4 rounded-lg border border-border bg-card hover:bg-accent/5 transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <h3 className="font-semibold text-foreground line-clamp-2">{script.title}</h3>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => onViewScript(script.id)}
+                      className="shrink-0"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                    </Button>
+                  </div>
 
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {script.content_type && (
-                    <Badge variant="secondary" className="text-xs">
-                      {script.content_type}
-                    </Badge>
-                  )}
-                  {script.shot_list && script.shot_list.length > 0 && (
-                    <Badge variant="outline" className="text-xs">
-                      {script.shot_list.length} shots
-                    </Badge>
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {script.content_type && (
+                      <Badge variant="secondary" className="text-xs">
+                        {script.content_type}
+                      </Badge>
+                    )}
+                    {script.shot_list && script.shot_list.length > 0 && (
+                      <Badge variant="outline" className="text-xs">
+                        {script.shot_list.length} shots
+                      </Badge>
+                    )}
+                  </div>
+
+                  {preview && (
+                    <p className="text-sm text-muted-foreground line-clamp-3">{preview}</p>
                   )}
                 </div>
-
-                {script.content && (
-                  <p className="text-sm text-muted-foreground line-clamp-3">{script.content}</p>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <Button onClick={() => onAddScript(date)} variant="outline" className="w-full">
