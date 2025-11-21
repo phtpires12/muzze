@@ -12,7 +12,8 @@ import {
   X,
   ArrowLeft,
   Check,
-  ArrowRight
+  ArrowRight,
+  Copy
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -294,6 +295,22 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
     if (e.key === 'Enter') {
       e.preventDefault();
       handleAddReference();
+    }
+  };
+
+  const copyToClipboard = async (text: string, sectionName: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({
+        title: "Texto copiado!",
+        description: `${sectionName} copiado para a área de transferência.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao copiar",
+        description: "Não foi possível copiar o texto.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -708,15 +725,28 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                   <h5 className="text-base font-semibold text-foreground flex items-center gap-2">
                     🪝 Gancho
                   </h5>
-                  {isReviewMode && (
-                    <input
-                      type="checkbox"
-                      id="gancho-check-single"
-                      checked={reviewedSections.gancho}
-                      onChange={() => toggleSectionReview('gancho')}
-                      className="w-4 h-4 rounded border-border cursor-pointer"
-                    />
-                  )}
+                  <div className="flex items-center gap-2">
+                    {isReviewMode && (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => copyToClipboard(content.gancho, "Gancho")}
+                          className="h-8 w-8 hover:bg-accent"
+                          title="Copiar texto"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </Button>
+                        <input
+                          type="checkbox"
+                          id="gancho-check-single"
+                          checked={reviewedSections.gancho}
+                          onChange={() => toggleSectionReview('gancho')}
+                          className="w-4 h-4 rounded border-border cursor-pointer"
+                        />
+                      </>
+                    )}
+                  </div>
                 </div>
                 <Textarea
                   value={content.gancho}
@@ -731,15 +761,28 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                   <h5 className="text-base font-semibold text-foreground flex items-center gap-2">
                     🤨 Setup (Contexto)
                   </h5>
-                  {isReviewMode && (
-                    <input
-                      type="checkbox"
-                      id="setup-check-single"
-                      checked={reviewedSections.setup}
-                      onChange={() => toggleSectionReview('setup')}
-                      className="w-4 h-4 rounded border-border cursor-pointer"
-                    />
-                  )}
+                  <div className="flex items-center gap-2">
+                    {isReviewMode && (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => copyToClipboard(content.setup, "Setup")}
+                          className="h-8 w-8 hover:bg-accent"
+                          title="Copiar texto"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </Button>
+                        <input
+                          type="checkbox"
+                          id="setup-check-single"
+                          checked={reviewedSections.setup}
+                          onChange={() => toggleSectionReview('setup')}
+                          className="w-4 h-4 rounded border-border cursor-pointer"
+                        />
+                      </>
+                    )}
+                  </div>
                 </div>
                 <Textarea
                   value={content.setup}
@@ -754,15 +797,28 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                   <h5 className="text-base font-semibold text-foreground flex items-center gap-2">
                     🦅 Desenvolvimento
                   </h5>
-                  {isReviewMode && (
-                    <input
-                      type="checkbox"
-                      id="desenvolvimento-check-single"
-                      checked={reviewedSections.desenvolvimento}
-                      onChange={() => toggleSectionReview('desenvolvimento')}
-                      className="w-4 h-4 rounded border-border cursor-pointer"
-                    />
-                  )}
+                  <div className="flex items-center gap-2">
+                    {isReviewMode && (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => copyToClipboard(content.desenvolvimento, "Desenvolvimento")}
+                          className="h-8 w-8 hover:bg-accent"
+                          title="Copiar texto"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </Button>
+                        <input
+                          type="checkbox"
+                          id="desenvolvimento-check-single"
+                          checked={reviewedSections.desenvolvimento}
+                          onChange={() => toggleSectionReview('desenvolvimento')}
+                          className="w-4 h-4 rounded border-border cursor-pointer"
+                        />
+                      </>
+                    )}
+                  </div>
                 </div>
                 <Textarea
                   value={content.desenvolvimento}
@@ -777,15 +833,28 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                   <h5 className="text-base font-semibold text-foreground flex items-center gap-2">
                     📩 Conclusão (Fecho de Loop)
                   </h5>
-                  {isReviewMode && (
-                    <input
-                      type="checkbox"
-                      id="conclusao-check-single"
-                      checked={reviewedSections.conclusao}
-                      onChange={() => toggleSectionReview('conclusao')}
-                      className="w-4 h-4 rounded border-border cursor-pointer"
-                    />
-                  )}
+                  <div className="flex items-center gap-2">
+                    {isReviewMode && (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => copyToClipboard(content.conclusao, "Conclusão")}
+                          className="h-8 w-8 hover:bg-accent"
+                          title="Copiar texto"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </Button>
+                        <input
+                          type="checkbox"
+                          id="conclusao-check-single"
+                          checked={reviewedSections.conclusao}
+                          onChange={() => toggleSectionReview('conclusao')}
+                          className="w-4 h-4 rounded border-border cursor-pointer"
+                        />
+                      </>
+                    )}
+                  </div>
                 </div>
                 <Textarea
                   value={content.conclusao}
