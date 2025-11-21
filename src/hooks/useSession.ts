@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { addXP, POINTS, getUserStats, saveUserStats, checkAndAwardTrophies } from "@/lib/gamification";
+import { addXP, POINTS, getUserStats, saveUserStats, checkAndAwardTrophies, calculateXPFromMinutes } from "@/lib/gamification";
 
 export type SessionStage = "idea" | "ideation" | "script" | "review" | "record" | "edit";
 
@@ -265,28 +265,44 @@ export const useSession = () => {
         });
       }
 
-      // Award XP based on total session duration
-      const stats = getUserStats();
-      const sessionMinutes = session.totalElapsedSeconds / 60;
-      
-      // Add to total hours
-      stats.totalHours += sessionMinutes / 60;
-      saveUserStats(stats);
-      
-      // Award XP for completing session
-      addXP(POINTS.COMPLETE_SESSION);
-      
-      // Calculate additional XP based on daily goal
+      // Calculate XP from time spent (2 XP per minute)
+      const durationMinutes = Math.floor(session.totalElapsedSeconds / 60);
+      const xpGained = calculateXPFromMinutes(durationMinutes);
+
+      // Get user and update XP in database
       const { data: profile } = await supabase
         .from('profiles')
-        .select('daily_goal_minutes')
+        .select('xp_points')
         .eq('user_id', user.id)
         .single();
 
-      const dailyGoal = profile?.daily_goal_minutes || 60;
-      const bonusXP = Math.min(100, (sessionMinutes / dailyGoal) * 100);
-      
-      const { stats: updatedStats } = addXP(Math.floor(bonusXP));
+      if (profile) {
+        await supabase
+          .from('profiles')
+          .update({ xp_points: (profile.xp_points || 0) + xpGained })
+          .eq('user_id', user.id);
+      }
+
+      // Award points for stage completion
+      if (session.stage === "ideation") {
+        addXP(POINTS.CREATE_IDEA);
+      } else if (session.stage === "script") {
+        addXP(POINTS.CREATE_SCRIPT);
+      }
+
+      // Show XP gained toast
+      if (xpGained > 0) {
+        toast({
+          title: `+${xpGained} XP`,
+          description: `${durationMinutes} minutos de criação!`
+        });
+      }
+
+      // Get updated stats for streak tracking
+      const stats = getUserStats();
+      const sessionMinutes = session.totalElapsedSeconds / 60;
+      stats.totalHours += sessionMinutes / 60;
+      saveUserStats(stats);
 
       // Track analytics
       await supabase.from('analytics_events').insert({
@@ -295,7 +311,7 @@ export const useSession = () => {
         payload: { 
           duration_seconds: session.totalElapsedSeconds,
           final_stage: session.stage,
-          xp_gained: POINTS.COMPLETE_SESSION + Math.floor(bonusXP)
+          xpGained
         }
       });
 
@@ -308,7 +324,7 @@ export const useSession = () => {
       const summary = {
         duration: session.totalElapsedSeconds,
         stage: session.stage,
-        xpGained: POINTS.COMPLETE_SESSION + Math.floor(bonusXP),
+        xpGained,
         streakAchieved: streakResult.streakAchieved || false,
         newStreak: streakResult.newStreak,
         creativeMinutesToday: streakResult.creativeMinutesToday,
