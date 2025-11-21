@@ -4,9 +4,12 @@ import { Card } from "@/components/ui/card";
 import { useStats } from "@/hooks/useStats";
 import { useDailyGoalProgress } from "@/hooks/useDailyGoalProgress";
 import { useProfile } from "@/hooks/useProfile";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 
 const Stats = () => {
-  const { weeklyData, totalSessions, totalHours, weeklyAverage, achievements, loading } = useStats();
+  const { weeklyData, totalSessions, totalHours, weeklyAverage, achievements, weeklyGoalStats, loading } = useStats();
   const { profile } = useProfile();
   const { progress: dailyGoal, loading: loadingGoal } = useDailyGoalProgress();
   
@@ -41,13 +44,69 @@ const Stats = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <StatCard
-          title="Meta Diária"
-          value={`${dailyGoal.actualMinutes}/${dailyGoal.goalMinutes}m`}
-          icon={dailyGoal.isAbove ? TrendingUp : TrendingDown}
-          gradient={dailyGoal.isAbove}
-          description={getDailyGoalDescription()}
-        />
+        <Card className="p-6 transition-all duration-300 hover:shadow-lg">
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Meta Diária</p>
+            </div>
+            <div className="p-3 rounded-xl bg-primary/10">
+              <Target className="w-6 h-6 text-primary" />
+            </div>
+          </div>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">📅 Hoje</span>
+              <span className="font-bold">{dailyGoal.actualMinutes}m</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">🎯 Sua Meta</span>
+              <span className="font-bold">{dailyGoal.goalMinutes}m</span>
+            </div>
+            <Progress value={dailyGoal.percentageProgress} className="h-2" />
+            <p className={cn(
+              "text-sm text-center font-medium",
+              dailyGoal.isAbove ? "text-green-600" : "text-orange-600"
+            )}>
+              {dailyGoal.isAbove 
+                ? `✅ Meta atingida! +${dailyGoal.percentageProgress - 100}%`
+                : `🔻 Faltam ${dailyGoal.goalMinutes - dailyGoal.actualMinutes} minutos`
+              }
+            </p>
+          </div>
+      </Card>
+
+      {/* Weekly Summary Card */}
+      <Card className="p-6 bg-gradient-to-br from-primary/5 to-accent/5">
+        <h3 className="text-lg font-semibold mb-4">📊 Resumo da Semana</h3>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">⏱️ Total trabalhado</span>
+            <span className="font-bold">
+              {weeklyGoalStats.weeklyTotalMinutes} min ({(weeklyGoalStats.weeklyTotalMinutes / 60).toFixed(1)}h)
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">🎯 Meta da semana</span>
+            <span className="font-bold">{weeklyGoalStats.weeklyGoalMinutes} min</span>
+          </div>
+          <Separator />
+          <div className="flex items-center justify-between text-lg">
+            <span className="font-semibold">📈 Produtividade</span>
+            <span className={cn(
+              "font-bold",
+              weeklyGoalStats.weeklyProductivityPercentage >= 0 ? "text-green-600" : "text-orange-600"
+            )}>
+              {weeklyGoalStats.weeklyProductivityPercentage >= 0 ? '+' : ''}{weeklyGoalStats.weeklyProductivityPercentage}%
+            </span>
+          </div>
+          <p className="text-sm text-center text-muted-foreground mt-4">
+            {weeklyGoalStats.weeklyProductivityPercentage >= 0 
+              ? "Você está arrasando! Continue assim! 💪"
+              : "Pequenos passos todos os dias fazem diferença! 🌱"
+            }
+          </p>
+        </div>
+      </Card>
         <StatCard
           title="Média Semanal"
           value={`${weeklyAverage}h`}

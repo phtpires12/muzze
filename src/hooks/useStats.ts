@@ -7,6 +7,12 @@ interface WeeklyData {
   hours: number;
 }
 
+interface WeeklyGoalStats {
+  weeklyTotalMinutes: number;
+  weeklyGoalMinutes: number;
+  weeklyProductivityPercentage: number;
+}
+
 interface Achievement {
   badge: string;
   title: string;
@@ -19,6 +25,11 @@ export const useStats = () => {
   const [totalHours, setTotalHours] = useState(0);
   const [weeklyAverage, setWeeklyAverage] = useState(0);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [weeklyGoalStats, setWeeklyGoalStats] = useState<WeeklyGoalStats>({
+    weeklyTotalMinutes: 0,
+    weeklyGoalMinutes: 0,
+    weeklyProductivityPercentage: 0,
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -85,6 +96,31 @@ export const useStats = () => {
       const weekTotal = weekData.reduce((sum, d) => sum + d.hours, 0);
       setWeeklyAverage(Math.round(weekTotal * 10) / 10);
 
+      // Calcular estatísticas de meta semanal
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('daily_goal_minutes')
+        .eq('user_id', user.id)
+        .single();
+
+      const dailyGoalMinutes = profile?.daily_goal_minutes || 60;
+      const weeklyGoalMinutes = dailyGoalMinutes * 7;
+      
+      const weeklyTotalSeconds = stageTimes?.reduce(
+        (sum, st) => sum + (st.duration_seconds || 0), 0
+      ) || 0;
+      const weeklyTotalMinutes = Math.floor(weeklyTotalSeconds / 60);
+
+      const weeklyProductivityPercentage = weeklyGoalMinutes > 0
+        ? Math.round(((weeklyTotalMinutes - weeklyGoalMinutes) / weeklyGoalMinutes) * 100)
+        : 0;
+
+      setWeeklyGoalStats({
+        weeklyTotalMinutes,
+        weeklyGoalMinutes,
+        weeklyProductivityPercentage,
+      });
+
       // Buscar conquistas do gamification
       const stats = getUserStats();
       const userAchievements: Achievement[] = [];
@@ -132,6 +168,7 @@ export const useStats = () => {
     totalHours,
     weeklyAverage,
     achievements,
+    weeklyGoalStats,
     loading,
     refetch: fetchStats
   };
