@@ -3,13 +3,15 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Plus, ChevronLeft, ChevronRight, Lightbulb, Filter, Trash2 } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, Lightbulb, Filter } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useDeviceType } from "@/hooks/useDeviceType";
+import { CalendarDay } from "@/components/calendar/CalendarDay";
+import { DayContentModal } from "@/components/calendar/DayContentModal";
 
 interface Script {
   id: string;
@@ -25,6 +27,7 @@ const CalendarioEditorial = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const deviceType = useDeviceType();
   const isIdeationMode = searchParams.get("mode") === "ideation";
   
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
@@ -33,6 +36,8 @@ const CalendarioEditorial = () => {
   const [draggedScript, setDraggedScript] = useState<Script | null>(null);
   const [dragOverDate, setDragOverDate] = useState<string | null>(null);
   const [contentTypeFilter, setContentTypeFilter] = useState<string>("all");
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
     fetchScripts();
@@ -140,18 +145,26 @@ const CalendarioEditorial = () => {
     }
   };
 
+  const handleDayClick = (date: Date, scripts: Script[]) => {
+    setSelectedDate(date);
+    setModalOpen(true);
+  };
+
+  const handleAddScript = (date: Date) => {
+    const publishDate = format(date, "yyyy-MM-dd");
+    navigate(`/session?stage=idea&publishDate=${publishDate}`);
+  };
+
   const handleDeleteScript = async (e: React.MouseEvent, scriptId: string) => {
-    e.stopPropagation(); // Prevent opening the script
+    e.stopPropagation();
     
     const scriptToDelete = scripts.find(s => s.id === scriptId);
     if (!scriptToDelete) return;
 
-    // Optimistically remove from UI
     setScripts(scripts.filter(s => s.id !== scriptId));
     
     let undoTimeout: NodeJS.Timeout;
     
-    // Show undo toast with action element
     toast({
       title: "Roteiro excluído",
       description: "O roteiro foi removido.",
@@ -175,7 +188,6 @@ const CalendarioEditorial = () => {
       ),
     });
 
-    // Delete after 5 seconds if not undone
     undoTimeout = setTimeout(async () => {
       try {
         const { error } = await supabase
@@ -186,7 +198,6 @@ const CalendarioEditorial = () => {
         if (error) throw error;
       } catch (error) {
         console.error('Error deleting script:', error);
-        // Restore on error
         setScripts(prev => [...prev, scriptToDelete].sort((a, b) => 
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         ));
@@ -304,86 +315,26 @@ const CalendarioEditorial = () => {
                   const dayScripts = getScriptsForDate(day);
                   const isCurrentMonth = isSameMonth(day, currentDate);
                   const isToday = isSameDay(day, new Date());
-
-                  const isDragOver = dragOverDate === format(day, "yyyy-MM-dd");
-                  const [isHovered, setIsHovered] = useState(false);
                   
                   return (
-                    <div
-                      key={idx}
-                      className={`group relative min-h-[120px] border-r border-b border-border p-2 transition-all ${
-                        !isCurrentMonth ? "bg-muted/10" : "bg-card"
-                      } ${idx % 7 === 6 ? "border-r-0" : ""} ${
-                        isDragOver ? "bg-primary/20 ring-2 ring-primary ring-inset shadow-lg" : ""
-                      }`}
-                      onDragOver={(e) => handleDragOver(e, day)}
-                      onDragLeave={handleDragLeave}
-                      onDrop={(e) => handleDrop(e, day)}
-                      onMouseEnter={() => setIsHovered(true)}
-                      onMouseLeave={() => setIsHovered(false)}
-                    >
-                      <div className="flex justify-between items-start">
-                        <div className={`text-sm font-medium mb-1 ${
-                          !isCurrentMonth ? "text-muted-foreground" : isToday ? "text-primary" : "text-foreground"
-                        }`}>
-                          {format(day, "d")}
-                        </div>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className={`h-6 w-6 transition-opacity ${
-                            isHovered ? "opacity-100" : "opacity-0"
-                          }`}
-                          onClick={() => {
-                            const publishDate = format(day, "yyyy-MM-dd");
-                            navigate(`/session?stage=idea&publishDate=${publishDate}`);
-                          }}
-                        >
-                          <Plus className="w-4 h-4" />
-                        </Button>
-                      </div>
-                      
-                      <div className="space-y-1">
-                        {dayScripts.slice(0, 3).map((script) => (
-                          <div
-                            key={script.id}
-                            draggable
-                            onDragStart={(e) => handleDragStart(e, script)}
-                            className={`group relative text-xs p-2 rounded-lg bg-card/80 border border-border/50 cursor-move hover:bg-card hover:border-border hover:shadow-md transition-all ${
-                              draggedScript?.id === script.id ? "opacity-50" : ""
-                            }`}
-                            onClick={() => handleViewScript(script.id)}
-                          >
-                            <button
-                              onClick={(e) => handleDeleteScript(e, script.id)}
-                              className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity bg-destructive/90 hover:bg-destructive text-destructive-foreground rounded p-1 z-10"
-                              title="Excluir roteiro"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </button>
-                            <div className="font-semibold truncate mb-1.5 text-foreground">
-                              {script.title}
-                            </div>
-                            <div className="flex flex-wrap gap-1">
-                              {script.content_type && (
-                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                                  {script.content_type}
-                                </Badge>
-                              )}
-                              {script.shot_list && script.shot_list.length > 0 && (
-                                <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                                  {script.shot_list.length} shots
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                        {dayScripts.length > 3 && (
-                          <div className="text-xs text-muted-foreground pl-1">
-                            +{dayScripts.length - 3} mais
-                          </div>
-                        )}
-                      </div>
+                    <div key={idx} className={idx % 7 === 6 ? "" : ""}>
+                      <CalendarDay
+                        day={day}
+                        scripts={dayScripts}
+                        isCurrentMonth={isCurrentMonth}
+                        isToday={isToday}
+                        compact={deviceType === "mobile" || deviceType === "tablet"}
+                        onDayClick={handleDayClick}
+                        onAddScript={handleAddScript}
+                        onDragStart={handleDragStart}
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                        onDrop={handleDrop}
+                        onViewScript={handleViewScript}
+                        onDeleteScript={handleDeleteScript}
+                        draggedScript={draggedScript}
+                        dragOverDate={dragOverDate}
+                      />
                     </div>
                   );
                 })}
@@ -416,75 +367,27 @@ const CalendarioEditorial = () => {
               <div className="grid grid-cols-7">
                 {weekDays.map((day) => {
                   const dayScripts = getScriptsForDate(day);
-
-                  const isDragOver = dragOverDate === format(day, "yyyy-MM-dd");
-                  const [isHovered, setIsHovered] = useState(false);
+                  const isToday = isSameDay(day, new Date());
                   
                   return (
-                    <div
+                    <CalendarDay
                       key={day.toISOString()}
-                      className={`group relative min-h-[400px] border-r border-border last:border-r-0 p-3 transition-all ${
-                        isDragOver ? "bg-primary/20 ring-2 ring-primary ring-inset shadow-lg" : ""
-                      }`}
-                      onDragOver={(e) => handleDragOver(e, day)}
+                      day={day}
+                      scripts={dayScripts}
+                      isCurrentMonth={true}
+                      isToday={isToday}
+                      compact={deviceType === "mobile" || deviceType === "tablet"}
+                      onDayClick={handleDayClick}
+                      onAddScript={handleAddScript}
+                      onDragStart={handleDragStart}
+                      onDragOver={handleDragOver}
                       onDragLeave={handleDragLeave}
-                      onDrop={(e) => handleDrop(e, day)}
-                      onMouseEnter={() => setIsHovered(true)}
-                      onMouseLeave={() => setIsHovered(false)}
-                    >
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className={`absolute top-2 right-2 h-7 w-7 transition-opacity z-10 ${
-                          isHovered ? "opacity-100" : "opacity-0"
-                        }`}
-                        onClick={() => {
-                          const publishDate = format(day, "yyyy-MM-dd");
-                          navigate(`/session?stage=idea&publishDate=${publishDate}`);
-                        }}
-                      >
-                        <Plus className="w-4 h-4" />
-                      </Button>
-                      <div className="space-y-2">
-                        {dayScripts.map((script) => (
-                          <div
-                            key={script.id}
-                            draggable
-                            onDragStart={(e) => handleDragStart(e, script)}
-                            className={`group relative p-3 rounded-lg bg-card border border-border cursor-move hover:border-primary/50 hover:shadow-md transition-all ${
-                              draggedScript?.id === script.id ? "opacity-50" : ""
-                            }`}
-                            onClick={() => handleViewScript(script.id)}
-                          >
-                            <button
-                              onClick={(e) => handleDeleteScript(e, script.id)}
-                              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-destructive/90 hover:bg-destructive text-destructive-foreground rounded p-1.5 z-10"
-                              title="Excluir roteiro"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                            <div className="font-semibold text-sm mb-2 pr-8">{script.title}</div>
-                            <div className="flex flex-wrap gap-1.5 mb-2">
-                              {script.content_type && (
-                                <Badge variant="secondary" className="text-xs">
-                                  {script.content_type}
-                                </Badge>
-                              )}
-                              {script.shot_list && script.shot_list.length > 0 && (
-                                <Badge variant="outline" className="text-xs">
-                                  {script.shot_list.length} shots
-                                </Badge>
-                              )}
-                            </div>
-                            {script.content && (
-                              <div className="text-xs text-muted-foreground line-clamp-2">
-                                {script.content}
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                      onDrop={handleDrop}
+                      onViewScript={handleViewScript}
+                      onDeleteScript={handleDeleteScript}
+                      draggedScript={draggedScript}
+                      dragOverDate={dragOverDate}
+                    />
                   );
                 })}
               </div>
@@ -492,6 +395,15 @@ const CalendarioEditorial = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      <DayContentModal
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        date={selectedDate}
+        scripts={selectedDate ? getScriptsForDate(selectedDate) : []}
+        onViewScript={handleViewScript}
+        onAddScript={handleAddScript}
+      />
     </div>
   );
 };
