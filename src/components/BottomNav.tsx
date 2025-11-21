@@ -19,7 +19,7 @@ const navigation = [
   { name: "Home", href: "/", icon: Home },
   { name: "Calendário", href: "/calendario", icon: Calendar },
   { name: "Stats", href: "/stats", icon: BarChart3 },
-  { name: "Ajustes", href: "/settings", icon: Settings },
+  { name: "Ajustes", href: "/profile", icon: Settings },
 ];
 
 const stageIcons = {
