@@ -19,6 +19,19 @@ export const POINTS = {
   HOUR_MILESTONE: 75,
 };
 
+// XP System Constants
+export const XP_PER_MINUTE = 2;
+export const FREEZE_COST_MULTIPLIER = 2;
+
+export function calculateXPFromMinutes(minutes: number): number {
+  return Math.floor(minutes * XP_PER_MINUTE);
+}
+
+export function calculateFreezeCost(minStreakMinutes: number = 20): number {
+  const dailyXP = calculateXPFromMinutes(minStreakMinutes);
+  return dailyXP * FREEZE_COST_MULTIPLIER;
+}
+
 export const LEVELS = [
   { level: 1, name: "Iniciante", minPoints: 0, color: "hsl(240 5.9% 64%)" },
   { level: 2, name: "Aprendiz", minPoints: 500, color: "hsl(142 76% 36%)" },

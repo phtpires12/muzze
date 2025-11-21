@@ -1,26 +1,31 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useProfile } from "@/hooks/useProfile";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Flame, X, Share2, ChevronLeft, ChevronRight, Shield, Check } from "lucide-react";
-import { toast } from "sonner";
+import { X, Share2, ChevronLeft, ChevronRight, Flame, Check, Snowflake, Gem, Info } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isFuture, isToday, getDaysInMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { toast } from "sonner";
+import { calculateXPFromMinutes, calculateFreezeCost } from "@/lib/gamification";
+import { useProfile } from "@/hooks/useProfile";
 
 const Ofensiva = () => {
   const navigate = useNavigate();
-  const { profile } = useProfile();
-  const [streakData, setStreakData] = useState<any>(null);
+  const { profile, loading: profileLoading } = useProfile();
+  const [streakCount, setStreakCount] = useState(0);
+  const [longestStreak, setLongestStreak] = useState(0);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [daysWithProgress, setDaysWithProgress] = useState<Date[]>([]);
+  const [freezeDays, setFreezeDays] = useState<Date[]>([]);
+  const [freezesUsedThisMonth, setFreezesUsedThisMonth] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchStreakData();
     fetchMonthProgress();
+    fetchFreezesUsedThisMonth();
   }, [currentMonth]);
 
   const fetchStreakData = async () => {
@@ -33,16 +38,21 @@ const Ofensiva = () => {
       .eq('user_id', user.id)
       .maybeSingle();
 
-    setStreakData(data);
+    if (data) {
+      setStreakCount(data.current_streak ?? 0);
+      setLongestStreak(data.longest_streak ?? 0);
+    }
+    setLoading(false);
   };
 
   const fetchMonthProgress = async () => {
-    setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
     const monthStart = startOfMonth(currentMonth);
     const monthEnd = endOfMonth(currentMonth);
+
+    const minMinutes = profile?.min_streak_minutes || 20;
 
     const { data: sessions } = await supabase
       .from('stage_times')
@@ -51,28 +61,42 @@ const Ofensiva = () => {
       .gte('started_at', monthStart.toISOString())
       .lte('started_at', monthEnd.toISOString());
 
-    if (sessions) {
-      // Agrupar por dia e filtrar dias que cumpriram a meta
-      const minMinutes = profile?.min_streak_minutes || 20;
-      const dayMap = new Map<string, number>();
+    // Group sessions by day and check if they meet minimum minutes
+    const dayMap = new Map<string, number>();
+    sessions?.forEach(session => {
+      const day = format(new Date(session.started_at!), 'yyyy-MM-dd');
+      const minutes = (session.duration_seconds || 0) / 60;
+      dayMap.set(day, (dayMap.get(day) || 0) + minutes);
+    });
 
-      sessions.forEach(session => {
-        const day = format(new Date(session.started_at), 'yyyy-MM-dd');
-        const current = dayMap.get(day) || 0;
-        dayMap.set(day, current + (session.duration_seconds || 0));
-      });
+    const completedDays: Date[] = [];
+    dayMap.forEach((minutes, dayStr) => {
+      if (minutes >= minMinutes) {
+        completedDays.push(new Date(dayStr));
+      }
+    });
 
-      const days: Date[] = [];
-      dayMap.forEach((totalSeconds, dateStr) => {
-        const minutes = totalSeconds / 60;
-        if (minutes >= minMinutes) {
-          days.push(new Date(dateStr));
-        }
-      });
+    setDaysWithProgress(completedDays);
+  };
 
-      setDaysWithProgress(days);
-    }
-    setLoading(false);
+  const fetchFreezesUsedThisMonth = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const monthStart = startOfMonth(currentMonth);
+    const monthEnd = endOfMonth(currentMonth);
+
+    const { data: freezeUsage } = await supabase
+      .from('streak_freeze_usage')
+      .select('used_at')
+      .eq('user_id', user.id)
+      .gte('used_at', monthStart.toISOString())
+      .lte('used_at', monthEnd.toISOString());
+
+    setFreezesUsedThisMonth(freezeUsage?.length || 0);
+
+    const freezeDates = freezeUsage?.map(f => new Date(f.used_at!)) || [];
+    setFreezeDays(freezeDates);
   };
 
   const handlePreviousMonth = () => {
@@ -94,9 +118,46 @@ const Ofensiva = () => {
   };
 
   const handleShare = () => {
-    toast.success("Em breve!", {
+    toast("Em breve!", {
       description: "A funcionalidade de compartilhamento estará disponível em breve.",
     });
+  };
+
+  const handleBuyFreeze = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user || !profile) return;
+
+    const freezeCost = calculateFreezeCost(profile.min_streak_minutes || 20);
+    const userXP = profile.xp_points || 0;
+
+    if (userXP < freezeCost) {
+      toast.error("XP insuficiente", {
+        description: `Você precisa de ${freezeCost} XP para comprar um bloqueio.`
+      });
+      return;
+    }
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        xp_points: userXP - freezeCost,
+        streak_freezes: (profile.streak_freezes || 0) + 1
+      })
+      .eq('user_id', user.id);
+
+    if (error) {
+      toast.error("Erro ao comprar bloqueio", {
+        description: error.message
+      });
+      return;
+    }
+
+    toast.success("Bloqueio adquirido!", {
+      description: "Sua ofensiva está protegida por mais 1 dia."
+    });
+
+    // Refresh profile data
+    window.location.reload();
   };
 
   const getMotivationalMessage = (streak: number) => {
@@ -107,6 +168,31 @@ const Ofensiva = () => {
     if (streak < 100) return `Você é imparável! ${streak} dias seguidos!`;
     return `Lendário! ${streak} dias de ofensiva!`;
   };
+
+  const MILESTONES = [7, 14, 30, 50, 75, 100, 150, 200, 250, 300, 365, 500, 1000];
+
+  const getCurrentMilestones = (streak: number) => {
+    let previous = 0;
+    let next = MILESTONES[0];
+
+    for (let i = 0; i < MILESTONES.length; i++) {
+      if (streak >= MILESTONES[i]) {
+        previous = MILESTONES[i];
+        next = MILESTONES[i + 1] || previous + 100;
+      } else {
+        next = MILESTONES[i];
+        break;
+      }
+    }
+
+    const progress = previous === 0
+      ? (streak / next) * 100
+      : ((streak - previous) / (next - previous)) * 100;
+
+    return { previous, next, progress: Math.min(progress, 100) };
+  };
+
+  const milestones = getCurrentMilestones(streakCount);
 
   const canGoNext = currentMonth.getMonth() < new Date().getMonth() || 
                     currentMonth.getFullYear() < new Date().getFullYear();
@@ -129,7 +215,9 @@ const Ofensiva = () => {
   const firstDayOfWeek = startOfMonth(currentMonth).getDay();
   const emptyDays = Array(firstDayOfWeek).fill(null);
 
-  const streakCount = streakData?.current_streak ?? 0;
+  if (loading || profileLoading) {
+    return <div className="min-h-screen bg-background flex items-center justify-center">Carregando...</div>;
+  }
 
   return (
     <div className="min-h-screen bg-background pb-8">
@@ -249,11 +337,48 @@ const Ofensiva = () => {
           </Card>
 
           <Card className="p-4 bg-card/50 border border-border/50 rounded-2xl text-center">
-            <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
-              <Shield className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center">
+              <Snowflake className="w-5 h-5 text-white" />
             </div>
-            <div className="text-2xl font-bold text-foreground">0</div>
+            <div className="text-2xl font-bold text-foreground">{freezesUsedThisMonth}</div>
             <div className="text-xs text-muted-foreground">Bloqueios utilizados</div>
+          </Card>
+        </div>
+
+        {/* Meta de Ofensiva */}
+        <div className="space-y-4">
+          <h2 className="text-2xl font-bold text-foreground">Meta de ofensiva</h2>
+
+          <Card className="p-6 bg-card/50 border border-border/50 rounded-2xl">
+            <div className="flex items-center justify-between mb-2">
+              {/* Previous milestone */}
+              <div className="flex items-center gap-2">
+                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">{milestones.previous}</span>
+                </div>
+              </div>
+
+              {/* Progress bar */}
+              <div className="flex-1 mx-4">
+                <div className="h-3 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-orange-400 to-orange-600 transition-all duration-500"
+                    style={{ width: `${milestones.progress}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Next milestone */}
+              <div className="flex items-center gap-2">
+                <div className="w-12 h-12 rounded-lg border-2 border-muted flex items-center justify-center">
+                  <span className="text-muted-foreground font-bold text-sm">{milestones.next}</span>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-xs text-muted-foreground text-center mt-2">
+              Faltam {milestones.next - streakCount} dias para atingir {milestones.next}
+            </p>
           </Card>
         </div>
 
@@ -279,6 +404,7 @@ const Ofensiva = () => {
             {monthDays.map(day => {
               const dayNumber = format(day, 'd');
               const hasProgress = daysWithProgress.some(d => isSameDay(d, day));
+              const freezeUsed = freezeDays.some(d => isSameDay(d, day));
               const isDayFuture = isFuture(day) && !isToday(day);
               const isDayToday = isToday(day);
 
@@ -289,6 +415,19 @@ const Ofensiva = () => {
                     className="aspect-square flex items-center justify-center text-sm text-muted-foreground/40"
                   >
                     {dayNumber}
+                  </div>
+                );
+              }
+
+              if (freezeUsed && !hasProgress) {
+                return (
+                  <div key={day.toString()} className="relative aspect-square flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center">
+                      <Snowflake className="w-5 h-5 text-white" />
+                    </div>
+                    <div className="absolute -bottom-1 text-xs text-muted-foreground">
+                      {dayNumber}
+                    </div>
                   </div>
                 );
               }
@@ -319,6 +458,78 @@ const Ofensiva = () => {
             })}
           </div>
         </Card>
+
+        {/* Proteja a sua Ofensiva (Loja) */}
+        <div className="space-y-4">
+          <h2 className="text-2xl font-bold text-foreground">Proteja a sua ofensiva</h2>
+
+          {/* XP Balance */}
+          <Card className="p-4 bg-card/50 border border-border/50 rounded-2xl">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
+                  <Gem className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Seu saldo de XP</p>
+                  <p className="text-lg font-bold text-foreground">{profile?.xp_points || 0} XP</p>
+                </div>
+              </div>
+
+              <div className="text-right">
+                <p className="text-xs text-muted-foreground">Bloqueios disponíveis</p>
+                <p className="text-lg font-bold text-cyan-500">{profile?.streak_freezes || 0}</p>
+              </div>
+            </div>
+          </Card>
+
+          {/* Freeze Purchase Card */}
+          <Card className="p-6 bg-card/50 border border-border/50 rounded-2xl">
+            <div className="flex items-center gap-4">
+              {/* Freeze icon */}
+              <div className="relative">
+                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center shadow-lg">
+                  <Snowflake className="w-10 h-10 text-white" />
+                </div>
+              </div>
+
+              {/* Info and button */}
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-foreground mb-1">Bloqueio de ofensiva</h3>
+                <p className="text-xs text-muted-foreground mb-3">
+                  Proteja sua ofensiva por 1 dia caso você não consiga cumprir sua meta
+                </p>
+
+                <Button
+                  onClick={handleBuyFreeze}
+                  disabled={!profile || (profile.xp_points || 0) < calculateFreezeCost(profile?.min_streak_minutes || 20)}
+                  className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-bold"
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    <span>COMPRAR POR</span>
+                    <Gem className="w-4 h-4" />
+                    <span>{calculateFreezeCost(profile?.min_streak_minutes || 20)}</span>
+                  </div>
+                </Button>
+
+                {profile && (profile.xp_points || 0) < calculateFreezeCost(profile.min_streak_minutes || 20) && (
+                  <p className="text-xs text-destructive mt-2 text-center">
+                    Você precisa de mais {calculateFreezeCost(profile.min_streak_minutes || 20) - (profile.xp_points || 0)} XP
+                  </p>
+                )}
+              </div>
+            </div>
+          </Card>
+
+          {/* Info box */}
+          <div className="flex items-start gap-2 p-3 bg-muted/50 rounded-lg">
+            <Info className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+            <p className="text-xs text-muted-foreground">
+              Os bloqueios são usados automaticamente quando você não cumpre sua meta diária,
+              preservando sua ofensiva. Você ganha 2 XP por minuto de uso da plataforma.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
