@@ -26,6 +26,7 @@ import TermsOfUse from "./pages/TermsOfUse";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import NotFound from "./pages/NotFound";
 import Levels from "./pages/Levels";
+import Ofensiva from "./pages/Ofensiva";
 import { LevelUpModal } from "./components/LevelUpModal";
 import { TrophyUnlockedModal } from "./components/TrophyUnlockedModal";
 
@@ -165,6 +166,7 @@ const App = () => (
           <Route path="/terms" element={<ProtectedRoute><Layout><TermsOfUse /></Layout></ProtectedRoute>} />
           <Route path="/privacy" element={<ProtectedRoute><Layout><PrivacyPolicy /></Layout></ProtectedRoute>} />
           <Route path="/levels" element={<ProtectedRoute><Levels /></ProtectedRoute>} />
+          <Route path="/ofensiva" element={<ProtectedRoute><Ofensiva /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
