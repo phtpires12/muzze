@@ -13,7 +13,8 @@ import {
   Video, 
   Scissors, 
   CheckCircle,
-  ArrowLeft 
+  ArrowLeft,
+  Home
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -406,7 +407,7 @@ const Session = () => {
                         className="h-14 flex flex-col items-center justify-center gap-1 hover:border-red-500/50 hover:bg-red-500/10"
                       >
                         <Video className="w-5 h-5 text-red-500" />
-                        <span className="text-xs font-medium">Gravação</span>
+                        <span className="text-xs font-medium">Etapa Anterior</span>
                       </Button>
                       
                       <Button
@@ -414,8 +415,8 @@ const Session = () => {
                         variant="outline"
                         className="h-14 flex flex-col items-center justify-center gap-1 hover:border-primary/50 hover:bg-accent/10"
                       >
-                        <ArrowLeft className="w-5 h-5" />
-                        <span className="text-xs font-medium">Dashboard</span>
+                        <Home className="w-5 h-5" />
+                        <span className="text-xs font-medium">Home</span>
                       </Button>
                     </div>
                   </div>
