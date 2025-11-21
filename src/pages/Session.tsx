@@ -388,11 +388,37 @@ const Session = () => {
               {/* Stage Selection OR Editing Checklist */}
               {session.stage === "edit" ? (
                 // Checklist para etapa de Edição
-                <div className="space-y-3">
+                <div className="space-y-4">
                   <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
                     Etapas de Edição
                   </h3>
                   <EditingChecklist onAllCompleted={handleEditingCompleted} />
+                  
+                  {/* Botões de Navegação */}
+                  <div className="pt-4 border-t border-border/20">
+                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                      Navegação
+                    </h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Button
+                        onClick={() => changeStage("record")}
+                        variant="outline"
+                        className="h-14 flex flex-col items-center justify-center gap-1 hover:border-red-500/50 hover:bg-red-500/10"
+                      >
+                        <Video className="w-5 h-5 text-red-500" />
+                        <span className="text-xs font-medium">Gravação</span>
+                      </Button>
+                      
+                      <Button
+                        onClick={() => navigate("/")}
+                        variant="outline"
+                        className="h-14 flex flex-col items-center justify-center gap-1 hover:border-primary/50 hover:bg-accent/10"
+                      >
+                        <ArrowLeft className="w-5 h-5" />
+                        <span className="text-xs font-medium">Dashboard</span>
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               ) : (
                 // Botões de mudança de etapa para outras etapas
