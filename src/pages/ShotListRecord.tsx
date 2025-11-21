@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Plus, Filter } from "lucide-react";
+import { ArrowLeft, Plus, Filter, ArrowRight } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -23,7 +23,8 @@ const ShotListRecord = () => {
 
   const [shots, setShots] = useState<ShotItem[]>([]);
   const [scriptTitle, setScriptTitle] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
+  const [saveTimeoutId, setSaveTimeoutId] = useState<NodeJS.Timeout | null>(null);
   const [uploadingImages, setUploadingImages] = useState<Set<string>>(new Set());
   const [galleryOpenShotId, setGalleryOpenShotId] = useState<string | null>(null);
 
@@ -50,6 +51,7 @@ const ShotListRecord = () => {
   }, [scriptId]);
 
   // Timer effect
+  // Timer effect
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (timerRunning) {
@@ -59,6 +61,50 @@ const ShotListRecord = () => {
     }
     return () => clearInterval(interval);
   }, [timerRunning]);
+
+  // Auto-save effect (debounced)
+  useEffect(() => {
+    // Não fazer auto-save no primeiro render ou se não há shots
+    if (shots.length === 0 || !scriptId) return;
+    
+    // Limpar timeout anterior se existir
+    if (saveTimeoutId) {
+      clearTimeout(saveTimeoutId);
+    }
+    
+    // Marcar como "não salvo"
+    setAutoSaveStatus('unsaved');
+    
+    // Agendar salvamento para 3 segundos depois
+    const timeout = setTimeout(async () => {
+      setAutoSaveStatus('saving');
+      
+      try {
+        const { error } = await supabase
+          .from('scripts')
+          .update({ shot_list: shots as any })
+          .eq('id', scriptId);
+        
+        if (error) throw error;
+        
+        setAutoSaveStatus('saved');
+      } catch (error) {
+        console.error('Auto-save failed:', error);
+        setAutoSaveStatus('unsaved');
+        toast({
+          title: "Erro ao salvar automaticamente",
+          description: "Suas alterações não foram salvas. Tente novamente.",
+          variant: "destructive",
+        });
+      }
+    }, 3000);
+    
+    setSaveTimeoutId(timeout);
+    
+    return () => {
+      if (timeout) clearTimeout(timeout);
+    };
+  }, [shots]);
 
   const loadShotList = async () => {
     try {
@@ -101,33 +147,88 @@ const ShotListRecord = () => {
     }
   };
 
-  const handleSave = async () => {
-    if (!scriptId) return;
-    
-    setIsSaving(true);
-    try {
-      const { error } = await supabase
-        .from('scripts')
-        .update({ shot_list: shots as any })
-        .eq('id', scriptId);
-
-
-      if (error) throw error;
-
+  const handleAdvanceToEdit = async () => {
+    // Se ainda está salvando, aguardar
+    if (autoSaveStatus === 'saving') {
       toast({
-        title: "Shot List salva!",
-        description: "Suas alterações foram salvas com sucesso",
+        title: "Aguarde...",
+        description: "Salvando alterações antes de avançar",
       });
-    } catch (error) {
-      console.error('Error saving shot list:', error);
-      toast({
-        title: "Erro ao salvar",
-        description: "Não foi possível salvar a Shot List",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSaving(false);
+      return;
     }
+    
+    // Se há mudanças não salvas, salvar primeiro
+    if (autoSaveStatus === 'unsaved') {
+      setAutoSaveStatus('saving');
+      
+      try {
+        const { error } = await supabase
+          .from('scripts')
+          .update({ shot_list: shots as any })
+          .eq('id', scriptId);
+        
+        if (error) throw error;
+        
+        setAutoSaveStatus('saved');
+        toast({
+          title: "Progresso salvo!",
+          description: "Avançando para a etapa de edição...",
+        });
+        
+        // Pequeno delay para feedback visual
+        setTimeout(() => {
+          navigate(`/session?stage=edit&scriptId=${scriptId}`);
+        }, 500);
+        
+      } catch (error) {
+        console.error('Error saving before advancing:', error);
+        toast({
+          title: "Erro ao salvar",
+          description: "Não foi possível salvar antes de avançar",
+          variant: "destructive",
+        });
+        setAutoSaveStatus('unsaved');
+      }
+    } else {
+      // Já está salvo, avançar diretamente
+      navigate(`/session?stage=edit&scriptId=${scriptId}`);
+    }
+  };
+
+  // SaveStatusIndicator Component
+  const SaveStatusIndicator = ({ status }: { status: 'saved' | 'saving' | 'unsaved' }) => {
+    const statusConfig = {
+      saved: {
+        color: 'bg-green-500',
+        text: 'Salvo',
+        pulse: false
+      },
+      saving: {
+        color: 'bg-yellow-500',
+        text: 'Salvando...',
+        pulse: true
+      },
+      unsaved: {
+        color: 'bg-red-500',
+        text: 'Não salvo',
+        pulse: true
+      }
+    };
+    
+    const config = statusConfig[status];
+    
+    return (
+      <div className="flex items-center gap-2">
+        <div className={cn(
+          "w-2.5 h-2.5 rounded-full",
+          config.color,
+          config.pulse && "animate-pulse"
+        )} />
+        <span className="text-xs text-muted-foreground hidden sm:inline">
+          {config.text}
+        </span>
+      </div>
+    );
   };
 
   const splitShotAtCursor = (shotId: string, cursorPosition: number) => {
@@ -275,14 +376,19 @@ const ShotListRecord = () => {
               <h1 className="text-lg font-bold text-foreground">Gravação</h1>
               <p className="text-xs text-muted-foreground truncate">{scriptTitle}</p>
             </div>
-            <Button
-              onClick={handleSave}
-              disabled={isSaving}
-              size="sm"
-              variant="outline"
-            >
-              {isSaving ? 'Salvando...' : 'Salvar'}
-            </Button>
+            
+            {/* Indicador de status + Botão de Edição */}
+            <div className="flex items-center gap-2">
+              <SaveStatusIndicator status={autoSaveStatus} />
+              <Button
+                onClick={handleAdvanceToEdit}
+                disabled={autoSaveStatus === 'saving'}
+                size="sm"
+                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+              >
+                Editar
+              </Button>
+            </div>
           </div>
 
           {/* Mobile Progress Card - Compacto */}
@@ -361,12 +467,19 @@ const ShotListRecord = () => {
               <p className="text-sm text-muted-foreground">{scriptTitle}</p>
             </div>
           </div>
-          <Button
-            onClick={handleSave}
-            disabled={isSaving}
-          >
-            {isSaving ? 'Salvando...' : 'Salvar Progresso'}
-          </Button>
+          
+          {/* Indicador de status + Botão de Edição */}
+          <div className="flex items-center gap-4">
+            <SaveStatusIndicator status={autoSaveStatus} />
+            <Button
+              onClick={handleAdvanceToEdit}
+              disabled={autoSaveStatus === 'saving'}
+              className="min-w-[160px] bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+            >
+              <ArrowRight className="w-4 h-4 mr-2" />
+              Avançar para Edição
+            </Button>
+          </div>
         </div>
 
         {/* Timer flutuante arrastável */}
