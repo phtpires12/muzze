@@ -5,11 +5,12 @@ import { Label } from "@/components/ui/label";
 import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { useTheme } from "next-themes";
 
 const Settings = () => {
   const navigate = useNavigate();
+  const { theme, setTheme } = useTheme();
   const [notifications, setNotifications] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -47,8 +48,8 @@ const Settings = () => {
               </Label>
               <Switch
                 id="dark-mode"
-                checked={darkMode}
-                onCheckedChange={setDarkMode}
+                checked={theme === "dark"}
+                onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
               />
             </div>
           </CardContent>
