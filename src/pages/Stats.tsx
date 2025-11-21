@@ -1,16 +1,18 @@
-import { Award, Target, Zap } from "lucide-react";
+import { Award, Target, Zap, TrendingUp, TrendingDown } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
 import { Card } from "@/components/ui/card";
 import { useStats } from "@/hooks/useStats";
 import { getUserStats } from "@/lib/gamification";
+import { useDailyGoalProgress } from "@/hooks/useDailyGoalProgress";
 
 const Stats = () => {
   const { weeklyData, totalSessions, totalHours, weeklyAverage, achievements, loading } = useStats();
   const gamificationStats = getUserStats();
+  const { progress: dailyGoal, loading: loadingGoal } = useDailyGoalProgress();
   
   const maxHours = Math.max(...weeklyData.map((d) => d.hours), 0.1);
 
-  if (loading) {
+  if (loading || loadingGoal) {
     return (
       <div className="p-8 space-y-8">
         <div>
@@ -21,6 +23,16 @@ const Stats = () => {
     );
   }
 
+  const getDailyGoalDescription = () => {
+    if (dailyGoal.isAbove) {
+      return `+${dailyGoal.percentageProgress}% acima da meta`;
+    } else if (dailyGoal.actualMinutes === 0) {
+      return "Comece sua sessão hoje";
+    } else {
+      return `${dailyGoal.percentageProgress}% da meta`;
+    }
+  };
+
   return (
     <div className="p-8 space-y-8">
       <div>
@@ -28,7 +40,14 @@ const Stats = () => {
         <p className="text-muted-foreground">Acompanhe seu progresso e conquistas</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <StatCard
+          title="Meta Diária"
+          value={`${dailyGoal.actualMinutes}/${dailyGoal.goalMinutes}m`}
+          icon={dailyGoal.isAbove ? TrendingUp : TrendingDown}
+          gradient={dailyGoal.isAbove}
+          description={getDailyGoalDescription()}
+        />
         <StatCard
           title="Média Semanal"
           value={`${weeklyAverage}h`}

@@ -378,8 +378,8 @@ export const useSession = () => {
         0
       );
 
-      // Check if day is fulfilled (at least min_streak_minutes AND met daily_goal_minutes)
-      const dayFulfilled = creativeMinutesToday >= minStreak && creativeMinutesToday >= dailyGoal;
+      // Check if day is fulfilled (25 min fixos para manter ofensiva)
+      const dayFulfilled = creativeMinutesToday >= 25;
 
       if (!dayFulfilled) {
         return { streakAchieved: false, creativeMinutesToday };
