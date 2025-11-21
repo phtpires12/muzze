@@ -323,10 +323,13 @@ const Index = () => {
       {/* Header */}
       <header className="px-6 pt-8 pb-4">
         <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2 text-foreground">
+          <button 
+            onClick={() => navigate('/ofensiva')}
+            className="flex items-center gap-2 text-foreground hover:text-accent transition-colors active:scale-95"
+          >
             <Flame className="w-5 h-5 text-accent" />
             <span className="font-semibold">{streakData?.current_streak ?? 0} dias</span>
-          </div>
+          </button>
           <div className="flex items-center gap-2 text-foreground">
             <Clock className="w-5 h-5 text-primary" />
             <span className="font-semibold">{weeklySessionsCount ?? 0} sessões</span>
