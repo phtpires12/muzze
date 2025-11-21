@@ -31,6 +31,7 @@ import { EditingChecklist } from "@/components/EditingChecklist";
 import { DraggableSessionTimer } from "@/components/DraggableSessionTimer";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useTimerPopup } from "@/hooks/useTimerPopup";
 
 const STAGES: { id: SessionStage; label: string; icon: any; color: string }[] = [
   { id: "idea" as SessionStage, label: "Ideia", icon: Lightbulb, color: "text-yellow-500" },
@@ -161,6 +162,27 @@ const Session = () => {
     await handleEnd();
   };
 
+  // Timer popup for editing stage - placed after handleEnd is defined
+  const currentStage = STAGES.find(s => s.id === session.stage);
+  const progress = session.targetSeconds 
+    ? Math.min(100, (session.elapsedSeconds / session.targetSeconds) * 100)
+    : 0;
+
+  const timerPopup = useTimerPopup({
+    enabled: session.stage === "edit",
+    stage: currentStage?.label || "Edição",
+    icon: "Scissors",
+    elapsedSeconds: session.elapsedSeconds,
+    targetSeconds: session.targetSeconds,
+    isPaused: session.isPaused,
+    isOvertime: session.isOvertime,
+    isActive: session.isActive,
+    progress,
+    onPause: pauseSession,
+    onResume: resumeSession,
+    onStop: handleEnd,
+  });
+
 
   if (!session.isActive) {
     return (
@@ -221,8 +243,7 @@ const Session = () => {
     );
   }
 
-  const currentStage = STAGES.find(s => s.id === session.stage)!;
-  const CurrentIcon = currentStage.icon;
+  const CurrentIcon = currentStage!.icon;
 
   // If stage is "record", show loading while fetching script
   if (session.stage === "record") {
@@ -297,9 +318,6 @@ const Session = () => {
     );
   }
 
-  const progress = session.targetSeconds 
-    ? Math.min(100, (session.elapsedSeconds / session.targetSeconds) * 100)
-    : 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-accent/10 via-background to-primary/10 p-6">
