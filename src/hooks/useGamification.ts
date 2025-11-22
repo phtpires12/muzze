@@ -140,7 +140,7 @@ export const useGamification = () => {
         unlocked: t.requirement(currentStats)
       })));
 
-      setStats({
+      const newStats = {
         totalXP: profile?.xp_points || 0,
         level: calculateLevelFromXP(profile?.xp_points || 0),
         streak: streak?.current_streak || 0,
@@ -149,7 +149,10 @@ export const useGamification = () => {
         ideasCreated: ideasCount || 0,
         trophies: unlockedTrophies,
         freezes: profile?.streak_freezes || 0,
-      });
+      };
+      
+      console.log('💾 Salvando no estado:', newStats);
+      setStats(newStats);
     } catch (error) {
       console.error('Error fetching gamification stats:', error);
     } finally {

@@ -14,7 +14,7 @@ const Stats = () => {
   const { weeklyData, totalSessions, totalHours, weeklyAverage, weeklyGoalStats, loading } = useStats();
   const { profile } = useProfile();
   const { progress: dailyGoal, loading: loadingGoal } = useDailyGoalProgress();
-  const { stats: gamificationStats } = useGamification();
+  const { stats: gamificationStats, loading: loadingGamification } = useGamification();
   
   // 🔍 DEBUG LOG TEMPORÁRIO
   console.log('📊 Stats useGamification:', gamificationStats);
@@ -99,7 +99,7 @@ const Stats = () => {
 
   const nextTrophies = getLockedTrophiesWithProgress();
 
-  if (loading || loadingGoal) {
+  if (loading || loadingGoal || loadingGamification) {
     return (
       <div className="p-8 space-y-8">
         <div>
