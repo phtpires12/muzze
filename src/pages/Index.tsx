@@ -307,6 +307,63 @@ const Index = () => {
   const totalHours = Math.floor(stats?.totalHours ?? 0);
   const totalMinutes = Math.round(((stats?.totalHours ?? 0) - totalHours) * 60);
 
+  const calculateTrophyProgress = (trophyId: string) => {
+    const scriptsCreated = stats?.scriptsCreated ?? 0;
+    const ideasCreated = stats?.ideasCreated ?? 0;
+    const totalHours = stats?.totalHours ?? 0;
+    const streak = stats?.streak ?? 0;
+
+    switch (trophyId) {
+      case 'first_script':
+        return { 
+          progress: Math.min((scriptsCreated / 1) * 100, 100),
+          text: `${scriptsCreated}/1 roteiro`
+        };
+      case 'scriptwriter':
+        return {
+          progress: Math.min((scriptsCreated / 10) * 100, 100),
+          text: `${scriptsCreated}/10 roteiros`
+        };
+      case 'first_idea':
+        return {
+          progress: Math.min((ideasCreated / 1) * 100, 100),
+          text: `${ideasCreated}/1 ideia`
+        };
+      case 'idea_machine':
+        return {
+          progress: Math.min((ideasCreated / 50) * 100, 100),
+          text: `${ideasCreated}/50 ideias`
+        };
+      case 'week_streak':
+        return {
+          progress: Math.min((streak / 7) * 100, 100),
+          text: `${streak}/7 dias`
+        };
+      case 'month_streak':
+        return {
+          progress: Math.min((streak / 30) * 100, 100),
+          text: `${streak}/30 dias`
+        };
+      case 'hour_creator':
+        return {
+          progress: Math.min((totalHours / 1) * 100, 100),
+          text: `${totalHours.toFixed(1)}/1 hora`
+        };
+      case 'ten_hours':
+        return {
+          progress: Math.min((totalHours / 10) * 100, 100),
+          text: `${totalHours.toFixed(1)}/10 horas`
+        };
+      case 'hundred_hours':
+        return {
+          progress: Math.min((totalHours / 100) * 100, 100),
+          text: `${totalHours.toFixed(1)}/100 horas`
+        };
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-accent/10 via-background to-primary/10 pb-24">
       {/* Header */}
@@ -617,31 +674,46 @@ const Index = () => {
                   <h4 className="font-semibold text-foreground">{trophy.name}</h4>
                   <p className="text-sm text-muted-foreground">{trophy.description}</p>
                   <Badge variant="secondary" className="mt-2">
-                    +{trophy.points} pontos
+                    +{trophy.points} XP
                   </Badge>
                 </div>
               </div>
             ))}
             
             {/* Locked Trophies */}
-            {TROPHIES.filter(t => !stats?.trophies?.includes(t.id)).map((trophy) => (
-              <div
-                key={trophy.id}
-                className="flex items-start gap-3 p-4 rounded-lg bg-muted/20 border border-border opacity-60"
-              >
-                <div className="text-3xl grayscale">{trophy.icon}</div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <Lock className="w-4 h-4 text-muted-foreground" />
-                    <h4 className="font-semibold text-muted-foreground">{trophy.name}</h4>
+            {TROPHIES.filter(t => !stats?.trophies?.includes(t.id)).map((trophy) => {
+              const progressData = calculateTrophyProgress(trophy.id);
+              
+              return (
+                <div
+                  key={trophy.id}
+                  className="flex items-start gap-3 p-4 rounded-lg bg-muted/30 border-muted/40 transition-all hover:bg-muted/40 hover:border-muted/60"
+                >
+                  <div className="text-3xl grayscale opacity-50">{trophy.icon}</div>
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-semibold text-sm text-foreground/70">{trophy.name}</h4>
+                      <Lock className="w-3.5 h-3.5 text-muted-foreground" />
+                    </div>
+                    <p className="text-xs text-muted-foreground">{trophy.description}</p>
+                    
+                    {progressData && (
+                      <div className="space-y-2 pt-1">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-muted-foreground font-medium">{progressData.text}</span>
+                          <span className="font-semibold text-primary">{Math.floor(progressData.progress)}%</span>
+                        </div>
+                        <Progress value={progressData.progress} className="h-2" />
+                      </div>
+                    )}
+                    
+                    <Badge variant="outline" className="text-xs font-semibold">
+                      +{trophy.points} XP
+                    </Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground">{trophy.description}</p>
-                  <Badge variant="outline" className="mt-2">
-                    +{trophy.points} pontos
-                  </Badge>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </DialogContent>
       </Dialog>
