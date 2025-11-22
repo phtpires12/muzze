@@ -14,6 +14,10 @@ import { useSession } from "@/hooks/useSession";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { useInProgressProjects } from "@/hooks/useInProgressProjects";
+import { useSessionContext } from "@/contexts/SessionContext";
+import { formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 const navigation = [
   { name: "Home", href: "/", icon: Home },
@@ -38,6 +42,8 @@ export const BottomNav = () => {
   const { trackEvent } = useAnalytics();
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   const [isLongPress, setIsLongPress] = useState(false);
+  const { projects, mostRecentProject, hasInProgressProjects, loading } = useInProgressProjects();
+  const { setMuzzeSession } = useSessionContext();
 
   useEffect(() => {
     const checkDailyProgress = async () => {
@@ -60,9 +66,38 @@ export const BottomNav = () => {
   }, []);
 
   const handleQuickStart = () => {
-    trackEvent('nav_click', { action: 'quick_start_session' });
-    startSession('ideation');
-    navigate('/session');
+    if (hasInProgressProjects && mostRecentProject) {
+      trackEvent('nav_click', { action: 'continue_project', project_type: mostRecentProject.type });
+      continueProject(mostRecentProject);
+    } else {
+      trackEvent('nav_click', { action: 'quick_start_session' });
+      startSession('ideation');
+      navigate('/session');
+    }
+  };
+
+  const continueProject = (project: typeof mostRecentProject) => {
+    if (!project) return;
+
+    setMuzzeSession({ contentId: project.id, stage: project.stage });
+
+    switch (project.stage) {
+      case "ideation":
+        startSession("ideation");
+        navigate(`/session?stage=ideation`);
+        break;
+      case "script":
+      case "review":
+        navigate(`/session?stage=${project.stage}&scriptId=${project.id}`);
+        break;
+      case "record":
+        navigate(`/shot-list/record?scriptId=${project.id}`);
+        break;
+      case "edit":
+        startSession("edit");
+        navigate(`/session?stage=edit`);
+        break;
+    }
   };
 
   const handleStageSelect = (stage: string) => {
@@ -122,13 +157,17 @@ export const BottomNav = () => {
                 onTouchEnd={handleMouseUp}
                 className={cn(
                   "h-14 w-14 rounded-full shadow-lg bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-all duration-300",
-                  hasProgress && "animate-pulse ring-2 ring-primary/50 ring-offset-2 ring-offset-background"
+                  hasInProgressProjects && "ring-2 ring-primary/50 ring-offset-2 ring-offset-background",
+                  hasProgress && !hasInProgressProjects && "animate-pulse ring-2 ring-yellow-500/50 ring-offset-2 ring-offset-background"
                 )}
               >
                 <Zap className="w-6 h-6 text-primary-foreground" />
               </Button>
-              {hasProgress && (
-                <div className="absolute -top-1 -right-1 h-4 w-4 bg-green-500 rounded-full border-2 border-background animate-pulse" />
+              {hasInProgressProjects && (
+                <div className="absolute -top-1 -right-1 h-4 w-4 bg-green-500 rounded-full border-2 border-background" />
+              )}
+              {hasProgress && !hasInProgressProjects && (
+                <div className="absolute -top-1 -right-1 h-4 w-4 bg-yellow-500 rounded-full border-2 border-background animate-pulse" />
               )}
             </div>
 
@@ -151,25 +190,66 @@ export const BottomNav = () => {
 
       {/* Stage Selection Dialog */}
       <Dialog open={isStageSelectOpen} onOpenChange={setIsStageSelectOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Escolher Estágio</DialogTitle>
+            <DialogTitle>Iniciar Sessão Criativa</DialogTitle>
             <DialogDescription>
-              Selecione o estágio da sessão criativa
+              {hasInProgressProjects 
+                ? "Continue de onde parou ou inicie uma nova sessão"
+                : "Selecione o estágio da sessão criativa"}
             </DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-3">
-            {Object.entries(stageIcons).map(([stage, Icon]) => (
-              <Button
-                key={stage}
-                variant="outline"
-                className="h-24 flex flex-col gap-2"
-                onClick={() => handleStageSelect(stage)}
-              >
-                <Icon className="w-6 h-6" />
-                <span className="capitalize">{stage}</span>
-              </Button>
-            ))}
+
+          <div className="space-y-4">
+            {/* Projetos em Andamento */}
+            {hasInProgressProjects && projects.length > 0 && (
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold text-foreground">Continuar Projeto</h3>
+                {projects.slice(0, 3).map((project) => (
+                  <Button
+                    key={project.id}
+                    variant="outline"
+                    className="w-full h-auto p-4 flex items-start gap-3 hover:bg-primary/5 hover:border-primary/50"
+                    onClick={() => {
+                      continueProject(project);
+                      setIsStageSelectOpen(false);
+                    }}
+                  >
+                    <div className="flex-1 text-left">
+                      <div className="flex items-center gap-2 mb-1">
+                        {project.type === "idea" && <Lightbulb className="w-4 h-4 text-primary" />}
+                        {project.type === "script" && <Video className="w-4 h-4 text-primary" />}
+                        {project.type === "shotlist" && <Mic className="w-4 h-4 text-primary" />}
+                        <span className="font-medium text-sm">{project.title}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Editado {formatDistanceToNow(project.updatedAt, { addSuffix: true, locale: ptBR })}
+                      </p>
+                    </div>
+                  </Button>
+                ))}
+              </div>
+            )}
+
+            {/* Iniciar Novo */}
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold text-foreground">
+                {hasInProgressProjects ? "Ou iniciar novo:" : "Escolher Estágio"}
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                {Object.entries(stageIcons).map(([stage, Icon]) => (
+                  <Button
+                    key={stage}
+                    variant="outline"
+                    className="h-24 flex flex-col gap-2"
+                    onClick={() => handleStageSelect(stage)}
+                  >
+                    <Icon className="w-6 h-6" />
+                    <span className="capitalize text-xs">{stage}</span>
+                  </Button>
+                ))}
+              </div>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
