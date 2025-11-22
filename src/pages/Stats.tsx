@@ -23,6 +23,79 @@ const Stats = () => {
     gamificationStats.trophies.includes(trophy.id)
   ).slice(0, 3); // Mostrar apenas os 3 primeiros
 
+  // Calcular progresso das próximas conquistas
+  const getLockedTrophiesWithProgress = () => {
+    const lockedTrophies = TROPHIES.filter(
+      trophy => !gamificationStats.trophies.includes(trophy.id)
+    ).map(trophy => {
+      let progress = 0;
+      let current = 0;
+      let target = 0;
+      let progressText = "";
+
+      if (trophy.id === 'first_script') {
+        current = gamificationStats.scriptsCreated;
+        target = 1;
+        progress = Math.min(100, (current / target) * 100);
+        progressText = `${current}/${target} roteiro`;
+      } else if (trophy.id === 'scripts_10') {
+        current = gamificationStats.scriptsCreated;
+        target = 10;
+        progress = Math.min(100, (current / target) * 100);
+        progressText = `${current}/${target} roteiros`;
+      } else if (trophy.id === 'scripts_50') {
+        current = gamificationStats.scriptsCreated;
+        target = 50;
+        progress = Math.min(100, (current / target) * 100);
+        progressText = `${current}/${target} roteiros`;
+      } else if (trophy.id === 'ideas_20') {
+        current = gamificationStats.ideasCreated;
+        target = 20;
+        progress = Math.min(100, (current / target) * 100);
+        progressText = `${current}/${target} ideias`;
+      } else if (trophy.id === 'streak_7') {
+        current = gamificationStats.streak;
+        target = 7;
+        progress = Math.min(100, (current / target) * 100);
+        progressText = `${current}/${target} dias`;
+      } else if (trophy.id === 'streak_30') {
+        current = gamificationStats.streak;
+        target = 30;
+        progress = Math.min(100, (current / target) * 100);
+        progressText = `${current}/${target} dias`;
+      } else if (trophy.id === 'hours_10') {
+        current = Math.floor(gamificationStats.totalHours);
+        target = 10;
+        progress = Math.min(100, (current / target) * 100);
+        progressText = `${current}/${target} horas`;
+      } else if (trophy.id === 'hours_50') {
+        current = Math.floor(gamificationStats.totalHours);
+        target = 50;
+        progress = Math.min(100, (current / target) * 100);
+        progressText = `${current}/${target} horas`;
+      } else if (trophy.id === 'hours_100') {
+        current = Math.floor(gamificationStats.totalHours);
+        target = 100;
+        progress = Math.min(100, (current / target) * 100);
+        progressText = `${current}/${target} horas`;
+      }
+
+      return {
+        ...trophy,
+        progress,
+        progressText,
+        current,
+        target
+      };
+    });
+
+    return lockedTrophies
+      .sort((a, b) => b.progress - a.progress)
+      .slice(0, 5);
+  };
+
+  const nextTrophies = getLockedTrophiesWithProgress();
+
   if (loading || loadingGoal) {
     return (
       <div className="p-8 space-y-8">
@@ -189,31 +262,39 @@ const Stats = () => {
         </Card>
 
         <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-4">Próximas Metas</h3>
+          <h3 className="text-lg font-semibold mb-4">Próximas Conquistas</h3>
           <div className="space-y-4">
-            {[
-              { goal: "Sequência de 30 dias", current: profile?.streak_freezes ?? 0, target: 30 },
-              { goal: "200 horas totais", current: Math.floor(totalHours), target: 200 },
-              { goal: "500 XP", current: profile?.xp_points ?? 0, target: 500 },
-            ].map((item, i) => {
-              const progress = Math.min((item.current / item.target) * 100, 100);
-              return (
-                <div key={i} className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium">{item.goal}</span>
-                    <span className="text-muted-foreground">
-                      {item.current}/{item.target}
+            {nextTrophies.length > 0 ? (
+              nextTrophies.map((trophy) => (
+                <div key={trophy.id} className="space-y-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2 flex-1">
+                      <span className="text-2xl">{trophy.icon}</span>
+                      <div className="flex-1">
+                        <p className="font-semibold text-sm">{trophy.name}</p>
+                        <p className="text-xs text-muted-foreground">{trophy.description}</p>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <span className="text-sm font-bold text-primary">
+                        {trophy.progressText}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <Progress value={trophy.progress} className="h-2 flex-1" />
+                    <span className="text-xs text-muted-foreground shrink-0">
+                      +{trophy.points} XP
                     </span>
                   </div>
-                  <div className="h-2 bg-secondary rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-accent to-primary transition-all duration-500"
-                      style={{ width: `${progress}%` }}
-                    />
-                  </div>
                 </div>
-              );
-            })}
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-8">
+                Parabéns! Você desbloqueou todas as conquistas! 🎉
+              </p>
+            )}
           </div>
         </Card>
       </div>
