@@ -111,15 +111,11 @@ const Index = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-    const { data, count } = await supabase
-      .from('analytics_events')
+    // Contar total de sessões completadas (stage_times)
+    const { count } = await supabase
+      .from('stage_times')
       .select('*', { count: 'exact', head: true })
-      .eq('user_id', user.id)
-      .eq('event', 'session_started')
-      .gte('created_at', sevenDaysAgo.toISOString());
+      .eq('user_id', user.id);
 
     setWeeklySessionsCount(count || 0);
   };
