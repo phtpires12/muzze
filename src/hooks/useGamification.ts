@@ -118,9 +118,27 @@ export const useGamification = () => {
         trophies: [],
       };
 
+      // 🔍 DEBUG: Log dados brutos
+      console.log('🎯 Debug useGamification:', {
+        scriptsCount,
+        ideasCount,
+        totalHours,
+        currentStreak: streak?.current_streak,
+        xp_points: profile?.xp_points,
+        currentStats
+      });
+
       const unlockedTrophies = TROPHIES
         .filter(trophy => trophy.requirement(currentStats))
         .map(t => t.id);
+
+      // 🔍 DEBUG: Log troféus
+      console.log('🏆 Troféus desbloqueados:', unlockedTrophies);
+      console.log('📊 TROPHIES completo:', TROPHIES.map(t => ({
+        id: t.id,
+        name: t.name,
+        unlocked: t.requirement(currentStats)
+      })));
 
       setStats({
         totalXP: profile?.xp_points || 0,
