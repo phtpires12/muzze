@@ -16,6 +16,9 @@ const Stats = () => {
   const { progress: dailyGoal, loading: loadingGoal } = useDailyGoalProgress();
   const { stats: gamificationStats } = useGamification();
   
+  // 🔍 DEBUG LOG TEMPORÁRIO
+  console.log('📊 Stats useGamification:', gamificationStats);
+  
   const maxHours = Math.max(...weeklyData.map((d) => d.hours), 0.1);
   
   // Filtrar troféus desbloqueados

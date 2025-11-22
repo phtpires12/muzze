@@ -9,6 +9,9 @@ import { useGamification } from "@/hooks/useGamification";
 export default function Levels() {
   const { stats, loading } = useGamification();
   const navigate = useNavigate();
+  
+  // 🔍 DEBUG LOG TEMPORÁRIO
+  console.log('🏅 Levels useGamification:', stats);
 
   if (loading) {
     return (

@@ -7,7 +7,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { addXP, POINTS, getUserStats, saveUserStats, checkAndAwardTrophies } from "@/lib/gamification";
 import { ArrowRight } from "lucide-react";
 
 const CONTENT_TYPES = [
@@ -127,17 +126,6 @@ export const IdeaForm = ({ scriptId }: IdeaFormProps) => {
         if (error) throw error;
         savedScriptId = data.id;
         setCurrentScriptId(data.id);
-        
-        // Award XP for creating script/idea
-        const stats = getUserStats();
-        stats.scriptsCreated += 1;
-        stats.ideasCreated += 1;
-        saveUserStats(stats);
-        
-        addXP(POINTS.CREATE_SCRIPT);
-        
-        // Check for trophies after creating idea
-        checkAndAwardTrophies();
       }
 
       toast({
