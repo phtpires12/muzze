@@ -3,6 +3,7 @@ import { ArrowLeft, Trophy, Gift, Lock, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { XP_LEVELS, getLevelByXP, getProgressToNextLevelByXP, getNextLevelInfo, TROPHIES } from "@/lib/gamification";
 import { useGamification } from "@/hooks/useGamification";
 
@@ -229,32 +230,29 @@ export default function Levels() {
               return (
                 <Card
                   key={trophy.id}
-                  className="p-4 bg-muted/30 opacity-60"
+                  className="p-4 bg-muted/30 border-muted/40 transition-all hover:bg-muted/40 hover:border-muted/60"
                 >
                   <div className="flex items-start gap-3">
-                    <div className="text-3xl grayscale">{trophy.icon}</div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold">{trophy.name}</h3>
-                        <Lock className="w-3 h-3 text-muted-foreground" />
+                    <div className="text-3xl grayscale opacity-50">{trophy.icon}</div>
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-foreground/70">{trophy.name}</h3>
+                        <Lock className="w-3.5 h-3.5 text-muted-foreground" />
                       </div>
-                      <p className="text-sm text-muted-foreground mb-2">{trophy.description}</p>
+                      <p className="text-sm text-muted-foreground">{trophy.description}</p>
+                      
                       {progressText && (
-                        <div className="space-y-1">
+                        <div className="space-y-2 pt-1">
                           <div className="flex items-center justify-between text-xs">
-                            <span className="text-muted-foreground">{progressText}</span>
-                            <span className="font-semibold">{Math.floor(progress)}%</span>
+                            <span className="text-muted-foreground font-medium">{progressText}</span>
+                            <span className="font-semibold text-primary">{Math.floor(progress)}%</span>
                           </div>
-                          <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-primary transition-all duration-300"
-                              style={{ width: `${progress}%` }}
-                            />
-                          </div>
+                          <Progress value={progress} className="h-2" />
                         </div>
                       )}
-                      <Badge variant="outline" className="text-xs mt-2">
-                        +{trophy.points} XP ao desbloquear
+                      
+                      <Badge variant="outline" className="text-xs font-semibold">
+                        +{trophy.points} XP
                       </Badge>
                     </div>
                   </div>
