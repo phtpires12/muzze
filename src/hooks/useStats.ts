@@ -13,18 +13,11 @@ interface WeeklyGoalStats {
   weeklyProductivityPercentage: number;
 }
 
-interface Achievement {
-  badge: string;
-  title: string;
-  description: string;
-}
-
 export const useStats = () => {
   const [weeklyData, setWeeklyData] = useState<WeeklyData[]>([]);
   const [totalSessions, setTotalSessions] = useState(0);
   const [totalHours, setTotalHours] = useState(0);
   const [weeklyAverage, setWeeklyAverage] = useState(0);
-  const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [weeklyGoalStats, setWeeklyGoalStats] = useState<WeeklyGoalStats>({
     weeklyTotalMinutes: 0,
     weeklyGoalMinutes: 0,
@@ -120,41 +113,6 @@ export const useStats = () => {
         weeklyGoalMinutes,
         weeklyProductivityPercentage,
       });
-
-      // Buscar conquistas do gamification
-      const stats = getUserStats();
-      const userAchievements: Achievement[] = [];
-
-      if (stats.streak >= 7) {
-        userAchievements.push({
-          badge: "🔥",
-          title: `Sequência de ${stats.streak} dias`,
-          description: `Trabalhou ${stats.streak} dias seguidos`
-        });
-      }
-
-      if (hours >= 100) {
-        userAchievements.push({
-          badge: "⭐",
-          title: `${Math.floor(hours)} horas`,
-          description: `Alcançou ${Math.floor(hours)} horas totais`
-        });
-      }
-
-      const { data: scripts } = await supabase
-        .from('scripts')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', user.id);
-
-      if ((scripts as any) >= 10) {
-        userAchievements.push({
-          badge: "📝",
-          title: "Escritor Dedicado",
-          description: `Criou ${scripts} roteiros`
-        });
-      }
-
-      setAchievements(userAchievements);
     } catch (error) {
       console.error('Error fetching stats:', error);
     } finally {
@@ -167,7 +125,6 @@ export const useStats = () => {
     totalSessions,
     totalHours,
     weeklyAverage,
-    achievements,
     weeklyGoalStats,
     loading,
     refetch: fetchStats

@@ -4,16 +4,24 @@ import { Card } from "@/components/ui/card";
 import { useStats } from "@/hooks/useStats";
 import { useDailyGoalProgress } from "@/hooks/useDailyGoalProgress";
 import { useProfile } from "@/hooks/useProfile";
+import { useGamification } from "@/hooks/useGamification";
+import { TROPHIES } from "@/lib/gamification";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 
 const Stats = () => {
-  const { weeklyData, totalSessions, totalHours, weeklyAverage, achievements, weeklyGoalStats, loading } = useStats();
+  const { weeklyData, totalSessions, totalHours, weeklyAverage, weeklyGoalStats, loading } = useStats();
   const { profile } = useProfile();
   const { progress: dailyGoal, loading: loadingGoal } = useDailyGoalProgress();
+  const { stats: gamificationStats } = useGamification();
   
   const maxHours = Math.max(...weeklyData.map((d) => d.hours), 0.1);
+  
+  // Filtrar troféus desbloqueados
+  const unlockedTrophies = TROPHIES.filter(trophy => 
+    gamificationStats.trophies.includes(trophy.id)
+  ).slice(0, 3); // Mostrar apenas os 3 primeiros
 
   if (loading || loadingGoal) {
     return (
@@ -158,16 +166,17 @@ const Stats = () => {
         <Card className="p-6">
           <h3 className="text-lg font-semibold mb-4">Conquistas Recentes</h3>
           <div className="space-y-4">
-            {achievements.length > 0 ? (
-              achievements.map((achievement, i) => (
+            {unlockedTrophies.length > 0 ? (
+              unlockedTrophies.map((trophy) => (
                 <div
-                  key={i}
+                  key={trophy.id}
                   className="flex items-center gap-4 p-4 rounded-lg bg-gradient-to-r from-accent/10 to-primary/10 border border-primary/20"
                 >
-                  <div className="text-3xl">{achievement.badge}</div>
-                  <div>
-                    <p className="font-semibold">{achievement.title}</p>
-                    <p className="text-sm text-muted-foreground">{achievement.description}</p>
+                  <div className="text-3xl">{trophy.icon}</div>
+                  <div className="flex-1">
+                    <p className="font-semibold">{trophy.name}</p>
+                    <p className="text-sm text-muted-foreground">{trophy.description}</p>
+                    <span className="text-xs text-primary font-semibold">+{trophy.points} XP</span>
                   </div>
                 </div>
               ))
