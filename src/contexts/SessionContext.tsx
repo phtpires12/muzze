@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 
 export interface MuzzeSessionType {
-  stage: "" | "ideation" | "script" | "record" | "edit";
+  stage: "" | "ideation" | "script" | "record" | "edit" | "review";
   duration: number | null;
   contentId: string | null;
 }
