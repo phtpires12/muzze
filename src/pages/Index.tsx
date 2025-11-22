@@ -4,7 +4,8 @@ import { useProfile } from "@/hooks/useProfile";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { useSessionContext } from "@/contexts/SessionContext";
 import { supabase } from "@/integrations/supabase/client";
-import { getUserStats, awardPoints, TROPHIES, getLevelByXP, checkAndAwardTrophies } from "@/lib/gamification";
+import { getLevelByXP, TROPHIES } from "@/lib/gamification";
+import { useGamification } from "@/hooks/useGamification";
 import { getWorkflow, getUserWorkflow } from "@/lib/workflows";
 import { BottomNav } from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
@@ -45,7 +46,7 @@ const Index = () => {
   const { profile, loading: profileLoading, refetch } = useProfile();
   const { trackEvent } = useAnalytics();
   const { muzzeSession, setMuzzeSession, resetMuzzeSession } = useSessionContext();
-  const [stats, setStats] = useState(getUserStats());
+  const { stats } = useGamification();
   const [streakData, setStreakData] = useState<any>(null);
   const [weeklySessionsCount, setWeeklySessionsCount] = useState(0);
   const [lastActivity, setLastActivity] = useState<any>(null);
@@ -71,16 +72,9 @@ const Index = () => {
 
   useEffect(() => {
     if (profile && !profileLoading) {
-      // Check for trophies on initial load
-      checkAndAwardTrophies();
-      
       fetchStreakData();
       fetchWeeklySessions();
       fetchLastActivity();
-      
-      const statsInterval = setInterval(() => {
-        setStats(getUserStats());
-      }, 1000);
       
       const dataInterval = setInterval(() => {
         fetchStreakData();
@@ -88,7 +82,6 @@ const Index = () => {
       }, 30000);
 
       return () => {
-        clearInterval(statsInterval);
         clearInterval(dataInterval);
       };
     }
@@ -310,7 +303,7 @@ const Index = () => {
   
   const currentLevel = stats?.level ?? 1;
   const currentLevelInfo = getLevelByXP(stats?.totalXP ?? 0);
-  const xpProgress = (((stats?.totalPoints ?? 0) % 1000) / 1000) * 100;
+  const xpProgress = (((stats?.totalXP ?? 0) % 1000) / 1000) * 100;
   const totalHours = Math.floor(stats?.totalHours ?? 0);
   const totalMinutes = Math.round(((stats?.totalHours ?? 0) - totalHours) * 60);
 

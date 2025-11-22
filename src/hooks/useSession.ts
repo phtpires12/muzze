@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { addXP, POINTS, getUserStats, saveUserStats, checkAndAwardTrophies, calculateXPFromMinutes } from "@/lib/gamification";
+import { POINTS, calculateXPFromMinutes } from "@/lib/gamification";
 
 export type SessionStage = "idea" | "ideation" | "script" | "review" | "record" | "edit";
 
