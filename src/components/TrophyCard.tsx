@@ -5,10 +5,17 @@ import { Lock, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useGamification } from "@/hooks/useGamification";
+import { useEffect } from "react";
 
 export const TrophyCard = () => {
   const navigate = useNavigate();
-  const { stats, loading } = useGamification();
+  const { stats, loading, refetch } = useGamification();
+  
+  // 🔍 DEBUG: Forçar re-fetch ao montar o componente
+  useEffect(() => {
+    console.log('🔄 TrophyCard montado - forçando refetch');
+    refetch();
+  }, []);
   
   if (loading) {
     return null;
