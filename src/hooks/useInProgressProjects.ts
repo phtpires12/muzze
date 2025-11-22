@@ -44,49 +44,89 @@ export const useInProgressProjects = () => {
 
       if (scripts) {
         for (const script of scripts) {
+          // Buscar tempo trabalhado neste projeto
+          const { data: stageTimes } = await supabase
+            .from("stage_times")
+            .select("duration_seconds")
+            .eq("content_item_id", script.id);
+
+          const totalTimeWorked = stageTimes?.reduce((sum, st) => sum + (st.duration_seconds || 0), 0) || 0;
+          const minutesWorked = Math.floor(totalTimeWorked / 60);
+
+          // Critérios híbridos: tempo OU conteúdo
+          let shouldInclude = false;
+
           // Ideias não desenvolvidas (draft_idea)
           if (script.status === "draft_idea") {
-            projectsList.push({
-              type: "idea",
-              id: script.id,
-              title: script.title || "Ideia sem título",
-              stage: "ideation",
-              updatedAt: new Date(script.updated_at),
-              status: script.status,
-            });
+            // Pelo menos 3 minutos trabalhados OU tem central_idea preenchida
+            const hasMinTime = minutesWorked >= 3;
+            const hasContent = script.central_idea && script.central_idea.trim().length > 0;
+            shouldInclude = hasMinTime || hasContent;
+
+            if (shouldInclude) {
+              projectsList.push({
+                type: "idea",
+                id: script.id,
+                title: script.title || "Ideia sem título",
+                stage: "ideation",
+                updatedAt: new Date(script.updated_at),
+                status: script.status,
+              });
+            }
           }
           // Roteiros em draft (em desenvolvimento)
           else if (script.status === "draft" || script.status === "in_progress") {
-            projectsList.push({
-              type: "script",
-              id: script.id,
-              title: script.title,
-              stage: "script",
-              updatedAt: new Date(script.updated_at),
-              status: script.status,
-            });
+            // Pelo menos 5 minutos trabalhados OU mais de 100 caracteres
+            const hasMinTime = minutesWorked >= 5;
+            const hasContent = script.content && script.content.length > 100;
+            shouldInclude = hasMinTime || hasContent;
+
+            if (shouldInclude) {
+              projectsList.push({
+                type: "script",
+                id: script.id,
+                title: script.title,
+                stage: "script",
+                updatedAt: new Date(script.updated_at),
+                status: script.status,
+              });
+            }
           }
           // Roteiros em revisão
           else if (script.status === "review") {
-            projectsList.push({
-              type: "script",
-              id: script.id,
-              title: script.title,
-              stage: "review",
-              updatedAt: new Date(script.updated_at),
-              status: script.status,
-            });
+            // Pelo menos 3 minutos trabalhados OU tem conteúdo
+            const hasMinTime = minutesWorked >= 3;
+            const hasContent = script.content && script.content.length > 50;
+            shouldInclude = hasMinTime || hasContent;
+
+            if (shouldInclude) {
+              projectsList.push({
+                type: "script",
+                id: script.id,
+                title: script.title,
+                stage: "review",
+                updatedAt: new Date(script.updated_at),
+                status: script.status,
+              });
+            }
           }
           // Shot lists para gravação (scripts com shot_list preenchida)
           else if (script.shot_list && script.shot_list.length > 0 && script.status !== "published") {
-            projectsList.push({
-              type: "shotlist",
-              id: script.id,
-              title: script.title,
-              stage: "record",
-              updatedAt: new Date(script.updated_at),
-              status: script.status,
-            });
+            // Pelo menos 3 minutos trabalhados OU tem pelo menos 1 item
+            const hasMinTime = minutesWorked >= 3;
+            const hasContent = script.shot_list.length >= 1;
+            shouldInclude = hasMinTime || hasContent;
+
+            if (shouldInclude) {
+              projectsList.push({
+                type: "shotlist",
+                id: script.id,
+                title: script.title,
+                stage: "record",
+                updatedAt: new Date(script.updated_at),
+                status: script.status,
+              });
+            }
           }
         }
       }
