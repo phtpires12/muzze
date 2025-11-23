@@ -90,7 +90,7 @@ export const BrainstormWorkspace = () => {
     data?.filter((item: any) => 
       item.publish_date && 
       item.user_id === user.id && 
-      item.status === "scheduled_idea"
+      item.status === "draft_idea"
     ).forEach((item: any) => {
       if (item.publish_date) {
         if (!grouped[item.publish_date]) {
@@ -220,7 +220,6 @@ export const BrainstormWorkspace = () => {
       .from("scripts")
       .update({
         publish_date: targetDate,
-        status: "scheduled_idea",
       })
       .eq("id", ideaId);
 
@@ -237,7 +236,7 @@ export const BrainstormWorkspace = () => {
     setIdeas(ideas.filter(i => i.id !== ideaId));
     setScheduledIdeas({
       ...scheduledIdeas,
-      [targetDate]: [...(scheduledIdeas[targetDate] || []), { ...idea, publish_date: targetDate, status: "scheduled_idea" }],
+      [targetDate]: [...(scheduledIdeas[targetDate] || []), { ...idea, publish_date: targetDate }],
     });
 
     toast({

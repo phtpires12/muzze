@@ -58,10 +58,11 @@ export const useInProgressProjects = () => {
 
           // Ideias não desenvolvidas (draft_idea)
           if (script.status === "draft_idea") {
-            // Pelo menos 3 minutos trabalhados OU tem central_idea preenchida
+            // Pelo menos 3 minutos trabalhados OU tem central_idea preenchida OU está agendada
             const hasMinTime = minutesWorked >= 3;
             const hasContent = script.central_idea && script.central_idea.trim().length > 0;
-            shouldInclude = hasMinTime || hasContent;
+            const isScheduled = script.publish_date !== null;
+            shouldInclude = hasMinTime || hasContent || isScheduled;
 
             if (shouldInclude) {
               projectsList.push({
