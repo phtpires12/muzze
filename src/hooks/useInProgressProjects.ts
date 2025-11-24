@@ -56,6 +56,34 @@ export const useInProgressProjects = () => {
           // Critérios híbridos: tempo OU conteúdo
           let shouldInclude = false;
 
+          // Detecção inteligente de stage baseada no conteúdo
+          const detectStage = (): SessionStage => {
+            // Prioridade 1: Se tem shot_list → gravação
+            if (script.shot_list && script.shot_list.length > 0) {
+              return "record";
+            }
+            
+            // Prioridade 2: Se status é review e tem conteúdo → revisão
+            if (script.status === "review" && script.content && script.content.length > 50) {
+              return "review";
+            }
+            
+            // Prioridade 3: Se tem conteúdo substancial → roteirização
+            if (script.content && script.content.length > 100) {
+              return "script";
+            }
+            
+            // Prioridade 4: Se tem central_idea → ideação
+            if (script.central_idea && script.central_idea.trim().length > 0) {
+              return "ideation";
+            }
+            
+            // Fallback: ideação
+            return "ideation";
+          };
+
+          const stage = detectStage();
+
           // Ideias não desenvolvidas (draft_idea)
           if (script.status === "draft_idea") {
             // Pelo menos 3 minutos trabalhados OU tem central_idea preenchida OU está agendada
@@ -66,10 +94,10 @@ export const useInProgressProjects = () => {
 
             if (shouldInclude) {
               projectsList.push({
-                type: "idea",
+                type: stage === "record" ? "shotlist" : stage === "script" || stage === "review" ? "script" : "idea",
                 id: script.id,
                 title: script.title || "Ideia sem título",
-                stage: "ideation",
+                stage: stage,
                 updatedAt: new Date(script.updated_at),
                 status: script.status,
               });
@@ -84,10 +112,10 @@ export const useInProgressProjects = () => {
 
             if (shouldInclude) {
               projectsList.push({
-                type: "script",
+                type: stage === "record" ? "shotlist" : "script",
                 id: script.id,
                 title: script.title,
-                stage: "script",
+                stage: stage,
                 updatedAt: new Date(script.updated_at),
                 status: script.status,
               });
@@ -102,10 +130,10 @@ export const useInProgressProjects = () => {
 
             if (shouldInclude) {
               projectsList.push({
-                type: "script",
+                type: stage === "record" ? "shotlist" : "script",
                 id: script.id,
                 title: script.title,
-                stage: "review",
+                stage: stage,
                 updatedAt: new Date(script.updated_at),
                 status: script.status,
               });
@@ -123,7 +151,7 @@ export const useInProgressProjects = () => {
                 type: "shotlist",
                 id: script.id,
                 title: script.title,
-                stage: "record",
+                stage: stage,
                 updatedAt: new Date(script.updated_at),
                 status: script.status,
               });
