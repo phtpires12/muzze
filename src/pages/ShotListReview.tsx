@@ -7,6 +7,9 @@ import { useToast } from "@/hooks/use-toast";
 import { ShotListTable, ShotItem } from "@/components/shotlist/ShotListTable";
 import { DragEndEvent } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
+import { DraggableSessionTimer } from "@/components/DraggableSessionTimer";
+import { useSession } from "@/hooks/useSession";
+import { useTimerPopup } from "@/hooks/useTimerPopup";
 import { cn } from "@/lib/utils";
 
 const ShotListReview = () => {
@@ -22,6 +25,15 @@ const ShotListReview = () => {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [lastSavedShots, setLastSavedShots] = useState<ShotItem[]>([]);
 
+  // Unified Session System
+  const {
+    session,
+    startSession,
+    pauseSession,
+    resumeSession,
+    endSession,
+  } = useSession();
+
   useEffect(() => {
     if (!scriptId || scriptId === 'null' || scriptId === 'undefined') {
       toast({
@@ -34,6 +46,11 @@ const ShotListReview = () => {
     }
     
     loadShotList();
+    
+    // Start session for review stage
+    if (!session.isActive) {
+      startSession("review");
+    }
   }, [scriptId]);
 
   const loadShotList = async () => {
@@ -268,6 +285,29 @@ const ShotListReview = () => {
     }
   };
 
+  // Timer popup integration
+  const progress = session.isStreakMode
+    ? Math.min((session.elapsedSeconds / (session.dailyGoalMinutes * 60)) * 100, 100)
+    : Math.min((session.elapsedSeconds / session.targetSeconds) * 100, 100);
+
+  const timerPopup = useTimerPopup({
+    enabled: true,
+    stage: "Revisão",
+    icon: session.isStreakMode ? "Flame" : "CheckCircle",
+    elapsedSeconds: session.elapsedSeconds,
+    targetSeconds: session.isStreakMode 
+      ? session.dailyGoalMinutes * 60 
+      : session.targetSeconds,
+    isPaused: session.isPaused,
+    isStreakMode: session.isStreakMode,
+    dailyGoalMinutes: session.dailyGoalMinutes,
+    isActive: session.isActive,
+    progress,
+    onPause: pauseSession,
+    onResume: resumeSession,
+    onStop: endSession,
+  });
+
   const handleAdvanceToRecord = async () => {
     await handleSave();
     navigate(`/shot-list/record?scriptId=${scriptId}`);
@@ -369,6 +409,23 @@ const ShotListReview = () => {
         >
           <Plus className="w-6 h-6" />
         </Button>
+
+        {/* Unified Session Timer */}
+        <DraggableSessionTimer
+          stage="Revisão"
+          icon={session.isStreakMode ? "Flame" : "CheckCircle"}
+          elapsedSeconds={session.elapsedSeconds}
+          targetSeconds={session.isStreakMode 
+            ? session.dailyGoalMinutes * 60 
+            : session.targetSeconds}
+          isPaused={session.isPaused}
+          isStreakMode={session.isStreakMode}
+          dailyGoalMinutes={session.dailyGoalMinutes}
+          onPause={pauseSession}
+          onResume={resumeSession}
+          onStop={endSession}
+          progress={progress}
+        />
 
         {/* Shot List Table */}
         {shots.length > 0 ? (
