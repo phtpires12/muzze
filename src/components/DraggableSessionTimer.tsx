@@ -2,13 +2,34 @@ import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Play, Pause, Square, GripVertical, LucideIcon, Flame } from 'lucide-react';
+import { 
+  Play, 
+  Pause, 
+  Square, 
+  GripVertical, 
+  Lightbulb, 
+  FileText, 
+  Video, 
+  Scissors, 
+  CheckCircle,
+  Flame,
+  LucideIcon 
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 
+const ICON_MAP: Record<string, LucideIcon> = {
+  Lightbulb,
+  FileText,
+  Video,
+  Scissors,
+  CheckCircle,
+  Flame,
+};
+
 interface DraggableSessionTimerProps {
   stage: string;
-  icon: LucideIcon;
+  icon: string;
   elapsedSeconds: number;
   targetSeconds: number;
   isStreakMode: boolean;
@@ -22,7 +43,7 @@ interface DraggableSessionTimerProps {
 
 export const DraggableSessionTimer = ({ 
   stage,
-  icon: StageIcon,
+  icon,
   elapsedSeconds,
   targetSeconds,
   isStreakMode,
@@ -70,7 +91,7 @@ export const DraggableSessionTimer = ({
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
-  const Icon = isStreakMode ? Flame : StageIcon;
+  const Icon = isStreakMode ? ICON_MAP['Flame'] : (ICON_MAP[icon] || ICON_MAP['Lightbulb']);
   const displayedTarget = isStreakMode ? dailyGoalMinutes * 60 : 25 * 60;
   const goalText = isStreakMode 
     ? `🎯 Meta diária: ${formatTime(dailyGoalMinutes * 60)}`

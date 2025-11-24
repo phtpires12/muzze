@@ -2,8 +2,29 @@ import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, Square, LucideIcon, AlertCircle, Flame } from 'lucide-react';
+import { 
+  Play, 
+  Pause, 
+  Square, 
+  Lightbulb, 
+  FileText, 
+  Video, 
+  Scissors, 
+  CheckCircle,
+  Flame,
+  AlertCircle,
+  LucideIcon 
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+const ICON_MAP: Record<string, LucideIcon> = {
+  Lightbulb,
+  FileText,
+  Video,
+  Scissors,
+  CheckCircle,
+  Flame,
+};
 
 interface TimerState {
   stage: string;
@@ -96,6 +117,10 @@ export function TimerPopup() {
     channel.close();
   };
 
+  const TimerIcon = timerState.isStreakMode 
+    ? ICON_MAP['Flame'] 
+    : (ICON_MAP[timerState.icon] || ICON_MAP['Lightbulb']);
+
   const displayedTarget = timerState.isStreakMode 
     ? timerState.dailyGoalMinutes * 60 
     : 25 * 60;
@@ -164,11 +189,10 @@ export function TimerPopup() {
                 ? "bg-orange-100/20 animate-wiggle"
                 : "bg-gradient-to-br from-accent to-primary"
             )}>
-              {timerState.isStreakMode ? (
-                <Flame className="w-10 h-10 text-orange-100" />
-              ) : (
-                <div className="w-10 h-10 text-white">💡</div>
-              )}
+              <TimerIcon className={cn(
+                "w-10 h-10 transition-colors duration-1000",
+                timerState.isStreakMode ? "text-orange-100" : "text-white"
+              )} />
             </div>
             
             {/* Time Display */}
