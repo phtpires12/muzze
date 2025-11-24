@@ -11,7 +11,9 @@ import { ShotListTable, ShotItem } from "@/components/shotlist/ShotListTable";
 import { ImageGalleryModal } from "@/components/shotlist/ImageGalleryModal";
 import { DragEndEvent } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
-import { DraggableTimer } from "@/components/DraggableTimer";
+import { DraggableSessionTimer } from "@/components/DraggableSessionTimer";
+import { useSession } from "@/hooks/useSession";
+import { useTimerPopup } from "@/hooks/useTimerPopup";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
@@ -28,9 +30,14 @@ const ShotListRecord = () => {
   const [uploadingImages, setUploadingImages] = useState<Set<string>>(new Set());
   const [galleryOpenShotId, setGalleryOpenShotId] = useState<string | null>(null);
 
-  // Timer states
-  const [timerRunning, setTimerRunning] = useState(false);
-  const [elapsedTime, setElapsedTime] = useState(0);
+  // Unified Session System
+  const {
+    session,
+    startSession,
+    pauseSession,
+    resumeSession,
+    endSession,
+  } = useSession();
 
   // Filter states
   const [filterLocation, setFilterLocation] = useState<string>("all");
@@ -48,19 +55,12 @@ const ShotListRecord = () => {
     }
     
     loadShotList();
-  }, [scriptId]);
-
-  // Timer effect
-  // Timer effect
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (timerRunning) {
-      interval = setInterval(() => {
-        setElapsedTime(prev => prev + 1);
-      }, 1000);
+    
+    // Start session for recording stage
+    if (!session.isActive) {
+      startSession("record");
     }
-    return () => clearInterval(interval);
-  }, [timerRunning]);
+  }, [scriptId]);
 
   // Auto-save effect (debounced)
   useEffect(() => {
@@ -348,16 +348,28 @@ const ShotListRecord = () => {
     [shots]
   );
 
-  const formatTime = (seconds: number) => {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = seconds % 60;
-    
-    if (h > 0) {
-      return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-    }
-    return `${m}:${s.toString().padStart(2, '0')}`;
-  };
+  // Timer popup integration
+  const progress = session.isStreakMode
+    ? Math.min((session.elapsedSeconds / (session.dailyGoalMinutes * 60)) * 100, 100)
+    : Math.min((session.elapsedSeconds / session.targetSeconds) * 100, 100);
+
+  const timerPopup = useTimerPopup({
+    enabled: true,
+    stage: "Gravação",
+    icon: session.isStreakMode ? "Flame" : "Video",
+    elapsedSeconds: session.elapsedSeconds,
+    targetSeconds: session.isStreakMode 
+      ? session.dailyGoalMinutes * 60 
+      : session.targetSeconds,
+    isPaused: session.isPaused,
+    isStreakMode: session.isStreakMode,
+    dailyGoalMinutes: session.dailyGoalMinutes,
+    isActive: session.isActive,
+    progress,
+    onPause: pauseSession,
+    onResume: resumeSession,
+    onStop: endSession,
+  });
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-6">
@@ -483,17 +495,21 @@ const ShotListRecord = () => {
           </div>
         </div>
 
-        {/* Timer flutuante arrastável */}
-        <DraggableTimer
-          elapsedTime={elapsedTime}
-          targetTime={165} // 2:45 em segundos
-          isRunning={timerRunning}
-          onToggle={() => setTimerRunning(!timerRunning)}
-          onStop={() => {
-            setTimerRunning(false);
-            setElapsedTime(0);
-          }}
-          progress={(elapsedTime / 165) * 100}
+        {/* Unified Session Timer */}
+        <DraggableSessionTimer
+          stage="Gravação"
+          icon={session.isStreakMode ? "Flame" : "Video"}
+          elapsedSeconds={session.elapsedSeconds}
+          targetSeconds={session.isStreakMode 
+            ? session.dailyGoalMinutes * 60 
+            : session.targetSeconds}
+          isPaused={session.isPaused}
+          isStreakMode={session.isStreakMode}
+          dailyGoalMinutes={session.dailyGoalMinutes}
+          onPause={pauseSession}
+          onResume={resumeSession}
+          onStop={endSession}
+          progress={progress}
         />
 
         {/* Desktop Progress */}
