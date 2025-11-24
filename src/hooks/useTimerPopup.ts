@@ -1,6 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
+// Global references to ensure only one popup and one channel exist
+let globalPopupRef: Window | null = null;
+let globalChannelRef: BroadcastChannel | null = null;
+
 interface TimerPopupState {
   stage: string;
   icon: string;
@@ -40,31 +44,43 @@ export function useTimerPopup(options: UseTimerPopupOptions) {
   useEffect(() => {
     if (!options.enabled || !options.isActive) return;
 
-    // Create BroadcastChannel
-    const channel = new BroadcastChannel('session-timer');
-    channelRef.current = channel;
-
-    // Listen for messages from popup
-    channel.onmessage = (event) => {
-      const { type } = event.data;
+    // Reuse existing channel or create new one
+    if (!globalChannelRef) {
+      globalChannelRef = new BroadcastChannel('session-timer');
       
-      if (type === 'PAUSE_REQUEST') {
-        options.onPause();
-      } else if (type === 'RESUME_REQUEST') {
-        options.onResume();
-      } else if (type === 'STOP_REQUEST') {
-        options.onStop();
-      } else if (type === 'POPUP_READY') {
-        // Send current state when popup is ready
-        broadcastTimerUpdate();
-      }
-    };
+      // Listen for messages from popup
+      globalChannelRef.onmessage = (event) => {
+        const { type } = event.data;
+        
+        if (type === 'PAUSE_REQUEST') {
+          options.onPause();
+        } else if (type === 'RESUME_REQUEST') {
+          options.onResume();
+        } else if (type === 'STOP_REQUEST') {
+          options.onStop();
+        } else if (type === 'POPUP_READY') {
+          // Send current state when popup is ready
+          broadcastTimerUpdate();
+        }
+      };
+    }
+    
+    channelRef.current = globalChannelRef;
 
-    // Try to create popup
+    // Check if popup already exists and is open
+    if (globalPopupRef && !globalPopupRef.closed) {
+      // Popup already exists, just reuse it and update state
+      popupRef.current = globalPopupRef;
+      setIsPopupBlocked(false);
+      broadcastTimerUpdate();
+      return;
+    }
+
+    // Create new popup only if it doesn't exist
     const popupUrl = `${window.location.origin}/timer-popup.html`;
     const popup = window.open(
       popupUrl,
-      'timer-popup',
+      'timer-popup',  // This name ensures only 1 window exists
       'width=450,height=400,left=100,top=100,resizable=yes'
     );
 
@@ -73,6 +89,7 @@ export function useTimerPopup(options: UseTimerPopupOptions) {
       setIsPopupBlocked(true);
       console.warn('Popup was blocked by browser');
     } else {
+      globalPopupRef = popup;
       popupRef.current = popup;
       setIsPopupBlocked(false);
       
@@ -88,9 +105,9 @@ export function useTimerPopup(options: UseTimerPopupOptions) {
       }
     }
 
+    // Don't clean up global references on unmount
     return () => {
-      channel.close();
-      channelRef.current = null;
+      // Keep global channel and popup alive
     };
   }, [options.enabled, options.isActive]);
 
@@ -148,32 +165,22 @@ export function useTimerPopup(options: UseTimerPopupOptions) {
     };
   }, [options.enabled, options.isActive]);
 
-  // Cleanup when session ends
+  // Cleanup when session ends (close global popup)
   useEffect(() => {
-    if (!options.isActive && popupRef.current && !popupRef.current.closed) {
+    if (!options.isActive && globalPopupRef && !globalPopupRef.closed) {
       // Session ended, close popup
-      if (channelRef.current) {
-        channelRef.current.postMessage({ type: 'MAIN_WINDOW_CLOSING' });
+      if (globalChannelRef) {
+        globalChannelRef.postMessage({ type: 'MAIN_WINDOW_CLOSING' });
+        globalChannelRef.close();
+        globalChannelRef = null;
       }
       setTimeout(() => {
-        popupRef.current?.close();
+        globalPopupRef?.close();
+        globalPopupRef = null;
         popupRef.current = null;
       }, 500);
     }
   }, [options.isActive]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (channelRef.current) {
-        channelRef.current.postMessage({ type: 'MAIN_WINDOW_CLOSING' });
-        channelRef.current.close();
-      }
-      if (popupRef.current && !popupRef.current.closed) {
-        popupRef.current.close();
-      }
-    };
-  }, []);
 
   const openPopupManually = () => {
     const popupUrl = `${window.location.origin}/timer-popup.html`;
@@ -184,6 +191,7 @@ export function useTimerPopup(options: UseTimerPopupOptions) {
     );
 
     if (popup && !popup.closed) {
+      globalPopupRef = popup;
       popupRef.current = popup;
       setIsPopupBlocked(false);
     }
