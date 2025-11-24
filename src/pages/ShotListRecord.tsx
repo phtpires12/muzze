@@ -348,12 +348,12 @@ const ShotListRecord = () => {
     [shots]
   );
 
-  // Timer popup integration
+  // Timer popup integration - managed globally via useTimerPopup hook
   const progress = session.isStreakMode
     ? Math.min((session.elapsedSeconds / (session.dailyGoalMinutes * 60)) * 100, 100)
     : Math.min((session.elapsedSeconds / session.targetSeconds) * 100, 100);
 
-  const timerPopup = useTimerPopup({
+  useTimerPopup({
     enabled: true,
     stage: "Gravação",
     icon: session.isStreakMode ? "Flame" : "Video",

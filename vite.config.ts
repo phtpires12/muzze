@@ -19,7 +19,7 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       input: {
         main: path.resolve(__dirname, 'index.html'),
-        popup: path.resolve(__dirname, 'public/timer-popup.html'),
+        popup: path.resolve(__dirname, 'timer-popup.html'),
       },
     },
   },
