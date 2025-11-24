@@ -34,12 +34,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useTimerPopup } from "@/hooks/useTimerPopup";
 
-const STAGES: { id: SessionStage; label: string; icon: any; color: string }[] = [
-  { id: "idea" as SessionStage, label: "Ideia", icon: Lightbulb, color: "text-yellow-500" },
-  { id: "script", label: "Roteiro", icon: FileText, color: "text-blue-500" },
-  { id: "review", label: "Revisão", icon: CheckCircle, color: "text-green-500" },
-  { id: "record", label: "Gravação", icon: Video, color: "text-red-500" },
-  { id: "edit", label: "Edição", icon: Scissors, color: "text-purple-500" },
+const STAGES: { 
+  id: SessionStage; 
+  label: string; 
+  icon: any;
+  iconName: string;
+  color: string;
+}[] = [
+  { id: "idea" as SessionStage, label: "Ideia", icon: Lightbulb, iconName: "Lightbulb", color: "text-yellow-500" },
+  { id: "script", label: "Roteiro", icon: FileText, iconName: "FileText", color: "text-blue-500" },
+  { id: "review", label: "Revisão", icon: CheckCircle, iconName: "CheckCircle", color: "text-green-500" },
+  { id: "record", label: "Gravação", icon: Video, iconName: "Video", color: "text-red-500" },
+  { id: "edit", label: "Edição", icon: Scissors, iconName: "Scissors", color: "text-purple-500" },
 ];
 
 const Session = () => {
@@ -171,9 +177,9 @@ const Session = () => {
   const progress = (session.elapsedSeconds / (session.isStreakMode ? session.dailyGoalMinutes * 60 : 25 * 60)) * 100;
 
   const timerPopup = useTimerPopup({
-    enabled: true, // ✅ Sempre ativo (todas as etapas)
+    enabled: true,
     stage: currentStage?.label || "Sessão",
-    icon: currentStage?.icon || "Lightbulb",
+    icon: session.isStreakMode ? "Flame" : (currentStage?.iconName || "Lightbulb"),
     elapsedSeconds: session.elapsedSeconds,
     targetSeconds: session.targetSeconds,
     isPaused: session.isPaused,
@@ -304,7 +310,7 @@ const Session = () => {
         {/* Floating Draggable Timer Pop-up */}
         <DraggableSessionTimer
           stage={currentStage.label}
-          icon={CurrentIcon}
+          icon={currentStage.iconName}
           elapsedSeconds={session.elapsedSeconds}
           targetSeconds={session.targetSeconds}
           isStreakMode={session.isStreakMode}
