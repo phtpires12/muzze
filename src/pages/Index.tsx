@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useProfile } from "@/hooks/useProfile";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { useSessionContext } from "@/contexts/SessionContext";
+import { useInProgressProjects } from "@/hooks/useInProgressProjects";
 import { supabase } from "@/integrations/supabase/client";
 import { getLevelByXP, TROPHIES } from "@/lib/gamification";
 import { useGamification } from "@/hooks/useGamification";
@@ -47,9 +48,9 @@ const Index = () => {
   const { trackEvent } = useAnalytics();
   const { muzzeSession, setMuzzeSession, resetMuzzeSession } = useSessionContext();
   const { stats } = useGamification();
+  const { mostRecentProject } = useInProgressProjects();
   const [streakData, setStreakData] = useState<any>(null);
   const [weeklySessionsCount, setWeeklySessionsCount] = useState(0);
-  const [lastActivity, setLastActivity] = useState<any>(null);
   const [isWorkflowModalOpen, setIsWorkflowModalOpen] = useState(false);
   
   // Novos estados para seleção de item
@@ -74,7 +75,6 @@ const Index = () => {
     if (profile && !profileLoading) {
       fetchStreakData();
       fetchWeeklySessions();
-      fetchLastActivity();
       
       const dataInterval = setInterval(() => {
         fetchStreakData();
@@ -111,65 +111,6 @@ const Index = () => {
       .eq('user_id', user.id);
 
     setWeeklySessionsCount(count || 0);
-  };
-
-  // Helper: Get last work in progress from scripts
-  const getLastWorkInProgress = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return null;
-
-    const { data: scripts } = await supabase
-      .from('scripts')
-      .select('*')
-      .eq('user_id', user.id)
-      .in('status', ['draft_idea', 'ideia', 'roteiro-em-progresso', 'gravado', 'edição-pendente'])
-      .order('updated_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    return scripts;
-  };
-
-  // Helper: Map status to session stage
-  const getStageFromStatus = (status: string): string => {
-    const stageMap: Record<string, string> = {
-      'draft_idea': 'ideation',
-      'ideia': 'ideation',
-      'roteiro-em-progresso': 'script',
-      'roteiro-pronto': 'record',
-      'gravado': 'edit',
-      'edição-pendente': 'edit',
-    };
-    return stageMap[status] || 'ideation';
-  };
-
-  const fetchLastActivity = async () => {
-    const workInProgress = await getLastWorkInProgress();
-    
-    if (workInProgress) {
-      // Get total time spent on this item
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: stageTimes } = await supabase
-        .from('stage_times')
-        .select('duration_seconds')
-        .eq('user_id', user.id)
-        .eq('content_item_id', workInProgress.id);
-
-      const totalSeconds = stageTimes?.reduce((sum, st) => sum + (st.duration_seconds || 0), 0) || 0;
-
-      setLastActivity({
-        id: workInProgress.id,
-        title: workInProgress.title,
-        stage: getStageFromStatus(workInProgress.status),
-        status: workInProgress.status,
-        updated_at: workInProgress.updated_at,
-        totalSeconds,
-      });
-    } else {
-      setLastActivity(null);
-    }
   };
 
   const fetchRecentSessions = async () => {
@@ -252,8 +193,10 @@ const Index = () => {
   };
 
   const handleContinueActivity = () => {
+    if (!mostRecentProject) return;
+    
     trackEvent('continued_activity');
-    navigate('/session');
+    navigate(`/session?stage=${mostRecentProject.stage}&scriptId=${mostRecentProject.id}`);
   };
 
 
@@ -393,35 +336,31 @@ const Index = () => {
           )}
         >
           <h2 className="text-2xl font-bold text-foreground mb-6">
-            {lastActivity ? "Sua última atividade criativa" : "Bem-vindo de volta"}
+            {mostRecentProject ? "Sua última atividade criativa" : "Bem-vindo de volta"}
           </h2>
 
-          {lastActivity ? (
+          {mostRecentProject ? (
             <div className="space-y-4">
               <div className="p-4 bg-secondary/50 rounded-2xl">
                 <h3 className="font-semibold text-foreground mb-2">
-                  📝 {lastActivity.title}
+                  📝 {mostRecentProject.title}
                 </h3>
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">
-                    Etapa: {lastActivity.stage === 'ideation' ? 'Ideação' : 
-                            lastActivity.stage === 'script' ? 'Roteiro em progresso' : 
-                            lastActivity.stage === 'record' ? 'Gravação pendente' : 
-                            lastActivity.stage === 'edit' ? 'Edição pendente' : lastActivity.stage}
+                    Etapa: {mostRecentProject.stage === 'ideation' ? 'Ideação' : 
+                            mostRecentProject.stage === 'script' ? 'Roteiro em progresso' : 
+                            mostRecentProject.stage === 'record' ? 'Gravação pendente' : 
+                            mostRecentProject.stage === 'review' ? 'Revisão' :
+                            mostRecentProject.stage === 'edit' ? 'Edição pendente' : mostRecentProject.stage}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Última edição: {new Date(lastActivity.updated_at).toLocaleString('pt-BR', { 
+                    Última edição: {new Date(mostRecentProject.updatedAt).toLocaleString('pt-BR', { 
                       day: '2-digit', 
                       month: 'short', 
                       hour: '2-digit', 
                       minute: '2-digit' 
                     })}
                   </p>
-                  {lastActivity.totalSeconds > 0 && (
-                    <p className="text-xs text-muted-foreground">
-                      Tempo dedicado: {Math.floor(lastActivity.totalSeconds / 60)}min
-                    </p>
-                  )}
                 </div>
               </div>
               <Button
