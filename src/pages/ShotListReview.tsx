@@ -10,6 +10,7 @@ import { arrayMove } from '@dnd-kit/sortable';
 import { DraggableSessionTimer } from "@/components/DraggableSessionTimer";
 import { useSession } from "@/hooks/useSession";
 import { useTimerPopup } from "@/hooks/useTimerPopup";
+import { useAppVisibility } from "@/hooks/useAppVisibility";
 import { cn } from "@/lib/utils";
 
 const ShotListReview = () => {
@@ -33,6 +34,8 @@ const ShotListReview = () => {
     resumeSession,
     endSession,
   } = useSession();
+  
+  const isAppVisible = useAppVisibility();
 
   useEffect(() => {
     if (!scriptId || scriptId === 'null' || scriptId === 'undefined') {
@@ -425,6 +428,7 @@ const ShotListReview = () => {
           onResume={resumeSession}
           onStop={endSession}
           progress={progress}
+          hidden={!isAppVisible}
         />
 
         {/* Shot List Table */}
