@@ -58,9 +58,7 @@ export const DraggableSessionTimer = ({
 }: DraggableSessionTimerProps) => {
   const isMobile = useIsMobile();
 
-  // Don't render when hidden (user is outside app)
-  if (hidden) return null;
-  const [position, setPosition] = useState({ 
+  const [position, setPosition] = useState({
     x: isMobile ? 16 : window.innerWidth - 370, 
     y: isMobile ? 16 : 24 
   });
@@ -159,6 +157,10 @@ export const DraggableSessionTimer = ({
       window.removeEventListener('touchend', handleEnd);
     };
   }, [isDragging]);
+
+  // Don't render when hidden (user is outside app)
+  // Moved here to respect Rules of Hooks
+  if (hidden) return null;
 
   return (
     <div
