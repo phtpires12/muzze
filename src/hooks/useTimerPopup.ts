@@ -147,14 +147,21 @@ export function useTimerPopup(options: UseTimerPopupOptions) {
     options.progress,
   ]);
 
-  // Handle visibility change - focus popup when user leaves
+  // Handle visibility change - manage popup display based on app visibility
   useEffect(() => {
     if (!options.enabled || !options.isActive) return;
 
     const handleVisibilityChange = () => {
-      if (document.hidden && popupRef.current && !popupRef.current.closed) {
-        // User left the app, bring popup to front
-        popupRef.current.focus();
+      if (document.hidden) {
+        // User SAIU do app → focar popup
+        if (popupRef.current && !popupRef.current.closed) {
+          popupRef.current.focus();
+        }
+        // Avisar popup que janela principal está escondida
+        channelRef.current?.postMessage({ type: 'MAIN_WINDOW_HIDDEN' });
+      } else {
+        // User VOLTOU pro app → minimizar popup
+        channelRef.current?.postMessage({ type: 'MAIN_WINDOW_VISIBLE' });
       }
     };
 

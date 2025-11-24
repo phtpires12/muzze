@@ -39,6 +39,7 @@ interface DraggableSessionTimerProps {
   onResume: () => void;
   onStop: () => void;
   progress: number;
+  hidden?: boolean;
 }
 
 export const DraggableSessionTimer = ({ 
@@ -52,9 +53,13 @@ export const DraggableSessionTimer = ({
   onPause,
   onResume,
   onStop,
-  progress
+  progress,
+  hidden = false,
 }: DraggableSessionTimerProps) => {
   const isMobile = useIsMobile();
+
+  // Don't render when hidden (user is outside app)
+  if (hidden) return null;
   const [position, setPosition] = useState({ 
     x: isMobile ? 16 : window.innerWidth - 370, 
     y: isMobile ? 16 : 24 

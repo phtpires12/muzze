@@ -33,6 +33,7 @@ import { DraggableSessionTimer } from "@/components/DraggableSessionTimer";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useTimerPopup } from "@/hooks/useTimerPopup";
+import { useAppVisibility } from "@/hooks/useAppVisibility";
 
 const STAGES: { 
   id: SessionStage; 
@@ -61,6 +62,7 @@ const Session = () => {
   const [summary, setSummary] = useState<any>(null);
   const [showStreakHalo, setShowStreakHalo] = useState(false);
   const [streakCount, setStreakCount] = useState(0);
+  const isAppVisible = useAppVisibility();
 
   useEffect(() => {
     if (stageParam) {
@@ -320,6 +322,7 @@ const Session = () => {
           onResume={resumeSession}
           onStop={handleEnd}
           progress={progress}
+          hidden={!isAppVisible}
         />
 
         {/* Script Editor */}

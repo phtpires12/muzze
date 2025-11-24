@@ -52,6 +52,7 @@ export function TimerPopup() {
   });
   const [isConnected, setIsConnected] = useState(false);
   const [mainWindowClosed, setMainWindowClosed] = useState(false);
+  const [mainWindowVisible, setMainWindowVisible] = useState(false);
 
   useEffect(() => {
     const channel = new BroadcastChannel('session-timer');
@@ -69,6 +70,10 @@ export function TimerPopup() {
         setTimeout(() => {
           window.close();
         }, 3000);
+      } else if (type === 'MAIN_WINDOW_VISIBLE') {
+        setMainWindowVisible(true);
+      } else if (type === 'MAIN_WINDOW_HIDDEN') {
+        setMainWindowVisible(false);
       }
     };
     
@@ -262,7 +267,12 @@ export function TimerPopup() {
           </div>
 
           {/* Sync Status */}
-          <div className="mt-6 pt-4 border-t border-border/20 text-center">
+          <div className="mt-6 pt-4 border-t border-border/20 text-center space-y-2">
+            {mainWindowVisible && (
+              <div className="text-xs text-muted-foreground bg-accent/10 p-2 rounded-lg mb-2">
+                💡 Volte para o app principal para ver o timer integrado
+              </div>
+            )}
             <p className="text-xs text-muted-foreground flex items-center justify-center gap-2">
               <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
               Sincronizado com o app principal

@@ -14,6 +14,7 @@ import { arrayMove } from '@dnd-kit/sortable';
 import { DraggableSessionTimer } from "@/components/DraggableSessionTimer";
 import { useSession } from "@/hooks/useSession";
 import { useTimerPopup } from "@/hooks/useTimerPopup";
+import { useAppVisibility } from "@/hooks/useAppVisibility";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
@@ -38,6 +39,8 @@ const ShotListRecord = () => {
     resumeSession,
     endSession,
   } = useSession();
+  
+  const isAppVisible = useAppVisibility();
 
   // Filter states
   const [filterLocation, setFilterLocation] = useState<string>("all");
@@ -510,6 +513,7 @@ const ShotListRecord = () => {
           onResume={resumeSession}
           onStop={endSession}
           progress={progress}
+          hidden={!isAppVisible}
         />
 
         {/* Desktop Progress */}
