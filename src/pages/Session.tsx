@@ -14,7 +14,8 @@ import {
   Scissors, 
   CheckCircle,
   ArrowLeft,
-  Home
+  Home,
+  Flame
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -141,9 +142,12 @@ const Session = () => {
       setShowSummary(true);
       
       // Show streak halo if achieved
-      if (result.streakAchieved && result.newStreak) {
-        setStreakCount(result.newStreak);
-        setShowStreakHalo(true);
+      if (result.streakAchieved) {
+        const newStreak = (result as any).newStreak;
+        if (newStreak !== undefined) {
+          setStreakCount(newStreak);
+          setShowStreakHalo(true);
+        }
       }
     }
   };
@@ -162,20 +166,19 @@ const Session = () => {
     await handleEnd();
   };
 
-  // Timer popup for editing stage - placed after handleEnd is defined
+  // Timer popup - habilitado para TODAS as etapas
   const currentStage = STAGES.find(s => s.id === session.stage);
-  const progress = session.targetSeconds 
-    ? Math.min(100, (session.elapsedSeconds / session.targetSeconds) * 100)
-    : 0;
+  const progress = (session.elapsedSeconds / (session.isStreakMode ? session.dailyGoalMinutes * 60 : 25 * 60)) * 100;
 
   const timerPopup = useTimerPopup({
-    enabled: session.stage === "edit",
-    stage: currentStage?.label || "Edição",
-    icon: "Scissors",
+    enabled: true, // ✅ Sempre ativo (todas as etapas)
+    stage: currentStage?.label || "Sessão",
+    icon: currentStage?.icon || "Lightbulb",
     elapsedSeconds: session.elapsedSeconds,
     targetSeconds: session.targetSeconds,
     isPaused: session.isPaused,
-    isOvertime: session.isOvertime,
+    isStreakMode: session.isStreakMode,
+    dailyGoalMinutes: session.dailyGoalMinutes,
     isActive: session.isActive,
     progress,
     onPause: pauseSession,
@@ -304,7 +307,8 @@ const Session = () => {
           icon={CurrentIcon}
           elapsedSeconds={session.elapsedSeconds}
           targetSeconds={session.targetSeconds}
-          isOvertime={session.isOvertime}
+          isStreakMode={session.isStreakMode}
+          dailyGoalMinutes={session.dailyGoalMinutes}
           isPaused={session.isPaused}
           onPause={pauseSession}
           onResume={resumeSession}
@@ -323,20 +327,24 @@ const Session = () => {
     <div className="min-h-screen bg-gradient-to-br from-accent/10 via-background to-primary/10 p-6">
       <div className="max-w-2xl mx-auto">
         <Card className={cn(
-          "p-8 backdrop-blur-md border-border/20 shadow-lg rounded-[28px] transition-all duration-300",
-          session.isOvertime 
-            ? "bg-destructive/10 border-destructive/30" 
+          "p-8 backdrop-blur-md border-border/20 shadow-lg rounded-[28px] transition-all duration-1000",
+          session.isStreakMode 
+            ? "bg-gradient-to-br from-orange-500/10 via-red-500/10 to-orange-600/10 border-orange-500/30" 
             : "bg-card/85"
         )}>
           {/* Timer Display */}
           <div className="text-center mb-8">
             <div className={cn(
-              "w-24 h-24 mx-auto mb-4 rounded-full flex items-center justify-center shadow-lg transition-all duration-300",
-              session.isOvertime
-                ? "bg-destructive animate-pulse"
+              "w-24 h-24 mx-auto mb-4 rounded-full flex items-center justify-center shadow-lg transition-all duration-1000",
+              session.isStreakMode
+                ? "bg-gradient-to-br from-orange-500 to-red-600 animate-wiggle"
                 : "bg-gradient-to-br from-accent to-primary"
             )}>
-              <CurrentIcon className="w-12 h-12 text-white" />
+              {session.isStreakMode ? (
+                <Flame className="w-12 h-12 text-white" />
+              ) : (
+                <CurrentIcon className="w-12 h-12 text-white" />
+              )}
             </div>
             
             <h2 className="text-2xl font-bold text-foreground mb-2">
@@ -344,29 +352,28 @@ const Session = () => {
             </h2>
             
             <div className={cn(
-              "text-6xl font-bold mb-2 tabular-nums transition-colors",
-              session.isOvertime ? "text-destructive" : "text-foreground"
+              "text-6xl font-bold mb-2 tabular-nums transition-colors duration-1000",
+              session.isStreakMode ? "text-orange-600" : "text-foreground"
             )}>
               {formatTime(session.elapsedSeconds)}
             </div>
 
-            {session.targetSeconds && (
-              <div className="text-sm text-muted-foreground mb-2">
-                {session.isOvertime 
-                  ? "⏰ Tempo esgotado!"
-                  : `Tempo sugerido: ${formatTime(session.targetSeconds)}`}
-              </div>
-            )}
+            <div className={cn(
+              "text-sm mb-2 transition-colors duration-1000",
+              session.isStreakMode ? "text-orange-600/70" : "text-muted-foreground"
+            )}>
+              {session.isStreakMode 
+                ? `🎯 Meta diária: ${formatTime(session.dailyGoalMinutes * 60)}`
+                : `Meta: ${formatTime(25 * 60)}`}
+            </div>
 
-            {session.targetSeconds && (
-              <Progress 
-                value={progress} 
-                className={cn(
-                  "max-w-xs mx-auto mb-4",
-                  session.isOvertime && "bg-destructive/20"
-                )}
-              />
-            )}
+            <Progress 
+              value={progress} 
+              className={cn(
+                "max-w-xs mx-auto mb-4 transition-all duration-500",
+                session.isStreakMode && "bg-orange-200 [&>div]:bg-gradient-to-r [&>div]:from-orange-500 [&>div]:to-red-600"
+              )}
+            />
             
             {session.isPaused && (
               <p className="text-muted-foreground">Sessão pausada</p>

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Play, Pause, Square, GripVertical, LucideIcon } from 'lucide-react';
+import { Play, Pause, Square, GripVertical, LucideIcon, Flame } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -10,8 +10,9 @@ interface DraggableSessionTimerProps {
   stage: string;
   icon: LucideIcon;
   elapsedSeconds: number;
-  targetSeconds?: number;
-  isOvertime: boolean;
+  targetSeconds: number;
+  isStreakMode: boolean;
+  dailyGoalMinutes: number;
   isPaused: boolean;
   onPause: () => void;
   onResume: () => void;
@@ -21,10 +22,11 @@ interface DraggableSessionTimerProps {
 
 export const DraggableSessionTimer = ({ 
   stage,
-  icon: Icon,
+  icon: StageIcon,
   elapsedSeconds,
   targetSeconds,
-  isOvertime,
+  isStreakMode,
+  dailyGoalMinutes,
   isPaused,
   onPause,
   onResume,
@@ -67,6 +69,12 @@ export const DraggableSessionTimer = ({
     }
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
+
+  const Icon = isStreakMode ? Flame : StageIcon;
+  const displayedTarget = isStreakMode ? dailyGoalMinutes * 60 : 25 * 60;
+  const goalText = isStreakMode 
+    ? `🎯 Meta diária: ${formatTime(dailyGoalMinutes * 60)}`
+    : `Meta: ${formatTime(25 * 60)}`;
 
   const handleMouseDown = (e: React.MouseEvent) => {
     setIsDragging(true);
@@ -139,31 +147,32 @@ export const DraggableSessionTimer = ({
       }}
     >
       <Card className={cn(
-        "backdrop-blur-md border-border/20 shadow-xl rounded-2xl transition-all duration-300",
-        isOvertime 
-          ? "bg-destructive/95 border-destructive animate-pulse" 
+        "backdrop-blur-md border-border/20 shadow-xl rounded-2xl transition-all duration-1000",
+        isStreakMode 
+          ? "bg-gradient-to-br from-orange-500/95 via-red-500/95 to-orange-600/95 border-orange-500 animate-pulse" 
           : "bg-card/95",
         isMobile ? "w-[280px]" : "w-auto"
       )}>
         {/* Drag Handle - Compacto em mobile */}
         <div
           className={cn(
-            "flex items-center justify-between rounded-t-2xl cursor-grab active:cursor-grabbing",
-            isOvertime ? "bg-destructive/20" : "bg-primary/10",
+            "flex items-center justify-between rounded-t-2xl cursor-grab active:cursor-grabbing transition-all duration-1000",
+            isStreakMode ? "bg-orange-500/20" : "bg-primary/10",
             isMobile ? "px-3 py-1.5" : "px-4 py-2"
           )}
           onMouseDown={handleMouseDown}
           onTouchStart={handleTouchStart}
         >
           <span className={cn(
-            "font-semibold",
-            isOvertime ? "text-destructive-foreground/80" : "text-muted-foreground",
+            "font-semibold transition-colors duration-1000",
+            isStreakMode ? "text-orange-100/80" : "text-muted-foreground",
             isMobile ? "text-[10px]" : "text-xs"
           )}>
             {stage}
           </span>
           <GripVertical className={cn(
-            isOvertime ? "text-destructive-foreground/60" : "text-muted-foreground",
+            "transition-colors duration-1000",
+            isStreakMode ? "text-orange-100/60" : "text-muted-foreground",
             isMobile ? "w-3 h-3" : "w-4 h-4"
           )} />
         </div>
@@ -176,34 +185,34 @@ export const DraggableSessionTimer = ({
           )}>
             {/* Icon - Menor em mobile */}
             <div className={cn(
-              "rounded-full flex items-center justify-center shadow-lg flex-shrink-0",
-              isOvertime
-                ? "bg-destructive-foreground/20"
+              "rounded-full flex items-center justify-center shadow-lg flex-shrink-0 transition-all duration-1000",
+              isStreakMode
+                ? "bg-orange-100/20 animate-wiggle"
                 : "bg-gradient-to-br from-accent to-primary",
               isMobile ? "w-10 h-10" : "w-12 h-12"
             )}>
               <Icon className={cn(
-                isOvertime ? "text-destructive-foreground" : "text-white",
+                "transition-colors duration-1000",
+                isStreakMode ? "text-orange-100" : "text-white",
                 isMobile ? "w-5 h-5" : "w-6 h-6"
               )} />
             </div>
             
             <div className={cn(isMobile ? "min-w-[100px]" : "min-w-[140px]")}>
               <div className={cn(
-                "font-bold tabular-nums",
-                isOvertime ? "text-destructive-foreground" : "text-foreground",
+                "font-bold tabular-nums transition-colors duration-1000",
+                isStreakMode ? "text-orange-100" : "text-foreground",
                 isMobile ? "text-xl" : "text-2xl"
               )}>
                 {formatTime(elapsedSeconds)}
               </div>
-              {targetSeconds && (
-                <div className={cn(
-                  isOvertime ? "text-destructive-foreground/70" : "text-muted-foreground",
-                  isMobile ? "text-[10px]" : "text-xs"
-                )}>
-                  {isOvertime ? "Tempo esgotado!" : `Meta: ${formatTime(targetSeconds)}`}
-                </div>
-              )}
+              <div className={cn(
+                "transition-colors duration-1000",
+                isStreakMode ? "text-orange-100/70" : "text-muted-foreground",
+                isMobile ? "text-[10px]" : "text-xs"
+              )}>
+                {goalText}
+              </div>
             </div>
 
             {/* Controls - Mais compactos em mobile */}
@@ -214,7 +223,7 @@ export const DraggableSessionTimer = ({
               {!isPaused ? (
                 <Button
                   onClick={onPause}
-                  variant={isOvertime ? "secondary" : "outline"}
+                  variant={isStreakMode ? "secondary" : "outline"}
                   size={isMobile ? "icon" : "sm"}
                   className={cn(isMobile && "h-8 w-8")}
                 >
@@ -223,7 +232,7 @@ export const DraggableSessionTimer = ({
               ) : (
                 <Button
                   onClick={onResume}
-                  variant={isOvertime ? "secondary" : "default"}
+                  variant={isStreakMode ? "secondary" : "default"}
                   size={isMobile ? "icon" : "sm"}
                   className={cn(isMobile && "h-8 w-8")}
                 >
@@ -232,7 +241,7 @@ export const DraggableSessionTimer = ({
               )}
               <Button
                 onClick={onStop}
-                variant={isOvertime ? "secondary" : "outline"}
+                variant={isStreakMode ? "secondary" : "outline"}
                 size={isMobile ? "icon" : "sm"}
                 className={cn(isMobile && "h-8 w-8")}
               >
@@ -242,15 +251,14 @@ export const DraggableSessionTimer = ({
           </div>
 
           {/* Progress bar - Mais fino em mobile */}
-          {targetSeconds && (
-            <Progress 
-              value={progress} 
-              className={cn(
-                isOvertime && "bg-destructive-foreground/20",
-                isMobile ? "mt-2 h-1" : "mt-3 h-1.5"
-              )}
-            />
-          )}
+          <Progress 
+            value={(elapsedSeconds / displayedTarget) * 100} 
+            className={cn(
+              "transition-all duration-500",
+              isStreakMode && "bg-orange-200 [&>div]:bg-gradient-to-r [&>div]:from-orange-500 [&>div]:to-red-600",
+              isMobile ? "mt-2 h-1" : "mt-3 h-1.5"
+            )}
+          />
         </div>
       </Card>
     </div>

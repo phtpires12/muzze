@@ -9,12 +9,13 @@ interface SessionState {
   isActive: boolean;
   isPaused: boolean;
   stage: SessionStage;
-  elapsedSeconds: number; // Timer for current stage only
-  totalElapsedSeconds: number; // Timer for entire session
+  elapsedSeconds: number; // Timer GLOBAL - não reseta ao mudar de etapa (para UI)
+  stageElapsedSeconds: number; // Timer da etapa atual - reseta ao mudar (para estatísticas)
   startedAt: Date | null;
   sessionId: string | null;
-  targetSeconds: number | null; // Target time based on average of last 3 sessions for current stage
-  isOvertime: boolean; // Whether user exceeded the target time for current stage
+  targetSeconds: number; // Meta fixa de 25 min (para streak)
+  isStreakMode: boolean; // Modo ofensiva (após 25 min)
+  dailyGoalMinutes: number; // Meta diária do usuário
 }
 
 export const useSession = () => {
@@ -24,36 +25,41 @@ export const useSession = () => {
     isPaused: false,
     stage: "ideation",
     elapsedSeconds: 0,
-    totalElapsedSeconds: 0,
+    stageElapsedSeconds: 0,
     startedAt: null,
     sessionId: null,
-    targetSeconds: null,
-    isOvertime: false,
+    targetSeconds: 25 * 60,
+    isStreakMode: false,
+    dailyGoalMinutes: 60,
   });
   
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const currentStageStartRef = useRef<Date | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Timer tick - increments both stage timer and total session timer
+  // Timer tick - increments both global and stage timers
   useEffect(() => {
     if (session.isActive && !session.isPaused) {
       intervalRef.current = setInterval(() => {
         setSession(prev => {
           const newElapsedSeconds = prev.elapsedSeconds + 1;
-          const newTotalElapsedSeconds = prev.totalElapsedSeconds + 1;
-          const isOvertime = prev.targetSeconds !== null && newElapsedSeconds > prev.targetSeconds;
+          const newStageElapsedSeconds = prev.stageElapsedSeconds + 1;
+          const streakThreshold = 25 * 60;
           
-          // Trigger alarm when just crossed the target time
-          if (isOvertime && !prev.isOvertime && prev.targetSeconds !== null && newElapsedSeconds === prev.targetSeconds + 1) {
-            triggerAlarm();
+          // Detectar entrada no modo streak
+          const wasStreakMode = prev.isStreakMode;
+          const isStreakMode = newElapsedSeconds >= streakThreshold;
+          
+          // Celebrar ao entrar em modo streak
+          if (!wasStreakMode && isStreakMode) {
+            triggerStreakMode();
           }
           
           return {
             ...prev,
             elapsedSeconds: newElapsedSeconds,
-            totalElapsedSeconds: newTotalElapsedSeconds,
-            isOvertime,
+            stageElapsedSeconds: newStageElapsedSeconds,
+            isStreakMode,
           };
         });
       }, 1000);
@@ -69,21 +75,13 @@ export const useSession = () => {
         clearInterval(intervalRef.current);
       }
     };
-  }, [session.isActive, session.isPaused, session.targetSeconds, session.isOvertime]);
+  }, [session.isActive, session.isPaused]);
 
-  const triggerAlarm = useCallback(() => {
-    // Visual alarm via toast
+  const triggerStreakMode = useCallback(() => {
     toast({
-      title: "⏰ Tempo esgotado!",
-      description: "Você atingiu o tempo limite para esta etapa",
-      variant: "destructive",
+      title: "🔥 Modo Ofensiva Ativado!",
+      description: "Continue criando para bater sua meta diária!",
     });
-
-    // Audio alarm
-    if (!audioRef.current) {
-      audioRef.current = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZURE');
-    }
-    audioRef.current.play().catch(err => console.log('Audio play failed:', err));
   }, [toast]);
 
   const startSession = useCallback(async (initialStage: SessionStage = "ideation") => {
@@ -94,56 +92,36 @@ export const useSession = () => {
       const now = new Date();
       currentStageStartRef.current = now;
 
-      // Calculate average time from last 3 sessions for this stage
-      const { data: recentSessions } = await supabase
-        .from('stage_times')
-        .select('duration_seconds')
+      // Buscar meta diária do usuário
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('daily_goal_minutes')
         .eq('user_id', user.id)
-        .eq('stage', initialStage)
-        .order('created_at', { ascending: false })
-        .limit(3);
-
-      // Default recommended times (in seconds) for each stage
-      const defaultTimes: Record<SessionStage, number> = {
-        idea: 10 * 60,        // 10 minutes
-        ideation: 15 * 60,    // 15 minutes
-        script: 45 * 60,      // 45 minutes
-        review: 30 * 60,      // 30 minutes
-        record: 50 * 60,      // 50 minutes
-        edit: 120 * 60,       // 2 hours
-      };
-
-      let targetSeconds: number | null = null;
-      if (recentSessions && recentSessions.length > 0) {
-        const totalSeconds = recentSessions.reduce((sum, s) => sum + (s.duration_seconds || 0), 0);
-        targetSeconds = Math.floor(totalSeconds / recentSessions.length);
-      } else {
-        // Use default time if no history
-        targetSeconds = defaultTimes[initialStage];
-      }
+        .single();
 
       setSession({
         isActive: true,
         isPaused: false,
         stage: initialStage,
         elapsedSeconds: 0,
-        totalElapsedSeconds: 0,
+        stageElapsedSeconds: 0,
         startedAt: now,
         sessionId: crypto.randomUUID(),
-        targetSeconds,
-        isOvertime: false,
+        targetSeconds: 25 * 60,
+        isStreakMode: false,
+        dailyGoalMinutes: profile?.daily_goal_minutes || 60,
       });
 
       // Track analytics
       await supabase.from('analytics_events').insert({
         user_id: user.id,
         event: 'session_started',
-        payload: { stage: initialStage, target_seconds: targetSeconds }
+        payload: { stage: initialStage }
       });
 
       toast({
         title: "Sessão iniciada",
-        description: `Etapa: ${getStageLabel(initialStage)} • Tempo recomendado: ${formatTime(targetSeconds || 0)}`,
+        description: `Etapa: ${getStageLabel(initialStage)} • Meta: 25 minutos para streak`,
       });
     } catch (error: any) {
       toast({
@@ -175,10 +153,10 @@ export const useSession = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      // Save previous stage time
+      // Salvar tempo da etapa ANTERIOR no banco
       if (currentStageStartRef.current) {
         const now = new Date();
-        const durationSeconds = Math.floor((now.getTime() - currentStageStartRef.current.getTime()) / 1000);
+        const durationSeconds = session.stageElapsedSeconds;
 
         await supabase.from('stage_times').insert({
           user_id: user.id,
@@ -190,50 +168,19 @@ export const useSession = () => {
         });
       }
 
-      // Default recommended times (in seconds) for each stage
-      const defaultTimes: Record<SessionStage, number> = {
-        idea: 10 * 60,        // 10 minutes
-        ideation: 15 * 60,    // 15 minutes
-        script: 45 * 60,      // 45 minutes
-        review: 30 * 60,      // 30 minutes
-        record: 50 * 60,      // 50 minutes
-        edit: 120 * 60,       // 2 hours
-      };
-
-      // Calculate average time for new stage
-      const { data: recentSessions } = await supabase
-        .from('stage_times')
-        .select('duration_seconds')
-        .eq('user_id', user.id)
-        .eq('stage', newStage)
-        .order('created_at', { ascending: false })
-        .limit(3);
-
-      let targetSeconds: number | null = null;
-      if (recentSessions && recentSessions.length > 0) {
-        const totalSeconds = recentSessions.reduce((sum, s) => sum + (s.duration_seconds || 0), 0);
-        targetSeconds = Math.floor(totalSeconds / recentSessions.length);
-      } else {
-        // Use default time if no history
-        targetSeconds = defaultTimes[newStage];
-      }
-
-      // Start new stage - reset stage timer but keep total session timer running
+      // Mudar etapa - reseta APENAS o timer da etapa
       currentStageStartRef.current = new Date();
       setSession(prev => ({ 
         ...prev, 
         stage: newStage,
-        elapsedSeconds: 0, // Reset stage timer
-        // totalElapsedSeconds keeps running
-        targetSeconds,
-        isOvertime: false,
+        stageElapsedSeconds: 0,
+        // elapsedSeconds continua! (timer global não reseta)
+        // isStreakMode continua! (modo streak persiste)
       }));
-
-      // XP for stage change is now tracked automatically through session duration
 
       toast({
         title: "Etapa alterada",
-        description: `Agora você está em: ${getStageLabel(newStage)} • Tempo recomendado: ${formatTime(targetSeconds || 0)}`,
+        description: `Agora você está em: ${getStageLabel(newStage)}`,
       });
     } catch (error: any) {
       toast({
@@ -242,17 +189,17 @@ export const useSession = () => {
         variant: "destructive",
       });
     }
-  }, [session.stage, toast]);
+  }, [session.stage, session.stageElapsedSeconds, toast]);
 
   const endSession = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      // Save final stage time
+      // Salvar tempo da etapa atual (última antes de finalizar)
       if (currentStageStartRef.current) {
         const now = new Date();
-        const durationSeconds = Math.floor((now.getTime() - currentStageStartRef.current.getTime()) / 1000);
+        const durationSeconds = session.stageElapsedSeconds;
 
         await supabase.from('stage_times').insert({
           user_id: user.id,
@@ -264,9 +211,9 @@ export const useSession = () => {
         });
       }
 
-      // Calculate XP from time spent (2 XP per minute)
-      const durationMinutes = Math.floor(session.totalElapsedSeconds / 60);
-      const xpGained = calculateXPFromMinutes(durationMinutes);
+      // Calcular XP baseado no tempo TOTAL da sessão
+      const totalMinutes = Math.floor(session.elapsedSeconds / 60);
+      const xpGained = calculateXPFromMinutes(totalMinutes);
 
       // Get user and update XP in database
       const { data: profile } = await supabase
@@ -286,7 +233,7 @@ export const useSession = () => {
       if (xpGained > 0) {
         toast({
           title: `+${xpGained} XP`,
-          description: `${durationMinutes} minutos de criação!`
+          description: `${totalMinutes} minutos de criação!`
         });
       }
 
@@ -295,41 +242,66 @@ export const useSession = () => {
         user_id: user.id,
         event: 'session_completed',
         payload: { 
-          duration_seconds: session.totalElapsedSeconds,
+          duration_seconds: session.elapsedSeconds,
           final_stage: session.stage,
           xpGained
         }
       });
 
-      // Update streak and check if achieved
-      const sessionMinutes = session.totalElapsedSeconds / 60;
-      const streakResult = await updateStreak(user.id, sessionMinutes);
+      // Update streak (se atingiu 25+ minutos)
+      if (session.elapsedSeconds >= 25 * 60) {
+        const streakResult = await updateStreak(user.id, totalMinutes);
+        
+        const summary = {
+          duration: session.elapsedSeconds,
+          stage: session.stage,
+          xpGained,
+          streakAchieved: streakResult.streakAchieved || false,
+          newStreak: streakResult.newStreak,
+          creativeMinutesToday: streakResult.creativeMinutesToday,
+        };
 
-      const summary = {
-        duration: session.totalElapsedSeconds,
-        stage: session.stage,
-        xpGained,
-        streakAchieved: streakResult.streakAchieved || false,
-        newStreak: streakResult.newStreak,
-        creativeMinutesToday: streakResult.creativeMinutesToday,
-      };
+        // Reset session
+        setSession({
+          isActive: false,
+          isPaused: false,
+          stage: "ideation",
+          elapsedSeconds: 0,
+          stageElapsedSeconds: 0,
+          startedAt: null,
+          sessionId: null,
+          targetSeconds: 25 * 60,
+          isStreakMode: false,
+          dailyGoalMinutes: 60,
+        });
 
-      // Reset session
-      setSession({
-        isActive: false,
-        isPaused: false,
-        stage: "ideation",
-        elapsedSeconds: 0,
-        totalElapsedSeconds: 0,
-        startedAt: null,
-        sessionId: null,
-        targetSeconds: null,
-        isOvertime: false,
-      });
+        currentStageStartRef.current = null;
 
-      currentStageStartRef.current = null;
+        return summary;
+      } else {
+        // Sessão muito curta, sem streak
+        setSession({
+          isActive: false,
+          isPaused: false,
+          stage: "ideation",
+          elapsedSeconds: 0,
+          stageElapsedSeconds: 0,
+          startedAt: null,
+          sessionId: null,
+          targetSeconds: 25 * 60,
+          isStreakMode: false,
+          dailyGoalMinutes: 60,
+        });
 
-      return summary;
+        currentStageStartRef.current = null;
+
+        return {
+          duration: session.elapsedSeconds,
+          stage: session.stage,
+          xpGained,
+          streakAchieved: false,
+        };
+      }
     } catch (error: any) {
       toast({
         title: "Erro ao finalizar sessão",

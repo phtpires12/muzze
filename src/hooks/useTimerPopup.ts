@@ -5,9 +5,10 @@ interface TimerPopupState {
   stage: string;
   icon: string;
   elapsedSeconds: number;
-  targetSeconds: number | null;
+  targetSeconds: number;
   isPaused: boolean;
-  isOvertime: boolean;
+  isStreakMode: boolean;
+  dailyGoalMinutes: number;
   isActive: boolean;
   progress: number;
 }
@@ -17,9 +18,10 @@ interface UseTimerPopupOptions {
   stage: string;
   icon: string;
   elapsedSeconds: number;
-  targetSeconds: number | null;
+  targetSeconds: number;
   isPaused: boolean;
-  isOvertime: boolean;
+  isStreakMode: boolean;
+  dailyGoalMinutes: number;
   isActive: boolean;
   progress: number;
   onPause: () => void;
@@ -102,7 +104,8 @@ export function useTimerPopup(options: UseTimerPopupOptions) {
       elapsedSeconds: options.elapsedSeconds,
       targetSeconds: options.targetSeconds,
       isPaused: options.isPaused,
-      isOvertime: options.isOvertime,
+      isStreakMode: options.isStreakMode,
+      dailyGoalMinutes: options.dailyGoalMinutes,
       isActive: options.isActive,
       progress: options.progress,
     };
@@ -123,7 +126,7 @@ export function useTimerPopup(options: UseTimerPopupOptions) {
     options.isActive,
     options.elapsedSeconds,
     options.isPaused,
-    options.isOvertime,
+    options.isStreakMode,
     options.progress,
   ]);
 
