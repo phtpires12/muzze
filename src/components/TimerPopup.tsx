@@ -2,28 +2,30 @@ import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, Square, LucideIcon, AlertCircle } from 'lucide-react';
+import { Play, Pause, Square, LucideIcon, AlertCircle, Flame } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface TimerState {
   stage: string;
   icon: string;
   elapsedSeconds: number;
-  targetSeconds: number | null;
+  targetSeconds: number;
   isPaused: boolean;
-  isOvertime: boolean;
+  isStreakMode: boolean;
+  dailyGoalMinutes: number;
   isActive: boolean;
   progress: number;
 }
 
 export function TimerPopup() {
   const [timerState, setTimerState] = useState<TimerState>({
-    stage: 'Edição',
-    icon: 'Scissors',
+    stage: 'Sessão',
+    icon: 'Lightbulb',
     elapsedSeconds: 0,
-    targetSeconds: null,
+    targetSeconds: 25 * 60,
     isPaused: false,
-    isOvertime: false,
+    isStreakMode: false,
+    dailyGoalMinutes: 60,
     isActive: false,
     progress: 0,
   });
@@ -94,10 +96,12 @@ export function TimerPopup() {
     channel.close();
   };
 
-  // Get icon component (simplified for popup)
-  const getIconClass = () => {
-    return timerState.icon;
-  };
+  const displayedTarget = timerState.isStreakMode 
+    ? timerState.dailyGoalMinutes * 60 
+    : 25 * 60;
+  const goalText = timerState.isStreakMode 
+    ? `🎯 Meta diária: ${formatTime(timerState.dailyGoalMinutes * 60)}`
+    : `Meta: ${formatTime(25 * 60)}`;
 
   if (mainWindowClosed) {
     return (
@@ -132,19 +136,19 @@ export function TimerPopup() {
   return (
     <div className="h-screen flex items-center justify-center bg-gradient-to-br from-accent/10 via-background to-primary/10 p-6">
       <Card className={cn(
-        "backdrop-blur-md border-border/20 shadow-2xl rounded-[28px] transition-all duration-300 max-w-md w-full",
-        timerState.isOvertime 
-          ? "bg-destructive/95 border-destructive animate-pulse" 
+        "backdrop-blur-md border-border/20 shadow-2xl rounded-[28px] transition-all duration-1000 max-w-md w-full",
+        timerState.isStreakMode 
+          ? "bg-gradient-to-br from-orange-500/95 via-red-500/95 to-orange-600/95 border-orange-500 animate-pulse" 
           : "bg-card/95"
       )}>
         {/* Header */}
         <div className={cn(
-          "px-6 py-3 rounded-t-[28px] border-b border-border/20",
-          timerState.isOvertime ? "bg-destructive/20" : "bg-primary/10"
+          "px-6 py-3 rounded-t-[28px] border-b border-border/20 transition-all duration-1000",
+          timerState.isStreakMode ? "bg-orange-500/20" : "bg-primary/10"
         )}>
           <h1 className={cn(
-            "text-sm font-semibold text-center",
-            timerState.isOvertime ? "text-destructive-foreground" : "text-muted-foreground"
+            "text-sm font-semibold text-center transition-colors duration-1000",
+            timerState.isStreakMode ? "text-orange-100" : "text-muted-foreground"
           )}>
             Timer - {timerState.stage}
           </h1>
@@ -155,53 +159,47 @@ export function TimerPopup() {
           <div className="text-center mb-8">
             {/* Icon */}
             <div className={cn(
-              "w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center shadow-lg transition-all duration-300",
-              timerState.isOvertime
-                ? "bg-destructive"
+              "w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center shadow-lg transition-all duration-1000",
+              timerState.isStreakMode
+                ? "bg-orange-100/20 animate-wiggle"
                 : "bg-gradient-to-br from-accent to-primary"
             )}>
-              {/* Using a placeholder icon - in real implementation would use the actual icon */}
-              <div className={cn(
-                "w-10 h-10",
-                timerState.isOvertime ? "text-destructive-foreground" : "text-white"
-              )}>✂️</div>
+              {timerState.isStreakMode ? (
+                <Flame className="w-10 h-10 text-orange-100" />
+              ) : (
+                <div className="w-10 h-10 text-white">💡</div>
+              )}
             </div>
             
             {/* Time Display */}
             <div className={cn(
-              "text-5xl font-bold mb-3 tabular-nums transition-colors",
-              timerState.isOvertime ? "text-destructive-foreground" : "text-foreground"
+              "text-5xl font-bold mb-3 tabular-nums transition-colors duration-1000",
+              timerState.isStreakMode ? "text-orange-100" : "text-foreground"
             )}>
               {formatTime(timerState.elapsedSeconds)}
             </div>
 
-            {timerState.targetSeconds && (
-              <div className={cn(
-                "text-sm mb-2",
-                timerState.isOvertime 
-                  ? "text-destructive-foreground/70" 
-                  : "text-muted-foreground"
-              )}>
-                {timerState.isOvertime 
-                  ? "⏰ Tempo esgotado!"
-                  : `Tempo sugerido: ${formatTime(timerState.targetSeconds)}`}
-              </div>
-            )}
+            <div className={cn(
+              "text-sm mb-2 transition-colors duration-1000",
+              timerState.isStreakMode 
+                ? "text-orange-100/70" 
+                : "text-muted-foreground"
+            )}>
+              {goalText}
+            </div>
 
-            {timerState.targetSeconds && (
-              <Progress 
-                value={timerState.progress} 
-                className={cn(
-                  "max-w-xs mx-auto mb-4",
-                  timerState.isOvertime && "bg-destructive-foreground/20"
-                )}
-              />
-            )}
+            <Progress 
+              value={(timerState.elapsedSeconds / displayedTarget) * 100} 
+              className={cn(
+                "max-w-xs mx-auto mb-4 transition-all duration-500",
+                timerState.isStreakMode && "bg-orange-200 [&>div]:bg-gradient-to-r [&>div]:from-orange-500 [&>div]:to-red-600"
+              )}
+            />
             
             {timerState.isPaused && (
               <p className={cn(
-                "text-sm font-medium",
-                timerState.isOvertime ? "text-destructive-foreground/70" : "text-muted-foreground"
+                "text-sm font-medium transition-colors duration-1000",
+                timerState.isStreakMode ? "text-orange-100/70" : "text-muted-foreground"
               )}>
                 ⏸️ Sessão pausada
               </p>
