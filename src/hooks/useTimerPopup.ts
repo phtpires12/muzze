@@ -40,7 +40,7 @@ export function useTimerPopup(options: UseTimerPopupOptions) {
   const hasShownToastRef = useRef(false);
   const [isPopupBlocked, setIsPopupBlocked] = useState(false);
 
-  // Initialize BroadcastChannel and popup
+  // Initialize BroadcastChannel (NOT popup - popup is created on demand)
   useEffect(() => {
     if (!options.enabled || !options.isActive) return;
 
@@ -70,45 +70,15 @@ export function useTimerPopup(options: UseTimerPopupOptions) {
       channelRef.current = globalChannelRef;
     }
 
-    // Check if popup already exists and is open
+    // If popup already exists and is open, reuse it
     if (globalPopupRef && !globalPopupRef.closed) {
-      // Popup already exists, just reuse it and update state
       popupRef.current = globalPopupRef;
       setIsPopupBlocked(false);
       broadcastTimerUpdate();
-      return;
     }
 
-    // Create new popup only if it doesn't exist
-    const popupUrl = `${window.location.origin}/timer-popup.html`;
-    const popup = window.open(
-      popupUrl,
-      'timer-popup',  // This name ensures only 1 window exists
-      'width=450,height=400,left=100,top=100,resizable=yes'
-    );
+    // ✅ Popup is NOT created here - only on demand when user leaves app
 
-    if (!popup || popup.closed || typeof popup.closed === 'undefined') {
-      // Popup was blocked
-      setIsPopupBlocked(true);
-      console.warn('Popup was blocked by browser');
-    } else {
-      globalPopupRef = popup;
-      popupRef.current = popup;
-      setIsPopupBlocked(false);
-      
-      // Show toast on first popup open
-      if (!hasShownToastRef.current) {
-        setTimeout(() => {
-          toast({
-            title: "✨ Timer em Nova Janela",
-            description: "Acompanhe seu tempo enquanto edita no seu editor preferido!",
-          });
-          hasShownToastRef.current = true;
-        }, 1000);
-      }
-    }
-
-    // Don't clean up global references on unmount
     return () => {
       // Keep global channel and popup alive
     };
@@ -150,21 +120,58 @@ export function useTimerPopup(options: UseTimerPopupOptions) {
     options.progress,
   ]);
 
-  // Handle visibility change - manage popup display based on app visibility
+  // Handle visibility change - create popup when user leaves app, close when returns
   useEffect(() => {
     if (!options.enabled || !options.isActive) return;
 
     const handleVisibilityChange = () => {
       if (document.hidden) {
-        // User SAIU do app → focar popup
+        // User SAIU do app → criar popup se não existir
+        if (!popupRef.current || popupRef.current.closed) {
+          const popupUrl = `${window.location.origin}/timer-popup.html`;
+          const popup = window.open(
+            popupUrl,
+            'timer-popup',
+            'width=450,height=400,left=100,top=100,resizable=yes'
+          );
+
+          if (popup && !popup.closed) {
+            globalPopupRef = popup;
+            popupRef.current = popup;
+            setIsPopupBlocked(false);
+            
+            // Show toast on first popup open
+            if (!hasShownToastRef.current) {
+              setTimeout(() => {
+                toast({
+                  title: "✨ Timer em Nova Janela",
+                  description: "Acompanhe seu tempo enquanto trabalha em outros apps!",
+                });
+                hasShownToastRef.current = true;
+              }, 1000);
+            }
+          } else {
+            setIsPopupBlocked(true);
+            console.warn('Popup was blocked by browser');
+          }
+        }
+        
+        // Focar popup (novo ou existente)
         if (popupRef.current && !popupRef.current.closed) {
           popupRef.current.focus();
         }
+        
         // Avisar popup que janela principal está escondida
         channelRef.current?.postMessage({ type: 'MAIN_WINDOW_HIDDEN' });
       } else {
-        // User VOLTOU pro app → minimizar popup
+        // User VOLTOU pro app → fechar popup (Opção A)
         channelRef.current?.postMessage({ type: 'MAIN_WINDOW_VISIBLE' });
+        
+        if (popupRef.current && !popupRef.current.closed) {
+          popupRef.current.close();
+          popupRef.current = null;
+          globalPopupRef = null;
+        }
       }
     };
 
@@ -173,7 +180,7 @@ export function useTimerPopup(options: UseTimerPopupOptions) {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [options.enabled, options.isActive]);
+  }, [options.enabled, options.isActive, toast]);
 
   // Cleanup when session ends (close global popup)
   useEffect(() => {
