@@ -5,6 +5,12 @@ import { useToast } from '@/hooks/use-toast';
 let globalPopupRef: Window | null = null;
 let globalChannelRef: BroadcastChannel | null = null;
 
+// Global refs for current options and callbacks (shared across all hook instances)
+let globalOptionsRef: UseTimerPopupOptions | null = null;
+let globalOnPauseRef: (() => void) | null = null;
+let globalOnResumeRef: (() => void) | null = null;
+let globalOnStopRef: (() => void) | null = null;
+
 interface TimerPopupState {
   stage: string;
   icon: string;
@@ -40,19 +46,11 @@ export function useTimerPopup(options: UseTimerPopupOptions) {
   const hasShownToastRef = useRef(false);
   const [isPopupBlocked, setIsPopupBlocked] = useState(false);
 
-  // Refs to avoid stale closures
-  const optionsRef = useRef(options);
-  const onPauseRef = useRef(options.onPause);
-  const onResumeRef = useRef(options.onResume);
-  const onStopRef = useRef(options.onStop);
-
-  // Keep refs updated on every render
-  useEffect(() => {
-    optionsRef.current = options;
-    onPauseRef.current = options.onPause;
-    onResumeRef.current = options.onResume;
-    onStopRef.current = options.onStop;
-  });
+  // Update global refs on every render (any component can update these)
+  globalOptionsRef = options;
+  globalOnPauseRef = options.onPause;
+  globalOnResumeRef = options.onResume;
+  globalOnStopRef = options.onStop;
 
   // Initialize BroadcastChannel (NOT popup - popup is created on demand)
   useEffect(() => {
@@ -67,26 +65,25 @@ export function useTimerPopup(options: UseTimerPopupOptions) {
         const { type } = event.data;
         
         if (type === 'PAUSE_REQUEST') {
-          onPauseRef.current(); // Always use latest callback
+          globalOnPauseRef?.(); // Use global ref (always current)
         } else if (type === 'RESUME_REQUEST') {
-          onResumeRef.current();
+          globalOnResumeRef?.();
         } else if (type === 'STOP_REQUEST') {
-          onStopRef.current();
+          globalOnStopRef?.();
         } else if (type === 'POPUP_READY') {
-          // Send current state when popup is ready using refs
-          if (globalChannelRef && optionsRef.current.isActive) {
-            const opts = optionsRef.current;
+          // Send current state when popup is ready using global refs
+          if (globalChannelRef && globalOptionsRef?.isActive) {
             globalChannelRef.postMessage({
               type: 'TIMER_UPDATE',
-              stage: opts.stage,
-              icon: opts.icon,
-              elapsedSeconds: opts.elapsedSeconds,
-              targetSeconds: opts.targetSeconds,
-              isPaused: opts.isPaused,
-              isStreakMode: opts.isStreakMode,
-              dailyGoalMinutes: opts.dailyGoalMinutes,
-              isActive: opts.isActive,
-              progress: opts.progress,
+              stage: globalOptionsRef.stage,
+              icon: globalOptionsRef.icon,
+              elapsedSeconds: globalOptionsRef.elapsedSeconds,
+              targetSeconds: globalOptionsRef.targetSeconds,
+              isPaused: globalOptionsRef.isPaused,
+              isStreakMode: globalOptionsRef.isStreakMode,
+              dailyGoalMinutes: globalOptionsRef.dailyGoalMinutes,
+              isActive: globalOptionsRef.isActive,
+              progress: globalOptionsRef.progress,
             });
           }
         }
@@ -114,19 +111,18 @@ export function useTimerPopup(options: UseTimerPopupOptions) {
 
   // Broadcast timer updates
   const broadcastTimerUpdate = () => {
-    if (!globalChannelRef) return; // Use global ref directly
+    if (!globalChannelRef || !globalOptionsRef) return;
 
-    const opts = optionsRef.current; // Always get latest version
     const state: TimerPopupState = {
-      stage: opts.stage,
-      icon: opts.icon,
-      elapsedSeconds: opts.elapsedSeconds,
-      targetSeconds: opts.targetSeconds,
-      isPaused: opts.isPaused,
-      isStreakMode: opts.isStreakMode,
-      dailyGoalMinutes: opts.dailyGoalMinutes,
-      isActive: opts.isActive,
-      progress: opts.progress,
+      stage: globalOptionsRef.stage,
+      icon: globalOptionsRef.icon,
+      elapsedSeconds: globalOptionsRef.elapsedSeconds,
+      targetSeconds: globalOptionsRef.targetSeconds,
+      isPaused: globalOptionsRef.isPaused,
+      isStreakMode: globalOptionsRef.isStreakMode,
+      dailyGoalMinutes: globalOptionsRef.dailyGoalMinutes,
+      isActive: globalOptionsRef.isActive,
+      progress: globalOptionsRef.progress,
     };
 
     globalChannelRef.postMessage({
