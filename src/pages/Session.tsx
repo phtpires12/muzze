@@ -32,7 +32,7 @@ import { EditingChecklist } from "@/components/EditingChecklist";
 import { DraggableSessionTimer } from "@/components/DraggableSessionTimer";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useTimerPopup } from "@/hooks/useTimerPopup";
+import { useWindowPortal } from "@/hooks/useWindowPortal";
 import { useAppVisibility } from "@/hooks/useAppVisibility";
 
 const STAGES: { 
@@ -174,25 +174,26 @@ const Session = () => {
     await handleEnd();
   };
 
-  // Timer popup - habilitado para TODAS as etapas
+  // Window portal system - pops out timer when user leaves app
   const currentStage = STAGES.find(s => s.id === session.stage);
   const progress = (session.elapsedSeconds / (session.isStreakMode ? session.dailyGoalMinutes * 60 : 25 * 60)) * 100;
 
-  const timerPopup = useTimerPopup({
-    enabled: true,
-    stage: currentStage?.label || "Sessão",
-    icon: session.isStreakMode ? "Flame" : (currentStage?.iconName || "Lightbulb"),
-    elapsedSeconds: session.elapsedSeconds,
-    targetSeconds: session.targetSeconds,
-    isPaused: session.isPaused,
-    isStreakMode: session.isStreakMode,
-    dailyGoalMinutes: session.dailyGoalMinutes,
-    isActive: session.isActive,
-    progress,
-    onPause: pauseSession,
-    onResume: resumeSession,
-    onStop: handleEnd,
+  const { isOpen, openPortal, closePortal, Portal } = useWindowPortal({
+    title: `Timer - ${currentStage?.label || "Sessão"}`,
+    width: 500,
+    height: 500,
   });
+
+  // Open/close portal based on app visibility
+  useEffect(() => {
+    if (!session.isActive) return;
+
+    if (!isAppVisible && !session.isPaused) {
+      openPortal();
+    } else if (isAppVisible) {
+      closePortal();
+    }
+  }, [isAppVisible, session.isPaused, session.isActive]);
 
 
   if (!session.isActive) {
@@ -309,21 +310,40 @@ const Session = () => {
         </div>
       )}
 
-        {/* Floating Draggable Timer Pop-up */}
-        <DraggableSessionTimer
-          stage={currentStage.label}
-          icon={currentStage.iconName}
-          elapsedSeconds={session.elapsedSeconds}
-          targetSeconds={session.targetSeconds}
-          isStreakMode={session.isStreakMode}
-          dailyGoalMinutes={session.dailyGoalMinutes}
-          isPaused={session.isPaused}
-          onPause={pauseSession}
-          onResume={resumeSession}
-          onStop={handleEnd}
-          progress={progress}
-          hidden={!isAppVisible}
-        />
+        {/* Floating Draggable Timer (in-app) - Hidden when user leaves app */}
+        {!isOpen && (
+          <DraggableSessionTimer
+            stage={currentStage.label}
+            icon={currentStage.iconName}
+            elapsedSeconds={session.elapsedSeconds}
+            targetSeconds={session.targetSeconds}
+            isStreakMode={session.isStreakMode}
+            dailyGoalMinutes={session.dailyGoalMinutes}
+            isPaused={session.isPaused}
+            onPause={pauseSession}
+            onResume={resumeSession}
+            onStop={handleEnd}
+            progress={progress}
+          />
+        )}
+
+        {/* Timer in External Popup Window */}
+        <Portal>
+          <DraggableSessionTimer
+            stage={currentStage.label}
+            icon={currentStage.iconName}
+            elapsedSeconds={session.elapsedSeconds}
+            targetSeconds={session.targetSeconds}
+            isStreakMode={session.isStreakMode}
+            dailyGoalMinutes={session.dailyGoalMinutes}
+            isPaused={session.isPaused}
+            onPause={pauseSession}
+            onResume={resumeSession}
+            onStop={handleEnd}
+            progress={progress}
+            isPopup={true}
+          />
+        </Portal>
 
         {/* Script Editor */}
         <ScriptEditor scriptId={scriptId} isReviewMode={session.stage === "review"} />
