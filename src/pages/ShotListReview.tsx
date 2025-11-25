@@ -10,7 +10,7 @@ import { arrayMove } from '@dnd-kit/sortable';
 import { DraggableSessionTimer } from "@/components/DraggableSessionTimer";
 import { useSession } from "@/hooks/useSession";
 import { useAppVisibility } from "@/hooks/useAppVisibility";
-import { useTimerPopup } from "@/hooks/useTimerPopup";
+import { useWindowPortal } from "@/hooks/useWindowPortal";
 import { cn } from "@/lib/utils";
 
 const ShotListReview = () => {
@@ -288,28 +288,27 @@ const ShotListReview = () => {
     }
   };
 
-  // Timer popup and progress calculation
+  // Window portal system - pops out timer when user leaves app
   const progress = session.isStreakMode
     ? Math.min((session.elapsedSeconds / (session.dailyGoalMinutes * 60)) * 100, 100)
     : Math.min((session.elapsedSeconds / session.targetSeconds) * 100, 100);
 
-  useTimerPopup({
-    enabled: true,
-    stage: "Revisão",
-    icon: session.isStreakMode ? "Flame" : "CheckCircle",
-    elapsedSeconds: session.elapsedSeconds,
-    targetSeconds: session.isStreakMode 
-      ? session.dailyGoalMinutes * 60 
-      : session.targetSeconds,
-    isPaused: session.isPaused,
-    isStreakMode: session.isStreakMode,
-    dailyGoalMinutes: session.dailyGoalMinutes,
-    isActive: session.isActive,
-    progress,
-    onPause: pauseSession,
-    onResume: resumeSession,
-    onStop: endSession,
+  const { isOpen, openPortal, closePortal, Portal } = useWindowPortal({
+    title: "Timer - Revisão",
+    width: 500,
+    height: 500,
   });
+
+  // Open/close portal based on app visibility
+  useEffect(() => {
+    if (!session.isActive) return;
+
+    if (!isAppVisible && !session.isPaused) {
+      openPortal();
+    } else if (isAppVisible) {
+      closePortal();
+    }
+  }, [isAppVisible, session.isPaused, session.isActive]);
 
   const handleAdvanceToRecord = async () => {
     await handleSave();
@@ -413,23 +412,44 @@ const ShotListReview = () => {
           <Plus className="w-6 h-6" />
         </Button>
 
-        {/* Unified Session Timer */}
-        <DraggableSessionTimer
-          stage="Revisão"
-          icon={session.isStreakMode ? "Flame" : "CheckCircle"}
-          elapsedSeconds={session.elapsedSeconds}
-          targetSeconds={session.isStreakMode 
-            ? session.dailyGoalMinutes * 60 
-            : session.targetSeconds}
-          isPaused={session.isPaused}
-          isStreakMode={session.isStreakMode}
-          dailyGoalMinutes={session.dailyGoalMinutes}
-          onPause={pauseSession}
-          onResume={resumeSession}
-          onStop={endSession}
-          progress={progress}
-          hidden={!isAppVisible}
-        />
+        {/* Unified Session Timer (in-app) - Hidden when user leaves app */}
+        {!isOpen && (
+          <DraggableSessionTimer
+            stage="Revisão"
+            icon={session.isStreakMode ? "Flame" : "CheckCircle"}
+            elapsedSeconds={session.elapsedSeconds}
+            targetSeconds={session.isStreakMode 
+              ? session.dailyGoalMinutes * 60 
+              : session.targetSeconds}
+            isPaused={session.isPaused}
+            isStreakMode={session.isStreakMode}
+            dailyGoalMinutes={session.dailyGoalMinutes}
+            onPause={pauseSession}
+            onResume={resumeSession}
+            onStop={endSession}
+            progress={progress}
+          />
+        )}
+
+        {/* Timer in External Popup Window */}
+        <Portal>
+          <DraggableSessionTimer
+            stage="Revisão"
+            icon={session.isStreakMode ? "Flame" : "CheckCircle"}
+            elapsedSeconds={session.elapsedSeconds}
+            targetSeconds={session.isStreakMode 
+              ? session.dailyGoalMinutes * 60 
+              : session.targetSeconds}
+            isPaused={session.isPaused}
+            isStreakMode={session.isStreakMode}
+            dailyGoalMinutes={session.dailyGoalMinutes}
+            onPause={pauseSession}
+            onResume={resumeSession}
+            onStop={endSession}
+            progress={progress}
+            isPopup={true}
+          />
+        </Portal>
 
         {/* Shot List Table */}
         {shots.length > 0 ? (

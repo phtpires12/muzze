@@ -14,7 +14,7 @@ import { arrayMove } from '@dnd-kit/sortable';
 import { DraggableSessionTimer } from "@/components/DraggableSessionTimer";
 import { useSession } from "@/hooks/useSession";
 import { useAppVisibility } from "@/hooks/useAppVisibility";
-import { useTimerPopup } from "@/hooks/useTimerPopup";
+import { useWindowPortal } from "@/hooks/useWindowPortal";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
@@ -351,28 +351,27 @@ const ShotListRecord = () => {
     [shots]
   );
 
-  // Timer popup and progress calculation
+  // Window portal system - pops out timer when user leaves app
   const progress = session.isStreakMode
     ? Math.min((session.elapsedSeconds / (session.dailyGoalMinutes * 60)) * 100, 100)
     : Math.min((session.elapsedSeconds / session.targetSeconds) * 100, 100);
 
-  useTimerPopup({
-    enabled: true,
-    stage: "Gravação",
-    icon: session.isStreakMode ? "Flame" : "Video",
-    elapsedSeconds: session.elapsedSeconds,
-    targetSeconds: session.isStreakMode 
-      ? session.dailyGoalMinutes * 60 
-      : session.targetSeconds,
-    isPaused: session.isPaused,
-    isStreakMode: session.isStreakMode,
-    dailyGoalMinutes: session.dailyGoalMinutes,
-    isActive: session.isActive,
-    progress,
-    onPause: pauseSession,
-    onResume: resumeSession,
-    onStop: endSession,
+  const { isOpen, openPortal, closePortal, Portal } = useWindowPortal({
+    title: "Timer - Gravação",
+    width: 500,
+    height: 500,
   });
+
+  // Open/close portal based on app visibility
+  useEffect(() => {
+    if (!session.isActive) return;
+
+    if (!isAppVisible && !session.isPaused) {
+      openPortal();
+    } else if (isAppVisible) {
+      closePortal();
+    }
+  }, [isAppVisible, session.isPaused, session.isActive]);
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-6">
@@ -498,23 +497,44 @@ const ShotListRecord = () => {
           </div>
         </div>
 
-        {/* Unified Session Timer */}
-        <DraggableSessionTimer
-          stage="Gravação"
-          icon={session.isStreakMode ? "Flame" : "Video"}
-          elapsedSeconds={session.elapsedSeconds}
-          targetSeconds={session.isStreakMode 
-            ? session.dailyGoalMinutes * 60 
-            : session.targetSeconds}
-          isPaused={session.isPaused}
-          isStreakMode={session.isStreakMode}
-          dailyGoalMinutes={session.dailyGoalMinutes}
-          onPause={pauseSession}
-          onResume={resumeSession}
-          onStop={endSession}
-          progress={progress}
-          hidden={!isAppVisible}
-        />
+        {/* Unified Session Timer (in-app) - Hidden when user leaves app */}
+        {!isOpen && (
+          <DraggableSessionTimer
+            stage="Gravação"
+            icon={session.isStreakMode ? "Flame" : "Video"}
+            elapsedSeconds={session.elapsedSeconds}
+            targetSeconds={session.isStreakMode 
+              ? session.dailyGoalMinutes * 60 
+              : session.targetSeconds}
+            isPaused={session.isPaused}
+            isStreakMode={session.isStreakMode}
+            dailyGoalMinutes={session.dailyGoalMinutes}
+            onPause={pauseSession}
+            onResume={resumeSession}
+            onStop={endSession}
+            progress={progress}
+          />
+        )}
+
+        {/* Timer in External Popup Window */}
+        <Portal>
+          <DraggableSessionTimer
+            stage="Gravação"
+            icon={session.isStreakMode ? "Flame" : "Video"}
+            elapsedSeconds={session.elapsedSeconds}
+            targetSeconds={session.isStreakMode 
+              ? session.dailyGoalMinutes * 60 
+              : session.targetSeconds}
+            isPaused={session.isPaused}
+            isStreakMode={session.isStreakMode}
+            dailyGoalMinutes={session.dailyGoalMinutes}
+            onPause={pauseSession}
+            onResume={resumeSession}
+            onStop={endSession}
+            progress={progress}
+            isPopup={true}
+          />
+        </Portal>
 
         {/* Desktop Progress */}
         <div className="hidden md:block bg-card p-6 rounded-lg border border-border mb-6">
