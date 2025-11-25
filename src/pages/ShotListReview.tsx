@@ -10,6 +10,7 @@ import { arrayMove } from '@dnd-kit/sortable';
 import { DraggableSessionTimer } from "@/components/DraggableSessionTimer";
 import { useSession } from "@/hooks/useSession";
 import { useAppVisibility } from "@/hooks/useAppVisibility";
+import { useTimerPopup } from "@/hooks/useTimerPopup";
 import { cn } from "@/lib/utils";
 
 const ShotListReview = () => {
@@ -287,10 +288,28 @@ const ShotListReview = () => {
     }
   };
 
-  // Timer popup - gerenciado globalmente por Session.tsx
+  // Timer popup and progress calculation
   const progress = session.isStreakMode
     ? Math.min((session.elapsedSeconds / (session.dailyGoalMinutes * 60)) * 100, 100)
     : Math.min((session.elapsedSeconds / session.targetSeconds) * 100, 100);
+
+  useTimerPopup({
+    enabled: true,
+    stage: "Revisão",
+    icon: session.isStreakMode ? "Flame" : "CheckCircle",
+    elapsedSeconds: session.elapsedSeconds,
+    targetSeconds: session.isStreakMode 
+      ? session.dailyGoalMinutes * 60 
+      : session.targetSeconds,
+    isPaused: session.isPaused,
+    isStreakMode: session.isStreakMode,
+    dailyGoalMinutes: session.dailyGoalMinutes,
+    isActive: session.isActive,
+    progress,
+    onPause: pauseSession,
+    onResume: resumeSession,
+    onStop: endSession,
+  });
 
   const handleAdvanceToRecord = async () => {
     await handleSave();
