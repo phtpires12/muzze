@@ -40,6 +40,20 @@ export function useTimerPopup(options: UseTimerPopupOptions) {
   const hasShownToastRef = useRef(false);
   const [isPopupBlocked, setIsPopupBlocked] = useState(false);
 
+  // Refs to avoid stale closures
+  const optionsRef = useRef(options);
+  const onPauseRef = useRef(options.onPause);
+  const onResumeRef = useRef(options.onResume);
+  const onStopRef = useRef(options.onStop);
+
+  // Keep refs updated on every render
+  useEffect(() => {
+    optionsRef.current = options;
+    onPauseRef.current = options.onPause;
+    onResumeRef.current = options.onResume;
+    onStopRef.current = options.onStop;
+  });
+
   // Initialize BroadcastChannel (NOT popup - popup is created on demand)
   useEffect(() => {
     if (!options.enabled || !options.isActive) return;
@@ -53,14 +67,28 @@ export function useTimerPopup(options: UseTimerPopupOptions) {
         const { type } = event.data;
         
         if (type === 'PAUSE_REQUEST') {
-          options.onPause();
+          onPauseRef.current(); // Always use latest callback
         } else if (type === 'RESUME_REQUEST') {
-          options.onResume();
+          onResumeRef.current();
         } else if (type === 'STOP_REQUEST') {
-          options.onStop();
+          onStopRef.current();
         } else if (type === 'POPUP_READY') {
-          // Send current state when popup is ready
-          broadcastTimerUpdate();
+          // Send current state when popup is ready using refs
+          if (globalChannelRef && optionsRef.current.isActive) {
+            const opts = optionsRef.current;
+            globalChannelRef.postMessage({
+              type: 'TIMER_UPDATE',
+              stage: opts.stage,
+              icon: opts.icon,
+              elapsedSeconds: opts.elapsedSeconds,
+              targetSeconds: opts.targetSeconds,
+              isPaused: opts.isPaused,
+              isStreakMode: opts.isStreakMode,
+              dailyGoalMinutes: opts.dailyGoalMinutes,
+              isActive: opts.isActive,
+              progress: opts.progress,
+            });
+          }
         }
       };
       
@@ -86,21 +114,22 @@ export function useTimerPopup(options: UseTimerPopupOptions) {
 
   // Broadcast timer updates
   const broadcastTimerUpdate = () => {
-    if (!channelRef.current) return;
+    if (!globalChannelRef) return; // Use global ref directly
 
+    const opts = optionsRef.current; // Always get latest version
     const state: TimerPopupState = {
-      stage: options.stage,
-      icon: options.icon,
-      elapsedSeconds: options.elapsedSeconds,
-      targetSeconds: options.targetSeconds,
-      isPaused: options.isPaused,
-      isStreakMode: options.isStreakMode,
-      dailyGoalMinutes: options.dailyGoalMinutes,
-      isActive: options.isActive,
-      progress: options.progress,
+      stage: opts.stage,
+      icon: opts.icon,
+      elapsedSeconds: opts.elapsedSeconds,
+      targetSeconds: opts.targetSeconds,
+      isPaused: opts.isPaused,
+      isStreakMode: opts.isStreakMode,
+      dailyGoalMinutes: opts.dailyGoalMinutes,
+      isActive: opts.isActive,
+      progress: opts.progress,
     };
 
-    channelRef.current.postMessage({
+    globalChannelRef.postMessage({
       type: 'TIMER_UPDATE',
       ...state,
     });
@@ -162,10 +191,10 @@ export function useTimerPopup(options: UseTimerPopupOptions) {
         }
         
         // Avisar popup que janela principal está escondida
-        channelRef.current?.postMessage({ type: 'MAIN_WINDOW_HIDDEN' });
+        globalChannelRef?.postMessage({ type: 'MAIN_WINDOW_HIDDEN' });
       } else {
         // User VOLTOU pro app → fechar popup (Opção A)
-        channelRef.current?.postMessage({ type: 'MAIN_WINDOW_VISIBLE' });
+        globalChannelRef?.postMessage({ type: 'MAIN_WINDOW_VISIBLE' });
         
         if (popupRef.current && !popupRef.current.closed) {
           popupRef.current.close();
