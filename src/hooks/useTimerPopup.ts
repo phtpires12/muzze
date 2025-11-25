@@ -48,7 +48,7 @@ export function useTimerPopup(options: UseTimerPopupOptions) {
     if (!globalChannelRef) {
       globalChannelRef = new BroadcastChannel('session-timer');
       
-      // Listen for messages from popup
+      // Listen for messages from popup - ONLY set once!
       globalChannelRef.onmessage = (event) => {
         const { type } = event.data;
         
@@ -63,9 +63,12 @@ export function useTimerPopup(options: UseTimerPopupOptions) {
           broadcastTimerUpdate();
         }
       };
+      
+      channelRef.current = globalChannelRef;
+    } else {
+      // Channel already exists - reuse without overwriting onmessage
+      channelRef.current = globalChannelRef;
     }
-    
-    channelRef.current = globalChannelRef;
 
     // Check if popup already exists and is open
     if (globalPopupRef && !globalPopupRef.closed) {

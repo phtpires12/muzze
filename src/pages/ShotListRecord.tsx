@@ -13,7 +13,6 @@ import { DragEndEvent } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import { DraggableSessionTimer } from "@/components/DraggableSessionTimer";
 import { useSession } from "@/hooks/useSession";
-import { useTimerPopup } from "@/hooks/useTimerPopup";
 import { useAppVisibility } from "@/hooks/useAppVisibility";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -351,28 +350,10 @@ const ShotListRecord = () => {
     [shots]
   );
 
-  // Timer popup integration - managed globally via useTimerPopup hook
+  // Timer popup - gerenciado globalmente por Session.tsx
   const progress = session.isStreakMode
     ? Math.min((session.elapsedSeconds / (session.dailyGoalMinutes * 60)) * 100, 100)
     : Math.min((session.elapsedSeconds / session.targetSeconds) * 100, 100);
-
-  useTimerPopup({
-    enabled: true,
-    stage: "Gravação",
-    icon: session.isStreakMode ? "Flame" : "Video",
-    elapsedSeconds: session.elapsedSeconds,
-    targetSeconds: session.isStreakMode 
-      ? session.dailyGoalMinutes * 60 
-      : session.targetSeconds,
-    isPaused: session.isPaused,
-    isStreakMode: session.isStreakMode,
-    dailyGoalMinutes: session.dailyGoalMinutes,
-    isActive: session.isActive,
-    progress,
-    onPause: pauseSession,
-    onResume: resumeSession,
-    onStop: endSession,
-  });
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-6">
