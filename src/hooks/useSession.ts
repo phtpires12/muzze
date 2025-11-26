@@ -259,6 +259,7 @@ export const useSession = () => {
           streakAchieved: streakResult.streakAchieved || false,
           newStreak: streakResult.newStreak,
           creativeMinutesToday: streakResult.creativeMinutesToday,
+          shouldShowCelebration: true, // Flag to trigger celebration
         };
 
         // Reset session
@@ -300,6 +301,7 @@ export const useSession = () => {
           stage: session.stage,
           xpGained,
           streakAchieved: false,
+          shouldShowCelebration: false,
         };
       }
     } catch (error: any) {
