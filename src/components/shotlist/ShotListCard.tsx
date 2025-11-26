@@ -70,6 +70,11 @@ export const ShotListCard = ({
     setLocalText(shot.scriptSegment);
     setHistory([shot.scriptSegment]);
     setHistoryIndex(0);
+    
+    // Forçar atualização do DOM do contentEditable
+    if (contentRef.current) {
+      contentRef.current.textContent = shot.scriptSegment;
+    }
   }, [shot.scriptSegment]);
 
   const updateHistory = (newText: string) => {
