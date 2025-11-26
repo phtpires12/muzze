@@ -57,6 +57,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
     conclusao: false,
   });
   const [showComparison, setShowComparison] = useState(false);
+  const [hasLoadedOriginal, setHasLoadedOriginal] = useState(false);
 
   // Refs for auto-resize textareas
   const ganchoRef = useRef<HTMLTextAreaElement>(null);
@@ -76,7 +77,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
     if (scriptId) {
       loadScript();
     }
-  }, [scriptId]);
+  }, [scriptId, isReviewMode]);
 
   // Auto-save effect
   useEffect(() => {
@@ -130,9 +131,33 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
         
         setContent(loadedContent);
         
-        // Store original content when entering review mode
-        if (isReviewMode) {
-          setOriginalContent(loadedContent);
+        // Load original content for comparison in review mode
+        if (isReviewMode && !hasLoadedOriginal) {
+          let originalLoadedContent;
+          try {
+            // Try to load from original_content column first
+            if (data.original_content) {
+              originalLoadedContent = typeof data.original_content === 'string'
+                ? JSON.parse(data.original_content)
+                : data.original_content;
+            } else {
+              // Fallback to current content if no original_content saved yet
+              originalLoadedContent = loadedContent;
+            }
+            
+            // Ensure all sections exist
+            originalLoadedContent = {
+              gancho: originalLoadedContent?.gancho || "",
+              setup: originalLoadedContent?.setup || "",
+              desenvolvimento: originalLoadedContent?.desenvolvimento || "",
+              conclusao: originalLoadedContent?.conclusao || ""
+            };
+          } catch {
+            originalLoadedContent = { gancho: "", setup: "", desenvolvimento: "", conclusao: "" };
+          }
+          
+          setOriginalContent(originalLoadedContent);
+          setHasLoadedOriginal(true);
         }
 
         // Auto-resize textareas after content loads
@@ -182,7 +207,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
         return;
       }
 
-      const scriptData = {
+      const scriptData: any = {
         user_id: user.id,
         title,
         content: JSON.stringify(content),
@@ -190,6 +215,11 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
         content_type: contentType,
         publish_date: publishDate || null,
       };
+
+      // Save original_content only when NOT in review mode (preserve original during review)
+      if (!isReviewMode) {
+        scriptData.original_content = JSON.stringify(content);
+      }
 
       if (scriptId) {
         const { error } = await supabase

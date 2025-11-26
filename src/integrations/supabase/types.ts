@@ -99,6 +99,7 @@ export type Database = {
           content_type: string | null
           created_at: string
           id: string
+          original_content: string | null
           publish_date: string | null
           reference_links: string[] | null
           reference_url: string | null
@@ -114,6 +115,7 @@ export type Database = {
           content_type?: string | null
           created_at?: string
           id?: string
+          original_content?: string | null
           publish_date?: string | null
           reference_links?: string[] | null
           reference_url?: string | null
@@ -129,6 +131,7 @@ export type Database = {
           content_type?: string | null
           created_at?: string
           id?: string
+          original_content?: string | null
           publish_date?: string | null
           reference_links?: string[] | null
           reference_url?: string | null
