@@ -26,6 +26,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { StreakHalo } from "@/components/StreakHalo";
+import { StreakCelebration } from "@/components/StreakCelebration";
+import { TrophyCelebration } from "@/components/TrophyCelebration";
 import { ScriptEditor } from "@/components/ScriptEditor";
 import { BrainstormWorkspace } from "@/components/brainstorm/BrainstormWorkspace";
 import { EditingChecklist } from "@/components/EditingChecklist";
@@ -34,6 +36,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useWindowPortal } from "@/hooks/useWindowPortal";
 import { useAppVisibility } from "@/hooks/useAppVisibility";
+import { useStreakCelebration } from "@/hooks/useStreakCelebration";
 
 const STAGES: { 
   id: SessionStage; 
@@ -63,6 +66,14 @@ const Session = () => {
   const [showStreakHalo, setShowStreakHalo] = useState(false);
   const [streakCount, setStreakCount] = useState(0);
   const isAppVisible = useAppVisibility();
+  
+  // Celebration system
+  const { 
+    celebrationData, 
+    triggerCelebration, 
+    dismissStreakCelebration,
+    dismissTrophyCelebration 
+  } = useStreakCelebration();
 
   useEffect(() => {
     if (stageParam) {
@@ -147,15 +158,17 @@ const Session = () => {
     const result = await endSession();
     if (result) {
       setSummary(result);
-      setShowSummary(true);
       
-      // Show streak halo if achieved
-      if (result.streakAchieved) {
+      // Check if we should show celebration
+      if ((result as any).shouldShowCelebration && result.streakAchieved) {
         const newStreak = (result as any).newStreak;
         if (newStreak !== undefined) {
-          setStreakCount(newStreak);
-          setShowStreakHalo(true);
+          // Trigger the new Duolingo-style celebration
+          await triggerCelebration(newStreak, result.xpGained);
         }
+      } else {
+        // Show old summary dialog for short sessions
+        setShowSummary(true);
       }
     }
   };
@@ -516,6 +529,21 @@ const Session = () => {
               )}
         </Card>
       </div>
+
+      {/* New Duolingo-style celebrations */}
+      <StreakCelebration
+        show={celebrationData.showStreakCelebration}
+        streakCount={celebrationData.streakCount}
+        weekDays={celebrationData.weekDays}
+        onContinue={dismissStreakCelebration}
+      />
+
+      <TrophyCelebration
+        show={celebrationData.showTrophyCelebration}
+        trophy={celebrationData.currentTrophy}
+        xpGained={celebrationData.xpGained}
+        onContinue={dismissTrophyCelebration}
+      />
 
       {/* Summary Dialog */}
       <Dialog open={showSummary} onOpenChange={setShowSummary}>
