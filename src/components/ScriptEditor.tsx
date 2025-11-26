@@ -58,6 +58,20 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
   });
   const [showComparison, setShowComparison] = useState(false);
 
+  // Refs for auto-resize textareas
+  const ganchoRef = useRef<HTMLTextAreaElement>(null);
+  const setupRef = useRef<HTMLTextAreaElement>(null);
+  const desenvolvimentoRef = useRef<HTMLTextAreaElement>(null);
+  const conclusaoRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-resize function
+  const autoResize = (element: HTMLTextAreaElement | null) => {
+    if (element) {
+      element.style.height = 'auto';
+      element.style.height = element.scrollHeight + 'px';
+    }
+  };
+
   useEffect(() => {
     if (scriptId) {
       loadScript();
@@ -120,6 +134,14 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
         if (isReviewMode) {
           setOriginalContent(loadedContent);
         }
+
+        // Auto-resize textareas after content loads
+        setTimeout(() => {
+          autoResize(ganchoRef.current);
+          autoResize(setupRef.current);
+          autoResize(desenvolvimentoRef.current);
+          autoResize(conclusaoRef.current);
+        }, 0);
         
         // Load references - prefer reference_links array, but fallback to reference_url from Ideas stage
         const savedReferences = data.reference_links || [];
@@ -706,7 +728,8 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                     <Textarea
                       value={content.gancho}
                       onChange={(e) => setContent({...content, gancho: e.target.value})}
-                      className="min-h-[100px] md:min-h-[120px] text-sm md:text-base leading-relaxed resize-none border-primary/40 bg-background focus-visible:ring-1 focus-visible:ring-primary"
+                      onInput={(e) => autoResize(e.currentTarget)}
+                      className="min-h-[60px] text-sm md:text-base leading-relaxed overflow-hidden border-primary/40 bg-background focus-visible:ring-1 focus-visible:ring-primary"
                     />
                   </div>
 
@@ -737,7 +760,8 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                     <Textarea
                       value={content.setup}
                       onChange={(e) => setContent({...content, setup: e.target.value})}
-                      className="min-h-[100px] md:min-h-[120px] text-sm md:text-base leading-relaxed resize-none border-primary/40 bg-background focus-visible:ring-1 focus-visible:ring-primary"
+                      onInput={(e) => autoResize(e.currentTarget)}
+                      className="min-h-[60px] text-sm md:text-base leading-relaxed overflow-hidden border-primary/40 bg-background focus-visible:ring-1 focus-visible:ring-primary"
                     />
                   </div>
 
@@ -768,7 +792,8 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                     <Textarea
                       value={content.desenvolvimento}
                       onChange={(e) => setContent({...content, desenvolvimento: e.target.value})}
-                      className="min-h-[100px] md:min-h-[120px] text-sm md:text-base leading-relaxed resize-none border-primary/40 bg-background focus-visible:ring-1 focus-visible:ring-primary"
+                      onInput={(e) => autoResize(e.currentTarget)}
+                      className="min-h-[60px] text-sm md:text-base leading-relaxed overflow-hidden border-primary/40 bg-background focus-visible:ring-1 focus-visible:ring-primary"
                     />
                   </div>
 
@@ -799,7 +824,8 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                     <Textarea
                       value={content.conclusao}
                       onChange={(e) => setContent({...content, conclusao: e.target.value})}
-                      className="min-h-[100px] md:min-h-[120px] text-sm md:text-base leading-relaxed resize-none border-primary/40 bg-background focus-visible:ring-1 focus-visible:ring-primary"
+                      onInput={(e) => autoResize(e.currentTarget)}
+                      className="min-h-[60px] text-sm md:text-base leading-relaxed overflow-hidden border-primary/40 bg-background focus-visible:ring-1 focus-visible:ring-primary"
                     />
                   </div>
                 </div>
@@ -837,10 +863,12 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                   </div>
                 </div>
                 <Textarea
+                  ref={ganchoRef}
                   value={content.gancho}
                   onChange={(e) => setContent({...content, gancho: e.target.value})}
+                  onInput={(e) => autoResize(e.currentTarget)}
                   placeholder="Escreva o gancho inicial..."
-                  className="min-h-[100px] md:min-h-[120px] text-sm md:text-base leading-relaxed resize-none border-none focus-visible:ring-0 bg-transparent"
+                  className="min-h-[60px] text-sm md:text-base leading-relaxed overflow-hidden border-none focus-visible:ring-0 bg-transparent"
                 />
               </div>
 
@@ -873,10 +901,12 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                   </div>
                 </div>
                 <Textarea
+                  ref={setupRef}
                   value={content.setup}
                   onChange={(e) => setContent({...content, setup: e.target.value})}
+                  onInput={(e) => autoResize(e.currentTarget)}
                   placeholder="Forneça o contexto necessário..."
-                  className="min-h-[100px] md:min-h-[120px] text-sm md:text-base leading-relaxed resize-none border-none focus-visible:ring-0 bg-transparent"
+                  className="min-h-[60px] text-sm md:text-base leading-relaxed overflow-hidden border-none focus-visible:ring-0 bg-transparent"
                 />
               </div>
 
@@ -909,10 +939,12 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                   </div>
                 </div>
                 <Textarea
+                  ref={desenvolvimentoRef}
                   value={content.desenvolvimento}
                   onChange={(e) => setContent({...content, desenvolvimento: e.target.value})}
+                  onInput={(e) => autoResize(e.currentTarget)}
                   placeholder="Desenvolva o conteúdo principal..."
-                  className="min-h-[100px] md:min-h-[120px] text-sm md:text-base leading-relaxed resize-none border-none focus-visible:ring-0 bg-transparent"
+                  className="min-h-[60px] text-sm md:text-base leading-relaxed overflow-hidden border-none focus-visible:ring-0 bg-transparent"
                 />
               </div>
 
@@ -945,10 +977,12 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                   </div>
                 </div>
                 <Textarea
+                  ref={conclusaoRef}
                   value={content.conclusao}
                   onChange={(e) => setContent({...content, conclusao: e.target.value})}
+                  onInput={(e) => autoResize(e.currentTarget)}
                   placeholder="Conclua e feche o loop..."
-                  className="min-h-[100px] md:min-h-[120px] text-sm md:text-base leading-relaxed resize-none border-none focus-visible:ring-0 bg-transparent"
+                  className="min-h-[60px] text-sm md:text-base leading-relaxed overflow-hidden border-none focus-visible:ring-0 bg-transparent"
                 />
               </div>
             </div>
