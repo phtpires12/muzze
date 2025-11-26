@@ -58,6 +58,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
   });
   const [showComparison, setShowComparison] = useState(false);
   const [hasLoadedOriginal, setHasLoadedOriginal] = useState(false);
+  const [viewMode, setViewMode] = useState<'sections' | 'full-text'>('sections');
 
   // Refs for auto-resize textareas
   const ganchoRef = useRef<HTMLTextAreaElement>(null);
@@ -366,6 +367,15 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
     }
   };
 
+  const getFullText = (contentObj: typeof content) => {
+    return [
+      contentObj.gancho,
+      contentObj.setup,
+      contentObj.desenvolvimento,
+      contentObj.conclusao
+    ].filter(Boolean).join('\n\n');
+  };
+
   return (
     <div className="min-h-screen bg-background p-4 md:p-6 pb-24 md:pb-6">
       <div className="max-w-4xl mx-auto w-full">
@@ -613,254 +623,343 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
               <p className="text-sm text-muted-foreground mb-3">
                 💡 Dica: Leia seu texto frase por frase em voz alta, finja que já está gravando-o.
               </p>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowComparison(!showComparison)}
-                className="gap-2"
-              >
-                {showComparison ? 'Ocultar Comparação' : 'Comparar Versões'}
-              </Button>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowComparison(!showComparison)}
+                  className="gap-2"
+                >
+                  {showComparison ? 'Ocultar Comparação' : 'Comparar Versões'}
+                </Button>
+                
+                {showComparison && (
+                  <div className="flex items-center gap-1 ml-2">
+                    <Button
+                      variant={viewMode === 'sections' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setViewMode('sections')}
+                      className="h-8 text-xs"
+                    >
+                      Por Seções
+                    </Button>
+                    <Button
+                      variant={viewMode === 'full-text' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setViewMode('full-text')}
+                      className="h-8 text-xs"
+                    >
+                      Texto Corrido
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
           {showComparison && isReviewMode ? (
-            // Side-by-side comparison view
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Original Version (Read-only) */}
-              <div className="space-y-4">
-                <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
-                  Original
-                </h4>
-                
+            viewMode === 'full-text' ? (
+              // Full text mode - continuous text view
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Original Version - Full Text (Read-only) */}
                 <div className="space-y-4">
+                  <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
+                    Original
+                  </h4>
+                  
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <h5 className="text-base font-semibold text-foreground flex items-center gap-2">
-                        🪝 Gancho
+                      <h5 className="text-base font-semibold text-foreground">
+                        📄 Texto Completo
                       </h5>
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => copyToClipboard(originalContent.gancho, "Gancho (Original)")}
+                        onClick={() => copyToClipboard(getFullText(originalContent), "Texto Completo (Original)")}
                         className="h-8 w-8 hover:bg-accent"
-                        title="Copiar texto original"
+                        title="Copiar texto completo original"
                       >
                         <Copy className="w-4 h-4" />
                       </Button>
                     </div>
                     <Textarea
-                      value={originalContent.gancho}
+                      value={getFullText(originalContent)}
                       readOnly
-                      className="min-h-[100px] md:min-h-[120px] text-sm md:text-base leading-relaxed resize-none border-border/40 bg-muted/20 focus-visible:ring-0"
-                    />
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <h5 className="text-base font-semibold text-foreground flex items-center gap-2">
-                        🤨 Setup (Contexto)
-                      </h5>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => copyToClipboard(originalContent.setup, "Setup (Original)")}
-                        className="h-8 w-8 hover:bg-accent"
-                        title="Copiar texto original"
-                      >
-                        <Copy className="w-4 h-4" />
-                      </Button>
-                    </div>
-                    <Textarea
-                      value={originalContent.setup}
-                      readOnly
-                      className="min-h-[100px] md:min-h-[120px] text-sm md:text-base leading-relaxed resize-none border-border/40 bg-muted/20 focus-visible:ring-0"
-                    />
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <h5 className="text-base font-semibold text-foreground flex items-center gap-2">
-                        🦅 Desenvolvimento
-                      </h5>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => copyToClipboard(originalContent.desenvolvimento, "Desenvolvimento (Original)")}
-                        className="h-8 w-8 hover:bg-accent"
-                        title="Copiar texto original"
-                      >
-                        <Copy className="w-4 h-4" />
-                      </Button>
-                    </div>
-                    <Textarea
-                      value={originalContent.desenvolvimento}
-                      readOnly
-                      className="min-h-[100px] md:min-h-[120px] text-sm md:text-base leading-relaxed resize-none border-border/40 bg-muted/20 focus-visible:ring-0"
-                    />
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <h5 className="text-base font-semibold text-foreground flex items-center gap-2">
-                        📩 Conclusão (Fecho de Loop)
-                      </h5>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => copyToClipboard(originalContent.conclusao, "Conclusão (Original)")}
-                        className="h-8 w-8 hover:bg-accent"
-                        title="Copiar texto original"
-                      >
-                        <Copy className="w-4 h-4" />
-                      </Button>
-                    </div>
-                    <Textarea
-                      value={originalContent.conclusao}
-                      readOnly
-                      className="min-h-[100px] md:min-h-[120px] text-sm md:text-base leading-relaxed resize-none border-border/40 bg-muted/20 focus-visible:ring-0"
+                      className="min-h-[400px] text-sm md:text-base leading-relaxed resize-none border-border/40 bg-muted/20 focus-visible:ring-0"
                     />
                   </div>
                 </div>
-              </div>
 
-              {/* Edited Version (Editable) */}
-              <div className="space-y-4">
-                <h4 className="text-sm font-semibold text-primary uppercase tracking-wider mb-4">
-                  Versão Editada
-                </h4>
-                
+                {/* Edited Version - Full Text (Read-only for display, edits happen in sections) */}
                 <div className="space-y-4">
+                  <h4 className="text-sm font-semibold text-primary uppercase tracking-wider mb-4">
+                    Versão Editada
+                  </h4>
+                  
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <h5 className="text-base font-semibold text-foreground flex items-center gap-2">
-                        🪝 Gancho
+                      <h5 className="text-base font-semibold text-foreground">
+                        📄 Texto Completo
                       </h5>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => copyToClipboard(content.gancho, "Gancho")}
-                          className="h-8 w-8 hover:bg-accent"
-                          title="Copiar texto editado"
-                        >
-                          <Copy className="w-4 h-4" />
-                        </Button>
-                        <input
-                          type="checkbox"
-                          id="gancho-check"
-                          checked={reviewedSections.gancho}
-                          onChange={() => toggleSectionReview('gancho')}
-                          className="w-4 h-4 rounded border-border cursor-pointer"
-                        />
-                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => copyToClipboard(getFullText(content), "Texto Completo")}
+                        className="h-8 w-8 hover:bg-accent"
+                        title="Copiar texto completo editado"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </Button>
                     </div>
                     <Textarea
-                      value={content.gancho}
-                      onChange={(e) => setContent({...content, gancho: e.target.value})}
-                      onInput={(e) => autoResize(e.currentTarget)}
-                      className="min-h-[60px] text-sm md:text-base leading-relaxed overflow-hidden border-primary/40 bg-background focus-visible:ring-1 focus-visible:ring-primary"
+                      value={getFullText(content)}
+                      readOnly
+                      className="min-h-[400px] text-sm md:text-base leading-relaxed resize-none border-primary/40 bg-background focus-visible:ring-1 focus-visible:ring-primary"
                     />
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <h5 className="text-base font-semibold text-foreground flex items-center gap-2">
-                        🤨 Setup (Contexto)
-                      </h5>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => copyToClipboard(content.setup, "Setup")}
-                          className="h-8 w-8 hover:bg-accent"
-                          title="Copiar texto editado"
-                        >
-                          <Copy className="w-4 h-4" />
-                        </Button>
-                        <input
-                          type="checkbox"
-                          id="setup-check"
-                          checked={reviewedSections.setup}
-                          onChange={() => toggleSectionReview('setup')}
-                          className="w-4 h-4 rounded border-border cursor-pointer"
-                        />
-                      </div>
-                    </div>
-                    <Textarea
-                      value={content.setup}
-                      onChange={(e) => setContent({...content, setup: e.target.value})}
-                      onInput={(e) => autoResize(e.currentTarget)}
-                      className="min-h-[60px] text-sm md:text-base leading-relaxed overflow-hidden border-primary/40 bg-background focus-visible:ring-1 focus-visible:ring-primary"
-                    />
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <h5 className="text-base font-semibold text-foreground flex items-center gap-2">
-                        🦅 Desenvolvimento
-                      </h5>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => copyToClipboard(content.desenvolvimento, "Desenvolvimento")}
-                          className="h-8 w-8 hover:bg-accent"
-                          title="Copiar texto editado"
-                        >
-                          <Copy className="w-4 h-4" />
-                        </Button>
-                        <input
-                          type="checkbox"
-                          id="desenvolvimento-check"
-                          checked={reviewedSections.desenvolvimento}
-                          onChange={() => toggleSectionReview('desenvolvimento')}
-                          className="w-4 h-4 rounded border-border cursor-pointer"
-                        />
-                      </div>
-                    </div>
-                    <Textarea
-                      value={content.desenvolvimento}
-                      onChange={(e) => setContent({...content, desenvolvimento: e.target.value})}
-                      onInput={(e) => autoResize(e.currentTarget)}
-                      className="min-h-[60px] text-sm md:text-base leading-relaxed overflow-hidden border-primary/40 bg-background focus-visible:ring-1 focus-visible:ring-primary"
-                    />
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <h5 className="text-base font-semibold text-foreground flex items-center gap-2">
-                        📩 Conclusão (Fecho de Loop)
-                      </h5>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => copyToClipboard(content.conclusao, "Conclusão")}
-                          className="h-8 w-8 hover:bg-accent"
-                          title="Copiar texto editado"
-                        >
-                          <Copy className="w-4 h-4" />
-                        </Button>
-                        <input
-                          type="checkbox"
-                          id="conclusao-check"
-                          checked={reviewedSections.conclusao}
-                          onChange={() => toggleSectionReview('conclusao')}
-                          className="w-4 h-4 rounded border-border cursor-pointer"
-                        />
-                      </div>
-                    </div>
-                    <Textarea
-                      value={content.conclusao}
-                      onChange={(e) => setContent({...content, conclusao: e.target.value})}
-                      onInput={(e) => autoResize(e.currentTarget)}
-                      className="min-h-[60px] text-sm md:text-base leading-relaxed overflow-hidden border-primary/40 bg-background focus-visible:ring-1 focus-visible:ring-primary"
-                    />
+                    <p className="text-xs text-muted-foreground mt-2">
+                      💡 Para editar, alterne para visualização "Por Seções"
+                    </p>
                   </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              // Side-by-side comparison view by sections
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Original Version (Read-only) */}
+                <div className="space-y-4">
+                  <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
+                    Original
+                  </h4>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <h5 className="text-base font-semibold text-foreground flex items-center gap-2">
+                          🪝 Gancho
+                        </h5>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => copyToClipboard(originalContent.gancho, "Gancho (Original)")}
+                          className="h-8 w-8 hover:bg-accent"
+                          title="Copiar texto original"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      <Textarea
+                        value={originalContent.gancho}
+                        readOnly
+                        className="min-h-[100px] md:min-h-[120px] text-sm md:text-base leading-relaxed resize-none border-border/40 bg-muted/20 focus-visible:ring-0"
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <h5 className="text-base font-semibold text-foreground flex items-center gap-2">
+                          🤨 Setup (Contexto)
+                        </h5>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => copyToClipboard(originalContent.setup, "Setup (Original)")}
+                          className="h-8 w-8 hover:bg-accent"
+                          title="Copiar texto original"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      <Textarea
+                        value={originalContent.setup}
+                        readOnly
+                        className="min-h-[100px] md:min-h-[120px] text-sm md:text-base leading-relaxed resize-none border-border/40 bg-muted/20 focus-visible:ring-0"
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <h5 className="text-base font-semibold text-foreground flex items-center gap-2">
+                          🦅 Desenvolvimento
+                        </h5>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => copyToClipboard(originalContent.desenvolvimento, "Desenvolvimento (Original)")}
+                          className="h-8 w-8 hover:bg-accent"
+                          title="Copiar texto original"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      <Textarea
+                        value={originalContent.desenvolvimento}
+                        readOnly
+                        className="min-h-[100px] md:min-h-[120px] text-sm md:text-base leading-relaxed resize-none border-border/40 bg-muted/20 focus-visible:ring-0"
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <h5 className="text-base font-semibold text-foreground flex items-center gap-2">
+                          📩 Conclusão (Fecho de Loop)
+                        </h5>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => copyToClipboard(originalContent.conclusao, "Conclusão (Original)")}
+                          className="h-8 w-8 hover:bg-accent"
+                          title="Copiar texto original"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      <Textarea
+                        value={originalContent.conclusao}
+                        readOnly
+                        className="min-h-[100px] md:min-h-[120px] text-sm md:text-base leading-relaxed resize-none border-border/40 bg-muted/20 focus-visible:ring-0"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Edited Version (Editable) */}
+                <div className="space-y-4">
+                  <h4 className="text-sm font-semibold text-primary uppercase tracking-wider mb-4">
+                    Versão Editada
+                  </h4>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <h5 className="text-base font-semibold text-foreground flex items-center gap-2">
+                          🪝 Gancho
+                        </h5>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => copyToClipboard(content.gancho, "Gancho")}
+                            className="h-8 w-8 hover:bg-accent"
+                            title="Copiar texto editado"
+                          >
+                            <Copy className="w-4 h-4" />
+                          </Button>
+                          <input
+                            type="checkbox"
+                            id="gancho-check"
+                            checked={reviewedSections.gancho}
+                            onChange={() => toggleSectionReview('gancho')}
+                            className="w-4 h-4 rounded border-border cursor-pointer"
+                          />
+                        </div>
+                      </div>
+                      <Textarea
+                        value={content.gancho}
+                        onChange={(e) => setContent({...content, gancho: e.target.value})}
+                        onInput={(e) => autoResize(e.currentTarget)}
+                        className="min-h-[60px] text-sm md:text-base leading-relaxed overflow-hidden border-primary/40 bg-background focus-visible:ring-1 focus-visible:ring-primary"
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <h5 className="text-base font-semibold text-foreground flex items-center gap-2">
+                          🤨 Setup (Contexto)
+                        </h5>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => copyToClipboard(content.setup, "Setup")}
+                            className="h-8 w-8 hover:bg-accent"
+                            title="Copiar texto editado"
+                          >
+                            <Copy className="w-4 h-4" />
+                          </Button>
+                          <input
+                            type="checkbox"
+                            id="setup-check"
+                            checked={reviewedSections.setup}
+                            onChange={() => toggleSectionReview('setup')}
+                            className="w-4 h-4 rounded border-border cursor-pointer"
+                          />
+                        </div>
+                      </div>
+                      <Textarea
+                        value={content.setup}
+                        onChange={(e) => setContent({...content, setup: e.target.value})}
+                        onInput={(e) => autoResize(e.currentTarget)}
+                        className="min-h-[60px] text-sm md:text-base leading-relaxed overflow-hidden border-primary/40 bg-background focus-visible:ring-1 focus-visible:ring-primary"
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <h5 className="text-base font-semibold text-foreground flex items-center gap-2">
+                          🦅 Desenvolvimento
+                        </h5>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => copyToClipboard(content.desenvolvimento, "Desenvolvimento")}
+                            className="h-8 w-8 hover:bg-accent"
+                            title="Copiar texto editado"
+                          >
+                            <Copy className="w-4 h-4" />
+                          </Button>
+                          <input
+                            type="checkbox"
+                            id="desenvolvimento-check"
+                            checked={reviewedSections.desenvolvimento}
+                            onChange={() => toggleSectionReview('desenvolvimento')}
+                            className="w-4 h-4 rounded border-border cursor-pointer"
+                          />
+                        </div>
+                      </div>
+                      <Textarea
+                        value={content.desenvolvimento}
+                        onChange={(e) => setContent({...content, desenvolvimento: e.target.value})}
+                        onInput={(e) => autoResize(e.currentTarget)}
+                        className="min-h-[60px] text-sm md:text-base leading-relaxed overflow-hidden border-primary/40 bg-background focus-visible:ring-1 focus-visible:ring-primary"
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <h5 className="text-base font-semibold text-foreground flex items-center gap-2">
+                          📩 Conclusão (Fecho de Loop)
+                        </h5>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => copyToClipboard(content.conclusao, "Conclusão")}
+                            className="h-8 w-8 hover:bg-accent"
+                            title="Copiar texto editado"
+                          >
+                            <Copy className="w-4 h-4" />
+                          </Button>
+                          <input
+                            type="checkbox"
+                            id="conclusao-check"
+                            checked={reviewedSections.conclusao}
+                            onChange={() => toggleSectionReview('conclusao')}
+                            className="w-4 h-4 rounded border-border cursor-pointer"
+                          />
+                        </div>
+                      </div>
+                      <Textarea
+                        value={content.conclusao}
+                        onChange={(e) => setContent({...content, conclusao: e.target.value})}
+                        onInput={(e) => autoResize(e.currentTarget)}
+                        className="min-h-[60px] text-sm md:text-base leading-relaxed overflow-hidden border-primary/40 bg-background focus-visible:ring-1 focus-visible:ring-primary"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )
           ) : (
             // Single editor view (default for both script and review mode)
             <div className="space-y-4">
