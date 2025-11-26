@@ -75,12 +75,24 @@ const SortableRow = ({
     isDragging,
   } = useSortable({ id: shot.id });
 
-  // Sincronizar mudanças externas
+  // Sincronizar mudanças externas (incluindo splits)
   useEffect(() => {
-    if (shot.scriptSegment !== localText && document.activeElement !== editableDivRef.current) {
-      setLocalText(shot.scriptSegment);
-      setHistory([shot.scriptSegment]);
-      setHistoryIndex(0);
+    if (shot.scriptSegment !== localText) {
+      // Verificar se é uma operação de split (texto novo é substring do antigo)
+      const isReduction = shot.scriptSegment.length < localText.length && 
+                          localText.startsWith(shot.scriptSegment);
+      
+      // Se for redução (split) OU elemento não está focado, atualizar
+      if (isReduction || document.activeElement !== editableDivRef.current) {
+        setLocalText(shot.scriptSegment);
+        setHistory([shot.scriptSegment]);
+        setHistoryIndex(0);
+        
+        // Forçar atualização do DOM
+        if (editableDivRef.current) {
+          editableDivRef.current.textContent = shot.scriptSegment;
+        }
+      }
     }
   }, [shot.scriptSegment, localText]);
 
