@@ -77,7 +77,11 @@ const ShotListReview = () => {
             id: shotData.id || crypto.randomUUID(),
             scriptSegment: shotData.scriptSegment || shotData.script_segment || '',
             scene: shotData.scene || '',
-            shotImageUrl: shotData.shotImageUrl || shotData.shot_image_url || '',
+            shotImageUrls: shotData.shotImageUrls 
+              ? shotData.shotImageUrls 
+              : shotData.shotImageUrl || shotData.shot_image_url 
+                ? [shotData.shotImageUrl || shotData.shot_image_url]
+                : [],
             location: shotData.location || '',
             sectionName: shotData.sectionName || shotData.section_name || '',
             isCompleted: shotData.isCompleted || shotData.is_completed || false,
@@ -185,7 +189,7 @@ const ShotListReview = () => {
       id: crypto.randomUUID(),
       scriptSegment: '',
       scene: '',
-      shotImageUrl: '',
+      shotImageUrls: [],
       location: '',
       sectionName: '',
       isCompleted: false,
@@ -207,7 +211,7 @@ const ShotListReview = () => {
         id: crypto.randomUUID(),
         scriptSegment: afterText,
         scene: shot.scene,
-        shotImageUrl: '',
+        shotImageUrls: [],
         location: shot.location,
         sectionName: shot.sectionName,
         isCompleted: false,
@@ -228,12 +232,31 @@ const ShotListReview = () => {
   const updateShot = (id: string, field: keyof ShotItem, value: string) => {
     setShots(shots.map(s => 
       s.id === id 
-        ? { ...s, [field]: field === 'isCompleted' ? value === 'true' : value }
+        ? { 
+            ...s, 
+            [field]: field === 'isCompleted' 
+              ? value === 'true' 
+              : field === 'shotImageUrls' 
+                ? JSON.parse(value)
+                : value 
+          }
         : s
     ));
   };
 
   const handleImageUpload = async (shotId: string, file: File) => {
+    const shot = shots.find(s => s.id === shotId);
+    const currentUrls = shot?.shotImageUrls || [];
+    
+    if (currentUrls.length >= 3) {
+      toast({
+        title: "Limite atingido",
+        description: "Máximo de 3 imagens por take",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setUploadingImages(prev => new Set(prev).add(shotId));
 
     try {
@@ -254,11 +277,12 @@ const ShotListReview = () => {
         .from('shot-references')
         .getPublicUrl(filePath);
 
-      updateShot(shotId, 'shotImageUrl', publicUrl);
+      const newUrls = [...currentUrls, publicUrl];
+      updateShot(shotId, 'shotImageUrls', JSON.stringify(newUrls));
 
       toast({
         title: "Imagem enviada!",
-        description: "A imagem de referência foi adicionada com sucesso",
+        description: `${newUrls.length}/3 imagens adicionadas`,
       });
     } catch (error) {
       console.error('Error uploading image:', error);

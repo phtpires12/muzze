@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 
 interface Shot {
   id: string;
-  shotImageUrl: string;
+  shotImageUrls: string[];
   scriptSegment: string;
   scene: string;
 }
@@ -18,18 +18,30 @@ interface ImageGalleryModalProps {
 }
 
 export const ImageGalleryModal = ({ shots, currentShotId, onClose }: ImageGalleryModalProps) => {
-  const shotsWithImages = shots.filter(shot => shot.shotImageUrl);
-  const currentIndex = shotsWithImages.findIndex(shot => shot.id === currentShotId);
+  // Flatten all images from all shots into a single array with metadata
+  const allImages = shots.flatMap(shot => 
+    (shot.shotImageUrls || []).map((url, imgIndex) => ({
+      url,
+      shotId: shot.id,
+      shotData: shot,
+      imageIndex: imgIndex,
+    }))
+  );
   
-  const [activeIndex, setActiveIndex] = useState(currentIndex >= 0 ? currentIndex : 0);
+  const currentShotImages = allImages.filter(img => img.shotId === currentShotId);
+  const startIndex = currentShotImages.length > 0 
+    ? allImages.findIndex(img => img.shotId === currentShotId && img.imageIndex === 0)
+    : 0;
+  
+  const [activeIndex, setActiveIndex] = useState(startIndex >= 0 ? startIndex : 0);
   const [zoom, setZoom] = useState(1);
 
   useEffect(() => {
-    if (currentIndex >= 0) {
-      setActiveIndex(currentIndex);
+    if (startIndex >= 0 && currentShotId) {
+      setActiveIndex(startIndex);
       setZoom(1);
     }
-  }, [currentIndex]);
+  }, [startIndex, currentShotId]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -40,15 +52,15 @@ export const ImageGalleryModal = ({ shots, currentShotId, onClose }: ImageGaller
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [activeIndex, shotsWithImages.length]);
+  }, [activeIndex, allImages.length]);
 
   const handlePrevious = () => {
-    setActiveIndex((prev) => (prev > 0 ? prev - 1 : shotsWithImages.length - 1));
+    setActiveIndex((prev) => (prev > 0 ? prev - 1 : allImages.length - 1));
     setZoom(1);
   };
 
   const handleNext = () => {
-    setActiveIndex((prev) => (prev < shotsWithImages.length - 1 ? prev + 1 : 0));
+    setActiveIndex((prev) => (prev < allImages.length - 1 ? prev + 1 : 0));
     setZoom(1);
   };
 
@@ -60,10 +72,11 @@ export const ImageGalleryModal = ({ shots, currentShotId, onClose }: ImageGaller
     setZoom((prev) => Math.max(prev - 0.5, 1));
   };
 
-  if (shotsWithImages.length === 0) return null;
+  if (allImages.length === 0) return null;
 
-  const currentShot = shotsWithImages[activeIndex];
-  const originalIndex = shots.findIndex(s => s.id === currentShot.id);
+  const currentImage = allImages[activeIndex];
+  const currentShot = currentImage.shotData;
+  const originalShotIndex = shots.findIndex(s => s.id === currentShot.id);
 
   return (
     <Dialog open={currentShotId !== null} onOpenChange={onClose}>
@@ -72,7 +85,7 @@ export const ImageGalleryModal = ({ shots, currentShotId, onClose }: ImageGaller
         <div className="absolute top-0 left-0 right-0 z-50 flex items-center justify-between p-4 bg-gradient-to-b from-black/80 to-transparent">
           <div className="text-white">
             <p className="text-sm font-medium">
-              Shot #{originalIndex + 1} • {activeIndex + 1} de {shotsWithImages.length}
+              Shot #{originalShotIndex + 1} • Imagem {currentImage.imageIndex + 1} de {currentShot.shotImageUrls.length} • {activeIndex + 1}/{allImages.length} total
             </p>
             <p className="text-xs text-white/70 mt-1 max-w-md truncate">
               {currentShot.scene || currentShot.scriptSegment}
@@ -91,8 +104,8 @@ export const ImageGalleryModal = ({ shots, currentShotId, onClose }: ImageGaller
         {/* Main Image */}
         <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
           <img
-            src={currentShot.shotImageUrl}
-            alt={`Referência Shot #${originalIndex + 1}`}
+            src={currentImage.url}
+            alt={`Referência Shot #${originalShotIndex + 1} - Imagem ${currentImage.imageIndex + 1}`}
             className="max-w-full max-h-full object-contain transition-transform duration-200 select-none"
             style={{ transform: `scale(${zoom})` }}
             draggable={false}
@@ -100,7 +113,7 @@ export const ImageGalleryModal = ({ shots, currentShotId, onClose }: ImageGaller
         </div>
 
         {/* Navigation Controls - Left */}
-        {shotsWithImages.length > 1 && (
+        {allImages.length > 1 && (
           <Button
             variant="ghost"
             size="icon"
@@ -112,7 +125,7 @@ export const ImageGalleryModal = ({ shots, currentShotId, onClose }: ImageGaller
         )}
 
         {/* Navigation Controls - Right */}
-        {shotsWithImages.length > 1 && (
+        {allImages.length > 1 && (
           <Button
             variant="ghost"
             size="icon"
@@ -155,14 +168,14 @@ export const ImageGalleryModal = ({ shots, currentShotId, onClose }: ImageGaller
         </div>
 
         {/* Thumbnails Strip - Bottom */}
-        {shotsWithImages.length > 1 && (
+        {allImages.length > 1 && (
           <div className="absolute bottom-24 left-0 right-0 z-40 px-4">
             <div className="flex items-center justify-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
-              {shotsWithImages.map((shot, idx) => {
-                const shotOriginalIndex = shots.findIndex(s => s.id === shot.id);
+              {allImages.map((img, idx) => {
+                const shotOriginalIndex = shots.findIndex(s => s.id === img.shotId);
                 return (
                   <button
-                    key={shot.id}
+                    key={`${img.shotId}-${img.imageIndex}`}
                     onClick={() => {
                       setActiveIndex(idx);
                       setZoom(1);
@@ -175,12 +188,12 @@ export const ImageGalleryModal = ({ shots, currentShotId, onClose }: ImageGaller
                     )}
                   >
                     <img
-                      src={shot.shotImageUrl}
-                      alt={`Shot #${shotOriginalIndex + 1}`}
+                      src={img.url}
+                      alt={`Shot #${shotOriginalIndex + 1} - Img ${img.imageIndex + 1}`}
                       className="w-full h-full object-cover"
                     />
                     <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-[10px] text-center py-0.5">
-                      #{shotOriginalIndex + 1}
+                      #{shotOriginalIndex + 1}.{img.imageIndex + 1}
                     </div>
                   </button>
                 );
