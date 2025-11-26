@@ -31,7 +31,7 @@ export interface ShotItem {
   id: string;
   scriptSegment: string;
   scene: string;
-  shotImageUrl: string;
+  shotImageUrls: string[];
   location: string;
   sectionName?: string;
   isCompleted?: boolean;
@@ -130,10 +130,11 @@ const SortableRow = ({
     }
   };
 
-  const handleRemoveImage = async () => {
-    if (shot.shotImageUrl) {
+  const handleRemoveImage = async (imageIndex: number) => {
+    const currentUrls = shot.shotImageUrls || [];
+    if (currentUrls[imageIndex]) {
       try {
-        const fileName = shot.shotImageUrl.split('/').pop();
+        const fileName = currentUrls[imageIndex].split('/').pop();
         if (fileName) {
           const { data: { user } } = await supabase.auth.getUser();
           if (user) {
@@ -145,7 +146,40 @@ const SortableRow = ({
       } catch (error) {
         console.error('Error removing image:', error);
       }
-      onUpdate(shot.id, 'shotImageUrl', '');
+      const newUrls = currentUrls.filter((_, i) => i !== imageIndex);
+      onUpdate(shot.id, 'shotImageUrls', JSON.stringify(newUrls));
+    }
+  };
+
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+
+    const currentUrls = shot.shotImageUrls || [];
+    if (currentUrls.length >= 3) {
+      return;
+    }
+
+    const files = Array.from(e.dataTransfer.files);
+    const imageFile = files.find(file => file.type.startsWith('image/'));
+    
+    if (imageFile) {
+      onImageUpload(shot.id, imageFile);
     }
   };
 
@@ -334,33 +368,51 @@ const SortableRow = ({
             onChange={handleFileChange}
             className="hidden"
           />
-          {shot.shotImageUrl ? (
-            <div className="relative group">
-              <img
-                src={shot.shotImageUrl}
-                alt="Referência"
-                className="w-32 h-20 object-cover rounded border border-border cursor-pointer"
-                onClick={handleImageClick}
-              />
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleRemoveImage}
-                className="absolute top-1 right-1 h-6 w-6 bg-background/80 hover:bg-background opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <X className="w-4 h-4" />
-              </Button>
+          {(shot.shotImageUrls && shot.shotImageUrls.length > 0) ? (
+            <div className="flex flex-wrap gap-2">
+              {shot.shotImageUrls.map((url, index) => (
+                <div key={index} className="relative group">
+                  <img
+                    src={url}
+                    alt={`Referência ${index + 1}`}
+                    className="w-20 h-20 object-cover rounded border border-border cursor-pointer"
+                    onClick={() => window.open(url, '_blank')}
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleRemoveImage(index)}
+                    className="absolute -top-1 -right-1 h-5 w-5 bg-destructive text-destructive-foreground hover:bg-destructive/90 opacity-0 group-hover:opacity-100 transition-opacity rounded-full p-0"
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
+                  {index === shot.shotImageUrls.length - 1 && shot.shotImageUrls.length < 3 && (
+                    <Button
+                      variant="default"
+                      size="icon"
+                      onClick={handleImageClick}
+                      className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full p-0 shadow-lg"
+                    >
+                      <Upload className="w-3 h-3" />
+                    </Button>
+                  )}
+                </div>
+              ))}
             </div>
           ) : (
-            <Button
-              variant="outline"
-              size="sm"
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
               onClick={handleImageClick}
-              className="gap-2 w-32"
+              className={cn(
+                "border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors",
+                isDragOver ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"
+              )}
             >
-              <Upload className="w-4 h-4" />
-              Upload
-            </Button>
+              <Upload className="w-6 h-6 mx-auto mb-2 text-muted-foreground" />
+              <p className="text-xs text-muted-foreground">Arraste ou clique</p>
+            </div>
           )}
         </div>
       </td>

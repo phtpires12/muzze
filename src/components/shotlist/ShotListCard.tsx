@@ -9,12 +9,13 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface ShotItem {
   id: string;
   scriptSegment: string;
   scene: string;
-  shotImageUrl: string;
+  shotImageUrls: string[];
   location: string;
   sectionName?: string;
   isCompleted?: boolean;
@@ -147,7 +148,64 @@ export const ShotListCard = ({
   };
 
   const handleImageClick = () => {
+    const currentUrls = shot.shotImageUrls || [];
+    if (currentUrls.length >= 3) {
+      return;
+    }
     fileInputRef.current?.click();
+  };
+
+  const handleRemoveImage = async (imageIndex: number) => {
+    const currentUrls = shot.shotImageUrls || [];
+    if (currentUrls[imageIndex]) {
+      try {
+        const fileName = currentUrls[imageIndex].split('/').pop();
+        if (fileName) {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            await supabase.storage
+              .from('shot-references')
+              .remove([`${user.id}/${fileName}`]);
+          }
+        }
+      } catch (error) {
+        console.error('Error removing image:', error);
+      }
+      const newUrls = currentUrls.filter((_, i) => i !== imageIndex);
+      onUpdate(shot.id, 'shotImageUrls', JSON.stringify(newUrls));
+    }
+  };
+
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+
+    const currentUrls = shot.shotImageUrls || [];
+    if (currentUrls.length >= 3) {
+      return;
+    }
+
+    const files = Array.from(e.dataTransfer.files);
+    const imageFile = files.find(file => file.type.startsWith('image/'));
+    
+    if (imageFile) {
+      onImageUpload(shot.id, imageFile);
+    }
   };
 
   return (
@@ -235,7 +293,7 @@ export const ShotListCard = ({
         {/* Imagem de Referência */}
         <div className="space-y-2">
           <label className="text-sm font-medium text-foreground">
-            🖼️ Imagem de Referência
+            🖼️ Imagens de Referência (máx. 3)
           </label>
           <input
             type="file"
@@ -244,37 +302,54 @@ export const ShotListCard = ({
             accept="image/*"
             className="hidden"
           />
-          {shot.shotImageUrl ? (
-            <div className="relative group">
-              <img
-                src={shot.shotImageUrl}
-                alt="Referência"
-                className={cn(
-                  "w-full h-48 object-cover rounded-lg border border-input",
-                  onImageClick && "cursor-pointer hover:opacity-90 transition-opacity"
-                )}
-                onClick={() => onImageClick?.(shot.id)}
-              />
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={handleImageClick}
-                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <Upload className="w-4 h-4 mr-2" />
-                Trocar
-              </Button>
+          {(shot.shotImageUrls && shot.shotImageUrls.length > 0) ? (
+            <div className="grid grid-cols-2 gap-2">
+              {shot.shotImageUrls.map((url, index) => (
+                <div key={index} className="relative group">
+                  <img
+                    src={url}
+                    alt={`Referência ${index + 1}`}
+                    className={cn(
+                      "w-full aspect-square object-cover rounded-lg border border-input",
+                      onImageClick && "cursor-pointer hover:opacity-90 transition-opacity"
+                    )}
+                    onClick={() => onImageClick?.(shot.id)}
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleRemoveImage(index)}
+                    className="absolute -top-1 -right-1 h-6 w-6 bg-destructive text-destructive-foreground hover:bg-destructive/90 opacity-0 group-hover:opacity-100 transition-opacity rounded-full p-0"
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
+                  {index === shot.shotImageUrls.length - 1 && shot.shotImageUrls.length < 3 && (
+                    <Button
+                      variant="default"
+                      size="icon"
+                      onClick={handleImageClick}
+                      className="absolute -bottom-1 -right-1 h-8 w-8 rounded-full p-0 shadow-lg"
+                    >
+                      <Upload className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+              ))}
             </div>
           ) : (
-            <Button
-              variant="outline"
-              size="lg"
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
               onClick={handleImageClick}
-              className="w-full h-24 border-dashed"
+              className={cn(
+                "border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors",
+                isDragOver ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"
+              )}
             >
-              <ImageIcon className="w-6 h-6 mr-2" />
-              Adicionar Imagem
-            </Button>
+              <ImageIcon className="w-12 h-12 mx-auto mb-2 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Arraste ou clique para adicionar</p>
+            </div>
           )}
         </div>
 
