@@ -81,7 +81,7 @@ const Onboarding = () => {
             <img 
               src={greekStatue} 
               alt="Estátua grega" 
-              className="w-32 h-32 mx-auto object-contain mb-4"
+              className="w-40 h-40 mx-auto object-contain mb-4"
             />
             <h1 className="text-5xl font-bold bg-gradient-to-r from-accent to-primary bg-clip-text text-transparent">
               Bem-vindo à Muzze.
