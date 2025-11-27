@@ -120,7 +120,7 @@ export const BottomNav = () => {
       clearTimeout(longPressTimer.current);
     }
     if (!isLongPress) {
-      setIsStageSelectOpen(true);
+      navigate('/session');
     }
   };
 
