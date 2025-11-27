@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useProfile } from "@/hooks/useProfile";
 import { useAnalytics } from "@/hooks/useAnalytics";
+import { useNotifications } from "@/hooks/useNotifications";
 import { supabase } from "@/integrations/supabase/client";
 import instagramLogo from "@/assets/instagram-logo.png";
 import youtubeLogo from "@/assets/youtube-logo.png";
@@ -24,6 +25,7 @@ const Onboarding = () => {
   const navigate = useNavigate();
   const { updateProfile } = useProfile();
   const { trackEvent } = useAnalytics();
+  const { requestPermission, isSupported } = useNotifications();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -329,13 +331,24 @@ const Onboarding = () => {
                 <div className="space-y-1">
                   <Label htmlFor="notifications">Receber lembrete diário</Label>
                   <p className="text-sm text-muted-foreground">
-                    Ative para receber notificações
+                    {isSupported 
+                      ? 'Ative para receber notificações'
+                      : 'Notificações não suportadas neste navegador'
+                    }
                   </p>
                 </div>
                 <Switch
                   id="notifications"
                   checked={notificationsEnabled}
-                  onCheckedChange={setNotificationsEnabled}
+                  disabled={!isSupported}
+                  onCheckedChange={async (checked) => {
+                    if (checked) {
+                      const granted = await requestPermission();
+                      setNotificationsEnabled(granted);
+                    } else {
+                      setNotificationsEnabled(false);
+                    }
+                  }}
                 />
               </div>
             </Card>
