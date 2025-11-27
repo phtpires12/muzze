@@ -25,11 +25,15 @@ export const useNotifications = () => {
 
   useEffect(() => {
     // Setup foreground message handler
-    setupForegroundMessageHandler((payload) => {
-      toast.info(payload.notification?.title || 'Nova notificação', {
-        description: payload.notification?.body
+    const setupHandler = async () => {
+      await setupForegroundMessageHandler((payload) => {
+        toast.info(payload.notification?.title || 'Nova notificação', {
+          description: payload.notification?.body
+        });
       });
-    });
+    };
+    
+    setupHandler();
   }, []);
 
   const requestPermission = async (): Promise<boolean> => {
