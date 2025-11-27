@@ -20,6 +20,7 @@ const Onboarding = () => {
   const [showCustomGoal, setShowCustomGoal] = useState(false);
   const [reminderTime, setReminderTime] = useState("09:00");
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [visibleCards, setVisibleCards] = useState(1);
   const navigate = useNavigate();
   const { updateProfile } = useProfile();
   const { trackEvent } = useAnalytics();
@@ -35,6 +36,12 @@ const Onboarding = () => {
     };
     checkAuth();
   }, [navigate]);
+
+  useEffect(() => {
+    if (step === 1) {
+      setVisibleCards(1);
+    }
+  }, [step]);
 
   const handleContinue = async () => {
     if (step < 5) {
@@ -103,53 +110,65 @@ const Onboarding = () => {
             </div>
 
             <div className="space-y-6">
-              {/* Bullet 1 */}
-              <Card className="p-6">
-                <div className="flex gap-4">
-                  <div className="text-3xl">⏱️</div>
-                  <div>
-                    <h3 className="font-semibold text-lg mb-2">Sessões criativas</h3>
-                    <p className="text-muted-foreground">
-                      Você escolhe a etapa do seu processo (ideias, roteiro, revisão, gravação ou edição), 
-                      inicia uma sessão e cria com foco total.
-                    </p>
+              {/* Card 1 - Constância diária */}
+              {visibleCards >= 1 && (
+                <Card className="p-6 animate-fade-in">
+                  <div className="flex gap-4">
+                    <div className="text-3xl">🌱</div>
+                    <div>
+                      <h3 className="font-semibold text-lg mb-2">Constância diária</h3>
+                      <p className="text-muted-foreground">
+                        A Muzze foi criada para te ajudar a <strong>criar um pouco todos os dias</strong>, 
+                        sem pressão e sem perfeccionismo.
+                      </p>
+                    </div>
                   </div>
-                </div>
-              </Card>
+                </Card>
+              )}
 
-              {/* Bullet 2 */}
-              <Card className="p-6">
-                <div className="flex gap-4">
-                  <div className="text-3xl">⏰</div>
-                  <div>
-                    <h3 className="font-semibold text-lg mb-2">Minutos, não posts</h3>
-                    <p className="text-muted-foreground">
-                      Nós medimos seu progresso pelo <strong>tempo criando</strong>, 
-                      não pela quantidade de publicações.
-                    </p>
+              {/* Card 2 - Minutos, não posts */}
+              {visibleCards >= 2 && (
+                <Card className="p-6 animate-fade-in">
+                  <div className="flex gap-4">
+                    <div className="text-3xl">⏰</div>
+                    <div>
+                      <h3 className="font-semibold text-lg mb-2">Minutos, não posts</h3>
+                      <p className="text-muted-foreground">
+                        Nós medimos seu progresso pelo <strong>tempo criando</strong>, 
+                        não pela quantidade de publicações.
+                      </p>
+                    </div>
                   </div>
-                </div>
-              </Card>
+                </Card>
+              )}
 
-              {/* Bullet 3 */}
-              <Card className="p-6">
-                <div className="flex gap-4">
-                  <div className="text-3xl">🌱</div>
-                  <div>
-                    <h3 className="font-semibold text-lg mb-2">Constância diária</h3>
-                    <p className="text-muted-foreground">
-                      A Muzze foi criada para te ajudar a <strong>criar um pouco todos os dias</strong>, 
-                      sem pressão e sem perfeccionismo.
-                    </p>
+              {/* Card 3 - Sessões criativas */}
+              {visibleCards >= 3 && (
+                <Card className="p-6 animate-fade-in">
+                  <div className="flex gap-4">
+                    <div className="text-3xl">⏱️</div>
+                    <div>
+                      <h3 className="font-semibold text-lg mb-2">Sessões criativas</h3>
+                      <p className="text-muted-foreground">
+                        Você escolhe a etapa do seu processo (ideias, roteiro, revisão, gravação ou edição), 
+                        inicia uma sessão e cria com foco total.
+                      </p>
+                    </div>
                   </div>
-                </div>
-              </Card>
+                </Card>
+              )}
             </div>
 
             <div className="flex justify-center pt-4">
-              <Button onClick={handleContinue} size="lg" className="min-w-[300px]">
-                Entendi, quero criar todos os dias
-              </Button>
+              {visibleCards < 3 ? (
+                <Button onClick={() => setVisibleCards(v => v + 1)} size="lg" className="min-w-[300px]">
+                  Continuar
+                </Button>
+              ) : (
+                <Button onClick={handleContinue} size="lg" className="min-w-[300px]">
+                  Entendi, quero criar todos os dias
+                </Button>
+              )}
             </div>
           </div>
         )}
