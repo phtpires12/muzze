@@ -183,7 +183,7 @@ const Onboarding = () => {
                       <img 
                         src={option.logo} 
                         alt={option.name} 
-                        className="w-12 h-12 mx-auto object-contain"
+                        className="w-20 h-20 mx-auto object-contain"
                       />
                     ) : (
                       <div className="text-4xl">{option.icon}</div>
