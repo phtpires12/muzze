@@ -251,9 +251,9 @@ const Onboarding = () => {
           <div className="space-y-8 animate-fade-in max-w-2xl mx-auto">
             <div className="text-center space-y-3">
               <h2 className="text-3xl font-bold">Vamos combinar um mínimo diário?</h2>
-              <p className="text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed">
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed text-balance">
                 Para construir constância, a Muzze recomenda começar com{' '}
-                <strong className="text-foreground">25 minutos por dia de sessão criativa.</strong>
+                <strong className="text-foreground"><span className="whitespace-nowrap">25 minutos</span> por dia de sessão criativa.</strong>
                 <br />
                 É pouco o suficiente pra caber na rotina, mas poderoso o bastante pra mover sua criatividade.
               </p>
