@@ -4,13 +4,33 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
 import { useTheme } from "next-themes";
+import { useNotifications } from "@/hooks/useNotifications";
+import { useProfile } from "@/hooks/useProfile";
 
 const Settings = () => {
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
-  const [notifications, setNotifications] = useState(true);
+  const { profile, updateProfile } = useProfile();
+  const { 
+    permission, 
+    isSupported, 
+    isLoading, 
+    requestPermission, 
+    removeToken 
+  } = useNotifications();
+  
+  const notificationsEnabled = profile?.notifications_enabled ?? false;
+  
+  const handleNotificationChange = async (checked: boolean) => {
+    if (checked) {
+      const granted = await requestPermission();
+      await updateProfile({ notifications_enabled: granted });
+    } else {
+      await removeToken();
+      await updateProfile({ notifications_enabled: false });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -37,8 +57,9 @@ const Settings = () => {
               </Label>
               <Switch
                 id="notifications"
-                checked={notifications}
-                onCheckedChange={setNotifications}
+                checked={notificationsEnabled}
+                disabled={!isSupported || isLoading}
+                onCheckedChange={handleNotificationChange}
               />
             </div>
 
