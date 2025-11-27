@@ -71,9 +71,27 @@ const Session = () => {
   const { 
     celebrationData, 
     triggerCelebration, 
-    dismissStreakCelebration,
-    dismissTrophyCelebration 
+    dismissStreakCelebration: originalDismissStreakCelebration,
+    dismissTrophyCelebration: originalDismissTrophyCelebration
   } = useStreakCelebration();
+
+  // Wrap dismissal functions to handle navigation
+  const dismissStreakCelebration = () => {
+    originalDismissStreakCelebration();
+    // If no trophies to show, navigate to home
+    if (celebrationData.unlockedTrophies.length === 0) {
+      navigate("/");
+    }
+  };
+
+  const dismissTrophyCelebration = () => {
+    originalDismissTrophyCelebration();
+    // After showing all trophies, navigate to home
+    const remainingTrophies = celebrationData.unlockedTrophies.slice(1);
+    if (remainingTrophies.length === 0) {
+      navigate("/");
+    }
+  };
 
   useEffect(() => {
     if (stageParam) {
@@ -297,6 +315,21 @@ const Session = () => {
 
           <BrainstormWorkspace />
         </div>
+
+        {/* Celebration Components */}
+        <StreakCelebration
+          show={celebrationData.showStreakCelebration}
+          streakCount={celebrationData.streakCount}
+          weekDays={celebrationData.weekDays}
+          onContinue={dismissStreakCelebration}
+        />
+
+        <TrophyCelebration
+          show={celebrationData.showTrophyCelebration}
+          trophy={celebrationData.currentTrophy}
+          xpGained={celebrationData.xpGained}
+          onContinue={dismissTrophyCelebration}
+        />
       </div>
     );
   }
@@ -360,6 +393,21 @@ const Session = () => {
 
         {/* Script Editor */}
         <ScriptEditor scriptId={scriptId} isReviewMode={session.stage === "review"} />
+
+        {/* Celebration Components */}
+        <StreakCelebration
+          show={celebrationData.showStreakCelebration}
+          streakCount={celebrationData.streakCount}
+          weekDays={celebrationData.weekDays}
+          onContinue={dismissStreakCelebration}
+        />
+
+        <TrophyCelebration
+          show={celebrationData.showTrophyCelebration}
+          trophy={celebrationData.currentTrophy}
+          xpGained={celebrationData.xpGained}
+          onContinue={dismissTrophyCelebration}
+        />
       </div>
     );
   }
