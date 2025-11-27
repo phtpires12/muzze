@@ -38,6 +38,63 @@ export type Database = {
         }
         Relationships: []
       }
+      device_tokens: {
+        Row: {
+          created_at: string | null
+          id: string
+          platform: string
+          token: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          platform?: string
+          token: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          platform?: string
+          token?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notification_logs: {
+        Row: {
+          error_message: string | null
+          id: string
+          notification_date: string
+          notification_type: string
+          sent_at: string | null
+          success: boolean | null
+          user_id: string
+        }
+        Insert: {
+          error_message?: string | null
+          id?: string
+          notification_date: string
+          notification_type: string
+          sent_at?: string | null
+          success?: boolean | null
+          user_id: string
+        }
+        Update: {
+          error_message?: string | null
+          id?: string
+          notification_date?: string
+          notification_type?: string
+          sent_at?: string | null
+          success?: boolean | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string | null
