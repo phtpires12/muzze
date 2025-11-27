@@ -77,24 +77,21 @@ const Onboarding = () => {
       <div className="w-full max-w-4xl">
         {/* Step 0 - Boas-vindas */}
         {step === 0 && (
-          <div className="text-center space-y-3 animate-fade-in">
+          <div className="text-center space-y-4 animate-fade-in">
             <img 
               src={greekStatue} 
               alt="Estátua grega" 
-              className="w-40 h-40 mx-auto object-contain mb-2"
+              className="w-56 h-56 mx-auto object-contain mb-4"
             />
             <h1 className="text-5xl font-bold bg-gradient-to-r from-accent to-primary bg-clip-text text-transparent">
-              Bem-vindo à Muzze
+              Bem-vindo à Muzze.
             </h1>
             <p className="text-xl text-foreground max-w-2xl mx-auto">
-              Organize a sua criatividade.
+              O app que organiza sua criatividade.
             </p>
-            <Button size="lg" onClick={handleContinue} className="mt-4">
+            <Button size="lg" onClick={handleContinue} className="mt-6 h-14 px-12 text-lg">
               Começar
             </Button>
-            <p className="text-sm text-muted-foreground max-w-md mx-auto pt-4">
-              Aqui, cada minuto criando vale mais do que qualquer curtida.
-            </p>
           </div>
         )}
 
