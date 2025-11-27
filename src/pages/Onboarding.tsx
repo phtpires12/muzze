@@ -309,7 +309,7 @@ const Onboarding = () => {
             <div className="text-center space-y-2">
               <h2 className="text-3xl font-bold">Quando você quer que a Muzze te lembre de criar?</h2>
               <p className="text-muted-foreground">
-                Um lembrete por dia, no horário que fizer mais sentido pra você.
+                Vamos te mandar até 3 lembretes por dia — só até você criar. Depois disso, a gente para de encher. 😉
               </p>
             </div>
 
