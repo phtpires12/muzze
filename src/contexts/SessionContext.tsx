@@ -30,8 +30,26 @@ const initialContext: MuzzeSessionType = {
   contentId: null,
 };
 
+// Carregar estado inicial do localStorage
+const loadInitialState = (): MuzzeSessionType => {
+  try {
+    const saved = localStorage.getItem('muzze_session_context');
+    if (saved) {
+      return JSON.parse(saved);
+    }
+  } catch (error) {
+    console.error('Error loading session context from localStorage:', error);
+  }
+  return initialContext;
+};
+
 export const SessionContextProvider = ({ children }: SessionContextProviderProps) => {
-  const [muzzeSession, setMuzzeSessionState] = useState<MuzzeSessionType>(initialContext);
+  const [muzzeSession, setMuzzeSessionState] = useState<MuzzeSessionType>(loadInitialState);
+
+  // Persistir em localStorage sempre que mudar
+  useEffect(() => {
+    localStorage.setItem('muzze_session_context', JSON.stringify(muzzeSession));
+  }, [muzzeSession]);
 
   // Sync contentId to global window object for useSession hook
   useEffect(() => {
