@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import instagramLogo from "@/assets/instagram-logo.png";
 import youtubeLogo from "@/assets/youtube-logo.png";
 import tiktokLogo from "@/assets/tiktok-logo.png";
+import greekStatue from "@/assets/greek-statue.png";
 
 const Onboarding = () => {
   const [step, setStep] = useState(0);
@@ -76,20 +77,24 @@ const Onboarding = () => {
       <div className="w-full max-w-4xl">
         {/* Step 0 - Boas-vindas */}
         {step === 0 && (
-          <div className="text-center space-y-6 animate-fade-in">
-            <div className="text-6xl mb-4">🎨</div>
+          <div className="text-center space-y-3 animate-fade-in">
+            <img 
+              src={greekStatue} 
+              alt="Estátua grega" 
+              className="w-40 h-40 mx-auto object-contain mb-2"
+            />
             <h1 className="text-5xl font-bold bg-gradient-to-r from-accent to-primary bg-clip-text text-transparent">
               Bem-vindo à Muzze
             </h1>
-            <p className="text-xl text-foreground max-w-2xl mx-auto leading-relaxed">
-              O seu templo de constância criativa.
+            <p className="text-xl text-foreground max-w-2xl mx-auto">
+              Organize a sua criatividade.
             </p>
-            <p className="text-lg text-muted-foreground max-w-xl mx-auto">
-              Aqui, cada minuto criando vale mais do que qualquer curtida.
-            </p>
-            <Button size="lg" onClick={handleContinue} className="mt-8">
+            <Button size="lg" onClick={handleContinue} className="mt-4">
               Começar
             </Button>
+            <p className="text-sm text-muted-foreground max-w-md mx-auto pt-4">
+              Aqui, cada minuto criando vale mais do que qualquer curtida.
+            </p>
           </div>
         )}
 
