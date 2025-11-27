@@ -103,75 +103,91 @@ const Onboarding = () => {
         )}
 
         {/* Step 1 - Como a Muzze vai te ajudar */}
-        {step === 1 && (
-          <div className="space-y-8 animate-fade-in max-w-3xl mx-auto">
-            <div className="text-center space-y-2">
-              <h2 className="text-3xl font-bold">Como a Muzze vai te ajudar</h2>
-            </div>
-
-            <div className="space-y-6">
-              {/* Card 1 - Constância diária */}
-              {visibleCards >= 1 && (
-                <Card className="p-6 animate-fade-in">
-                  <div className="flex gap-4">
-                    <div className="text-3xl">🌱</div>
-                    <div>
-                      <h3 className="font-semibold text-lg mb-2">Constância diária</h3>
-                      <p className="text-muted-foreground">
-                        A Muzze foi criada para te ajudar a <strong>criar um pouco todos os dias</strong>, 
-                        sem pressão e sem perfeccionismo.
-                      </p>
-                    </div>
-                  </div>
-                </Card>
-              )}
-
-              {/* Card 2 - Minutos, não posts */}
-              {visibleCards >= 2 && (
-                <Card className="p-6 animate-fade-in">
-                  <div className="flex gap-4">
-                    <div className="text-3xl">⏰</div>
-                    <div>
-                      <h3 className="font-semibold text-lg mb-2">Minutos, não posts</h3>
-                      <p className="text-muted-foreground">
-                        Nós medimos seu progresso pelo <strong>tempo criando</strong>, 
-                        não pela quantidade de publicações.
-                      </p>
-                    </div>
-                  </div>
-                </Card>
-              )}
-
-              {/* Card 3 - Sessões criativas */}
-              {visibleCards >= 3 && (
-                <Card className="p-6 animate-fade-in">
-                  <div className="flex gap-4">
-                    <div className="text-3xl">⏱️</div>
-                    <div>
-                      <h3 className="font-semibold text-lg mb-2">Sessões criativas</h3>
-                      <p className="text-muted-foreground">
-                        Você escolhe a etapa do seu processo (ideias, roteiro, revisão, gravação ou edição), 
-                        inicia uma sessão e cria com foco total.
-                      </p>
-                    </div>
-                  </div>
-                </Card>
-              )}
-            </div>
-
-            <div className="flex justify-center pt-4">
-              {visibleCards < 3 ? (
-                <Button onClick={() => setVisibleCards(v => v + 1)} size="lg" className="min-w-[300px]">
-                  Continuar
-                </Button>
-              ) : (
-                <Button onClick={handleContinue} size="lg" className="min-w-[300px]">
-                  Entendi, quero criar todos os dias
-                </Button>
-              )}
-            </div>
+      {step === 1 && (
+        <div 
+          className={`space-y-8 animate-fade-in max-w-3xl mx-auto ${visibleCards < 3 ? 'cursor-pointer' : ''}`}
+          onClick={() => {
+            if (visibleCards < 3) {
+              setVisibleCards(v => v + 1);
+            }
+          }}
+        >
+          <div className="text-center space-y-2">
+            <h2 className="text-3xl font-bold">Como a Muzze vai te ajudar</h2>
           </div>
-        )}
+
+          <div className="space-y-6">
+            {/* Card 1 - Constância diária */}
+            {visibleCards >= 1 && (
+              <Card className="p-6 animate-fade-in">
+                <div className="flex gap-4">
+                  <div className="text-3xl">🌱</div>
+                  <div>
+                    <h3 className="font-semibold text-lg mb-2">Constância diária</h3>
+                    <p className="text-muted-foreground">
+                      A Muzze foi criada para te ajudar a <strong>criar um pouco todos os dias</strong>, 
+                      sem pressão e sem perfeccionismo.
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            )}
+
+            {/* Card 2 - Minutos, não posts */}
+            {visibleCards >= 2 && (
+              <Card className="p-6 animate-fade-in">
+                <div className="flex gap-4">
+                  <div className="text-3xl">⏰</div>
+                  <div>
+                    <h3 className="font-semibold text-lg mb-2">Minutos, não posts</h3>
+                    <p className="text-muted-foreground">
+                      Nós medimos seu progresso pelo <strong>tempo criando</strong>, 
+                      não pela quantidade de publicações.
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            )}
+
+            {/* Card 3 - Sessões criativas */}
+            {visibleCards >= 3 && (
+              <Card className="p-6 animate-fade-in">
+                <div className="flex gap-4">
+                  <div className="text-3xl">⏱️</div>
+                  <div>
+                    <h3 className="font-semibold text-lg mb-2">Sessões criativas</h3>
+                    <p className="text-muted-foreground">
+                      Você escolhe a etapa do seu processo (ideias, roteiro, revisão, gravação ou edição), 
+                      inicia uma sessão e cria com foco total.
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            )}
+          </div>
+
+          {visibleCards < 3 && (
+            <p className="text-center text-sm text-muted-foreground animate-pulse pt-4">
+              Toque para continuar
+            </p>
+          )}
+
+          {visibleCards === 3 && (
+            <div className="flex justify-center pt-4">
+              <Button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleContinue();
+                }} 
+                size="lg" 
+                className="min-w-[300px]"
+              >
+                Entendi, quero criar todos os dias
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
 
         {/* Step 2 - Onde você publica mais? */}
         {step === 2 && (
