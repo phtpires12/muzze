@@ -38,6 +38,7 @@ const ShotListRecord = () => {
     pauseSession,
     resumeSession,
     endSession,
+    saveCurrentStageTime,
   } = useSession();
   
   const isAppVisible = useAppVisibility();
@@ -182,6 +183,9 @@ const ShotListRecord = () => {
           description: "Avançando para a etapa de edição...",
         });
         
+        // Salvar tempo da sessão
+        await saveCurrentStageTime();
+        
         // Pequeno delay para feedback visual
         setTimeout(() => {
           navigate(`/session?stage=edit&scriptId=${scriptId}`);
@@ -197,7 +201,8 @@ const ShotListRecord = () => {
         setAutoSaveStatus('unsaved');
       }
     } else {
-      // Já está salvo, avançar diretamente
+      // Já está salvo, salvar tempo e avançar
+      await saveCurrentStageTime();
       navigate(`/session?stage=edit&scriptId=${scriptId}`);
     }
   };
@@ -406,7 +411,10 @@ const ShotListRecord = () => {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate(`/shot-list/review?scriptId=${scriptId}`)}
+              onClick={async () => {
+                await saveCurrentStageTime();
+                navigate(`/shot-list/review?scriptId=${scriptId}`);
+              }}
             >
               <ArrowLeft className="w-5 h-5" />
             </Button>
@@ -495,7 +503,10 @@ const ShotListRecord = () => {
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
-              onClick={() => navigate(`/shot-list/review?scriptId=${scriptId}`)}
+              onClick={async () => {
+                await saveCurrentStageTime();
+                navigate(`/shot-list/review?scriptId=${scriptId}`);
+              }}
               className="hover:bg-accent/10"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />

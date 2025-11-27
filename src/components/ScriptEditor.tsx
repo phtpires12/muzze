@@ -20,6 +20,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useSessionContext } from "@/contexts/SessionContext";
+import { useSession } from "@/hooks/useSession";
 
 interface ScriptEditorProps {
   onClose?: () => void;
@@ -31,6 +32,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
   const { toast } = useToast();
   const navigate = useNavigate();
   const { setMuzzeSession } = useSessionContext();
+  const { saveCurrentStageTime } = useSession();
   const [title, setTitle] = useState("Novo Roteiro");
   const [content, setContent] = useState({
     gancho: "",
@@ -253,7 +255,9 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
     }
   };
 
-  const handleBack = () => {
+  const handleBack = async () => {
+    // Salvar tempo da sessão antes de navegar
+    await saveCurrentStageTime();
     navigate('/calendario');
   };
 
@@ -283,6 +287,10 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
     console.log('[DEBUG - ScriptEditor] Salvando antes de navegar...');
     await handleAutoSave();
     console.log('[DEBUG - ScriptEditor] ✅ Auto-save completed');
+    
+    // Salvar tempo da sessão
+    await saveCurrentStageTime();
+    console.log('[DEBUG - ScriptEditor] ✅ Stage time saved');
     
     // Add small delay to ensure DB commit completes
     await new Promise(resolve => setTimeout(resolve, 500));

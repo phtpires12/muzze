@@ -33,6 +33,7 @@ const ShotListReview = () => {
     pauseSession,
     resumeSession,
     endSession,
+    saveCurrentStageTime,
   } = useSession();
   
   const isAppVisible = useAppVisibility();
@@ -336,6 +337,7 @@ const ShotListReview = () => {
 
   const handleAdvanceToRecord = async () => {
     await handleSave();
+    await saveCurrentStageTime();
     navigate(`/shot-list/record?scriptId=${scriptId}`);
   };
 
@@ -348,7 +350,10 @@ const ShotListReview = () => {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate(`/session?stage=review&scriptId=${scriptId}`)}
+              onClick={async () => {
+                await saveCurrentStageTime();
+                navigate(`/session?stage=review&scriptId=${scriptId}`);
+              }}
             >
               <ArrowLeft className="w-5 h-5" />
             </Button>
@@ -386,7 +391,10 @@ const ShotListReview = () => {
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
-              onClick={() => navigate(`/session?stage=review&scriptId=${scriptId}`)}
+              onClick={async () => {
+                await saveCurrentStageTime();
+                navigate(`/session?stage=review&scriptId=${scriptId}`);
+              }}
               className="hover:bg-accent/10"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />

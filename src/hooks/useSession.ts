@@ -18,9 +18,22 @@ interface SessionState {
   dailyGoalMinutes: number; // Meta diária do usuário
 }
 
-export const useSession = () => {
-  const { toast } = useToast();
-  const [session, setSession] = useState<SessionState>({
+// Carregar estado inicial do localStorage
+const loadSessionState = (): SessionState => {
+  try {
+    const saved = localStorage.getItem('muzze_session_state');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // Converter startedAt de string para Date
+      if (parsed.startedAt) {
+        parsed.startedAt = new Date(parsed.startedAt);
+      }
+      return parsed;
+    }
+  } catch (error) {
+    console.error('Error loading session state:', error);
+  }
+  return {
     isActive: false,
     isPaused: false,
     stage: "ideation",
@@ -31,11 +44,59 @@ export const useSession = () => {
     targetSeconds: 25 * 60,
     isStreakMode: false,
     dailyGoalMinutes: 60,
-  });
+  };
+};
+
+export const useSession = () => {
+  const { toast } = useToast();
+  const [session, setSession] = useState<SessionState>(loadSessionState);
   
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const currentStageStartRef = useRef<Date | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const autoSaveIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Persistir estado em localStorage
+  useEffect(() => {
+    localStorage.setItem('muzze_session_state', JSON.stringify(session));
+  }, [session]);
+
+  // Auto-save incremental de stage_times a cada 30 segundos
+  useEffect(() => {
+    if (session.isActive && !session.isPaused) {
+      autoSaveIntervalRef.current = setInterval(() => {
+        saveCurrentStageTime();
+      }, 30000); // 30 segundos
+    } else {
+      if (autoSaveIntervalRef.current) {
+        clearInterval(autoSaveIntervalRef.current);
+        autoSaveIntervalRef.current = null;
+      }
+    }
+
+    return () => {
+      if (autoSaveIntervalRef.current) {
+        clearInterval(autoSaveIntervalRef.current);
+      }
+    };
+  }, [session.isActive, session.isPaused]);
+
+  // Handler para beforeunload - salvar dados antes de fechar
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (session.isActive) {
+        e.preventDefault();
+        e.returnValue = 'Você tem uma sessão ativa. Tem certeza que deseja sair?';
+        // Salvar dados antes de sair
+        saveCurrentStageTime();
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [session.isActive]);
 
   // Timer tick - increments both global and stage timers
   useEffect(() => {
@@ -83,6 +144,40 @@ export const useSession = () => {
       description: "Continue criando para bater sua meta diária!",
     });
   }, [toast]);
+
+  // Função para salvar tempo da etapa atual SEM finalizar sessão
+  const saveCurrentStageTime = useCallback(async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Salvar apenas se tiver tempo acumulado na etapa atual
+      if (currentStageStartRef.current && session.stageElapsedSeconds > 0) {
+        const now = new Date();
+
+        await supabase.from('stage_times').insert({
+          user_id: user.id,
+          stage: session.stage,
+          started_at: currentStageStartRef.current.toISOString(),
+          ended_at: now.toISOString(),
+          duration_seconds: session.stageElapsedSeconds,
+          content_item_id: (window as any).__muzzeSessionContentId || null,
+        });
+
+        console.log(`[useSession] ✅ Salvamento incremental: ${session.stageElapsedSeconds}s na etapa ${session.stage}`);
+
+        // Resetar contadores da etapa atual após salvar (continua sessão global)
+        currentStageStartRef.current = now;
+        setSession(prev => ({ 
+          ...prev, 
+          stageElapsedSeconds: 0,
+          // elapsedSeconds e isStreakMode continuam inalterados
+        }));
+      }
+    } catch (error) {
+      console.error('[useSession] Erro ao salvar stage_time incremental:', error);
+    }
+  }, [session.stage, session.stageElapsedSeconds]);
 
   const startSession = useCallback(async (initialStage: SessionStage = "ideation") => {
     try {
@@ -448,6 +543,7 @@ export const useSession = () => {
     resumeSession,
     changeStage,
     endSession,
+    saveCurrentStageTime,
   };
 };
 
