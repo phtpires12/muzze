@@ -8,6 +8,9 @@ import { Switch } from "@/components/ui/switch";
 import { useProfile } from "@/hooks/useProfile";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { supabase } from "@/integrations/supabase/client";
+import instagramLogo from "@/assets/instagram-logo.png";
+import youtubeLogo from "@/assets/youtube-logo.png";
+import tiktokLogo from "@/assets/tiktok-logo.png";
 
 const Onboarding = () => {
   const [step, setStep] = useState(0);
@@ -161,9 +164,9 @@ const Onboarding = () => {
 
             <div className="grid grid-cols-2 gap-4">
               {[
-                { id: 'instagram', name: 'Instagram', icon: '📸' },
-                { id: 'tiktok', name: 'TikTok', icon: '🎵' },
-                { id: 'youtube', name: 'YouTube', icon: '▶️' },
+                { id: 'instagram', name: 'Instagram', logo: instagramLogo },
+                { id: 'tiktok', name: 'TikTok', logo: tiktokLogo },
+                { id: 'youtube', name: 'YouTube', logo: youtubeLogo },
                 { id: 'outros', name: 'Outros', icon: '🌐' }
               ].map((option) => (
                 <Card
@@ -176,7 +179,15 @@ const Onboarding = () => {
                   onClick={() => setPlatform(option.id)}
                 >
                   <div className="text-center space-y-2">
-                    <div className="text-4xl">{option.icon}</div>
+                    {'logo' in option ? (
+                      <img 
+                        src={option.logo} 
+                        alt={option.name} 
+                        className="w-12 h-12 mx-auto object-contain"
+                      />
+                    ) : (
+                      <div className="text-4xl">{option.icon}</div>
+                    )}
                     <p className="font-medium">{option.name}</p>
                   </div>
                 </Card>
