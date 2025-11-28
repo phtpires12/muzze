@@ -37,6 +37,7 @@ const CalendarioEditorial = () => {
   const [draggedScript, setDraggedScript] = useState<Script | null>(null);
   const [dragOverDate, setDragOverDate] = useState<string | null>(null);
   const [contentTypeFilter, setContentTypeFilter] = useState<string>("all");
+  const [stageFilter, setStageFilter] = useState<string>("all");
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -64,6 +65,18 @@ const CalendarioEditorial = () => {
     }
   };
 
+  const getScriptStage = (script: Script): string => {
+    if (script.shot_list && script.shot_list.length > 0) {
+      return "record";
+    } else if (script.status === "review") {
+      return "review";
+    } else if (script.content && script.content.length > 100) {
+      return "script";
+    } else {
+      return "idea";
+    }
+  };
+
   const getScriptsForDate = (checkDate: Date) => {
     return scripts.filter((script) => {
       const scriptDate = script.publish_date || script.created_at;
@@ -72,11 +85,15 @@ const CalendarioEditorial = () => {
       const checkDateOnly = format(checkDate, "yyyy-MM-dd");
       const dateMatches = scriptDateOnly === checkDateOnly;
       
+      if (!dateMatches) return false;
+      
       // Apply content type filter
-      if (contentTypeFilter === "all") {
-        return dateMatches;
-      }
-      return dateMatches && script.content_type === contentTypeFilter;
+      const contentTypeMatches = contentTypeFilter === "all" || script.content_type === contentTypeFilter;
+      
+      // Apply stage filter
+      const stageMatches = stageFilter === "all" || getScriptStage(script) === stageFilter;
+      
+      return contentTypeMatches && stageMatches;
     });
   };
 
@@ -249,10 +266,10 @@ const CalendarioEditorial = () => {
                 <TabsTrigger value="week">Semana</TabsTrigger>
               </TabsList>
               
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <Filter className="w-4 h-4 text-muted-foreground" />
                 <Select value={contentTypeFilter} onValueChange={setContentTypeFilter}>
-                  <SelectTrigger className="w-[180px]">
+                  <SelectTrigger className="w-[160px]">
                     <SelectValue placeholder="Filtrar por tipo" />
                   </SelectTrigger>
                   <SelectContent>
@@ -261,6 +278,19 @@ const CalendarioEditorial = () => {
                     <SelectItem value="YouTube">YouTube</SelectItem>
                     <SelectItem value="TikTok">TikTok</SelectItem>
                     <SelectItem value="X (Twitter)">X (Twitter)</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                <Select value={stageFilter} onValueChange={setStageFilter}>
+                  <SelectTrigger className="w-[160px]">
+                    <SelectValue placeholder="Filtrar por etapa" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas as etapas</SelectItem>
+                    <SelectItem value="idea">Ideação</SelectItem>
+                    <SelectItem value="script">Roteiro</SelectItem>
+                    <SelectItem value="review">Revisão</SelectItem>
+                    <SelectItem value="record">Gravação</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
