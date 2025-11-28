@@ -65,9 +65,9 @@ const Novidades = () => {
     <div className="min-h-screen bg-background pb-20">
       <div className="max-w-4xl mx-auto px-6 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Novidades</h1>
+          <h1 className="text-3xl font-bold text-foreground mb-2">Melhorias de Futuras Atualizações</h1>
           <p className="text-muted-foreground">
-            Fique por dentro das próximas features e atualizações do CreatorFlow
+            Confira as sugestões de melhoria que nossos usuários nos deram
           </p>
         </div>
 
