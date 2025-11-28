@@ -1,8 +1,18 @@
 import { format } from "date-fns";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Script {
   id: string;
@@ -80,6 +90,7 @@ export function CalendarDay({
   dragOverDate,
 }: CalendarDayProps) {
   const [isHovered, setIsHovered] = useState(false);
+  const [scriptToDelete, setScriptToDelete] = useState<Script | null>(null);
   const isDragOver = dragOverDate === format(day, "yyyy-MM-dd");
 
   const handleCellClick = () => {
@@ -186,6 +197,16 @@ export function CalendarDay({
               }`}
               onClick={() => onViewScript?.(script.id)}
             >
+              <button
+                className="absolute top-1 right-1 opacity-0 group-hover/card:opacity-100 transition-opacity p-1 rounded hover:bg-destructive/20 z-10"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setScriptToDelete(script);
+                }}
+              >
+                <Trash2 className="w-3 h-3 text-muted-foreground hover:text-destructive" />
+              </button>
+              
               <div className="flex items-start gap-2">
                 <div className="text-muted-foreground mt-0.5 flex-shrink-0">
                   📄
@@ -215,6 +236,32 @@ export function CalendarDay({
           <div className="text-xs text-muted-foreground pl-2">+{scripts.length - 4} mais</div>
         )}
       </div>
+
+      <AlertDialog open={!!scriptToDelete} onOpenChange={(open) => !open && setScriptToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir conteúdo?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Você tem certeza que deseja excluir "{scriptToDelete?.title}"? 
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(e) => {
+                if (scriptToDelete) {
+                  onDeleteScript?.(e, scriptToDelete.id);
+                  setScriptToDelete(null);
+                }
+              }}
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
