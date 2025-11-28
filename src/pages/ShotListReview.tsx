@@ -31,6 +31,7 @@ const ShotListReview = () => {
   const {
     session,
     startSession,
+    changeStage,
     pauseSession,
     resumeSession,
     endSession,
@@ -55,6 +56,8 @@ const ShotListReview = () => {
     // Start session for review stage
     if (!session.isActive) {
       startSession("review");
+    } else if (session.stage !== "review") {
+      changeStage("review");
     }
   }, [scriptId]);
 

@@ -109,7 +109,9 @@ const Session = () => {
   // Handle record stage - redirect to shot list record
   useEffect(() => {
     const handleRecordStage = async () => {
-      if (session.stage === "record") {
+      // Only redirect if both session.stage and stageParam are "record"
+      // This prevents unwanted redirects when navigating back from review
+      if (session.stage === "record" && stageParam === "record") {
         console.log('[Session] Record stage detected, scriptId:', scriptId);
         
         if (scriptId && scriptId !== 'null' && scriptId !== 'undefined') {
@@ -156,7 +158,7 @@ const Session = () => {
     };
 
     handleRecordStage();
-  }, [session.stage, scriptId, navigate, toast]);
+  }, [session.stage, stageParam, scriptId, navigate, toast]);
 
   const formatTime = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
