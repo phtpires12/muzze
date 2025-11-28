@@ -32,6 +32,7 @@ import { ScriptEditor } from "@/components/ScriptEditor";
 import { BrainstormWorkspace } from "@/components/brainstorm/BrainstormWorkspace";
 import { EditingChecklist } from "@/components/EditingChecklist";
 import { DraggableSessionTimer } from "@/components/DraggableSessionTimer";
+import { AutoHideNav } from "@/components/AutoHideNav";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useWindowPortal } from "@/hooks/useWindowPortal";
@@ -316,6 +317,9 @@ const Session = () => {
           <BrainstormWorkspace />
         </div>
 
+        {/* Auto-hide Navigation */}
+        <AutoHideNav />
+
         {/* Celebration Components */}
         <StreakCelebration
           show={celebrationData.showStreakCelebration}
@@ -393,6 +397,9 @@ const Session = () => {
 
         {/* Script Editor */}
         <ScriptEditor scriptId={scriptId} isReviewMode={session.stage === "review"} />
+
+        {/* Auto-hide Navigation */}
+        <AutoHideNav />
 
         {/* Celebration Components */}
         <StreakCelebration
@@ -646,6 +653,9 @@ const Session = () => {
         streakCount={streakCount}
         onComplete={() => setShowStreakHalo(false)}
       />
+      
+      {/* Auto-hide Navigation */}
+      <AutoHideNav />
     </div>
   );
 };
