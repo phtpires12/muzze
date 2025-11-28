@@ -16,6 +16,7 @@ import greekStatue from "@/assets/greek-statue.png";
 
 const Onboarding = () => {
   const [step, setStep] = useState(0);
+  const [username, setUsername] = useState("");
   const [platform, setPlatform] = useState<string>("");
   const [dailyGoalMinutes, setDailyGoalMinutes] = useState(25);
   const [showCustomGoal, setShowCustomGoal] = useState(false);
@@ -46,19 +47,21 @@ const Onboarding = () => {
   }, [step]);
 
   const handleContinue = async () => {
-    if (step < 5) {
+    if (step < 6) {
       setStep(step + 1);
       
       // Track events
       if (step === 0) await trackEvent("onboarding_started");
       if (step === 1) await trackEvent("methodology_viewed");
-      if (step === 2) await trackEvent("platform_selected", { platform });
-      if (step === 3) await trackEvent("daily_goal_set", { minutes: dailyGoalMinutes });
-      if (step === 4) await trackEvent("reminder_configured", { time: reminderTime, enabled: notificationsEnabled });
+      if (step === 2) await trackEvent("username_set", { username });
+      if (step === 3) await trackEvent("platform_selected", { platform });
+      if (step === 4) await trackEvent("daily_goal_set", { minutes: dailyGoalMinutes });
+      if (step === 5) await trackEvent("reminder_configured", { time: reminderTime, enabled: notificationsEnabled });
     } else {
       // Final step - save everything and complete onboarding
       try {
         await updateProfile({
+          username: username.trim(),
           preferred_platform: platform,
           daily_goal_minutes: dailyGoalMinutes,
           reminder_time: reminderTime,
@@ -189,10 +192,46 @@ const Onboarding = () => {
             </div>
           )}
         </div>
-      )}
+        )}
 
-        {/* Step 2 - Onde você publica mais? */}
+        {/* Step 2 - Como você gostaria de ser chamado? */}
         {step === 2 && (
+          <div className="space-y-8 animate-fade-in max-w-2xl mx-auto">
+            <div className="text-center space-y-2">
+              <h2 className="text-3xl font-bold">Como você gostaria de ser chamado?</h2>
+              <p className="text-muted-foreground">
+                Esse nome aparecerá no seu perfil.
+              </p>
+            </div>
+
+            <div className="max-w-md mx-auto">
+              <Input
+                placeholder="Seu nome"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="text-lg h-14 text-center"
+                autoFocus
+                maxLength={50}
+              />
+            </div>
+
+            <div className="flex justify-center gap-4 pt-4">
+              <Button variant="outline" onClick={handleBack}>
+                Voltar
+              </Button>
+              <Button 
+                onClick={handleContinue} 
+                disabled={!username.trim()}
+                className="min-w-[200px]"
+              >
+                Continuar
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 3 - Onde você publica mais? */}
+        {step === 3 && (
           <div className="space-y-8 animate-fade-in max-w-2xl mx-auto">
             <div className="text-center space-y-2">
               <h2 className="text-3xl font-bold">Onde você publica mais?</h2>
@@ -248,8 +287,8 @@ const Onboarding = () => {
           </div>
         )}
 
-        {/* Step 3 - Meta diária mínima */}
-        {step === 3 && (
+        {/* Step 4 - Meta diária mínima */}
+        {step === 4 && (
           <div className="space-y-8 animate-fade-in max-w-2xl mx-auto">
             <div className="text-center space-y-3">
               <h2 className="text-3xl font-bold">Vamos combinar um mínimo diário?</h2>
@@ -305,8 +344,8 @@ const Onboarding = () => {
           </div>
         )}
 
-        {/* Step 4 - Lembrete diário */}
-        {step === 4 && (
+        {/* Step 5 - Lembrete diário */}
+        {step === 5 && (
           <div className="space-y-8 animate-fade-in max-w-2xl mx-auto">
             <div className="text-center space-y-2">
               <h2 className="text-2xl font-bold">Qual o horário perfeito pra você começar a criar?</h2>
@@ -364,14 +403,19 @@ const Onboarding = () => {
           </div>
         )}
 
-        {/* Step 5 - Resumo */}
-        {step === 5 && (
+        {/* Step 6 - Resumo */}
+        {step === 6 && (
           <div className="space-y-8 animate-fade-in max-w-2xl mx-auto">
             <div className="text-center space-y-2">
               <h2 className="text-3xl font-bold">Pronto para começar?</h2>
             </div>
 
             <div className="grid gap-4">
+              <Card className="p-6">
+                <h3 className="font-semibold mb-2">Seu nome</h3>
+                <p className="text-muted-foreground">{username}</p>
+              </Card>
+
               <Card className="p-6">
                 <h3 className="font-semibold mb-2">Meta diária</h3>
                 <p className="text-muted-foreground">{dailyGoalMinutes} minutos por dia</p>
@@ -406,9 +450,9 @@ const Onboarding = () => {
         )}
 
         {/* Progress indicator */}
-        {step > 0 && step < 6 && (
+        {step > 0 && step < 7 && (
           <div className="flex justify-center gap-2 mt-8">
-            {[1, 2, 3, 4, 5].map((dot) => (
+            {[1, 2, 3, 4, 5, 6].map((dot) => (
               <div
                 key={dot}
                 className={`w-2 h-2 rounded-full transition-all ${
