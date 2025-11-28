@@ -8,6 +8,7 @@ import { ShotListTable, ShotItem } from "@/components/shotlist/ShotListTable";
 import { DragEndEvent } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import { DraggableSessionTimer } from "@/components/DraggableSessionTimer";
+import { AutoHideNav } from "@/components/AutoHideNav";
 import { useSession } from "@/hooks/useSession";
 import { useAppVisibility } from "@/hooks/useAppVisibility";
 import { useWindowPortal } from "@/hooks/useWindowPortal";
@@ -502,6 +503,9 @@ const ShotListReview = () => {
           </div>
         )}
       </div>
+
+      {/* Auto-hide Navigation */}
+      <AutoHideNav />
     </div>
   );
 };
