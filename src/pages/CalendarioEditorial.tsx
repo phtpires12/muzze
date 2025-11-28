@@ -171,56 +171,32 @@ const CalendarioEditorial = () => {
   const handleDeleteScript = async (e: React.MouseEvent, scriptId: string) => {
     e.stopPropagation();
     
-    const scriptToDelete = scripts.find(s => s.id === scriptId);
-    if (!scriptToDelete) return;
-
+    // Remover imediatamente da interface
     setScripts(scripts.filter(s => s.id !== scriptId));
     
-    let undoTimeout: NodeJS.Timeout;
-    
-    toast({
-      title: "Roteiro excluído",
-      description: "O roteiro foi removido.",
-      action: (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            clearTimeout(undoTimeout);
-            setScripts(prev => [...prev, scriptToDelete].sort((a, b) => 
-              new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-            ));
-            toast({
-              title: "Exclusão cancelada",
-              description: "O roteiro foi restaurado.",
-            });
-          }}
-        >
-          Desfazer
-        </Button>
-      ),
-    });
+    // Excluir do banco de dados
+    try {
+      const { error } = await supabase
+        .from('scripts')
+        .delete()
+        .eq('id', scriptId);
 
-    undoTimeout = setTimeout(async () => {
-      try {
-        const { error } = await supabase
-          .from('scripts')
-          .delete()
-          .eq('id', scriptId);
+      if (error) throw error;
 
-        if (error) throw error;
-      } catch (error) {
-        console.error('Error deleting script:', error);
-        setScripts(prev => [...prev, scriptToDelete].sort((a, b) => 
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        ));
-        toast({
-          title: "Erro ao excluir",
-          description: "Não foi possível excluir o roteiro.",
-          variant: "destructive",
-        });
-      }
-    }, 5000);
+      toast({
+        title: "Conteúdo excluído",
+        description: "O conteúdo foi removido com sucesso.",
+      });
+    } catch (error) {
+      console.error('Error deleting script:', error);
+      // Recarregar scripts em caso de erro
+      fetchScripts();
+      toast({
+        title: "Erro ao excluir",
+        description: "Não foi possível excluir o conteúdo.",
+        variant: "destructive",
+      });
+    }
   };
 
   const monthStart = startOfMonth(currentDate);
