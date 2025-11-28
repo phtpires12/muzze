@@ -1,4 +1,4 @@
-import { Sparkles, Users, Workflow, Calendar, Rocket } from "lucide-react";
+import { Sparkles, Users, Workflow, Rocket } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -30,24 +30,6 @@ const novidades: NovidadeItem[] = [
     description: "Escolha entre 3 workflows especializados: Executor (para quem tem muitas ideias), Idealizador (para quem precisa de inspiração) e Desenvolvedor (para transformar ideias em roteiros completos).",
     icon: Workflow,
     gradient: "from-orange-500 to-yellow-500",
-  },
-  {
-    id: "3",
-    badge: "EM DESENVOLVIMENTO",
-    badgeColor: "bg-gradient-to-r from-blue-500 to-cyan-500",
-    title: "Calendário Editorial Inteligente",
-    description: "Planeje seu conteúdo com inteligência artificial. O novo calendário sugere os melhores dias para publicar baseado no seu histórico e engajamento.",
-    icon: Calendar,
-    gradient: "from-blue-500 to-cyan-500",
-  },
-  {
-    id: "4",
-    badge: "PRÓXIMA ATUALIZAÇÃO",
-    badgeColor: "bg-gradient-to-r from-green-500 to-emerald-500",
-    title: "Análise de Performance",
-    description: "Descubra quais tipos de conteúdo performam melhor e receba sugestões personalizadas para otimizar seu processo criativo.",
-    icon: Sparkles,
-    gradient: "from-green-500 to-emerald-500",
   },
   {
     id: "5",
