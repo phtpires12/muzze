@@ -1,16 +1,27 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, TrendingUp, FileText, CheckCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useMyProgress } from "@/hooks/useMyProgress";
 
 const MyProgress = () => {
   const navigate = useNavigate();
+  const { 
+    totalScripts, 
+    completedShots, 
+    currentStreak, 
+    monthlyGoalHours, 
+    monthlyProgressHours, 
+    monthlyPercentage,
+    loading 
+  } = useMyProgress();
 
   const stats = [
-    { label: "Roteiros criados", value: 24, icon: FileText },
-    { label: "Shots completos", value: 156, icon: CheckCircle },
-    { label: "Sequência atual", value: "7 dias", icon: TrendingUp },
+    { label: "Roteiros criados", value: totalScripts, icon: FileText },
+    { label: "Shots completos", value: completedShots, icon: CheckCircle },
+    { label: "Sequência atual", value: `${currentStreak} dias`, icon: TrendingUp },
   ];
 
   return (
@@ -32,17 +43,30 @@ const MyProgress = () => {
             <CardTitle>Estatísticas Gerais</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            {stats.map((stat, index) => (
-              <div key={index} className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <stat.icon className="w-5 h-5 text-primary" />
-                    <span className="font-medium">{stat.label}</span>
+            {loading ? (
+              <>
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Skeleton className="h-5 w-40" />
+                      <Skeleton className="h-8 w-16" />
+                    </div>
                   </div>
-                  <span className="text-2xl font-bold text-primary">{stat.value}</span>
+                ))}
+              </>
+            ) : (
+              stats.map((stat, index) => (
+                <div key={index} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <stat.icon className="w-5 h-5 text-primary" />
+                      <span className="font-medium">{stat.label}</span>
+                    </div>
+                    <span className="text-2xl font-bold text-primary">{stat.value}</span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </CardContent>
         </Card>
 
@@ -51,13 +75,20 @@ const MyProgress = () => {
             <CardTitle>Meta Mensal</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>15 de 20 roteiros</span>
-                <span className="text-muted-foreground">75%</span>
+            {loading ? (
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-full" />
               </div>
-              <Progress value={75} />
-            </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>{monthlyProgressHours} de {monthlyGoalHours} horas</span>
+                  <span className="text-muted-foreground">{monthlyPercentage}%</span>
+                </div>
+                <Progress value={monthlyPercentage} />
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
