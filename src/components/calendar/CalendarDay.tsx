@@ -12,6 +12,7 @@ interface Script {
   publish_date: string | null;
   created_at: string;
   shot_list: string[];
+  status: string | null;
 }
 
 interface CalendarDayProps {
@@ -45,6 +46,20 @@ const getContentTypeColor = (contentType: string | null) => {
     default:
       return "bg-primary";
   }
+};
+
+const getStageInfo = (script: Script): { label: string; color: string } => {
+  // Prioridade: shot_list → review status → content → ideation
+  if (script.shot_list && script.shot_list.length > 0) {
+    return { label: "Gravação", color: "bg-orange-500" };
+  }
+  if (script.status === "review") {
+    return { label: "Revisão", color: "bg-blue-500" };
+  }
+  if (script.content && script.content.length > 100) {
+    return { label: "Roteiro", color: "bg-green-500" };
+  }
+  return { label: "Ideação", color: "bg-gray-400" };
 };
 
 export function CalendarDay({
@@ -128,7 +143,7 @@ export function CalendarDay({
     );
   }
 
-  // Desktop view - full cards (existing behavior)
+  // Desktop view - Notion-style cards
   return (
     <div
       className={`group relative min-h-[120px] border-r border-b border-border p-2 transition-all ${
@@ -140,9 +155,9 @@ export function CalendarDay({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div className="flex justify-between items-start">
+      <div className="flex justify-between items-start mb-2">
         <div
-          className={`text-sm font-medium mb-1 ${
+          className={`text-sm font-medium ${
             !isCurrentMonth ? "text-muted-foreground" : isToday ? "text-primary" : "text-foreground"
           }`}
         >
@@ -158,55 +173,46 @@ export function CalendarDay({
         </Button>
       </div>
 
-      <div className="space-y-1">
-        {scripts.slice(0, 3).map((script) => (
-          <div
-            key={script.id}
-            draggable
-            onDragStart={(e) => onDragStart?.(e, script)}
-            className={`group/card relative text-xs p-2 rounded-lg bg-card/80 border border-border/50 cursor-move hover:bg-card hover:border-border hover:shadow-md transition-all ${
-              draggedScript?.id === script.id ? "opacity-50" : ""
-            }`}
-            onClick={() => onViewScript?.(script.id)}
-          >
-            <button
-              onClick={(e) => onDeleteScript?.(e, script.id)}
-              className="absolute top-1 right-1 opacity-0 group-hover/card:opacity-100 transition-opacity bg-destructive/90 hover:bg-destructive text-destructive-foreground rounded p-1 z-10"
-              title="Excluir roteiro"
+      <div className="space-y-1.5">
+        {scripts.slice(0, 4).map((script) => {
+          const stageInfo = getStageInfo(script);
+          return (
+            <div
+              key={script.id}
+              draggable
+              onDragStart={(e) => onDragStart?.(e, script)}
+              className={`group/card relative text-xs p-2 rounded bg-card border border-border/50 cursor-pointer hover:border-border hover:shadow-sm transition-all ${
+                draggedScript?.id === script.id ? "opacity-50" : ""
+              }`}
+              onClick={() => onViewScript?.(script.id)}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M3 6h18" />
-                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-              </svg>
-            </button>
-            <div className="font-semibold truncate mb-1.5 text-foreground">{script.title}</div>
-            <div className="flex flex-wrap gap-1">
-              {script.content_type && (
-                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                  {script.content_type}
-                </Badge>
-              )}
-              {script.shot_list && script.shot_list.length > 0 && (
-                <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                  {script.shot_list.length} shots
-                </Badge>
-              )}
+              <div className="flex items-start gap-2">
+                <div className="text-muted-foreground mt-0.5 flex-shrink-0">
+                  📄
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium truncate text-foreground mb-1.5">
+                    {script.title}
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    <Badge 
+                      className={`${stageInfo.color} text-white text-[10px] px-1.5 py-0 border-0`}
+                    >
+                      {stageInfo.label}
+                    </Badge>
+                    {script.content_type && (
+                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                        {script.content_type}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-        ))}
-        {scripts.length > 3 && (
-          <div className="text-xs text-muted-foreground pl-1">+{scripts.length - 3} mais</div>
+          );
+        })}
+        {scripts.length > 4 && (
+          <div className="text-xs text-muted-foreground pl-2">+{scripts.length - 4} mais</div>
         )}
       </div>
     </div>
