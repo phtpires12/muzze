@@ -61,7 +61,9 @@ const Session = () => {
   const { toast } = useToast();
   
   const [scriptId, setScriptId] = useState<string | undefined>(scriptIdParam || undefined);
-  const { session, startSession, pauseSession, resumeSession, changeStage, endSession } = useSession();
+  const { session, startSession, pauseSession, resumeSession, changeStage, endSession } = useSession({ 
+    attachBeforeUnloadListener: true 
+  });
   const [showSummary, setShowSummary] = useState(false);
   const [summary, setSummary] = useState<any>(null);
   const [showStreakHalo, setShowStreakHalo] = useState(false);

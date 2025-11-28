@@ -41,7 +41,9 @@ const ShotListRecord = () => {
     resumeSession,
     endSession,
     saveCurrentStageTime,
-  } = useSession();
+  } = useSession({ 
+    attachBeforeUnloadListener: true 
+  });
   
   const isAppVisible = useAppVisibility();
 
