@@ -36,6 +36,7 @@ const ShotListRecord = () => {
   const {
     session,
     startSession,
+    changeStage,
     pauseSession,
     resumeSession,
     endSession,
@@ -64,6 +65,8 @@ const ShotListRecord = () => {
     // Start session for recording stage
     if (!session.isActive) {
       startSession("record");
+    } else if (session.stage !== "record") {
+      changeStage("record");
     }
   }, [scriptId]);
 
