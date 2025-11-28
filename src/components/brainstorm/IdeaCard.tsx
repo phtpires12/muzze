@@ -12,12 +12,10 @@ import { DatePickerModal } from "./DatePickerModal";
 import { useDeviceType } from "@/hooks/useDeviceType";
 
 const CONTENT_TYPES = [
-  { value: "video", label: "Vídeo", icon: Video },
-  { value: "reel", label: "Reel", icon: Clapperboard },
-  { value: "tiktok", label: "TikTok", icon: Music },
-  { value: "short", label: "Short", icon: Video },
-  { value: "podcast", label: "Podcast", icon: Music },
-  { value: "post", label: "Post", icon: FileText },
+  { value: "Reels", label: "Reels", icon: Clapperboard },
+  { value: "YouTube", label: "YouTube", icon: Video },
+  { value: "TikTok", label: "TikTok", icon: Music },
+  { value: "X (Twitter)", label: "X (Twitter)", icon: FileText },
 ];
 
 interface IdeaCardProps {
