@@ -10,12 +10,10 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowRight } from "lucide-react";
 
 const CONTENT_TYPES = [
-  { value: "video", label: "Vídeo" },
-  { value: "reel", label: "Reel" },
-  { value: "tiktok", label: "TikTok" },
-  { value: "short", label: "Short" },
-  { value: "podcast", label: "Podcast" },
-  { value: "post", label: "Post" },
+  { value: "Reels", label: "Reels" },
+  { value: "YouTube", label: "YouTube" },
+  { value: "TikTok", label: "TikTok" },
+  { value: "X (Twitter)", label: "X (Twitter)" },
 ];
 
 interface IdeaFormProps {
