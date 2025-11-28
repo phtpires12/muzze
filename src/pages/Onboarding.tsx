@@ -309,7 +309,7 @@ const Onboarding = () => {
         {step === 4 && (
           <div className="space-y-8 animate-fade-in max-w-2xl mx-auto">
             <div className="text-center space-y-2">
-              <h2 className="text-3xl font-bold">Qual o horário perfeito pra você começar a criar?</h2>
+              <h2 className="text-2xl font-bold">Qual o horário perfeito pra você começar a criar?</h2>
               <p className="text-muted-foreground">
                 Vamos te lembrar de entrar na Muzze nele.
               </p>
