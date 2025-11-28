@@ -1,18 +1,28 @@
+import { useState, useEffect } from "react";
 import { User, Mail, CheckCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useProfile } from "@/hooks/useProfile";
 
 const Profile = () => {
   const navigate = useNavigate();
+  const { profile } = useProfile();
+  const [userEmail, setUserEmail] = useState<string>("");
 
-  // Mock user data - in a real app, this would come from authentication
-  const user = {
-    name: "Pedro Henrique",
-    email: "phtpires12@gmail.com",
-    subscription: "Assinatura ativa",
-  };
+  useEffect(() => {
+    const fetchUserEmail = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.email) {
+        setUserEmail(user.email);
+      }
+    };
+    fetchUserEmail();
+  }, []);
+
+  const displayName = profile?.username || userEmail.split('@')[0] || "Usuário";
 
   const menuItems = [
     { icon: User, label: "Editar perfil", path: "/edit-profile" },
@@ -30,11 +40,11 @@ const Profile = () => {
         <Card className="mb-6">
           <CardContent className="pt-8 pb-6">
             <div className="text-center mb-6">
-              <h1 className="text-3xl font-bold mb-2">{user.name}</h1>
-              <p className="text-muted-foreground mb-4">{user.email}</p>
+              <h1 className="text-3xl font-bold mb-2">{displayName}</h1>
+              <p className="text-muted-foreground mb-4">{userEmail}</p>
               <Badge variant="secondary" className="bg-green-500/10 text-green-600 hover:bg-green-500/20">
                 <CheckCircle className="w-4 h-4 mr-1" />
-                {user.subscription}
+                Assinatura ativa
               </Badge>
             </div>
           </CardContent>
