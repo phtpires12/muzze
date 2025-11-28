@@ -18,33 +18,47 @@ interface SessionState {
   dailyGoalMinutes: number; // Meta diária do usuário
 }
 
+const defaultState: SessionState = {
+  isActive: false,
+  isPaused: false,
+  stage: "ideation",
+  elapsedSeconds: 0,
+  stageElapsedSeconds: 0,
+  startedAt: null,
+  sessionId: null,
+  targetSeconds: 25 * 60,
+  isStreakMode: false,
+  dailyGoalMinutes: 60,
+};
+
 // Carregar estado inicial do localStorage
 const loadSessionState = (): SessionState => {
   try {
     const saved = localStorage.getItem('muzze_session_state');
     if (saved) {
       const parsed = JSON.parse(saved);
-      // Converter startedAt de string para Date
+      
+      // Verificar se a sessão é órfã (muito antiga)
       if (parsed.startedAt) {
-        parsed.startedAt = new Date(parsed.startedAt);
+        const startedAt = new Date(parsed.startedAt);
+        const hoursAgo = (Date.now() - startedAt.getTime()) / (1000 * 60 * 60);
+        
+        // Se a sessão foi iniciada há mais de 2 horas, considerar como órfã
+        if (hoursAgo > 2) {
+          console.log('[useSession] Sessão órfã detectada (iniciada há', hoursAgo.toFixed(1), 'horas), resetando...');
+          localStorage.removeItem('muzze_session_state');
+          return defaultState;
+        }
+        
+        parsed.startedAt = startedAt;
       }
+      
       return parsed;
     }
   } catch (error) {
     console.error('Error loading session state:', error);
   }
-  return {
-    isActive: false,
-    isPaused: false,
-    stage: "ideation",
-    elapsedSeconds: 0,
-    stageElapsedSeconds: 0,
-    startedAt: null,
-    sessionId: null,
-    targetSeconds: 25 * 60,
-    isStreakMode: false,
-    dailyGoalMinutes: 60,
-  };
+  return defaultState;
 };
 
 export const useSession = () => {
@@ -84,9 +98,10 @@ export const useSession = () => {
   // Handler para beforeunload - salvar dados antes de fechar
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (session.isActive) {
+      // Só avisar se houver tempo real não salvo (mais de 30 segundos desde último auto-save)
+      if (session.isActive && session.stageElapsedSeconds > 30) {
         e.preventDefault();
-        e.returnValue = 'Você tem uma sessão ativa. Tem certeza que deseja sair?';
+        e.returnValue = 'Você tem uma sessão ativa com dados não salvos.';
         // Salvar dados antes de sair
         saveCurrentStageTime();
       }
@@ -96,7 +111,7 @@ export const useSession = () => {
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, [session.isActive]);
+  }, [session.isActive, session.stageElapsedSeconds]);
 
   // Timer tick - increments both global and stage timers
   useEffect(() => {

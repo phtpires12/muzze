@@ -137,16 +137,42 @@ const OnboardingRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      {/* Modals must be inside BrowserRouter to use useNavigate */}
-      <BrowserRouter>
-        <LevelUpModal />
-        <TrophyUnlockedModal />
-        <Routes>
+const App = () => {
+  // Cleanup de sessões órfãs na inicialização
+  useEffect(() => {
+    const cleanupOrphanSession = () => {
+      try {
+        const saved = localStorage.getItem('muzze_session_state');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed.startedAt) {
+            const startedAt = new Date(parsed.startedAt);
+            const hoursAgo = (Date.now() - startedAt.getTime()) / (1000 * 60 * 60);
+            
+            if (hoursAgo > 2) {
+              localStorage.removeItem('muzze_session_state');
+              console.log('[App] Sessão órfã removida na inicialização');
+            }
+          }
+        }
+      } catch (error) {
+        console.error('[App] Erro ao limpar sessão órfã:', error);
+      }
+    };
+    
+    cleanupOrphanSession();
+  }, []);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        {/* Modals must be inside BrowserRouter to use useNavigate */}
+        <BrowserRouter>
+          <LevelUpModal />
+          <TrophyUnlockedModal />
+          <Routes>
           <Route path="/auth" element={<Auth />} />
           <Route path="/onboarding" element={<OnboardingRoute><Onboarding /></OnboardingRoute>} />
           <Route path="/" element={<ProtectedRoute><Layout><Index /></Layout></ProtectedRoute>} />
@@ -172,6 +198,7 @@ const App = () => (
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;
