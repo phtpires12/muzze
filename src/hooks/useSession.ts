@@ -61,7 +61,12 @@ const loadSessionState = (): SessionState => {
   return defaultState;
 };
 
-export const useSession = () => {
+interface UseSessionOptions {
+  attachBeforeUnloadListener?: boolean;
+}
+
+export const useSession = (options: UseSessionOptions = {}) => {
+  const { attachBeforeUnloadListener = false } = options;
   const { toast } = useToast();
   const [session, setSession] = useState<SessionState>(loadSessionState);
   
@@ -95,8 +100,11 @@ export const useSession = () => {
     };
   }, [session.isActive, session.isPaused]);
 
-  // Handler para beforeunload - salvar dados antes de fechar
+  // Handler para beforeunload - CONDICIONAL
   useEffect(() => {
+    // Só anexar o listener se explicitamente solicitado
+    if (!attachBeforeUnloadListener) return;
+
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       // Só avisar se houver tempo real não salvo (mais de 30 segundos desde último auto-save)
       if (session.isActive && session.stageElapsedSeconds > 30) {
@@ -111,7 +119,7 @@ export const useSession = () => {
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, [session.isActive, session.stageElapsedSeconds]);
+  }, [attachBeforeUnloadListener, session.isActive, session.stageElapsedSeconds]);
 
   // Timer tick - increments both global and stage timers
   useEffect(() => {
