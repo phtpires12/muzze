@@ -1,19 +1,66 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useProfile } from "@/hooks/useProfile";
+import { useToast } from "@/hooks/use-toast";
 
 const EditProfile = () => {
   const navigate = useNavigate();
-  const [name, setName] = useState("Pedro Henrique");
-  const [email, setEmail] = useState("phtpires12@gmail.com");
+  const { profile, updateProfile } = useProfile();
+  const { toast } = useToast();
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [initializing, setInitializing] = useState(true);
 
-  const handleSave = () => {
-    // Handle save logic here
-    navigate("/profile");
+  useEffect(() => {
+    const fetchUserData = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.email) {
+        setEmail(user.email);
+      }
+      if (profile?.username) {
+        setName(profile.username);
+      }
+      setInitializing(false);
+    };
+    fetchUserData();
+  }, [profile]);
+
+  const handleSave = async () => {
+    if (!name.trim()) {
+      toast({
+        title: "Nome obrigatório",
+        description: "Por favor, insira seu nome.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await updateProfile({ username: name.trim() });
+      
+      toast({
+        title: "Perfil atualizado",
+        description: "Seu nome foi salvo com sucesso."
+      });
+      
+      navigate("/profile");
+    } catch (error) {
+      toast({
+        title: "Erro ao salvar",
+        description: "Não foi possível atualizar seu perfil.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -50,12 +97,20 @@ const EditProfile = () => {
                 id="email"
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                disabled
+                className="bg-muted cursor-not-allowed"
               />
+              <p className="text-xs text-muted-foreground">
+                O e-mail não pode ser alterado.
+              </p>
             </div>
 
-            <Button onClick={handleSave} className="w-full mt-4">
-              Salvar Alterações
+            <Button 
+              onClick={handleSave} 
+              className="w-full mt-4"
+              disabled={loading || initializing || !name.trim()}
+            >
+              {loading ? "Salvando..." : "Salvar Alterações"}
             </Button>
           </CardContent>
         </Card>
