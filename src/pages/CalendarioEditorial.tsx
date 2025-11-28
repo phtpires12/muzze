@@ -21,6 +21,7 @@ interface Script {
   publish_date: string | null;
   created_at: string;
   shot_list: string[];
+  status: string | null;
 }
 
 const CalendarioEditorial = () => {
@@ -84,7 +85,19 @@ const CalendarioEditorial = () => {
   };
 
   const handleViewScript = (scriptId: string) => {
-    navigate(`/session?stage=script&scriptId=${scriptId}`);
+    const script = scripts.find(s => s.id === scriptId);
+    if (!script) return;
+    
+    // Detectar estágio atual baseado na lógica do sistema
+    if (script.shot_list && script.shot_list.length > 0) {
+      navigate(`/shot-list/record?scriptId=${scriptId}`);
+    } else if (script.status === "review") {
+      navigate(`/session?stage=review&scriptId=${scriptId}`);
+    } else if (script.content && script.content.length > 100) {
+      navigate(`/session?stage=script&scriptId=${scriptId}`);
+    } else {
+      navigate(`/session?stage=idea&scriptId=${scriptId}`);
+    }
   };
 
   const handleDragStart = (e: React.DragEvent, script: Script) => {
