@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { useAnalytics } from "@/hooks/useAnalytics";
+import { useNotifications } from "@/hooks/useNotifications";
 import { OnboardingLayout } from "@/components/onboarding/shared/OnboardingLayout";
 import { Button } from "@/components/ui/button";
 import { Screen0Welcome } from "@/components/onboarding/screens/phase1/Screen0Welcome";
@@ -24,10 +25,18 @@ import { Screen15MinimalEffort } from "@/components/onboarding/screens/phase4/Sc
 import { Screen16PersonalizedFeatures } from "@/components/onboarding/screens/phase4/Screen16PersonalizedFeatures";
 import { Screen17UniquePositioning } from "@/components/onboarding/screens/phase4/Screen17UniquePositioning";
 import { Screen18CommitmentTest } from "@/components/onboarding/screens/phase4/Screen18CommitmentTest";
+import { Screen19DailyGoal } from "@/components/onboarding/screens/phase5/Screen19DailyGoal";
+import { Screen20CreationTime } from "@/components/onboarding/screens/phase5/Screen20CreationTime";
+import { Screen21Signup } from "@/components/onboarding/screens/phase6/Screen21Signup";
+import { Screen22Snapshot } from "@/components/onboarding/screens/phase6/Screen22Snapshot";
+import { Screen23Notifications } from "@/components/onboarding/screens/phase6/Screen23Notifications";
+import { Screen24Review } from "@/components/onboarding/screens/phase6/Screen24Review";
+import { Screen25Paywall } from "@/components/onboarding/screens/phase6/Screen25Paywall";
 
 const NewOnboarding = () => {
   const navigate = useNavigate();
   const { trackEvent } = useAnalytics();
+  const { requestPermission } = useNotifications();
   const {
     state,
     updateData,
@@ -35,6 +44,7 @@ const NewOnboarding = () => {
     prevScreen,
     getProgress,
     calculateLostPosts,
+    completeOnboarding,
   } = useOnboarding();
 
   useEffect(() => {
@@ -43,13 +53,16 @@ const NewOnboarding = () => {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) {
-        navigate("/auth");
+        // Only check auth for phase 5 onwards (signup phase)
+        if (state.phase >= 5) {
+          navigate("/auth");
+        }
       } else {
         trackEvent("onboarding_started");
       }
     };
     checkAuth();
-  }, [navigate, trackEvent]);
+  }, [navigate, trackEvent, state.phase]);
 
   const handleContinue = () => {
     nextScreen();
@@ -59,25 +72,45 @@ const NewOnboarding = () => {
     prevScreen();
   };
 
+  const handleAcceptDefaultGoal = () => {
+    updateData({ daily_goal_minutes: 25 });
+    nextScreen();
+  };
+
+  const handleNotificationsAccept = async () => {
+    await requestPermission();
+    nextScreen();
+  };
+
+  const handleSignupSuccess = () => {
+    nextScreen();
+  };
+
+  const handleComplete = async () => {
+    const success = await completeOnboarding();
+    if (success) {
+      navigate("/", { replace: true });
+    }
+  };
+
   const canContinue = () => {
     const { phase, screen, data } = state;
-    
+
     // Phase 0 (Hook + Dream Outcome)
     if (phase === 0) {
-      if (screen === 0) return true; // Welcome screen
-      if (screen === 1) return true; // Methodology screen
-      if (screen === 2) return !!data.username?.trim(); // Username required
-      if (screen === 3) return (data.preferred_platform?.length ?? 0) > 0; // At least one platform
+      if (screen === 0) return true;
+      if (screen === 1) return true;
+      if (screen === 2) return !!data.username?.trim();
+      if (screen === 3) return (data.preferred_platform?.length ?? 0) > 0;
     }
-    
+
     // Phase 1 (Pain Diagnosis)
     if (phase === 1) {
-      if (screen === 0) return (data.sticking_points?.length ?? 0) > 0; // At least one sticking point
-      if (screen === 1) return (data.months_trying ?? 0) > 0; // Months trying required
-      if (screen === 2) return (data.current_post_count ?? 0) >= 0; // Current posts (can be 0)
-      if (screen === 3) return (data.previous_attempts?.length ?? 0) > 0; // At least one attempt
+      if (screen === 0) return (data.sticking_points?.length ?? 0) > 0;
+      if (screen === 1) return (data.months_trying ?? 0) > 0;
+      if (screen === 2) return (data.current_post_count ?? 0) >= 0;
+      if (screen === 3) return (data.previous_attempts?.length ?? 0) > 0;
       if (screen === 4) {
-        // All impact scales must be set (1-5)
         return (
           data.inconsistency_impact?.financial > 0 &&
           data.inconsistency_impact?.emotional > 0 &&
@@ -85,15 +118,14 @@ const NewOnboarding = () => {
         );
       }
     }
-    
+
     // Phase 2 (Confrontation + Opportunity)
     if (phase === 2) {
-      if (screen === 0) return true; // Lost posts calculation (auto)
-      if (screen === 1) return true; // Time wasted (auto)
-      if (screen === 2) return true; // Accumulated impact (auto)
-      if (screen === 3) return true; // Opportunity visualization
+      if (screen === 0) return true;
+      if (screen === 1) return true;
+      if (screen === 2) return true;
+      if (screen === 3) return true;
       if (screen === 4) {
-        // All dream outcome importance scales must be set
         return (
           data.dream_outcome_importance?.posts_30_days > 0 &&
           data.dream_outcome_importance?.clarity > 0 &&
@@ -101,16 +133,31 @@ const NewOnboarding = () => {
         );
       }
     }
-    
+
     // Phase 3 (Personalized Solution)
     if (phase === 3) {
-      if (screen === 0) return true; // 25 minutes science (auto)
-      if (screen === 1) return true; // Minimal effort (auto)
-      if (screen === 2) return true; // Personalized features (auto)
-      if (screen === 3) return true; // Unique positioning (auto)
-      if (screen === 4) return !!data.commitment_level; // Commitment test required
+      if (screen === 0) return true;
+      if (screen === 1) return true;
+      if (screen === 2) return true;
+      if (screen === 3) return true;
+      if (screen === 4) return !!data.commitment_level;
     }
-    
+
+    // Phase 4 (Commitment + Configuration)
+    if (phase === 4) {
+      if (screen === 0) return (data.daily_goal_minutes ?? 0) > 0;
+      if (screen === 1) return !!data.creation_time;
+    }
+
+    // Phase 5 (Signup + Snapshot + Paywall)
+    if (phase === 5) {
+      if (screen === 0) return false; // Signup handled separately
+      if (screen === 1) return true; // Snapshot
+      if (screen === 2) return false; // Notifications (button handles)
+      if (screen === 3) return false; // Review (button handles)
+      if (screen === 4) return false; // Paywall (button handles completion)
+    }
+
     return true;
   };
 
@@ -119,12 +166,8 @@ const NewOnboarding = () => {
 
     // Phase 0: Hook + Dream Outcome
     if (phase === 0) {
-      if (screen === 0) {
-        return <Screen0Welcome onContinue={handleContinue} />;
-      }
-      if (screen === 1) {
-        return <Screen1Methodology onContinue={handleContinue} />;
-      }
+      if (screen === 0) return <Screen0Welcome onContinue={handleContinue} />;
+      if (screen === 1) return <Screen1Methodology onContinue={handleContinue} />;
       if (screen === 2) {
         return (
           <Screen2Username
@@ -213,9 +256,7 @@ const NewOnboarding = () => {
         );
       }
       if (screen === 1) {
-        return (
-          <Screen10TimeWasted monthsTrying={state.data.months_trying || 0} />
-        );
+        return <Screen10TimeWasted monthsTrying={state.data.months_trying || 0} />;
       }
       if (screen === 2) {
         return (
@@ -244,9 +285,7 @@ const NewOnboarding = () => {
                 consistent_identity: 0,
               }
             }
-            onChange={(value) =>
-              updateData({ dream_outcome_importance: value })
-            }
+            onChange={(value) => updateData({ dream_outcome_importance: value })}
           />
         );
       }
@@ -254,12 +293,8 @@ const NewOnboarding = () => {
 
     // Phase 3: Personalized Solution
     if (phase === 3) {
-      if (screen === 0) {
-        return <Screen14TwentyFiveMinutes />;
-      }
-      if (screen === 1) {
-        return <Screen15MinimalEffort />;
-      }
+      if (screen === 0) return <Screen14TwentyFiveMinutes />;
+      if (screen === 1) return <Screen15MinimalEffort />;
       if (screen === 2) {
         return (
           <Screen16PersonalizedFeatures
@@ -267,9 +302,7 @@ const NewOnboarding = () => {
           />
         );
       }
-      if (screen === 3) {
-        return <Screen17UniquePositioning />;
-      }
+      if (screen === 3) return <Screen17UniquePositioning />;
       if (screen === 4) {
         return (
           <Screen18CommitmentTest
@@ -280,26 +313,74 @@ const NewOnboarding = () => {
       }
     }
 
-    // Placeholder for other phases
+    // Phase 4: Commitment + Configuration
+    if (phase === 4) {
+      if (screen === 0) {
+        return (
+          <Screen19DailyGoal
+            value={state.data.daily_goal_minutes || 25}
+            onChange={(value) => updateData({ daily_goal_minutes: value })}
+            onAcceptDefault={handleAcceptDefaultGoal}
+          />
+        );
+      }
+      if (screen === 1) {
+        return (
+          <Screen20CreationTime
+            value={state.data.creation_time || "09:00"}
+            onChange={(value) => updateData({ creation_time: value })}
+          />
+        );
+      }
+    }
+
+    // Phase 5: Signup + Snapshot + Paywall
+    if (phase === 5) {
+      const lostPosts = calculateLostPosts(
+        state.data.months_trying || 0,
+        state.data.current_post_count || 0
+      );
+
+      if (screen === 0) {
+        return <Screen21Signup onSuccess={handleSignupSuccess} />;
+      }
+      if (screen === 1) {
+        return <Screen22Snapshot data={state.data} lostPosts={lostPosts} />;
+      }
+      if (screen === 2) {
+        return (
+          <Screen23Notifications
+            onAccept={handleNotificationsAccept}
+            onSkip={nextScreen}
+          />
+        );
+      }
+      if (screen === 3) {
+        return <Screen24Review onSkip={nextScreen} />;
+      }
+      if (screen === 4) {
+        return <Screen25Paywall onContinue={handleComplete} />;
+      }
+    }
+
     return (
       <div className="text-center space-y-4">
         <h2 className="text-2xl font-bold">
           Fase {phase + 1}, Tela {screen + 1}
         </h2>
-        <p className="text-muted-foreground">
-          Esta tela será implementada nos próximos sprints.
-        </p>
+        <p className="text-muted-foreground">Erro ao carregar tela.</p>
       </div>
     );
   };
 
   const showProgress = state.phase > 0 || state.screen > 1;
-  const showBack = state.phase > 0 || state.screen > 2;
+  const showBack = (state.phase > 0 || state.screen > 2) && state.phase < 5;
   const showContinueButton =
     (state.phase === 0 && (state.screen === 2 || state.screen === 3)) ||
     (state.phase === 1 && state.screen >= 0 && state.screen <= 4) ||
     (state.phase === 2 && state.screen >= 0 && state.screen <= 4) ||
-    (state.phase === 3 && state.screen >= 0 && state.screen <= 4);
+    (state.phase === 3 && state.screen >= 0 && state.screen <= 4) ||
+    (state.phase === 4 && state.screen === 1);
 
   return (
     <OnboardingLayout
@@ -312,7 +393,6 @@ const NewOnboarding = () => {
     >
       {renderScreen()}
 
-      {/* Continue button for screens that need it */}
       {showContinueButton && (
         <div className="flex justify-center gap-4 pt-4">
           {showBack && (
