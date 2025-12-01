@@ -1,5 +1,6 @@
 export interface OnboardingData {
   // Phase 1: Hook + Dream Outcome
+  username?: string;
   preferred_platform?: string;
   
   // Phase 2: Pain Diagnosis

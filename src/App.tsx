@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { BottomNav } from "@/components/BottomNav";
 import Onboarding from "./pages/Onboarding";
+import NewOnboarding from "./pages/NewOnboarding";
 import Auth from "./pages/Auth";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -175,6 +176,7 @@ const App = () => {
           <Routes>
           <Route path="/auth" element={<Auth />} />
           <Route path="/onboarding" element={<OnboardingRoute><Onboarding /></OnboardingRoute>} />
+          <Route path="/new-onboarding" element={<OnboardingRoute><NewOnboarding /></OnboardingRoute>} />
           <Route path="/" element={<ProtectedRoute><Layout><Index /></Layout></ProtectedRoute>} />
           <Route path="/novidades" element={<ProtectedRoute><Layout><Novidades /></Layout></ProtectedRoute>} />
           <Route path="/calendario" element={<ProtectedRoute><Layout><CalendarioEditorial /></Layout></ProtectedRoute>} />
