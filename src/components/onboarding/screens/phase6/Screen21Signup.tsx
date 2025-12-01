@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { UserPlus, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 interface Screen21SignupProps {
   onSuccess: () => void;
@@ -16,6 +17,7 @@ export const Screen21Signup = ({ onSuccess }: Screen21SignupProps) => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -139,6 +141,17 @@ export const Screen21Signup = ({ onSuccess }: Screen21SignupProps) => {
             .
           </p>
         </form>
+
+        <div className="mt-6 text-center">
+          <Button
+            variant="ghost"
+            onClick={() => navigate("/auth")}
+            disabled={loading}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            Já tenho uma conta
+          </Button>
+        </div>
       </Card>
     </div>
   );
