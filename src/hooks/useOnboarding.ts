@@ -13,11 +13,37 @@ const ONBOARDING_VERSION = "1.0";
 export const useOnboarding = () => {
   const { toast } = useToast();
   const [state, setState] = useState<OnboardingState>(() => {
-    // Try to restore from localStorage
     const stored = localStorage.getItem(STORAGE_KEY);
+    const screensPerPhase = SCREENS_PER_PHASE;
+    const totalPhases = screensPerPhase.length;
+
     if (stored) {
       try {
-        return JSON.parse(stored);
+        const parsed = JSON.parse(stored) as Partial<OnboardingState> & {
+          data?: OnboardingData;
+        };
+
+        // Ensure phase is within valid bounds
+        let phase = typeof parsed.phase === "number" ? parsed.phase : 0;
+        if (phase < 0 || phase >= totalPhases) {
+          phase = 0;
+        }
+
+        // Ensure screen is within valid bounds for the current phase
+        let screen = typeof parsed.screen === "number" ? parsed.screen : 0;
+        if (screen < 0) screen = 0;
+        if (screen >= screensPerPhase[phase]) {
+          screen = screensPerPhase[phase] - 1;
+        }
+
+        return {
+          phase,
+          screen,
+          data: parsed.data || {},
+          loading: false,
+          totalPhases,
+          screensPerPhase,
+        };
       } catch (e) {
         console.error("Failed to parse onboarding state:", e);
       }
@@ -28,8 +54,8 @@ export const useOnboarding = () => {
       screen: 0,
       data: {},
       loading: false,
-      totalPhases: 6,
-      screensPerPhase: SCREENS_PER_PHASE,
+      totalPhases,
+      screensPerPhase,
     };
   });
 
