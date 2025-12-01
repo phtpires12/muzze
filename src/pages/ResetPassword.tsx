@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Shield, AlertCircle, CheckCircle } from "lucide-react";
 
 const passwordSchema = z.object({
   password: z
@@ -20,6 +20,87 @@ const passwordSchema = z.object({
   path: ["confirmPassword"],
 });
 
+type PasswordStrength = {
+  score: number; // 0-4
+  label: string;
+  color: string;
+  textColor: string;
+  icon: typeof Shield;
+};
+
+const calculatePasswordStrength = (password: string): PasswordStrength => {
+  let score = 0;
+  
+  if (!password) {
+    return {
+      score: 0,
+      label: "Muito fraca",
+      color: "bg-destructive",
+      textColor: "text-destructive",
+      icon: AlertCircle,
+    };
+  }
+
+  // Comprimento
+  if (password.length >= 8) score++;
+  if (password.length >= 12) score++;
+
+  // Letras minúsculas
+  if (/[a-z]/.test(password)) score++;
+
+  // Letras maiúsculas
+  if (/[A-Z]/.test(password)) score++;
+
+  // Números
+  if (/\d/.test(password)) score++;
+
+  // Símbolos especiais
+  if (/[^A-Za-z0-9]/.test(password)) score++;
+
+  // Normalizar score para 0-4
+  const normalizedScore = Math.min(Math.floor(score / 1.5), 4);
+
+  const strengthLevels: PasswordStrength[] = [
+    {
+      score: 0,
+      label: "Muito fraca",
+      color: "bg-destructive",
+      textColor: "text-destructive",
+      icon: AlertCircle,
+    },
+    {
+      score: 1,
+      label: "Fraca",
+      color: "bg-orange-500",
+      textColor: "text-orange-500",
+      icon: AlertCircle,
+    },
+    {
+      score: 2,
+      label: "Média",
+      color: "bg-yellow-500",
+      textColor: "text-yellow-600",
+      icon: Shield,
+    },
+    {
+      score: 3,
+      label: "Forte",
+      color: "bg-green-500",
+      textColor: "text-green-600",
+      icon: CheckCircle,
+    },
+    {
+      score: 4,
+      label: "Muito forte",
+      color: "bg-green-600",
+      textColor: "text-green-700",
+      icon: CheckCircle,
+    },
+  ];
+
+  return strengthLevels[normalizedScore];
+};
+
 const ResetPassword = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -31,6 +112,8 @@ const ResetPassword = () => {
   const [checkingSession, setCheckingSession] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const passwordStrength = calculatePasswordStrength(password);
 
   useEffect(() => {
     const checkSession = async () => {
@@ -151,6 +234,51 @@ const ResetPassword = () => {
               </div>
               {errors.password && (
                 <p className="text-sm text-destructive">{errors.password}</p>
+              )}
+              
+              {password && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Força da senha:</span>
+                    <span className={`flex items-center gap-1 font-medium ${passwordStrength.textColor}`}>
+                      <passwordStrength.icon size={14} />
+                      {passwordStrength.label}
+                    </span>
+                  </div>
+                  <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full ${passwordStrength.color} transition-all duration-300`}
+                      style={{ width: `${(passwordStrength.score + 1) * 20}%` }}
+                    />
+                  </div>
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <p className="flex items-center gap-1">
+                      <span className={password.length >= 8 ? "text-green-600" : ""}>
+                        {password.length >= 8 ? "✓" : "○"} Mínimo 8 caracteres
+                      </span>
+                    </p>
+                    <p className="flex items-center gap-1">
+                      <span className={/[A-Z]/.test(password) ? "text-green-600" : ""}>
+                        {/[A-Z]/.test(password) ? "✓" : "○"} Letra maiúscula
+                      </span>
+                    </p>
+                    <p className="flex items-center gap-1">
+                      <span className={/[a-z]/.test(password) ? "text-green-600" : ""}>
+                        {/[a-z]/.test(password) ? "✓" : "○"} Letra minúscula
+                      </span>
+                    </p>
+                    <p className="flex items-center gap-1">
+                      <span className={/\d/.test(password) ? "text-green-600" : ""}>
+                        {/\d/.test(password) ? "✓" : "○"} Número
+                      </span>
+                    </p>
+                    <p className="flex items-center gap-1">
+                      <span className={/[^A-Za-z0-9]/.test(password) ? "text-green-600" : ""}>
+                        {/[^A-Za-z0-9]/.test(password) ? "✓" : "○"} Símbolo especial
+                      </span>
+                    </p>
+                  </div>
+                </div>
               )}
             </div>
 
