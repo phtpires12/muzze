@@ -19,6 +19,11 @@ import { Screen10TimeWasted } from "@/components/onboarding/screens/phase3/Scree
 import { Screen11AccumulatedImpact } from "@/components/onboarding/screens/phase3/Screen11AccumulatedImpact";
 import { Screen12Opportunity } from "@/components/onboarding/screens/phase3/Screen12Opportunity";
 import { Screen13DreamOutcome } from "@/components/onboarding/screens/phase3/Screen13DreamOutcome";
+import { Screen14TwentyFiveMinutes } from "@/components/onboarding/screens/phase4/Screen14TwentyFiveMinutes";
+import { Screen15MinimalEffort } from "@/components/onboarding/screens/phase4/Screen15MinimalEffort";
+import { Screen16PersonalizedFeatures } from "@/components/onboarding/screens/phase4/Screen16PersonalizedFeatures";
+import { Screen17UniquePositioning } from "@/components/onboarding/screens/phase4/Screen17UniquePositioning";
+import { Screen18CommitmentTest } from "@/components/onboarding/screens/phase4/Screen18CommitmentTest";
 
 const NewOnboarding = () => {
   const navigate = useNavigate();
@@ -95,6 +100,15 @@ const NewOnboarding = () => {
           data.dream_outcome_importance?.consistent_identity > 0
         );
       }
+    }
+    
+    // Phase 3 (Personalized Solution)
+    if (phase === 3) {
+      if (screen === 0) return true; // 25 minutes science (auto)
+      if (screen === 1) return true; // Minimal effort (auto)
+      if (screen === 2) return true; // Personalized features (auto)
+      if (screen === 3) return true; // Unique positioning (auto)
+      if (screen === 4) return !!data.commitment_level; // Commitment test required
     }
     
     return true;
@@ -238,6 +252,34 @@ const NewOnboarding = () => {
       }
     }
 
+    // Phase 3: Personalized Solution
+    if (phase === 3) {
+      if (screen === 0) {
+        return <Screen14TwentyFiveMinutes />;
+      }
+      if (screen === 1) {
+        return <Screen15MinimalEffort />;
+      }
+      if (screen === 2) {
+        return (
+          <Screen16PersonalizedFeatures
+            stickingPoints={state.data.sticking_points || []}
+          />
+        );
+      }
+      if (screen === 3) {
+        return <Screen17UniquePositioning />;
+      }
+      if (screen === 4) {
+        return (
+          <Screen18CommitmentTest
+            value={state.data.commitment_level || ""}
+            onChange={(value) => updateData({ commitment_level: value })}
+          />
+        );
+      }
+    }
+
     // Placeholder for other phases
     return (
       <div className="text-center space-y-4">
@@ -256,7 +298,8 @@ const NewOnboarding = () => {
   const showContinueButton =
     (state.phase === 0 && (state.screen === 2 || state.screen === 3)) ||
     (state.phase === 1 && state.screen >= 0 && state.screen <= 4) ||
-    (state.phase === 2 && state.screen >= 0 && state.screen <= 4);
+    (state.phase === 2 && state.screen >= 0 && state.screen <= 4) ||
+    (state.phase === 3 && state.screen >= 0 && state.screen <= 4);
 
   return (
     <OnboardingLayout
