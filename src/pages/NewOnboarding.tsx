@@ -4,8 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useUserRole } from "@/hooks/useUserRole";
 import { OnboardingLayout } from "@/components/onboarding/shared/OnboardingLayout";
 import { Button } from "@/components/ui/button";
+import { Shield } from "lucide-react";
 import { Screen0Welcome } from "@/components/onboarding/screens/phase1/Screen0Welcome";
 import { Screen1Methodology } from "@/components/onboarding/screens/phase1/Screen1Methodology";
 import { Screen2Username } from "@/components/onboarding/screens/phase1/Screen2Username";
@@ -37,6 +39,7 @@ const NewOnboarding = () => {
   const navigate = useNavigate();
   const { trackEvent } = useAnalytics();
   const { requestPermission } = useNotifications();
+  const { isDeveloper, isAdmin } = useUserRole();
   const {
     state,
     updateData,
@@ -94,6 +97,9 @@ const NewOnboarding = () => {
   };
 
   const canContinue = () => {
+    // Desenvolvedores e admins podem navegar livremente
+    if (isDeveloper || isAdmin) return true;
+
     const { phase, screen, data } = state;
 
     // Phase 0 (Hook + Dream Outcome)
@@ -392,6 +398,16 @@ const NewOnboarding = () => {
       phase={state.phase}
       totalPhases={state.totalPhases}
     >
+      {/* Developer Badge */}
+      {(isDeveloper || isAdmin) && (
+        <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-full">
+          <Shield className="w-4 h-4 text-primary" />
+          <span className="text-xs font-medium text-primary">
+            {isAdmin ? "Admin" : "Developer"}
+          </span>
+        </div>
+      )}
+
       {renderScreen()}
 
       {showContinueButton && (
