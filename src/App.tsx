@@ -4,8 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { BottomNav } from "@/components/BottomNav";
-import Onboarding from "./pages/Onboarding";
-import NewOnboarding from "./pages/NewOnboarding";
+import Onboarding from "./pages/NewOnboarding";
 import Auth from "./pages/Auth";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -92,7 +91,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   }
 
   if (!user) {
-    return <Navigate to="/auth" replace />;
+    return <Navigate to="/onboarding" replace />;
   }
 
   const currentPath = window.location.pathname;
@@ -103,40 +102,6 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-const OnboardingRoute = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-      setLoading(false);
-    };
-
-    checkAuth();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user || null);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse text-xl">Carregando...</div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <Navigate to="/auth" replace />;
-  }
-
-  return <>{children}</>;
-};
 
 const App = () => {
   // Cleanup de sessões órfãs na inicialização
@@ -175,8 +140,7 @@ const App = () => {
           <TrophyUnlockedModal />
           <Routes>
           <Route path="/auth" element={<Auth />} />
-          <Route path="/onboarding" element={<OnboardingRoute><Onboarding /></OnboardingRoute>} />
-          <Route path="/new-onboarding" element={<OnboardingRoute><NewOnboarding /></OnboardingRoute>} />
+          <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/" element={<ProtectedRoute><Layout><Index /></Layout></ProtectedRoute>} />
           <Route path="/novidades" element={<ProtectedRoute><Layout><Novidades /></Layout></ProtectedRoute>} />
           <Route path="/calendario" element={<ProtectedRoute><Layout><CalendarioEditorial /></Layout></ProtectedRoute>} />
