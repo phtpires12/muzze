@@ -374,7 +374,8 @@ const NewOnboarding = () => {
   };
 
   const showProgress = state.phase > 0 || state.screen > 1;
-  const showBack = (state.phase > 0 || state.screen > 2) && state.phase < 5;
+  // Mostrar botão de voltar em todas as telas exceto a primeira
+  const showBack = !(state.phase === 0 && state.screen === 0);
   const showContinueButton =
     (state.phase === 0 && (state.screen === 2 || state.screen === 3)) ||
     (state.phase === 1 && state.screen >= 0 && state.screen <= 4) ||
