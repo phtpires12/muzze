@@ -14,6 +14,11 @@ import { Screen5MonthsTrying } from "@/components/onboarding/screens/phase2/Scre
 import { Screen6CurrentPosts } from "@/components/onboarding/screens/phase2/Screen6CurrentPosts";
 import { Screen7PreviousAttempts } from "@/components/onboarding/screens/phase2/Screen7PreviousAttempts";
 import { Screen8ImpactScale } from "@/components/onboarding/screens/phase2/Screen8ImpactScale";
+import { Screen9LostPosts } from "@/components/onboarding/screens/phase3/Screen9LostPosts";
+import { Screen10TimeWasted } from "@/components/onboarding/screens/phase3/Screen10TimeWasted";
+import { Screen11AccumulatedImpact } from "@/components/onboarding/screens/phase3/Screen11AccumulatedImpact";
+import { Screen12Opportunity } from "@/components/onboarding/screens/phase3/Screen12Opportunity";
+import { Screen13DreamOutcome } from "@/components/onboarding/screens/phase3/Screen13DreamOutcome";
 
 const NewOnboarding = () => {
   const navigate = useNavigate();
@@ -24,6 +29,7 @@ const NewOnboarding = () => {
     nextScreen,
     prevScreen,
     getProgress,
+    calculateLostPosts,
   } = useOnboarding();
 
   useEffect(() => {
@@ -71,6 +77,22 @@ const NewOnboarding = () => {
           data.inconsistency_impact?.financial > 0 &&
           data.inconsistency_impact?.emotional > 0 &&
           data.inconsistency_impact?.professional > 0
+        );
+      }
+    }
+    
+    // Phase 2 (Confrontation + Opportunity)
+    if (phase === 2) {
+      if (screen === 0) return true; // Lost posts calculation (auto)
+      if (screen === 1) return true; // Time wasted (auto)
+      if (screen === 2) return true; // Accumulated impact (auto)
+      if (screen === 3) return true; // Opportunity visualization
+      if (screen === 4) {
+        // All dream outcome importance scales must be set
+        return (
+          data.dream_outcome_importance?.posts_30_days > 0 &&
+          data.dream_outcome_importance?.clarity > 0 &&
+          data.dream_outcome_importance?.consistent_identity > 0
         );
       }
     }
@@ -160,6 +182,62 @@ const NewOnboarding = () => {
       }
     }
 
+    // Phase 2: Confrontation + Opportunity
+    if (phase === 2) {
+      const lostPosts = calculateLostPosts(
+        state.data.months_trying || 0,
+        state.data.current_post_count || 0
+      );
+
+      if (screen === 0) {
+        return (
+          <Screen9LostPosts
+            monthsTrying={state.data.months_trying || 0}
+            currentPosts={state.data.current_post_count || 0}
+            lostPosts={lostPosts}
+          />
+        );
+      }
+      if (screen === 1) {
+        return (
+          <Screen10TimeWasted monthsTrying={state.data.months_trying || 0} />
+        );
+      }
+      if (screen === 2) {
+        return (
+          <Screen11AccumulatedImpact
+            impact={
+              state.data.inconsistency_impact || {
+                financial: 1,
+                emotional: 1,
+                professional: 1,
+              }
+            }
+            monthsTrying={state.data.months_trying || 0}
+          />
+        );
+      }
+      if (screen === 3) {
+        return <Screen12Opportunity />;
+      }
+      if (screen === 4) {
+        return (
+          <Screen13DreamOutcome
+            value={
+              state.data.dream_outcome_importance || {
+                posts_30_days: 0,
+                clarity: 0,
+                consistent_identity: 0,
+              }
+            }
+            onChange={(value) =>
+              updateData({ dream_outcome_importance: value })
+            }
+          />
+        );
+      }
+    }
+
     // Placeholder for other phases
     return (
       <div className="text-center space-y-4">
@@ -175,9 +253,10 @@ const NewOnboarding = () => {
 
   const showProgress = state.phase > 0 || state.screen > 1;
   const showBack = state.phase > 0 || state.screen > 2;
-  const showContinueButton = 
+  const showContinueButton =
     (state.phase === 0 && (state.screen === 2 || state.screen === 3)) ||
-    (state.phase === 1 && state.screen >= 0 && state.screen <= 4);
+    (state.phase === 1 && state.screen >= 0 && state.screen <= 4) ||
+    (state.phase === 2 && state.screen >= 0 && state.screen <= 4);
 
   return (
     <OnboardingLayout
