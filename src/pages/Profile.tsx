@@ -1,15 +1,17 @@
 import { useState, useEffect } from "react";
-import { User, Mail, CheckCircle } from "lucide-react";
+import { User, Mail, CheckCircle, Wrench } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
+import { useUserRole } from "@/hooks/useUserRole";
 
 const Profile = () => {
   const navigate = useNavigate();
   const { profile } = useProfile();
+  const { isDeveloper, isAdmin } = useUserRole();
   const [userEmail, setUserEmail] = useState<string>("");
 
   useEffect(() => {
@@ -34,6 +36,13 @@ const Profile = () => {
     { icon: User, label: "Política de Privacidade", path: "/privacy" },
   ];
 
+  // Add Dev Tools for developers/admins
+  const devMenuItem = (isDeveloper || isAdmin) 
+    ? [{ icon: Wrench, label: "Dev Tools", path: "/dev-tools" }]
+    : [];
+
+  const allMenuItems = [...menuItems, ...devMenuItem];
+
   return (
     <div className="min-h-screen bg-background pb-24">
       <div className="container mx-auto p-4 max-w-2xl">
@@ -51,7 +60,7 @@ const Profile = () => {
         </Card>
 
         <div className="space-y-2">
-          {menuItems.map((item, index) => (
+          {allMenuItems.map((item, index) => (
             <Button
               key={index}
               variant="ghost"
