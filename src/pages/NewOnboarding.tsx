@@ -426,6 +426,21 @@ const NewOnboarding = () => {
           </Button>
         </div>
       )}
+
+      {/* Developer bypass button - appears when normal continue button is hidden */}
+      {(isDeveloper || isAdmin) && !showContinueButton && (
+        <div className="flex justify-center pt-6">
+          <Button 
+            variant="outline" 
+            size="lg"
+            onClick={handleContinue}
+            className="min-w-[200px] border-primary/50 text-primary hover:bg-primary/10"
+          >
+            <Shield className="w-4 h-4 mr-2" />
+            Pular (Dev)
+          </Button>
+        </div>
+      )}
     </OnboardingLayout>
   );
 };
