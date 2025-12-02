@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 const DevTools = () => {
   const navigate = useNavigate();
   const { isDeveloper, isAdmin, isLoading } = useUserRole();
-  const { celebrationData, triggerCelebration, dismissStreakCelebration, dismissTrophyCelebration } = useStreakCelebration();
+  const { celebrationData, triggerCelebration, triggerTrophyDirectly, dismissStreakCelebration, dismissTrophyCelebration } = useStreakCelebration();
   
   // Redirect non-developers to home
   useEffect(() => {
@@ -27,7 +27,8 @@ const DevTools = () => {
   };
 
   const handleSimulateTrophy = async () => {
-    await triggerCelebration(3, 100);
+    const exampleTrophy = TROPHIES[0]; // "Primeiro Roteiro" 🎬
+    triggerTrophyDirectly(exampleTrophy, 50);
   };
 
   const handleClearLocalStorage = () => {

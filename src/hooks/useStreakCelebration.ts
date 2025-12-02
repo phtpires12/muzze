@@ -233,9 +233,22 @@ export const useStreakCelebration = () => {
     }
   };
 
+  const triggerTrophyDirectly = (trophy: Trophy, xpGained: number) => {
+    setCelebrationData({
+      showStreakCelebration: false,
+      showTrophyCelebration: true,
+      streakCount: 0,
+      weekDays: [],
+      unlockedTrophies: [trophy],
+      currentTrophy: trophy,
+      xpGained,
+    });
+  };
+
   return {
     celebrationData,
     triggerCelebration,
+    triggerTrophyDirectly,
     dismissStreakCelebration,
     dismissTrophyCelebration,
   };
