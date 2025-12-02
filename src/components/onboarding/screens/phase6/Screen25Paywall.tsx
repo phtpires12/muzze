@@ -103,16 +103,16 @@ export const Screen25Paywall = ({ onContinue }: Screen25PaywallProps) => {
       </div>
 
       {/* Timeline */}
-      <div className="relative pl-8 space-y-6 py-4">
-        {/* Vertical line */}
-        <div className="absolute left-[15px] top-8 bottom-8 w-0.5 bg-border" />
-
+      <div className="space-y-0 py-4">
         {/* Step 1: Today */}
-        <div className="relative flex gap-4">
-          <div className="absolute left-[-17px] w-8 h-8 rounded-full bg-primary flex items-center justify-center z-10">
-            <Unlock className="w-4 h-4 text-primary-foreground" />
+        <div className="flex gap-4">
+          <div className="flex flex-col items-center">
+            <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center shrink-0">
+              <Unlock className="w-5 h-5 text-primary-foreground" />
+            </div>
+            <div className="w-0.5 flex-1 bg-border min-h-[24px]" />
           </div>
-          <div className="flex-1 ml-4">
+          <div className="flex-1 pb-4">
             <p className="font-semibold">Hoje</p>
             <p className="text-sm text-muted-foreground">
               Você desbloqueia as ferramentas do aplicativo, como o workflow guiado, o timer integrado, a gamificação com XP.
@@ -121,11 +121,14 @@ export const Screen25Paywall = ({ onContinue }: Screen25PaywallProps) => {
         </div>
 
         {/* Step 2: In 7 days - Reminder */}
-        <div className="relative flex gap-4">
-          <div className="absolute left-[-17px] w-8 h-8 rounded-full bg-yellow-500 flex items-center justify-center z-10">
-            <Bell className="w-4 h-4 text-white" />
+        <div className="flex gap-4">
+          <div className="flex flex-col items-center">
+            <div className="w-10 h-10 rounded-full bg-yellow-500 flex items-center justify-center shrink-0">
+              <Bell className="w-5 h-5 text-white" />
+            </div>
+            <div className="w-0.5 flex-1 bg-border min-h-[24px]" />
           </div>
-          <div className="flex-1 ml-4">
+          <div className="flex-1 pb-4">
             <p className="font-semibold">Em 7 dias</p>
             <p className="text-sm text-muted-foreground">
               Te enviaremos um lembrete de que seu teste está acabando em breve.
@@ -134,11 +137,13 @@ export const Screen25Paywall = ({ onContinue }: Screen25PaywallProps) => {
         </div>
 
         {/* Step 3: In 7 days - Billing */}
-        <div className="relative flex gap-4">
-          <div className="absolute left-[-17px] w-8 h-8 rounded-full bg-muted flex items-center justify-center z-10">
-            <CreditCard className="w-4 h-4 text-muted-foreground" />
+        <div className="flex gap-4">
+          <div className="flex flex-col items-center">
+            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center shrink-0">
+              <CreditCard className="w-5 h-5 text-muted-foreground" />
+            </div>
           </div>
-          <div className="flex-1 ml-4">
+          <div className="flex-1">
             <p className="font-semibold">Em 7 dias - A Cobrança Inicia</p>
             <p className="text-sm text-muted-foreground">
               Você será cobrado no dia {formattedDate}, a não ser que você cancele antes, quando quiser.
