@@ -1,23 +1,24 @@
-import { Award, Target, Zap, TrendingUp, TrendingDown } from "lucide-react";
+import { Award, Target, Zap } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
 import { Card } from "@/components/ui/card";
-import { useStats } from "@/hooks/useStats";
-import { useDailyGoalProgress } from "@/hooks/useDailyGoalProgress";
-import { useProfile } from "@/hooks/useProfile";
-import { useGamification } from "@/hooks/useGamification";
+import { useStatsPage } from "@/hooks/useStatsPage";
 import { TROPHIES } from "@/lib/gamification";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { StatsPageSkeleton } from "@/components/stats/StatsPageSkeleton";
 
 const Stats = () => {
-  const { weeklyData, totalSessions, totalHours, weeklyAverage, weeklyGoalStats, loading } = useStats();
-  const { profile } = useProfile();
-  const { progress: dailyGoal, loading: loadingGoal } = useDailyGoalProgress();
-  const { stats: gamificationStats, loading: loadingGamification } = useGamification();
-  
-  // 🔍 DEBUG LOG TEMPORÁRIO
-  console.log('📊 Stats useGamification:', gamificationStats);
+  const {
+    weeklyData,
+    totalSessions,
+    weeklyAverage,
+    weeklyGoalStats,
+    dailyGoal,
+    profile,
+    gamificationStats,
+    loading,
+  } = useStatsPage();
   
   const maxHours = Math.max(...weeklyData.map((d) => d.hours), 0.1);
   
@@ -99,15 +100,8 @@ const Stats = () => {
 
   const nextTrophies = getLockedTrophiesWithProgress();
 
-  if (loading || loadingGoal || loadingGamification) {
-    return (
-      <div className="p-8 space-y-8">
-        <div>
-          <h1 className="text-4xl font-bold mb-2">Estatísticas</h1>
-          <p className="text-muted-foreground">Carregando...</p>
-        </div>
-      </div>
-    );
+  if (loading) {
+    return <StatsPageSkeleton />;
   }
 
   const getDailyGoalDescription = () => {
