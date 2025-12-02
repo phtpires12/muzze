@@ -280,11 +280,16 @@ const ShotListReview = () => {
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
+      // P4 Security: Usar URLs assinadas ao invés de públicas
+      const { data: signedUrlData, error: signedUrlError } = await supabase.storage
         .from('shot-references')
-        .getPublicUrl(filePath);
+        .createSignedUrl(filePath, 3600); // 1 hora de validade
 
-      const newUrls = [...currentUrls, publicUrl];
+      if (signedUrlError || !signedUrlData) {
+        throw new Error('Failed to generate signed URL');
+      }
+
+      const newUrls = [...currentUrls, signedUrlData.signedUrl];
       updateShot(shotId, 'shotImageUrls', JSON.stringify(newUrls));
 
       toast({
