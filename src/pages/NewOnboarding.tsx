@@ -5,6 +5,7 @@ import { useOnboarding } from "@/hooks/useOnboarding";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { OnboardingLayout } from "@/components/onboarding/shared/OnboardingLayout";
 import { Button } from "@/components/ui/button";
 import { Shield } from "lucide-react";
@@ -40,6 +41,7 @@ const NewOnboarding = () => {
   const { trackEvent } = useAnalytics();
   const { requestPermission } = useNotifications();
   const { isDeveloper, isAdmin } = useUserRole();
+  const isMobile = useIsMobile();
   const {
     state,
     updateData,
@@ -66,6 +68,14 @@ const NewOnboarding = () => {
     };
     checkAuth();
   }, [navigate, trackEvent, state.phase]);
+
+  // Auto-skip Screen24Review (Review/Rating) on non-mobile devices
+  // App Store review only makes sense on mobile
+  useEffect(() => {
+    if (state.phase === 5 && state.screen === 3 && !isMobile) {
+      nextScreen();
+    }
+  }, [state.phase, state.screen, isMobile, nextScreen]);
 
   const handleContinue = () => {
     nextScreen();
