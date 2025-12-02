@@ -38,6 +38,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useWindowPortal } from "@/hooks/useWindowPortal";
 import { useAppVisibility } from "@/hooks/useAppVisibility";
 import { useStreakCelebration } from "@/hooks/useStreakCelebration";
+import { DevToolsPanel } from "@/components/DevToolsPanel";
+import { TROPHIES } from "@/lib/gamification";
 
 const STAGES: { 
   id: SessionStage; 
@@ -94,6 +96,18 @@ const Session = () => {
     if (remainingTrophies.length === 0) {
       navigate("/");
     }
+  };
+
+  // Developer tools handlers
+  const handleSimulateSession = async () => {
+    // Simulate a completed session with streak
+    await triggerCelebration(5, 150);
+  };
+
+  const handleSimulateTrophy = async () => {
+    // Get the first trophy as example
+    const exampleTrophy = TROPHIES[0];
+    await triggerCelebration(3, 100);
   };
 
   useEffect(() => {
@@ -324,6 +338,12 @@ const Session = () => {
         {/* Auto-hide Navigation */}
         <AutoHideNav />
 
+        {/* Developer Tools Panel */}
+        <DevToolsPanel
+          onSimulateSession={handleSimulateSession}
+          onSimulateTrophy={handleSimulateTrophy}
+        />
+
         {/* Celebration Components */}
         <StreakCelebration
           show={celebrationData.showStreakCelebration}
@@ -404,6 +424,12 @@ const Session = () => {
 
         {/* Auto-hide Navigation */}
         <AutoHideNav />
+
+        {/* Developer Tools Panel */}
+        <DevToolsPanel
+          onSimulateSession={handleSimulateSession}
+          onSimulateTrophy={handleSimulateTrophy}
+        />
 
         {/* Celebration Components */}
         <StreakCelebration
@@ -660,6 +686,12 @@ const Session = () => {
       
       {/* Auto-hide Navigation */}
       <AutoHideNav />
+
+      {/* Developer Tools Panel */}
+      <DevToolsPanel
+        onSimulateSession={handleSimulateSession}
+        onSimulateTrophy={handleSimulateTrophy}
+      />
     </div>
   );
 };
