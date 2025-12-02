@@ -7,6 +7,12 @@ import { UserPlus, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { z } from "zod";
+
+const signupSchema = z.object({
+  email: z.string().trim().email('Email inválido'),
+  password: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres'),
+});
 
 interface Screen21SignupProps {
   onSuccess: () => void;
@@ -22,19 +28,12 @@ export const Screen21Signup = ({ onSuccess }: Screen21SignupProps) => {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!email || !password) {
+    // P3 Security: Validação com zod
+    const validation = signupSchema.safeParse({ email, password });
+    if (!validation.success) {
       toast({
-        title: "Campos obrigatórios",
-        description: "Por favor, preencha email e senha.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (password.length < 6) {
-      toast({
-        title: "Senha muito curta",
-        description: "A senha deve ter pelo menos 6 caracteres.",
+        title: "Dados inválidos",
+        description: validation.error.errors[0].message,
         variant: "destructive",
       });
       return;
