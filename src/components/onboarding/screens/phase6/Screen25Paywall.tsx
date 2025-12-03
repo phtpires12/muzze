@@ -4,22 +4,27 @@ import { Card } from "@/components/ui/card";
 import { Bell, Unlock, Clock, CreditCard, Check } from "lucide-react";
 import { addDays, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import muzzeLogo from "@/assets/muzze-logo.png";
+import muzzeLogoRounded from "@/assets/muzze-logo-rounded.png";
 
 interface Screen25PaywallProps {
   onContinue: () => void;
 }
 
-// Logo Component with glow effect
+// Logo Component with gradient background and rounded corners
 const MuzzeLogo = () => (
-  <div className="relative w-40 h-40 mx-auto">
-    {/* Glow effect */}
-    <div className="absolute inset-0 bg-gradient-to-br from-primary/40 to-accent/40 rounded-full blur-2xl animate-pulse" />
-    <img
-      src={muzzeLogo}
-      alt="Muzze Logo"
-      className="relative w-40 h-40 object-contain"
-    />
+  <div className="flex flex-col items-center gap-4">
+    <div className="relative w-24 h-24 mx-auto">
+      {/* Glow effect */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/40 to-accent/40 rounded-3xl blur-xl animate-pulse" />
+      <img
+        src={muzzeLogoRounded}
+        alt="Muzze Logo"
+        className="relative w-24 h-24 object-contain rounded-3xl shadow-lg"
+      />
+    </div>
+    <p className="text-sm text-muted-foreground text-center max-w-[200px]">
+      Sua jornada de consistência criativa começa aqui.
+    </p>
   </div>
 );
 
@@ -49,13 +54,13 @@ export const Screen25Paywall = ({ onContinue }: Screen25PaywallProps) => {
   const trialEndDate = addDays(new Date(), 7);
   const formattedDate = format(trialEndDate, "d 'de' MMMM 'de' yyyy", { locale: ptBR });
 
-  // Animation loop for step 1
+  // Animation loop for step 1 with longer interval
   useEffect(() => {
     if (step !== 1) return;
     
     const interval = setInterval(() => {
       setShowLogo((prev) => !prev);
-    }, 3000);
+    }, 4000); // Increased from 3000 to 4000 for better readability
 
     return () => clearInterval(interval);
   }, [step]);
@@ -64,10 +69,26 @@ export const Screen25Paywall = ({ onContinue }: Screen25PaywallProps) => {
   if (step === 1) {
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-between animate-fade-in py-8">
-        {/* Animated logo/bell section */}
+        {/* Animated logo/bell section with crossfade */}
         <div className="flex-1 flex items-center justify-center">
-          <div className="transition-opacity duration-500">
-            {showLogo ? <MuzzeLogo /> : <ReminderBell />}
+          <div className="relative h-[180px] w-full flex items-center justify-center">
+            {/* Logo - always rendered, opacity controlled */}
+            <div 
+              className={`absolute inset-0 flex items-center justify-center transition-opacity duration-700 ease-in-out ${
+                showLogo ? 'opacity-100' : 'opacity-0'
+              }`}
+            >
+              <MuzzeLogo />
+            </div>
+            
+            {/* Bell - always rendered, opacity controlled */}
+            <div 
+              className={`absolute inset-0 flex items-center justify-center transition-opacity duration-700 ease-in-out ${
+                showLogo ? 'opacity-0' : 'opacity-100'
+              }`}
+            >
+              <ReminderBell />
+            </div>
           </div>
         </div>
 
