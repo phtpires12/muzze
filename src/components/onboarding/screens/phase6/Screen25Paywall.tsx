@@ -18,7 +18,7 @@ const MuzzeLogo = () => (
       <div className="absolute inset-0 bg-gradient-to-br from-primary/40 to-accent/40 rounded-3xl blur-xl animate-pulse" />
       {/* Logo container with gradient */}
       <div className="relative w-24 h-24 bg-gradient-to-br from-primary to-accent rounded-3xl flex items-center justify-center shadow-lg">
-        <img src={muzzeLogoWhite} alt="Muzze Logo" className="w-32 h-32 object-contain" />
+        <img src={muzzeLogoWhite} alt="Muzze Logo" className="w-40 h-40 object-contain" />
       </div>
     </div>
     <p className="text-sm text-muted-foreground text-center w-[85vw] max-w-sm">
