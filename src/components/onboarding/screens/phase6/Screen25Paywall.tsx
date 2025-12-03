@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Bell, Leaf, Unlock, CreditCard, Check } from "lucide-react";
+import { Bell, Unlock, CreditCard, Check } from "lucide-react";
+import muzzeLogoWhite from "@/assets/muzze-logo-white.png";
 import { addDays, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -17,7 +18,7 @@ const MuzzeLogo = () => (
       <div className="absolute inset-0 bg-gradient-to-br from-primary/40 to-accent/40 rounded-3xl blur-xl animate-pulse" />
       {/* Logo container with gradient */}
       <div className="relative w-24 h-24 bg-gradient-to-br from-primary to-accent rounded-3xl flex items-center justify-center shadow-lg">
-        <Leaf className="w-12 h-12 text-white" />
+        <img src={muzzeLogoWhite} alt="Muzze Logo" className="w-12 h-12 object-contain" />
       </div>
     </div>
     <p className="text-sm text-muted-foreground text-center w-[85vw] max-w-sm">
