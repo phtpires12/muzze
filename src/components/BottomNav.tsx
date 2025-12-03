@@ -1,4 +1,5 @@
-import { Home, Calendar, BarChart3, Settings, Zap, Timer, Video, Mic, Scissors, CheckCircle, Lightbulb } from "lucide-react";
+import { Home, Calendar, BarChart3, Settings, Timer, Video, Mic, Scissors, CheckCircle, Lightbulb } from "lucide-react";
+import muzzeLogo from "@/assets/muzze-logo-white.png";
 import { NavLink } from "./NavLink";
 import { Button } from "./ui/button";
 import { useState, useEffect, useRef } from "react";
@@ -161,7 +162,7 @@ export const BottomNav = () => {
                   hasProgress && !hasInProgressProjects && "animate-pulse ring-2 ring-yellow-500/50 ring-offset-2 ring-offset-background"
                 )}
               >
-                <Zap className="w-6 h-6 text-primary-foreground" />
+                <img src={muzzeLogo} alt="Criar" className="w-6 h-6 object-contain" />
               </Button>
               {hasInProgressProjects && (
                 <div className="absolute -top-1 -right-1 h-4 w-4 bg-green-500 rounded-full border-2 border-background" />

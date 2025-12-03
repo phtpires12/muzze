@@ -1,4 +1,5 @@
-import { Home, Calendar, BarChart3, Settings, Zap } from "lucide-react";
+import { Home, Calendar, BarChart3, Settings } from "lucide-react";
+import muzzeLogo from "@/assets/muzze-logo-white.png";
 import { NavLink } from "./NavLink";
 import { Button } from "./ui/button";
 import { useState, useRef, useEffect } from "react";
@@ -90,7 +91,7 @@ export const AutoHideNav = () => {
               onClick={() => navigate('/session')}
               className="h-14 w-14 rounded-full shadow-lg bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-all duration-300"
             >
-              <Zap className="w-6 h-6 text-primary-foreground" />
+              <img src={muzzeLogo} alt="Criar" className="w-6 h-6 object-contain" />
             </Button>
 
             {/* Right navigation items */}

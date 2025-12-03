@@ -17,7 +17,7 @@ export const Sidebar = () => {
           <img 
             src={muzzeLogo} 
             alt="Muzze Logo" 
-            className="w-8 h-8 rounded-lg object-contain"
+            className="w-10 h-10 object-contain"
           />
           <h1 className="text-xl font-bold bg-gradient-to-r from-accent to-primary bg-clip-text text-transparent">
             Muzze

@@ -10,11 +10,11 @@ export const Screen0Welcome = ({ onContinue }: Screen0WelcomeProps) => {
     <div className="text-center space-y-6 animate-fade-in">
       <div className="relative w-32 h-32 mx-auto mb-4">
         {/* Glow effect */}
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-accent/30 rounded-3xl blur-xl animate-pulse" />
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-accent/30 rounded-full blur-xl animate-pulse" />
         <img
           src={muzzeLogo}
           alt="Muzze Logo"
-          className="relative w-32 h-32 object-contain rounded-2xl"
+          className="relative w-32 h-32 object-contain"
         />
       </div>
       <div className="space-y-2">

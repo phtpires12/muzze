@@ -14,11 +14,11 @@ interface Screen25PaywallProps {
 const MuzzeLogo = () => (
   <div className="relative w-24 h-24 mx-auto">
     {/* Glow effect */}
-    <div className="absolute inset-0 bg-gradient-to-br from-primary/40 to-accent/40 rounded-3xl blur-xl animate-pulse" />
+    <div className="absolute inset-0 bg-gradient-to-br from-primary/40 to-accent/40 rounded-full blur-xl animate-pulse" />
     <img
       src={muzzeLogo}
       alt="Muzze Logo"
-      className="relative w-24 h-24 object-contain rounded-2xl"
+      className="relative w-24 h-24 object-contain"
     />
   </div>
 );
