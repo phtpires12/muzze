@@ -50,6 +50,17 @@ export const Screen25Paywall = ({ onContinue, onBack }: Screen25PaywallProps) =>
   const [showLogo, setShowLogo] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState<"monthly" | "yearly">("yearly");
 
+  // Handler centralizado para navegação "Voltar"
+  const handleBackClick = () => {
+    if (step === 2) {
+      // Se estiver no Step 2, apenas volta para o Step 1
+      setStep(1);
+    } else {
+      // Se estiver no Step 1, volta para a tela anterior do onboarding
+      onBack?.();
+    }
+  };
+
   // Calculate trial end date
   const trialEndDate = addDays(new Date(), 7);
   const formattedDate = format(trialEndDate, "d 'de' MMMM 'de' yyyy", { locale: ptBR });
@@ -75,7 +86,7 @@ export const Screen25Paywall = ({ onContinue, onBack }: Screen25PaywallProps) =>
             <Button
               variant="ghost"
               size="sm"
-              onClick={onBack}
+              onClick={handleBackClick}
               className="gap-2 -ml-2"
             >
               <ArrowLeft className="w-4 h-4" />
@@ -133,11 +144,11 @@ export const Screen25Paywall = ({ onContinue, onBack }: Screen25PaywallProps) =>
   // Step 2: Timeline and pricing
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Back button to Step 1 */}
+      {/* Back button */}
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => setStep(1)}
+        onClick={handleBackClick}
         className="gap-2 -ml-2"
       >
         <ArrowLeft className="w-4 h-4" />
