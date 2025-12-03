@@ -101,12 +101,12 @@ const Auth = () => {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-4">
           {/* Muzze Logo */}
-          <div className="relative w-20 h-20 mx-auto">
+          <div className="relative w-24 h-24 mx-auto">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-accent/30 rounded-full blur-xl animate-pulse" />
             <img
               src={muzzeLogo}
               alt="Muzze Logo"
-              className="relative w-20 h-20 object-contain"
+              className="relative w-24 h-24 object-contain"
             />
           </div>
           

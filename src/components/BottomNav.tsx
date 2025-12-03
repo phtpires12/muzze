@@ -162,7 +162,7 @@ export const BottomNav = () => {
                   hasProgress && !hasInProgressProjects && "animate-pulse ring-2 ring-yellow-500/50 ring-offset-2 ring-offset-background"
                 )}
               >
-                <img src={muzzeLogo} alt="Criar" className="w-6 h-6 object-contain" />
+                <img src={muzzeLogo} alt="Criar" className="w-8 h-8 object-contain" />
               </Button>
               {hasInProgressProjects && (
                 <div className="absolute -top-1 -right-1 h-4 w-4 bg-green-500 rounded-full border-2 border-background" />
