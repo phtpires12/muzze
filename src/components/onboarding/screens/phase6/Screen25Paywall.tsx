@@ -1,34 +1,32 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Bell, Unlock, Clock, CreditCard, Check } from "lucide-react";
+import { Bell, Leaf, Unlock, CreditCard, Check } from "lucide-react";
 import { addDays, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import muzzeLogoRounded from "@/assets/muzze-logo-rounded.png";
 
 interface Screen25PaywallProps {
   onContinue: () => void;
 }
 
-// Logo Component with gradient background and rounded corners
+// Logo Component with gradient background (same style as ReminderBell)
 const MuzzeLogo = () => (
   <div className="flex flex-col items-center gap-4">
     <div className="relative w-24 h-24 mx-auto">
       {/* Glow effect */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary/40 to-accent/40 rounded-3xl blur-xl animate-pulse" />
-      <img
-        src={muzzeLogoRounded}
-        alt="Muzze Logo"
-        className="relative w-24 h-24 object-contain rounded-3xl shadow-lg"
-      />
+      {/* Logo container with gradient */}
+      <div className="relative w-24 h-24 bg-gradient-to-br from-primary to-accent rounded-3xl flex items-center justify-center shadow-lg">
+        <Leaf className="w-12 h-12 text-white" />
+      </div>
     </div>
-    <p className="text-sm text-muted-foreground text-center max-w-[200px]">
+    <p className="text-sm text-muted-foreground text-center max-w-[280px]">
       Sua jornada de consistência criativa começa aqui.
     </p>
   </div>
 );
 
-// Bell notification component
+// Bell notification component with glow effect
 const ReminderBell = () => (
   <div className="flex flex-col items-center gap-4">
     <div className="relative w-24 h-24 mx-auto">
@@ -39,7 +37,7 @@ const ReminderBell = () => (
         <Bell className="w-12 h-12 text-white" />
       </div>
     </div>
-    <p className="text-sm text-muted-foreground text-center max-w-[200px]">
+    <p className="text-sm text-muted-foreground text-center max-w-[280px]">
       Te mandaremos um lembrete antes do seu teste gratuito acabar.
     </p>
   </div>
