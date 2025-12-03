@@ -1,5 +1,5 @@
 import { Home, Calendar, BarChart3, Settings, Timer, Video, Mic, Scissors, CheckCircle, Lightbulb } from "lucide-react";
-import muzzeSessionButton from "@/assets/muzze-session-button.png";
+import muzzeLeafWhite from "@/assets/muzze-leaf-white.png";
 import { NavLink } from "./NavLink";
 import { Button } from "./ui/button";
 import { useState, useEffect, useRef } from "react";
@@ -150,20 +150,25 @@ export const BottomNav = () => {
 
             {/* Center session button */}
             <div className="relative">
-              <button
+              <Button
+                size="icon"
                 onMouseDown={handleMouseDown}
                 onMouseUp={handleMouseUp}
                 onTouchStart={handleMouseDown}
                 onTouchEnd={handleMouseUp}
-                className="h-16 w-16 rounded-full focus:outline-none hover:scale-105 transition-transform duration-300"
+                className={cn(
+                  "h-14 w-14 rounded-full shadow-lg bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-all duration-300",
+                  hasInProgressProjects && "ring-2 ring-primary/50 ring-offset-2 ring-offset-background",
+                  hasProgress && !hasInProgressProjects && "animate-pulse ring-2 ring-yellow-500/50 ring-offset-2 ring-offset-background"
+                )}
               >
-                <img src={muzzeSessionButton} alt="Criar" className="w-full h-full object-contain" />
-              </button>
+                <img src={muzzeLeafWhite} alt="Criar" className="w-10 h-10 object-contain" />
+              </Button>
               {hasInProgressProjects && (
-                <div className="absolute top-0 right-0 h-4 w-4 bg-green-500 rounded-full border-2 border-background" />
+                <div className="absolute -top-1 -right-1 h-4 w-4 bg-green-500 rounded-full border-2 border-background" />
               )}
               {hasProgress && !hasInProgressProjects && (
-                <div className="absolute top-0 right-0 h-4 w-4 bg-yellow-500 rounded-full border-2 border-background animate-pulse" />
+                <div className="absolute -top-1 -right-1 h-4 w-4 bg-yellow-500 rounded-full border-2 border-background animate-pulse" />
               )}
             </div>
 
