@@ -375,7 +375,7 @@ const NewOnboarding = () => {
         return <Screen24Review onSkip={nextScreen} />;
       }
       if (screen === 4) {
-        return <Screen25Paywall onContinue={handleComplete} />;
+        return <Screen25Paywall onContinue={handleComplete} onBack={handleBack} />;
       }
     }
 
@@ -391,7 +391,8 @@ const NewOnboarding = () => {
 
   const showProgress = state.phase > 0 || state.screen > 1;
   // Mostrar botão de voltar em todas as telas exceto a primeira
-  const showBack = !(state.phase === 0 && state.screen === 0);
+  // Esconde botão voltar na primeira tela e no Paywall (navegação interna)
+  const showBack = !(state.phase === 0 && state.screen === 0) && !(state.phase === 5 && state.screen === 4);
   const showContinueButton =
     (state.phase === 0 && (state.screen === 2 || state.screen === 3)) ||
     (state.phase === 1 && state.screen >= 0 && state.screen <= 4) ||
