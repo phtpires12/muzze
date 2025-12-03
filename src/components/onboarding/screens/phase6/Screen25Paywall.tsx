@@ -20,7 +20,7 @@ const MuzzeLogo = () => (
         <Leaf className="w-12 h-12 text-white" />
       </div>
     </div>
-    <p className="text-sm text-muted-foreground text-center max-w-[350px]">
+    <p className="text-sm text-muted-foreground text-center w-[85vw] max-w-sm">
       Sua jornada de consistência criativa começa aqui.
     </p>
   </div>
@@ -37,7 +37,7 @@ const ReminderBell = () => (
         <Bell className="w-12 h-12 text-white" />
       </div>
     </div>
-    <p className="text-sm text-muted-foreground text-center max-w-[350px]">
+    <p className="text-sm text-muted-foreground text-center w-[85vw] max-w-sm">
       Te mandaremos um lembrete antes do seu teste gratuito acabar.
     </p>
   </div>
