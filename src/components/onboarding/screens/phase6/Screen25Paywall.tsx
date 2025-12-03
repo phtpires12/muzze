@@ -4,20 +4,22 @@ import { Card } from "@/components/ui/card";
 import { Bell, Unlock, Clock, CreditCard, Check } from "lucide-react";
 import { addDays, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import muzzeLogo from "@/assets/muzze-logo.png";
 
 interface Screen25PaywallProps {
   onContinue: () => void;
 }
 
-// Placeholder Logo Component
+// Logo Component with glow effect
 const MuzzeLogo = () => (
   <div className="relative w-24 h-24 mx-auto">
     {/* Glow effect */}
     <div className="absolute inset-0 bg-gradient-to-br from-primary/40 to-accent/40 rounded-3xl blur-xl animate-pulse" />
-    {/* Logo container */}
-    <div className="relative w-24 h-24 bg-gradient-to-br from-primary to-accent rounded-3xl flex items-center justify-center shadow-lg">
-      <span className="text-5xl font-bold text-primary-foreground">M</span>
-    </div>
+    <img
+      src={muzzeLogo}
+      alt="Muzze Logo"
+      className="relative w-24 h-24 object-contain rounded-2xl"
+    />
   </div>
 );
 
