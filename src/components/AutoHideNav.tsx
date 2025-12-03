@@ -1,5 +1,5 @@
 import { Home, Calendar, BarChart3, Settings } from "lucide-react";
-import muzzeSessionButton from "@/assets/muzze-session-button.png";
+import muzzeLeafWhite from "@/assets/muzze-leaf-white.png";
 import { NavLink } from "./NavLink";
 import { Button } from "./ui/button";
 import { useState, useRef, useEffect } from "react";
@@ -86,12 +86,13 @@ export const AutoHideNav = () => {
             ))}
 
             {/* Center session button */}
-            <button
+            <Button
+              size="icon"
               onClick={() => navigate('/session')}
-              className="h-16 w-16 rounded-full focus:outline-none hover:scale-105 transition-transform duration-300"
+              className="h-14 w-14 rounded-full shadow-lg bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-all duration-300"
             >
-              <img src={muzzeSessionButton} alt="Criar" className="w-full h-full object-contain" />
-            </button>
+              <img src={muzzeLeafWhite} alt="Criar" className="w-10 h-10 object-contain" />
+            </Button>
 
             {/* Right navigation items */}
             {navigation.slice(2).map((item) => (
