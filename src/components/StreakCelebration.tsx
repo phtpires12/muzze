@@ -112,7 +112,7 @@ export const StreakCelebration = ({
           </h3>
           <div className="grid grid-cols-7 gap-2 md:gap-3">
             {weekDays.map((day, index) => (
-              <div key={index} className="flex flex-col items-center gap-2">
+              <div key={index} className="flex flex-col items-center gap-2 min-w-0">
                 <div className={cn(
                   "w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center transition-all duration-300",
                   day.status === 'completed' || day.status === 'today' 
@@ -126,14 +126,14 @@ export const StreakCelebration = ({
                   {getStatusIcon(day.status)}
                 </div>
                 <span className={cn(
-                  "text-xs font-medium",
+                  "text-xs font-medium text-center w-full truncate",
                   day.status === 'completed' || day.status === 'today'
                     ? "text-orange-500"
                     : day.status === 'freeze'
                     ? "text-blue-400"
                     : "text-muted-foreground"
                 )}>
-                  {day.dayName}
+                  {day.dayName.slice(0, 3)}
                 </span>
               </div>
             ))}
