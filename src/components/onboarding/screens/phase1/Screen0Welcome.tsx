@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import greekStatue from "@/assets/greek-statue.png";
+import muzzeLogo from "@/assets/muzze-logo.png";
 
 interface Screen0WelcomeProps {
   onContinue: () => void;
@@ -8,11 +8,15 @@ interface Screen0WelcomeProps {
 export const Screen0Welcome = ({ onContinue }: Screen0WelcomeProps) => {
   return (
     <div className="text-center space-y-6 animate-fade-in">
-      <img
-        src={greekStatue}
-        alt="Estátua grega"
-        className="w-40 h-40 mx-auto object-contain mb-4"
-      />
+      <div className="relative w-32 h-32 mx-auto mb-4">
+        {/* Glow effect */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-accent/30 rounded-3xl blur-xl animate-pulse" />
+        <img
+          src={muzzeLogo}
+          alt="Muzze Logo"
+          className="relative w-32 h-32 object-contain rounded-2xl"
+        />
+      </div>
       <div className="space-y-2">
         <h1 className="text-5xl font-bold bg-gradient-to-r from-accent to-primary bg-clip-text text-transparent">
           Bem-vindo à Muzze.

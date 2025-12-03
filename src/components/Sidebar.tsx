@@ -1,6 +1,6 @@
 import { Home, FileText, List, BarChart3 } from "lucide-react";
 import { NavLink } from "./NavLink";
-import { cn } from "@/lib/utils";
+import muzzeLogo from "@/assets/muzze-logo.png";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: Home },
@@ -14,11 +14,13 @@ export const Sidebar = () => {
     <div className="flex h-screen w-64 flex-col bg-card border-r border-border">
       <div className="flex h-16 items-center px-6 border-b border-border">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent to-primary flex items-center justify-center">
-            <FileText className="w-5 h-5 text-white" />
-          </div>
+          <img 
+            src={muzzeLogo} 
+            alt="Muzze Logo" 
+            className="w-8 h-8 rounded-lg object-contain"
+          />
           <h1 className="text-xl font-bold bg-gradient-to-r from-accent to-primary bg-clip-text text-transparent">
-            CreatorFlow
+            Muzze
           </h1>
         </div>
       </div>
