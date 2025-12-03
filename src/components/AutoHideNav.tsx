@@ -91,7 +91,7 @@ export const AutoHideNav = () => {
               onClick={() => navigate('/session')}
               className="h-14 w-14 rounded-full shadow-lg bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-all duration-300"
             >
-              <img src={muzzeLogo} alt="Criar" className="w-6 h-6 object-contain" />
+              <img src={muzzeLogo} alt="Criar" className="w-8 h-8 object-contain" />
             </Button>
 
             {/* Right navigation items */}
