@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Bell, Unlock, CreditCard, Check } from "lucide-react";
+import { Bell, Unlock, CreditCard, Check, ArrowLeft } from "lucide-react";
 import muzzeLeafWhite from "@/assets/muzze-leaf-white.png";
 import { addDays, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -117,6 +117,17 @@ export const Screen25Paywall = ({ onContinue }: Screen25PaywallProps) => {
   // Step 2: Timeline and pricing
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* Back button to Step 1 */}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => setStep(1)}
+        className="gap-2 -ml-2"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Voltar
+      </Button>
+
       {/* Title */}
       <div className="text-center">
         <h2 className="text-2xl font-bold">
