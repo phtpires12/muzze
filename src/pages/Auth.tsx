@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
+import muzzeLogo from "@/assets/muzze-logo.png";
 
 const loginSchema = z.object({
   email: z.string().trim().email('Email inválido'),
@@ -98,16 +99,28 @@ const Auth = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/5 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-3xl font-bold text-center bg-gradient-to-r from-accent to-primary bg-clip-text text-transparent">
-            {showResetPassword ? "Recuperar senha" : "Bem-vindo de volta"}
-          </CardTitle>
-          <CardDescription className="text-center">
-            {showResetPassword 
-              ? "Digite seu email para receber o link de recuperação."
-              : "Continue sua jornada de constância criativa."
-            }
-          </CardDescription>
+        <CardHeader className="space-y-4">
+          {/* Muzze Logo */}
+          <div className="relative w-20 h-20 mx-auto">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-accent/30 rounded-full blur-xl animate-pulse" />
+            <img
+              src={muzzeLogo}
+              alt="Muzze Logo"
+              className="relative w-20 h-20 object-contain"
+            />
+          </div>
+          
+          <div className="space-y-1">
+            <CardTitle className="text-3xl font-bold text-center bg-gradient-to-r from-accent to-primary bg-clip-text text-transparent">
+              {showResetPassword ? "Recuperar senha" : "Bem-vindo de volta"}
+            </CardTitle>
+            <CardDescription className="text-center">
+              {showResetPassword 
+                ? "Digite seu email para receber o link de recuperação."
+                : "Continue sua jornada de constância criativa."
+              }
+            </CardDescription>
+          </div>
         </CardHeader>
         <CardContent>
           {showResetPassword ? (
