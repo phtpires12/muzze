@@ -8,6 +8,7 @@ import { ptBR } from "date-fns/locale";
 
 interface Screen25PaywallProps {
   onContinue: () => void;
+  onBack?: () => void;
 }
 
 // Logo Component with gradient background (same style as ReminderBell)
@@ -44,7 +45,7 @@ const ReminderBell = () => (
   </div>
 );
 
-export const Screen25Paywall = ({ onContinue }: Screen25PaywallProps) => {
+export const Screen25Paywall = ({ onContinue, onBack }: Screen25PaywallProps) => {
   const [step, setStep] = useState(1);
   const [showLogo, setShowLogo] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState<"monthly" | "yearly">("yearly");
@@ -68,6 +69,21 @@ export const Screen25Paywall = ({ onContinue }: Screen25PaywallProps) => {
   if (step === 1) {
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-between animate-fade-in py-8">
+        {/* Back button to previous screen */}
+        {onBack && (
+          <div className="self-start w-full">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onBack}
+              className="gap-2 -ml-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Voltar
+            </Button>
+          </div>
+        )}
+
         {/* Animated logo/bell section with crossfade */}
         <div className="flex-1 flex items-center justify-center">
           <div className="relative h-[180px] w-full flex items-center justify-center">
