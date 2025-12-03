@@ -89,9 +89,9 @@ export const AutoHideNav = () => {
             <Button
               size="icon"
               onClick={() => navigate('/session')}
-              className="h-14 w-14 rounded-full shadow-lg bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-all duration-300"
+              className="h-12 w-12 rounded-full shadow-lg bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-all duration-300"
             >
-              <img src={muzzeLeafWhite} alt="Criar" className="w-10 h-10 object-contain" />
+              <img src={muzzeLeafWhite} alt="Criar" className="w-8 h-8 object-contain" />
             </Button>
 
             {/* Right navigation items */}
