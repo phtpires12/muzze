@@ -121,6 +121,9 @@ export const BottomNav = () => {
       clearTimeout(longPressTimer.current);
     }
     if (!isLongPress) {
+      // Limpar estado de sessão órfã antes de navegar
+      // Isso garante que o modal de seleção de etapas será exibido
+      localStorage.removeItem('muzze_session_state');
       navigate('/session');
     }
   };
