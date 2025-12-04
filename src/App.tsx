@@ -29,6 +29,7 @@ import NotFound from "./pages/NotFound";
 import Levels from "./pages/Levels";
 import Ofensiva from "./pages/Ofensiva";
 import DevTools from "./pages/DevTools";
+import Install from "./pages/Install";
 import { LevelUpModal } from "./components/LevelUpModal";
 import { TrophyUnlockedModal } from "./components/TrophyUnlockedModal";
 
@@ -144,6 +145,7 @@ const App = () => {
           <Route path="/auth" element={<Auth />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/onboarding" element={<Onboarding />} />
+          <Route path="/install" element={<Install />} />
           <Route path="/" element={<ProtectedRoute><Layout><Index /></Layout></ProtectedRoute>} />
           <Route path="/novidades" element={<ProtectedRoute><Layout><Novidades /></Layout></ProtectedRoute>} />
           <Route path="/calendario" element={<ProtectedRoute><Layout><CalendarioEditorial /></Layout></ProtectedRoute>} />
