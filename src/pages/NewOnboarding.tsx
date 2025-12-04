@@ -35,6 +35,7 @@ import { Screen22Snapshot } from "@/components/onboarding/screens/phase6/Screen2
 import { Screen23Notifications } from "@/components/onboarding/screens/phase6/Screen23Notifications";
 import { Screen24Review } from "@/components/onboarding/screens/phase6/Screen24Review";
 import { Screen25Paywall } from "@/components/onboarding/screens/phase6/Screen25Paywall";
+import { Screen26Install } from "@/components/onboarding/screens/phase6/Screen26Install";
 
 const NewOnboarding = () => {
   const navigate = useNavigate();
@@ -103,6 +104,10 @@ const NewOnboarding = () => {
     nextScreen();
   };
 
+  const handlePaywallComplete = () => {
+    nextScreen(); // Go to install screen
+  };
+
   const handleComplete = async () => {
     const success = await completeOnboarding();
     if (success) {
@@ -169,13 +174,14 @@ const NewOnboarding = () => {
       if (screen === 1) return !!data.creation_time;
     }
 
-    // Phase 5 (Signup + Snapshot + Paywall)
+    // Phase 5 (Signup + Snapshot + Paywall + Install)
     if (phase === 5) {
       if (screen === 0) return false; // Signup handled separately
       if (screen === 1) return true; // Snapshot
       if (screen === 2) return false; // Notifications (button handles)
       if (screen === 3) return false; // Review (button handles)
-      if (screen === 4) return false; // Paywall (button handles completion)
+      if (screen === 4) return false; // Paywall (button handles)
+      if (screen === 5) return false; // Install (button handles completion)
     }
 
     return true;
@@ -379,7 +385,10 @@ const NewOnboarding = () => {
         return <Screen24Review onSkip={nextScreen} />;
       }
       if (screen === 4) {
-        return <Screen25Paywall onContinue={handleComplete} onBack={handleBack} />;
+        return <Screen25Paywall onContinue={handlePaywallComplete} onBack={handleBack} />;
+      }
+      if (screen === 5) {
+        return <Screen26Install onContinue={handleComplete} />;
       }
     }
 
@@ -395,8 +404,8 @@ const NewOnboarding = () => {
 
   const showProgress = state.phase > 0 || state.screen > 1;
   // Mostrar botão de voltar em todas as telas exceto a primeira
-  // Esconde botão voltar na primeira tela e no Paywall (navegação interna)
-  const showBack = !(state.phase === 0 && state.screen === 0) && !(state.phase === 5 && state.screen === 4);
+  // Esconde botão voltar na primeira tela, no Paywall e no Install (navegação interna)
+  const showBack = !(state.phase === 0 && state.screen === 0) && !(state.phase === 5 && state.screen === 4) && !(state.phase === 5 && state.screen === 5);
   const showContinueButton =
     (state.phase === 0 && (state.screen === 2 || state.screen === 3)) ||
     (state.phase === 1 && state.screen >= 0 && state.screen <= 4) ||
