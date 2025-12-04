@@ -160,8 +160,8 @@ const App = () => {
           <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
           <Route path="/send-suggestions" element={<ProtectedRoute><Layout><SendSuggestions /></Layout></ProtectedRoute>} />
           <Route path="/help" element={<ProtectedRoute><Layout><Help /></Layout></ProtectedRoute>} />
-          <Route path="/terms" element={<ProtectedRoute><Layout><TermsOfUse /></Layout></ProtectedRoute>} />
-          <Route path="/privacy" element={<ProtectedRoute><Layout><PrivacyPolicy /></Layout></ProtectedRoute>} />
+          <Route path="/terms" element={<TermsOfUse />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/levels" element={<ProtectedRoute><Levels /></ProtectedRoute>} />
           <Route path="/ofensiva" element={<ProtectedRoute><Ofensiva /></ProtectedRoute>} />
           <Route path="/dev-tools" element={<ProtectedRoute><Layout><DevTools /></Layout></ProtectedRoute>} />
