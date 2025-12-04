@@ -15,7 +15,7 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["muzze-favicon.png", "muzze-logo.png"],
+      includeAssets: ["muzze-logo.png"],
       manifest: {
         name: "Muzze - Organize sua Criatividade",
         short_name: "Muzze",
@@ -47,6 +47,7 @@ export default defineConfig(({ mode }) => ({
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+        globIgnores: ["**/muzze-favicon.png"],
         importScripts: ["/firebase-messaging-sw.js"],
         runtimeCaching: [
           {
