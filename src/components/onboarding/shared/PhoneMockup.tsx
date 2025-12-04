@@ -5,7 +5,7 @@ import macbookMockupVideo from "@/assets/muzze-macbook-mockup.mp4";
 // Desktop mockup - simple video without frame
 const DesktopMockup = () => {
   return (
-    <div className="mx-auto w-[520px]">
+    <div className="mx-auto max-w-[1080px] w-full">
       <video
         src={macbookMockupVideo}
         autoPlay
