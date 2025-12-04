@@ -59,8 +59,9 @@ const NewOnboarding = () => {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) {
-        // Only check auth for phase 5 onwards (signup phase)
-        if (state.phase >= 5) {
+        // Only redirect to auth if past the signup screen (phase 5, screen 0)
+        // Screen 0 of phase 5 IS the signup screen, so allow access
+        if (state.phase >= 5 && state.screen > 0) {
           navigate("/auth");
         }
       } else {
@@ -68,7 +69,7 @@ const NewOnboarding = () => {
       }
     };
     checkAuth();
-  }, [navigate, trackEvent, state.phase]);
+  }, [navigate, trackEvent, state.phase, state.screen]);
 
   // Auto-skip Screen24Review (Review/Rating) on non-mobile devices
   // App Store review only makes sense on mobile
