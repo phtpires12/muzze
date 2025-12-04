@@ -31,10 +31,16 @@ const PWAInstallPrompt = ({ variant = "popup", onDismiss }: PWAInstallPromptProp
     const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent);
     setIsIOS(isIOSDevice);
 
-    // Capture the install prompt event
+    // Verificar se evento já foi capturado globalmente (em main.tsx)
+    if ((window as any).deferredPrompt) {
+      setDeferredPrompt((window as any).deferredPrompt);
+    }
+
+    // Continuar escutando por novos eventos
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
+      (window as any).deferredPrompt = e;
     };
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
@@ -62,6 +68,7 @@ const PWAInstallPrompt = ({ variant = "popup", onDismiss }: PWAInstallPromptProp
         setIsInstalled(true);
       }
       setDeferredPrompt(null);
+      (window as any).deferredPrompt = null; // Limpar referência global
     } else {
       // Fallback for iOS, Safari/Mac, and any browser without native install support
       window.location.href = "/install";
