@@ -412,7 +412,8 @@ const NewOnboarding = () => {
     (state.phase === 1 && state.screen >= 0 && state.screen <= 4) ||
     (state.phase === 2 && state.screen >= 0 && state.screen <= 4) ||
     (state.phase === 3 && state.screen >= 0 && state.screen <= 4) ||
-    (state.phase === 4 && state.screen === 1);
+    (state.phase === 4 && state.screen === 1) ||
+    (state.phase === 5 && state.screen === 1); // Snapshot - botão Continuar
 
   return (
     <OnboardingLayout
