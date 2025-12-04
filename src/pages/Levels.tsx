@@ -68,7 +68,7 @@ export default function Levels() {
 
               <div className="text-right">
                 <div className="text-3xl font-bold text-primary">
-                  {Math.round(progress)}%
+                  {Math.floor(progress)}%
                 </div>
                 <p className="text-xs text-muted-foreground">progresso</p>
               </div>

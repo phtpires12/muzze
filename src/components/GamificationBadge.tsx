@@ -36,7 +36,7 @@ export const GamificationBadge = () => {
           </div>
           
           <div className="text-2xl font-bold text-primary">
-            {Math.round(progress)}%
+            {Math.floor(progress)}%
           </div>
         </div>
         
@@ -44,7 +44,7 @@ export const GamificationBadge = () => {
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span>Próximo: {nextLevel.name}</span>
-              <span>{Math.round(progress)}%</span>
+              <span>{Math.floor(progress)}%</span>
             </div>
             <div className="h-2 bg-secondary rounded-full overflow-hidden">
               <div

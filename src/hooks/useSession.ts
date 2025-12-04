@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { POINTS, calculateXPFromMinutes } from "@/lib/gamification";
+import { POINTS, calculateXPFromMinutes, calculateLevelByXP, getLevelInfo } from "@/lib/gamification";
 
 export type SessionStage = "idea" | "ideation" | "script" | "review" | "record" | "edit";
 
@@ -340,11 +340,26 @@ export const useSession = (options: UseSessionOptions = {}) => {
         .eq('user_id', user.id)
         .single();
 
+      const previousXP = profile?.xp_points || 0;
+      const newXP = previousXP + xpGained;
+
+      // Calculate levels before and after XP update
+      const previousLevel = calculateLevelByXP(previousXP);
+      const newLevel = calculateLevelByXP(newXP);
+
       if (profile) {
         await supabase
           .from('profiles')
-          .update({ xp_points: (profile.xp_points || 0) + xpGained })
+          .update({ xp_points: newXP })
           .eq('user_id', user.id);
+      }
+
+      // Dispatch level up celebration if user leveled up
+      if (newLevel > previousLevel) {
+        const levelInfo = getLevelInfo(newLevel);
+        window.dispatchEvent(new CustomEvent('levelUp', { 
+          detail: { level: newLevel, levelInfo } 
+        }));
       }
 
       // Show XP gained toast
