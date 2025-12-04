@@ -1,8 +1,9 @@
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Download } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "next-themes";
 import { useNotifications } from "@/hooks/useNotifications";
@@ -12,6 +13,7 @@ const Settings = () => {
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
   const { profile, updateProfile } = useProfile();
+  const [isInstalled, setIsInstalled] = useState(false);
   const { 
     permission, 
     isSupported, 
@@ -21,6 +23,12 @@ const Settings = () => {
   } = useNotifications();
   
   const notificationsEnabled = profile?.notifications_enabled ?? false;
+
+  useEffect(() => {
+    if (window.matchMedia("(display-mode: standalone)").matches) {
+      setIsInstalled(true);
+    }
+  }, []);
   
   const handleNotificationChange = async (checked: boolean) => {
     if (checked) {
@@ -45,7 +53,7 @@ const Settings = () => {
         </div>
       </div>
 
-      <div className="container mx-auto p-4 max-w-2xl">
+      <div className="container mx-auto p-4 max-w-2xl space-y-4">
         <Card>
           <CardHeader>
             <CardTitle>Preferências</CardTitle>
@@ -75,6 +83,27 @@ const Settings = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* PWA Install Card - only shows if not installed */}
+        {!isInstalled && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Instalar Aplicativo</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Instale a Muzze na sua tela inicial para acesso rápido e uma experiência melhor.
+              </p>
+              <Button 
+                onClick={() => navigate('/install')} 
+                className="w-full gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Instalar Muzze
+              </Button>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
