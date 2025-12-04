@@ -30,7 +30,7 @@ const initialContext: MuzzeSessionType = {
   contentId: null,
 };
 
-const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
+const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
 
 // Limpar sessões órfãs com mais de 24 horas
 const cleanupOrphanSessions = () => {
@@ -42,7 +42,7 @@ const cleanupOrphanSessions = () => {
       const lastUpdate = parsed.lastUpdateTime || parsed.startTime;
       if (lastUpdate) {
         const age = Date.now() - lastUpdate;
-        if (age > TWENTY_FOUR_HOURS_MS) {
+        if (age > TWO_HOURS_MS) {
           console.log('[SessionContext] Removendo sessão órfã (muzze_session_state) com mais de 24h');
           localStorage.removeItem('muzze_session_state');
         }
@@ -56,7 +56,7 @@ const cleanupOrphanSessions = () => {
       // Se tiver um contentId mas não tiver atividade recente, limpar
       if (parsed.contentId && parsed.lastActivity) {
         const age = Date.now() - parsed.lastActivity;
-        if (age > TWENTY_FOUR_HOURS_MS) {
+        if (age > TWO_HOURS_MS) {
           console.log('[SessionContext] Removendo contexto órfão (muzze_session_context) com mais de 24h');
           localStorage.removeItem('muzze_session_context');
         }
