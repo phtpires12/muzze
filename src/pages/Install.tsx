@@ -60,13 +60,11 @@ export default function Install() {
       {/* Content */}
       <div className="flex-1 flex flex-col items-center justify-center p-6 space-y-8">
         {/* Logo */}
-        <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg">
-          <img 
-            src="/muzze-favicon.png" 
-            alt="Muzze" 
-            className="w-16 h-16 object-contain"
-          />
-        </div>
+        <img 
+          src="/muzze-logo-install.png" 
+          alt="Muzze" 
+          className="w-24 h-24 rounded-2xl shadow-lg object-cover"
+        />
         
         {/* Title */}
         <div className="text-center space-y-2">
