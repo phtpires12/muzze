@@ -39,7 +39,21 @@ const Auth = () => {
     const checkUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        navigate("/");
+        // Verificar se o usuário completou o onboarding
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('first_login')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        
+        // Só redireciona para home se o onboarding foi completado
+        if (profile && profile.first_login === false) {
+          navigate("/");
+        } else {
+          // Se o usuário tem sessão mas não completou onboarding,
+          // faz logout para permitir login com outra conta
+          await supabase.auth.signOut();
+        }
       }
     };
     checkUser();
