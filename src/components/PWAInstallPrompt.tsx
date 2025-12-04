@@ -1,13 +1,10 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Download, X, Smartphone } from "lucide-react";
+import { usePWAInstall } from "@/hooks/usePWAInstall";
 import muzzeLogo from "@/assets/muzze-logo.png";
-
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
-}
 
 interface PWAInstallPromptProps {
   variant?: "popup" | "inline";
@@ -15,36 +12,11 @@ interface PWAInstallPromptProps {
 }
 
 const PWAInstallPrompt = ({ variant = "popup", onDismiss }: PWAInstallPromptProps) => {
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [isInstalled, setIsInstalled] = useState(false);
+  const navigate = useNavigate();
+  const { isInstallAvailable, isInstalled, triggerInstall } = usePWAInstall();
   const [isVisible, setIsVisible] = useState(true);
-  const [isIOS, setIsIOS] = useState(false);
 
   useEffect(() => {
-    // Check if already installed
-    if (window.matchMedia("(display-mode: standalone)").matches) {
-      setIsInstalled(true);
-      return;
-    }
-
-    // Check if iOS
-    const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    setIsIOS(isIOSDevice);
-
-    // Verificar se evento já foi capturado globalmente (em main.tsx)
-    if ((window as any).deferredPrompt) {
-      setDeferredPrompt((window as any).deferredPrompt);
-    }
-
-    // Continuar escutando por novos eventos
-    const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
-      (window as any).deferredPrompt = e;
-    };
-
-    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
-
     // Check if dismissed recently (don't show for 24h)
     const dismissedAt = localStorage.getItem("pwa_prompt_dismissed");
     if (dismissedAt) {
@@ -54,25 +26,19 @@ const PWAInstallPrompt = ({ variant = "popup", onDismiss }: PWAInstallPromptProp
         setIsVisible(false);
       }
     }
-
-    return () => {
-      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
-    };
   }, []);
 
   const handleInstall = async () => {
-    if (deferredPrompt) {
-      await deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === "accepted") {
-        setIsInstalled(true);
-      }
-      setDeferredPrompt(null);
-      (window as any).deferredPrompt = null; // Limpar referência global
-    } else {
-      // Fallback for iOS, Safari/Mac, and any browser without native install support
-      window.location.href = "/install";
+    // PRIMEIRO: Tentar usar a API nativa
+    if (isInstallAvailable) {
+      await triggerInstall();
+      // Independente de aceitar ou recusar, esconder o prompt
+      setIsVisible(false);
+      return;
     }
+    
+    // FALLBACK: Só redirecionar se a API não estiver disponível (iOS/Safari)
+    navigate("/install");
   };
 
   const handleDismiss = () => {
@@ -81,7 +47,7 @@ const PWAInstallPrompt = ({ variant = "popup", onDismiss }: PWAInstallPromptProp
     onDismiss?.();
   };
 
-  // Don't render if installed or dismissed
+  // Não renderizar se já instalado ou dispensado
   if (isInstalled || !isVisible) return null;
 
   // For inline variant (Settings page), always show if not installed
