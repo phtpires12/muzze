@@ -409,7 +409,7 @@ const Index = () => {
                 Nível {currentLevel} — {currentLevelInfo?.name || "Criador Iniciante"}
               </span>
               <span className="text-xs text-muted-foreground">
-                {Math.round(xpProgress)}%
+                {Math.floor(xpProgress)}%
               </span>
             </div>
             <Progress 
