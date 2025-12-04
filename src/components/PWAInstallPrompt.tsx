@@ -62,8 +62,8 @@ const PWAInstallPrompt = ({ variant = "popup", onDismiss }: PWAInstallPromptProp
         setIsInstalled(true);
       }
       setDeferredPrompt(null);
-    } else if (isIOS) {
-      // For iOS, navigate to install page with instructions
+    } else {
+      // Fallback for iOS, Safari/Mac, and any browser without native install support
       window.location.href = "/install";
     }
   };
