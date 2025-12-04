@@ -30,8 +30,48 @@ const initialContext: MuzzeSessionType = {
   contentId: null,
 };
 
+const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
+
+// Limpar sessões órfãs com mais de 24 horas
+const cleanupOrphanSessions = () => {
+  try {
+    // Limpar muzze_session_state (usado pelo useSession hook)
+    const sessionState = localStorage.getItem('muzze_session_state');
+    if (sessionState) {
+      const parsed = JSON.parse(sessionState);
+      const lastUpdate = parsed.lastUpdateTime || parsed.startTime;
+      if (lastUpdate) {
+        const age = Date.now() - lastUpdate;
+        if (age > TWENTY_FOUR_HOURS_MS) {
+          console.log('[SessionContext] Removendo sessão órfã (muzze_session_state) com mais de 24h');
+          localStorage.removeItem('muzze_session_state');
+        }
+      }
+    }
+
+    // Limpar muzze_session_context se muito antigo (verificar via timestamp interno se existir)
+    const sessionContext = localStorage.getItem('muzze_session_context');
+    if (sessionContext) {
+      const parsed = JSON.parse(sessionContext);
+      // Se tiver um contentId mas não tiver atividade recente, limpar
+      if (parsed.contentId && parsed.lastActivity) {
+        const age = Date.now() - parsed.lastActivity;
+        if (age > TWENTY_FOUR_HOURS_MS) {
+          console.log('[SessionContext] Removendo contexto órfão (muzze_session_context) com mais de 24h');
+          localStorage.removeItem('muzze_session_context');
+        }
+      }
+    }
+  } catch (error) {
+    console.error('[SessionContext] Erro ao limpar sessões órfãs:', error);
+  }
+};
+
 // Carregar estado inicial do localStorage
 const loadInitialState = (): MuzzeSessionType => {
+  // Executar limpeza de sessões órfãs antes de carregar
+  cleanupOrphanSessions();
+  
   try {
     const saved = localStorage.getItem('muzze_session_context');
     if (saved) {
