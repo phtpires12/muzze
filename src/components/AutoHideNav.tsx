@@ -88,7 +88,10 @@ export const AutoHideNav = () => {
             {/* Center session button */}
             <Button
               size="icon"
-              onClick={() => navigate('/session')}
+              onClick={() => {
+                localStorage.removeItem('muzze_session_state');
+                navigate('/session');
+              }}
               className="h-12 w-12 rounded-full shadow-lg bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-all duration-300"
             >
               <img src={muzzeLeafWhite} alt="Criar" className="w-8 h-8 object-contain" />
