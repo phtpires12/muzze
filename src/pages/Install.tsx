@@ -2,58 +2,25 @@ import { Button } from "@/components/ui/button";
 import { Download, Share, Plus, MoreVertical, Check, ArrowLeft } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
-}
+import { usePWAInstall } from "@/hooks/usePWAInstall";
 
 export default function Install() {
   const navigate = useNavigate();
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [isInstalled, setIsInstalled] = useState(false);
+  const { isInstallAvailable, isInstalled, triggerInstall } = usePWAInstall();
   const [isIOS, setIsIOS] = useState(false);
-  const [isAndroid, setIsAndroid] = useState(false);
 
   useEffect(() => {
     // Detectar plataforma
     const userAgent = navigator.userAgent.toLowerCase();
     const iOS = /ipad|iphone|ipod/.test(userAgent);
-    const android = /android/.test(userAgent);
     setIsIOS(iOS);
-    setIsAndroid(android);
-
-    // Detectar se já está instalado (modo standalone)
-    if (window.matchMedia("(display-mode: standalone)").matches) {
-      setIsInstalled(true);
-    }
-
-    // Capturar evento de instalação (Chrome/Android)
-    const handler = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
-    };
-    window.addEventListener("beforeinstallprompt", handler);
-
-    // Detectar quando foi instalado
-    window.addEventListener("appinstalled", () => {
-      setIsInstalled(true);
-      setDeferredPrompt(null);
-    });
-
-    return () => {
-      window.removeEventListener("beforeinstallprompt", handler);
-    };
   }, []);
 
   const handleInstall = async () => {
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === "accepted") {
-        setIsInstalled(true);
-      }
-      setDeferredPrompt(null);
+    const installed = await triggerInstall();
+    if (installed) {
+      // Sucesso - navegar para home após instalação
+      navigate("/");
     }
   };
 
@@ -132,7 +99,17 @@ export default function Install() {
         </div>
 
         {/* Installation Instructions */}
-        {isIOS ? (
+        {isInstallAvailable ? (
+          // Botão de instalação direta quando API disponível
+          <Button 
+            onClick={handleInstall} 
+            size="lg" 
+            className="gap-2 w-full max-w-sm"
+          >
+            <Download className="w-5 h-5" />
+            Instalar Agora
+          </Button>
+        ) : isIOS ? (
           // Instruções para iOS (Safari)
           <div className="bg-card border border-border rounded-xl p-6 space-y-4 max-w-sm w-full">
             <h2 className="font-semibold text-foreground">Como instalar no iPhone/iPad:</h2>
@@ -163,27 +140,17 @@ export default function Install() {
               </li>
             </ol>
           </div>
-        ) : deferredPrompt ? (
-          // Botão de instalação para Android/Chrome
-          <Button 
-            onClick={handleInstall} 
-            size="lg" 
-            className="gap-2 w-full max-w-sm"
-          >
-            <Download className="w-5 h-5" />
-            Instalar Agora
-          </Button>
         ) : (
-          // Instruções para Android (Chrome) quando prompt não disponível
+          // Instruções para Android/Desktop (Chrome) quando prompt não disponível
           <div className="bg-card border border-border rounded-xl p-6 space-y-4 max-w-sm w-full">
-            <h2 className="font-semibold text-foreground">Como instalar no Android:</h2>
+            <h2 className="font-semibold text-foreground">Como instalar:</h2>
             <ol className="space-y-4 text-sm">
               <li className="flex items-start gap-3">
                 <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shrink-0">
                   1
                 </span>
                 <span className="text-foreground">
-                  Toque no menu <MoreVertical className="inline w-4 h-4 mx-1" /> no canto superior direito do Chrome
+                  Toque no menu <MoreVertical className="inline w-4 h-4 mx-1" /> no canto superior direito do navegador
                 </span>
               </li>
               <li className="flex items-start gap-3">
