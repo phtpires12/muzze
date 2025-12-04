@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Flame, Clock, Trophy, Lightbulb, Zap, Film, Mic, Scissors, AlertCircle, Lock, Sparkles, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 import {
   Dialog,
   DialogContent,
@@ -753,6 +754,8 @@ const Index = () => {
         </DialogContent>
       </Dialog>
 
+      {/* PWA Install Prompt */}
+      <PWAInstallPrompt variant="popup" />
 
       <BottomNav />
     </div>

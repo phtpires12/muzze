@@ -3,12 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Download } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "next-themes";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useProfile } from "@/hooks/useProfile";
-
+import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 const Settings = () => {
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
@@ -84,26 +84,8 @@ const Settings = () => {
           </CardContent>
         </Card>
 
-        {/* PWA Install Card - only shows if not installed */}
-        {!isInstalled && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Instalar Aplicativo</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                Instale a Muzze na sua tela inicial para acesso rápido e uma experiência melhor.
-              </p>
-              <Button 
-                onClick={() => navigate('/install')} 
-                className="w-full gap-2"
-              >
-                <Download className="w-4 h-4" />
-                Instalar Muzze
-              </Button>
-            </CardContent>
-          </Card>
-        )}
+        {/* PWA Install - only shows if not installed */}
+        {!isInstalled && <PWAInstallPrompt variant="inline" />}
       </div>
     </div>
   );
