@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Download, Smartphone, Wifi, Bell, Zap } from "lucide-react";
-import muzzeLogo from "@/assets/muzze-logo.png";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -61,9 +60,11 @@ export const Screen26Install = ({ onContinue }: Screen26InstallProps) => {
   if (isInstalled) {
     return (
       <div className="text-center space-y-8 py-8">
-        <div className="w-20 h-20 mx-auto bg-gradient-to-br from-primary to-accent rounded-3xl flex items-center justify-center shadow-lg">
-          <img src={muzzeLogo} alt="Muzze" className="w-12 h-12" />
-        </div>
+        <img 
+          src="/muzze-logo-install.png" 
+          alt="Muzze" 
+          className="w-20 h-20 mx-auto rounded-3xl shadow-lg object-cover"
+        />
         
         <div className="space-y-2">
           <h1 className="text-2xl font-bold">App Instalado! ✓</h1>
@@ -81,9 +82,11 @@ export const Screen26Install = ({ onContinue }: Screen26InstallProps) => {
 
   return (
     <div className="text-center space-y-6 py-4">
-      <div className="w-20 h-20 mx-auto bg-gradient-to-br from-primary to-accent rounded-3xl flex items-center justify-center shadow-lg">
-        <img src={muzzeLogo} alt="Muzze" className="w-12 h-12" />
-      </div>
+      <img 
+        src="/muzze-logo-install.png" 
+        alt="Muzze" 
+        className="w-20 h-20 mx-auto rounded-3xl shadow-lg object-cover"
+      />
       
       <div className="space-y-2">
         <h1 className="text-2xl font-bold">Instale a Muzze</h1>
