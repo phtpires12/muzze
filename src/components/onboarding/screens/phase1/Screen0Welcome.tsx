@@ -1,37 +1,57 @@
 import { Button } from "@/components/ui/button";
+import { PhoneMockup } from "@/components/onboarding/shared/PhoneMockup";
 import muzzeLogo from "@/assets/muzze-logo.png";
 
 interface Screen0WelcomeProps {
   onContinue: () => void;
+  onLogin: () => void;
 }
 
-export const Screen0Welcome = ({ onContinue }: Screen0WelcomeProps) => {
+export const Screen0Welcome = ({ onContinue, onLogin }: Screen0WelcomeProps) => {
   return (
-    <div className="text-center space-y-6 animate-fade-in">
-      <div className="relative w-32 h-32 mx-auto mb-4">
-        {/* Glow effect */}
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-accent/30 rounded-full blur-xl animate-pulse" />
+    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-120px)] px-4 animate-fade-in">
+      {/* Logo at top */}
+      <div className="mb-6">
         <img
           src={muzzeLogo}
           alt="Muzze Logo"
-          className="relative w-32 h-32 object-contain"
+          className="w-16 h-16 sm:w-20 sm:h-20 object-contain"
         />
       </div>
-      <div className="space-y-2">
-        <h1 className="text-5xl font-bold bg-gradient-to-r from-accent to-primary bg-clip-text text-transparent">
+
+      {/* Phone Mockup */}
+      <div className="mb-8">
+        <PhoneMockup />
+      </div>
+
+      {/* Text content */}
+      <div className="text-center space-y-2 mb-8">
+        <h1 className="text-3xl sm:text-4xl font-bold text-foreground">
           Bem-vindo à Muzze.
         </h1>
-        <p className="text-xl text-foreground">
+        <p className="text-lg sm:text-xl text-muted-foreground">
           O app que organiza sua criatividade.
         </p>
       </div>
-      <Button
-        size="lg"
-        onClick={onContinue}
-        className="mt-6 h-14 px-12 text-lg"
-      >
-        Começar
-      </Button>
+
+      {/* Buttons */}
+      <div className="w-full max-w-sm space-y-3">
+        <Button
+          size="lg"
+          onClick={onContinue}
+          className="w-full h-14 text-lg font-semibold"
+        >
+          Começar
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onLogin}
+          className="w-full text-muted-foreground hover:text-foreground"
+        >
+          Já tem uma conta? Entre!
+        </Button>
+      </div>
     </div>
   );
 };

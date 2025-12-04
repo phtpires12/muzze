@@ -85,6 +85,10 @@ const NewOnboarding = () => {
     prevScreen();
   };
 
+  const handleLogin = () => {
+    navigate("/auth");
+  };
+
   const handleAcceptDefaultGoal = () => {
     updateData({ daily_goal_minutes: 25 });
     nextScreen();
@@ -182,7 +186,7 @@ const NewOnboarding = () => {
 
     // Phase 0: Hook + Dream Outcome
     if (phase === 0) {
-      if (screen === 0) return <Screen0Welcome onContinue={handleContinue} />;
+      if (screen === 0) return <Screen0Welcome onContinue={handleContinue} onLogin={handleLogin} />;
       if (screen === 1) return <Screen1Methodology onContinue={handleContinue} />;
       if (screen === 2) {
         return (
