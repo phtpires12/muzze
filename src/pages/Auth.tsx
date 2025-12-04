@@ -14,6 +14,18 @@ const loginSchema = z.object({
   password: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres'),
 });
 
+const translateAuthError = (error: string): string => {
+  const errorMap: Record<string, string> = {
+    'User already registered': 'Este email já está cadastrado. Tente fazer login.',
+    'Invalid login credentials': 'Email ou senha incorretos.',
+    'Email not confirmed': 'Por favor, confirme seu email antes de entrar.',
+    'Password should be at least 6 characters': 'A senha deve ter no mínimo 6 caracteres.',
+    'Signup requires a valid password': 'A senha deve ter no mínimo 6 caracteres.',
+    'Unable to validate email address: invalid format': 'Formato de email inválido.',
+  };
+  return errorMap[error] || error || 'Ocorreu um erro. Tente novamente.';
+};
+
 const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -59,7 +71,7 @@ const Auth = () => {
     } catch (error: any) {
       toast({
         title: "Erro ao entrar",
-        description: error.message,
+        description: translateAuthError(error.message),
         variant: "destructive",
       });
     } finally {
