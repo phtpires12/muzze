@@ -37,7 +37,7 @@ const ShotListReview = () => {
     endSession,
     saveCurrentStageTime,
   } = useSession({ 
-    attachBeforeUnloadListener: true 
+    attachBeforeUnloadListener: false 
   });
   
   const isAppVisible = useAppVisibility();
