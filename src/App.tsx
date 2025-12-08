@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { BottomNav } from "@/components/BottomNav";
+import { SessionContextProvider } from "@/contexts/SessionContext";
 import Onboarding from "./pages/NewOnboarding";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
@@ -111,16 +112,32 @@ const App = () => {
   useEffect(() => {
     const cleanupOrphanSession = () => {
       try {
-        const saved = localStorage.getItem('muzze_session_state');
-        if (saved) {
-          const parsed = JSON.parse(saved);
+        // Limpar chave antiga
+        const savedOld = localStorage.getItem('muzze_session_state');
+        if (savedOld) {
+          const parsed = JSON.parse(savedOld);
           if (parsed.startedAt) {
             const startedAt = new Date(parsed.startedAt);
             const hoursAgo = (Date.now() - startedAt.getTime()) / (1000 * 60 * 60);
             
             if (hoursAgo > 2) {
               localStorage.removeItem('muzze_session_state');
-              console.log('[App] Sessão órfã removida na inicialização');
+              console.log('[App] Sessão órfã antiga removida na inicialização');
+            }
+          }
+        }
+        
+        // Limpar chave nova do timer global
+        const savedNew = localStorage.getItem('muzze_global_timer');
+        if (savedNew) {
+          const parsed = JSON.parse(savedNew);
+          if (parsed.startedAt) {
+            const startedAt = new Date(parsed.startedAt);
+            const hoursAgo = (Date.now() - startedAt.getTime()) / (1000 * 60 * 60);
+            
+            if (hoursAgo > 2) {
+              localStorage.removeItem('muzze_global_timer');
+              console.log('[App] Timer global órfão removido na inicialização');
             }
           }
         }
@@ -134,14 +151,15 @@ const App = () => {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        {/* Modals must be inside BrowserRouter to use useNavigate */}
-        <BrowserRouter>
-          <LevelUpModal />
-          <TrophyUnlockedModal />
-          <Routes>
+      <SessionContextProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          {/* Modals must be inside BrowserRouter to use useNavigate */}
+          <BrowserRouter>
+            <LevelUpModal />
+            <TrophyUnlockedModal />
+            <Routes>
           <Route path="/auth" element={<Auth />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/onboarding" element={<Onboarding />} />
@@ -168,8 +186,9 @@ const App = () => {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+        </TooltipProvider>
+      </SessionContextProvider>
+    </QueryClientProvider>
   );
 };
 
