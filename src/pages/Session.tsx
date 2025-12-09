@@ -335,6 +335,41 @@ const Session = () => {
           <BrainstormWorkspace />
         </div>
 
+        {/* Floating Draggable Timer (in-app) - Hidden when user leaves app */}
+        {!isOpen && (
+          <DraggableSessionTimer
+            stage={currentStage!.label}
+            icon={currentStage!.iconName}
+            elapsedSeconds={session.elapsedSeconds}
+            targetSeconds={session.targetSeconds}
+            isStreakMode={session.isStreakMode}
+            dailyGoalMinutes={session.dailyGoalMinutes}
+            isPaused={session.isPaused}
+            onPause={pauseSession}
+            onResume={resumeSession}
+            onStop={handleEnd}
+            progress={progress}
+          />
+        )}
+
+        {/* Timer in External Popup Window */}
+        <Portal>
+          <DraggableSessionTimer
+            stage={currentStage!.label}
+            icon={currentStage!.iconName}
+            elapsedSeconds={session.elapsedSeconds}
+            targetSeconds={session.targetSeconds}
+            isStreakMode={session.isStreakMode}
+            dailyGoalMinutes={session.dailyGoalMinutes}
+            isPaused={session.isPaused}
+            onPause={pauseSession}
+            onResume={resumeSession}
+            onStop={handleEnd}
+            progress={progress}
+            isPopup={true}
+          />
+        </Portal>
+
         {/* Auto-hide Navigation */}
         <AutoHideNav />
 
