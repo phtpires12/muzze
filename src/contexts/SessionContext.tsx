@@ -11,6 +11,7 @@ export interface TimerState {
   elapsedSeconds: number; // Timer GLOBAL - não reseta ao mudar de etapa
   stageElapsedSeconds: number; // Timer da etapa atual - reseta ao mudar
   startedAt: Date | null;
+  lastActivityAt: Date | null; // Última interação do usuário
   sessionId: string | null;
   targetSeconds: number; // Meta fixa de 25 min (para streak)
   isStreakMode: boolean; // Modo ofensiva (após 25 min)
@@ -35,6 +36,7 @@ interface SessionContextValue {
   changeTimerStage: (newStage: SessionStage) => Promise<void>;
   setContentId: (id: string | null) => void;
   saveStageTime: () => Promise<void>;
+  validateSessionFreshness: () => boolean;
   
   // Backward compatibility
   muzzeSession: MuzzeSessionType;
@@ -57,6 +59,7 @@ const defaultTimerState: TimerState = {
   elapsedSeconds: 0,
   stageElapsedSeconds: 0,
   startedAt: null,
+  lastActivityAt: null,
   sessionId: null,
   targetSeconds: 25 * 60,
   isStreakMode: false,
@@ -64,31 +67,68 @@ const defaultTimerState: TimerState = {
   contentId: null,
 };
 
-// Carregar estado inicial do localStorage
+// Verificar se sessão é órfã baseado em lastActivityAt
+const isSessionOrphan = (state: TimerState): boolean => {
+  if (!state.isActive) return false;
+  
+  // Usar lastActivityAt se disponível, senão startedAt
+  const lastActivity = state.lastActivityAt 
+    ? new Date(state.lastActivityAt) 
+    : state.startedAt 
+      ? new Date(state.startedAt) 
+      : null;
+  
+  if (!lastActivity) return false;
+  
+  const age = Date.now() - lastActivity.getTime();
+  return age > TWO_HOURS_MS;
+};
+
+// Carregar estado inicial do localStorage COM validação de órfãos
 const loadTimerState = (): TimerState => {
   try {
+    // Limpar chave antiga também
+    const savedOld = localStorage.getItem('muzze_session_state');
+    if (savedOld) {
+      try {
+        const parsedOld = JSON.parse(savedOld);
+        if (parsedOld.startedAt) {
+          const startedAt = new Date(parsedOld.startedAt);
+          const age = Date.now() - startedAt.getTime();
+          if (age > TWO_HOURS_MS) {
+            localStorage.removeItem('muzze_session_state');
+            console.log('[SessionContext] Chave antiga órfã removida');
+          }
+        }
+      } catch {
+        localStorage.removeItem('muzze_session_state');
+      }
+    }
+
     const saved = localStorage.getItem('muzze_global_timer');
     if (saved) {
       const parsed = JSON.parse(saved);
       
-      // Verificar se a sessão é órfã (muito antiga)
+      // Converter datas de string para Date
       if (parsed.startedAt) {
-        const startedAt = new Date(parsed.startedAt);
-        const age = Date.now() - startedAt.getTime();
-        
-        if (age > TWO_HOURS_MS) {
-          console.log('[SessionContext] Timer órfão detectado, resetando...');
-          localStorage.removeItem('muzze_global_timer');
-          return defaultTimerState;
-        }
-        
-        parsed.startedAt = startedAt;
+        parsed.startedAt = new Date(parsed.startedAt);
+      }
+      if (parsed.lastActivityAt) {
+        parsed.lastActivityAt = new Date(parsed.lastActivityAt);
+      }
+      
+      // Verificar se a sessão é órfã
+      if (isSessionOrphan(parsed)) {
+        console.log('[SessionContext] Timer órfão detectado no carregamento, resetando...');
+        localStorage.removeItem('muzze_global_timer');
+        return defaultTimerState;
       }
       
       return parsed;
     }
   } catch (error) {
     console.error('[SessionContext] Error loading timer state:', error);
+    localStorage.removeItem('muzze_global_timer');
   }
   return defaultTimerState;
 };
@@ -101,6 +141,40 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
   const stageStartRef = useRef<Date | null>(null);
   const autoSaveIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Validar frescor da sessão - retorna true se válida, false se foi resetada
+  const validateSessionFreshness = useCallback((): boolean => {
+    if (!timer.isActive) return true;
+    
+    if (isSessionOrphan(timer)) {
+      console.log('[SessionContext] Sessão órfã detectada via validateSessionFreshness');
+      setTimer(defaultTimerState);
+      localStorage.removeItem('muzze_global_timer');
+      return false;
+    }
+    
+    return true;
+  }, [timer]);
+
+  // Verificar frescor quando o usuário volta ao app
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        if (timer.isActive && isSessionOrphan(timer)) {
+          console.log('[SessionContext] Sessão órfã detectada ao voltar ao app');
+          setTimer(defaultTimerState);
+          localStorage.removeItem('muzze_global_timer');
+          toast({
+            title: "Sessão expirada",
+            description: "Sua sessão anterior expirou. Inicie uma nova.",
+          });
+        }
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [timer, toast]);
+
   // Persistir estado em localStorage sempre que mudar
   useEffect(() => {
     localStorage.setItem('muzze_global_timer', JSON.stringify(timer));
@@ -111,7 +185,7 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
     (window as any).__muzzeSessionContentId = timer.contentId;
   }, [timer.contentId]);
 
-  // Timer tick - incrementa os dois contadores
+  // Timer tick - incrementa os dois contadores E atualiza lastActivityAt
   useEffect(() => {
     if (timer.isActive && !timer.isPaused) {
       intervalRef.current = setInterval(() => {
@@ -137,6 +211,7 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
             elapsedSeconds: newElapsedSeconds,
             stageElapsedSeconds: newStageElapsedSeconds,
             isStreakMode,
+            lastActivityAt: new Date(), // Atualiza a cada tick
           };
         });
       }, 1000);
@@ -199,6 +274,7 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
         setTimer(prev => ({ 
           ...prev, 
           stageElapsedSeconds: 0,
+          lastActivityAt: now,
         }));
       }
     } catch (error) {
@@ -229,6 +305,7 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
         elapsedSeconds: 0,
         stageElapsedSeconds: 0,
         startedAt: now,
+        lastActivityAt: now,
         sessionId: crypto.randomUUID(),
         targetSeconds: 25 * 60,
         isStreakMode: false,
@@ -256,7 +333,8 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
 
   // Pausar timer
   const pauseTimer = useCallback(() => {
-    setTimer(prev => ({ ...prev, isPaused: true }));
+    const now = new Date();
+    setTimer(prev => ({ ...prev, isPaused: true, lastActivityAt: now }));
     toast({
       title: "Sessão pausada",
       description: "Continue quando estiver pronto",
@@ -265,7 +343,8 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
 
   // Retomar timer
   const resumeTimer = useCallback(() => {
-    setTimer(prev => ({ ...prev, isPaused: false }));
+    const now = new Date();
+    setTimer(prev => ({ ...prev, isPaused: false, lastActivityAt: now }));
     toast({
       title: "Sessão retomada",
       description: "Continue criando!",
@@ -310,6 +389,7 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
         ...prev, 
         stage: newStage,
         stageElapsedSeconds: 0,
+        lastActivityAt: now,
         // elapsedSeconds continua! (timer global não reseta)
         // isStreakMode continua! (modo streak persiste)
       }));
@@ -327,7 +407,7 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
 
   // Definir contentId
   const setContentId = useCallback((id: string | null) => {
-    setTimer(prev => ({ ...prev, contentId: id }));
+    setTimer(prev => ({ ...prev, contentId: id, lastActivityAt: new Date() }));
   }, []);
 
   // ============ Backward Compatibility ============
@@ -363,6 +443,7 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
         changeTimerStage,
         setContentId,
         saveStageTime,
+        validateSessionFreshness,
         
         // Backward compatibility
         muzzeSession,

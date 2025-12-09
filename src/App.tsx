@@ -108,46 +108,8 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 
 const App = () => {
-  // Cleanup de sessões órfãs na inicialização
-  useEffect(() => {
-    const cleanupOrphanSession = () => {
-      try {
-        // Limpar chave antiga
-        const savedOld = localStorage.getItem('muzze_session_state');
-        if (savedOld) {
-          const parsed = JSON.parse(savedOld);
-          if (parsed.startedAt) {
-            const startedAt = new Date(parsed.startedAt);
-            const hoursAgo = (Date.now() - startedAt.getTime()) / (1000 * 60 * 60);
-            
-            if (hoursAgo > 2) {
-              localStorage.removeItem('muzze_session_state');
-              console.log('[App] Sessão órfã antiga removida na inicialização');
-            }
-          }
-        }
-        
-        // Limpar chave nova do timer global
-        const savedNew = localStorage.getItem('muzze_global_timer');
-        if (savedNew) {
-          const parsed = JSON.parse(savedNew);
-          if (parsed.startedAt) {
-            const startedAt = new Date(parsed.startedAt);
-            const hoursAgo = (Date.now() - startedAt.getTime()) / (1000 * 60 * 60);
-            
-            if (hoursAgo > 2) {
-              localStorage.removeItem('muzze_global_timer');
-              console.log('[App] Timer global órfão removido na inicialização');
-            }
-          }
-        }
-      } catch (error) {
-        console.error('[App] Erro ao limpar sessão órfã:', error);
-      }
-    };
-    
-    cleanupOrphanSession();
-  }, []);
+  // NOTE: Cleanup de sessões órfãs agora é feito atomicamente no SessionContext.loadTimerState()
+  // Isso garante que a validação acontece ANTES do estado ser carregado na memória
 
   return (
     <QueryClientProvider client={queryClient}>

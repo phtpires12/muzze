@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useSession, SessionStage } from "@/hooks/useSession";
+import { useSessionContext } from "@/contexts/SessionContext";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -66,6 +67,7 @@ const Session = () => {
   const { session, startSession, pauseSession, resumeSession, changeStage, endSession } = useSession({ 
     attachBeforeUnloadListener: true 
   });
+  const { validateSessionFreshness } = useSessionContext();
   const [showSummary, setShowSummary] = useState(false);
   const [summary, setSummary] = useState<any>(null);
   const [showStreakHalo, setShowStreakHalo] = useState(false);
@@ -109,6 +111,17 @@ const Session = () => {
     const exampleTrophy = TROPHIES[0];
     await triggerCelebration(3, 100);
   };
+
+  // Validar frescor da sessão ao montar a página
+  useEffect(() => {
+    const isValid = validateSessionFreshness();
+    if (!isValid) {
+      toast({
+        title: "Sessão anterior expirada",
+        description: "Iniciando uma nova sessão do zero.",
+      });
+    }
+  }, []);
 
   useEffect(() => {
     if (stageParam) {
