@@ -50,7 +50,8 @@ const STAGES: {
   iconName: string;
   color: string;
 }[] = [
-  { id: "idea" as SessionStage, label: "Ideia", icon: Lightbulb, iconName: "Lightbulb", color: "text-yellow-500" },
+  { id: "idea", label: "Ideia", icon: Lightbulb, iconName: "Lightbulb", color: "text-yellow-500" },
+  { id: "ideation", label: "Ideação", icon: Lightbulb, iconName: "Lightbulb", color: "text-yellow-500" },
   { id: "script", label: "Roteiro", icon: FileText, iconName: "FileText", color: "text-blue-500" },
   { id: "review", label: "Revisão", icon: CheckCircle, iconName: "CheckCircle", color: "text-green-500" },
   { id: "record", label: "Gravação", icon: Video, iconName: "Video", color: "text-red-500" },
