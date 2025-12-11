@@ -64,24 +64,24 @@ const getContentTypeColor = (contentType: string | null) => {
 const getCardBackground = (script: Script): string => {
   // Prioridade 1: Status finais de publicação
   if (script.publish_status === "perdido") {
-    return "bg-red-500/10"; // Vermelho translúcido
+    return "bg-red-500/25";
   }
   if (script.publish_status === "postado") {
-    return "bg-green-500/10"; // Verde translúcido
+    return "bg-green-500/25";
   }
   
   // Prioridade 2: Etapas do workflow
   if (script.status === "editing") {
-    return "bg-blue-500/10"; // Azul translúcido
+    return "bg-blue-500/25";
   }
   if (script.status === "recording" || (script.shot_list && script.shot_list.length > 0)) {
-    return "bg-orange-500/10"; // Laranja translúcido
+    return "bg-orange-500/25";
   }
   if (script.status === "review") {
-    return "bg-purple-300/15"; // Lilás translúcido
+    return "bg-purple-300/25";
   }
   if (script.status === "draft" || (script.content && script.content.length > 100)) {
-    return "bg-purple-500/10"; // Roxo translúcido
+    return "bg-purple-500/25";
   }
   
   // Ideação: sem cor (neutro)
@@ -97,6 +97,33 @@ const getStageLabel = (script: Script): string | null => {
   if (script.status === "review") return "Revisão";
   if (script.status === "draft" || (script.content && script.content.length > 100)) return "Roteiro";
   return null; // Ideação não mostra label
+};
+
+// Classes do badge de etapa (cor forte + texto branco)
+const getStageBadgeClasses = (script: Script): string | null => {
+  // Prioridade 1: Status finais de publicação
+  if (script.publish_status === "perdido") {
+    return "bg-red-500/70 text-white border-transparent";
+  }
+  if (script.publish_status === "postado") {
+    return "bg-green-500/70 text-white border-transparent";
+  }
+  
+  // Prioridade 2: Etapas do workflow
+  if (script.status === "editing") {
+    return "bg-blue-500/70 text-white border-transparent";
+  }
+  if (script.status === "recording" || (script.shot_list && script.shot_list.length > 0)) {
+    return "bg-orange-500/70 text-white border-transparent";
+  }
+  if (script.status === "review") {
+    return "bg-purple-400/70 text-white border-transparent";
+  }
+  if (script.status === "draft" || (script.content && script.content.length > 100)) {
+    return "bg-purple-500/70 text-white border-transparent";
+  }
+  
+  return null; // Ideação sem badge colorido
 };
 
 export function CalendarDay({
@@ -242,12 +269,17 @@ export function CalendarDay({
                     {isPosted ? "✅" : "📄"}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="font-medium truncate text-foreground mb-1">
-                      {script.title}
+                    <div className={`font-medium truncate mb-1 ${
+                      script.title?.trim() ? "text-foreground" : "text-muted-foreground"
+                    }`}>
+                      {script.title?.trim() || "Sem título"}
                     </div>
                     <div className="flex flex-wrap gap-1">
                       {stageLabel && (
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                        <Badge 
+                          variant="outline" 
+                          className={`text-[10px] px-1.5 py-0 ${getStageBadgeClasses(script) || ""}`}
+                        >
                           {stageLabel}
                         </Badge>
                       )}
