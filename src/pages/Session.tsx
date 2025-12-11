@@ -31,6 +31,7 @@ import { StreakCelebration } from "@/components/StreakCelebration";
 import { TrophyCelebration } from "@/components/TrophyCelebration";
 import { ScriptEditor } from "@/components/ScriptEditor";
 import { BrainstormWorkspace } from "@/components/brainstorm/BrainstormWorkspace";
+import { IdeaDetail } from "@/components/brainstorm/IdeaDetail";
 import { EditingChecklist } from "@/components/EditingChecklist";
 import { DraggableSessionTimer } from "@/components/DraggableSessionTimer";
 import { AutoHideNav } from "@/components/AutoHideNav";
@@ -331,7 +332,7 @@ const Session = () => {
     );
   }
 
-  // If stage is "idea", show the brainstorm workspace
+  // If stage is "idea", show either the specific idea detail or brainstorm workspace
   if (session.stage === "idea") {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
@@ -345,7 +346,12 @@ const Session = () => {
             Voltar ao Dashboard
           </Button>
 
-          <BrainstormWorkspace />
+          {/* Show IdeaDetail if scriptId is present, otherwise BrainstormWorkspace */}
+          {scriptId ? (
+            <IdeaDetail scriptId={scriptId} />
+          ) : (
+            <BrainstormWorkspace />
+          )}
         </div>
 
         {/* Floating Draggable Timer (in-app) - Hidden when user leaves app */}
