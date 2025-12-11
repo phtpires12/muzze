@@ -13,7 +13,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { PublishStatusBadge, PublishStatus } from "./PublishStatusBadge";
 
 interface Script {
   id: string;
@@ -24,7 +23,7 @@ interface Script {
   created_at: string;
   shot_list: string[];
   status: string | null;
-  publish_status?: PublishStatus | null;
+  publish_status?: string | null;
   published_at?: string | null;
 }
 
@@ -61,21 +60,32 @@ const getContentTypeColor = (contentType: string | null) => {
   }
 };
 
-const getStageInfo = (script: Script): { label: string; color: string } => {
-  // Prioridade: status primeiro, depois inferências
+// Cor do header baseada no status/etapa (prioridade: status final > etapa)
+const getHeaderColor = (script: Script): string => {
+  // Prioridade 1: Status finais de publicação
+  if (script.publish_status === "perdido") {
+    return "bg-red-500";
+  }
+  if (script.publish_status === "postado") {
+    return "bg-green-500";
+  }
+  
+  // Prioridade 2: Etapas do workflow
   if (script.status === "editing") {
-    return { label: "Edição", color: "bg-pink-500" };
+    return "bg-blue-500";
   }
   if (script.status === "recording" || (script.shot_list && script.shot_list.length > 0)) {
-    return { label: "Gravação", color: "bg-orange-500" };
+    return "bg-orange-500";
   }
   if (script.status === "review") {
-    return { label: "Revisão", color: "bg-blue-500" };
+    return "bg-purple-300"; // Lilás
   }
   if (script.status === "draft" || (script.content && script.content.length > 100)) {
-    return { label: "Roteiro", color: "bg-green-500" };
+    return "bg-purple-500"; // Roxo
   }
-  return { label: "Ideação", color: "bg-gray-400" };
+  
+  // Ideação: sem cor
+  return "";
 };
 
 export function CalendarDay({
@@ -192,53 +202,42 @@ export function CalendarDay({
 
       <div className="space-y-1.5">
         {scripts.slice(0, 4).map((script) => {
-          const stageInfo = getStageInfo(script);
+          const headerColor = getHeaderColor(script);
           const isPosted = script.publish_status === "postado";
           return (
             <div
               key={script.id}
               draggable={!isPosted}
               onDragStart={(e) => !isPosted && onDragStart?.(e, script)}
-              className={`group/card relative text-xs p-2 rounded bg-card border border-border/50 cursor-pointer hover:border-border hover:shadow-sm transition-all ${
+              className={`group/card relative text-xs rounded bg-card border border-border/50 cursor-pointer hover:border-border hover:shadow-sm transition-all overflow-hidden ${
                 draggedScript?.id === script.id ? "opacity-50" : ""
               } ${isPosted ? "opacity-75" : ""}`}
               onClick={() => onViewScript?.(script.id)}
             >
-              {/* Publish Status Badge - Top Right */}
-              <div className="absolute top-1 right-6">
-                <PublishStatusBadge 
-                  status={script.publish_status} 
-                  compact 
-                  className="text-[8px] px-1 py-0"
-                />
-              </div>
+              {/* Header colorido baseado no status/etapa */}
+              {headerColor && (
+                <div className={`h-1.5 ${headerColor}`} />
+              )}
               
-              <button
-                className="absolute top-1 right-1 opacity-0 group-hover/card:opacity-100 transition-opacity p-1 rounded hover:bg-destructive/20 z-10"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setScriptToDelete(script);
-                }}
-              >
-                <Trash2 className="w-3 h-3 text-muted-foreground hover:text-destructive" />
-              </button>
-              
-              <div className="flex items-start gap-2">
-                <div className="text-muted-foreground mt-0.5 flex-shrink-0">
-                  {isPosted ? "✅" : "📄"}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium truncate text-foreground mb-1.5">
-                    {script.title}
+              <div className="p-2">
+                <button
+                  className="absolute top-1 right-1 opacity-0 group-hover/card:opacity-100 transition-opacity p-1 rounded hover:bg-destructive/20 z-10"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setScriptToDelete(script);
+                  }}
+                >
+                  <Trash2 className="w-3 h-3 text-muted-foreground hover:text-destructive" />
+                </button>
+                
+                <div className="flex items-start gap-2">
+                  <div className="text-muted-foreground mt-0.5 flex-shrink-0">
+                    {isPosted ? "✅" : "📄"}
                   </div>
-                  <div className="flex flex-wrap gap-1">
-                    {!isPosted && (
-                      <Badge 
-                        className={`${stageInfo.color} text-white text-[10px] px-1.5 py-0 border-0`}
-                      >
-                        {stageInfo.label}
-                      </Badge>
-                    )}
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium truncate text-foreground mb-1">
+                      {script.title}
+                    </div>
                     {script.content_type && (
                       <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
                         {script.content_type}
