@@ -192,6 +192,12 @@ const ShotListRecord = () => {
         // Salvar tempo da sessão
         await saveCurrentStageTime();
         
+        // Update status to 'editing'
+        await supabase
+          .from('scripts')
+          .update({ status: 'editing' })
+          .eq('id', scriptId);
+        
         // Pequeno delay para feedback visual
         setTimeout(() => {
           navigate(`/session?stage=edit&scriptId=${scriptId}`);
@@ -206,11 +212,18 @@ const ShotListRecord = () => {
         });
         setAutoSaveStatus('unsaved');
       }
-    } else {
-      // Já está salvo, salvar tempo e avançar
-      await saveCurrentStageTime();
-      navigate(`/session?stage=edit&scriptId=${scriptId}`);
-    }
+      } else {
+        // Já está salvo, salvar tempo e avançar
+        await saveCurrentStageTime();
+        
+        // Update status to 'editing'
+        await supabase
+          .from('scripts')
+          .update({ status: 'editing' })
+          .eq('id', scriptId);
+        
+        navigate(`/session?stage=edit&scriptId=${scriptId}`);
+      }
   };
 
   // SaveStatusIndicator Component

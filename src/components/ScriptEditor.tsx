@@ -327,6 +327,13 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
       return;
     }
     
+    // Update status in database based on current mode
+    const newStatus = isReviewMode ? 'recording' : 'review';
+    await supabase
+      .from('scripts')
+      .update({ status: newStatus })
+      .eq('id', currentScriptId);
+    
     const url = `/session?stage=${nextStage}&scriptId=${currentScriptId}`;
     
     console.log('[DEBUG - ScriptEditor] Navegando para:', url);

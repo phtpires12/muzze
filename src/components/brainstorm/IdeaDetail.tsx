@@ -152,6 +152,13 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
     if (hasUnsavedChanges) {
       await autoSave();
     }
+    
+    // Update status to 'draft' (script stage)
+    await supabase
+      .from("scripts")
+      .update({ status: "draft" })
+      .eq("id", scriptId);
+    
     // Navigate to script stage
     navigate(`/session?stage=script&scriptId=${scriptId}`);
   };
