@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, FileText, ExternalLink, Loader2 } from "lucide-react";
+import { FileText, ExternalLink, Loader2, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -46,6 +46,12 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
   const [centralIdea, setCentralIdea] = useState("");
   const [referenceUrl, setReferenceUrl] = useState("");
 
+  // Auto-save state
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isInitialLoad = useRef(true);
+
   useEffect(() => {
     loadIdea();
   }, [scriptId]);
@@ -66,6 +72,7 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
         setContentType(data.content_type || "");
         setCentralIdea(data.central_idea || "");
         setReferenceUrl(data.reference_url || "");
+        isInitialLoad.current = false;
       }
     } catch (error) {
       console.error("Error loading idea:", error);
@@ -79,7 +86,8 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
     }
   };
 
-  const saveIdea = async () => {
+  // Auto-save function
+  const autoSave = useCallback(async () => {
     setSaving(true);
     try {
       const { error } = await supabase
@@ -94,28 +102,68 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
 
       if (error) throw error;
 
-      toast({
-        title: "Ideia salva",
-        description: "As alterações foram salvas com sucesso.",
-      });
+      setLastSaved(new Date());
+      setHasUnsavedChanges(false);
     } catch (error) {
-      console.error("Error saving idea:", error);
-      toast({
-        title: "Erro ao salvar",
-        description: "Não foi possível salvar as alterações.",
-        variant: "destructive",
-      });
+      console.error("Auto-save error:", error);
     } finally {
       setSaving(false);
     }
-  };
+  }, [title, contentType, centralIdea, referenceUrl, scriptId]);
+
+  // Debounced auto-save effect
+  useEffect(() => {
+    // Skip on initial load
+    if (isInitialLoad.current || loading || !idea) return;
+
+    setHasUnsavedChanges(true);
+
+    // Clear previous timeout
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    // Schedule new save after 2 seconds
+    saveTimeoutRef.current = setTimeout(() => {
+      autoSave();
+    }, 2000);
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [title, contentType, centralIdea, referenceUrl, loading, idea, autoSave]);
 
   const handleRoteirizar = async () => {
-    // Save current changes first
-    await saveIdea();
+    // Save any pending changes first
+    if (hasUnsavedChanges) {
+      await autoSave();
+    }
     // Navigate to script stage
     navigate(`/session?stage=script&scriptId=${scriptId}`);
   };
+
+  // Save status indicator component
+  const SaveStatus = () => (
+    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+      {saving && (
+        <>
+          <Loader2 className="h-3 w-3 animate-spin" />
+          <span>Salvando...</span>
+        </>
+      )}
+      {!saving && lastSaved && !hasUnsavedChanges && (
+        <>
+          <Check className="h-3 w-3 text-green-500" />
+          <span>Salvo</span>
+        </>
+      )}
+      {!saving && hasUnsavedChanges && (
+        <span className="text-amber-500">Alterações não salvas</span>
+      )}
+    </div>
+  );
 
   if (loading) {
     return (
@@ -145,9 +193,12 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
       <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-xl font-semibold">
-              Desenvolver Ideia
-            </CardTitle>
+            <div className="flex items-center gap-3">
+              <CardTitle className="text-xl font-semibold">
+                Desenvolver Ideia
+              </CardTitle>
+              <SaveStatus />
+            </div>
             {contentType && (
               <Badge variant="secondary" className="text-xs">
                 {contentType}
