@@ -146,7 +146,7 @@ export function PostConfirmationPopup({
   const deleteButton = onDelete && (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <button className="absolute top-4 right-4 p-2 text-muted-foreground hover:text-destructive transition-colors rounded-full hover:bg-destructive/10">
+        <button className="absolute top-4 left-4 p-2 text-muted-foreground hover:text-destructive transition-colors rounded-full hover:bg-destructive/10 z-10">
           <Trash2 className="w-5 h-5" />
         </button>
       </AlertDialogTrigger>
@@ -170,14 +170,12 @@ export function PostConfirmationPopup({
   if (deviceType === "mobile") {
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent>
-          <div className="relative">
-            {deleteButton}
-            <DrawerHeader>
-              <DrawerTitle className="text-center pr-8">{title}</DrawerTitle>
-              <DrawerDescription className="text-center">{description}</DrawerDescription>
-            </DrawerHeader>
-          </div>
+        <DrawerContent className="relative">
+          {deleteButton}
+          <DrawerHeader>
+            <DrawerTitle className="text-center px-8">{title}</DrawerTitle>
+            <DrawerDescription className="text-center">{description}</DrawerDescription>
+          </DrawerHeader>
           <div className="px-4 pb-8">{content}</div>
         </DrawerContent>
       </Drawer>
@@ -186,14 +184,12 @@ export function PostConfirmationPopup({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <div className="relative">
-          {deleteButton}
-          <DialogHeader>
-            <DialogTitle className="text-center pr-8">{title}</DialogTitle>
-            <DialogDescription className="text-center">{description}</DialogDescription>
-          </DialogHeader>
-        </div>
+      <DialogContent className="max-w-md relative">
+        {deleteButton}
+        <DialogHeader>
+          <DialogTitle className="text-center px-8">{title}</DialogTitle>
+          <DialogDescription className="text-center">{description}</DialogDescription>
+        </DialogHeader>
         {content}
       </DialogContent>
     </Dialog>
