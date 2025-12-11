@@ -1,11 +1,18 @@
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Plus, ExternalLink, FileText } from "lucide-react";
+import { Plus, ExternalLink, FileText, Check, CalendarDays, Eye, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from "@/components/ui/drawer";
 import { useDeviceType } from "@/hooks/useDeviceType";
+import { PublishStatusBadge, PublishStatus } from "./PublishStatusBadge";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 interface Script {
   id: string;
@@ -18,6 +25,8 @@ interface Script {
   status: string | null;
   central_idea: string | null;
   reference_url: string | null;
+  publish_status?: PublishStatus | null;
+  published_at?: string | null;
 }
 
 interface DayContentModalProps {
@@ -27,30 +36,133 @@ interface DayContentModalProps {
   scripts: Script[];
   onViewScript: (scriptId: string) => void;
   onAddScript: (date: Date) => void;
+  onRefresh?: () => void;
 }
 
 function IdeaCard({ 
   script, 
-  onViewScript 
+  onViewScript,
+  onRefresh,
 }: { 
   script: Script; 
   onViewScript: (scriptId: string) => void;
+  onRefresh?: () => void;
 }) {
-  const handleRoteirizar = () => {
-    onViewScript(script.id);
+  const { toast } = useToast();
+  const [showReschedule, setShowReschedule] = useState(false);
+  const [rescheduleDate, setRescheduleDate] = useState<Date | undefined>(undefined);
+
+  const isPosted = script.publish_status === "postado";
+  const isLost = script.publish_status === "perdido";
+  const isReady = script.publish_status === "pronto_para_postar";
+
+  const handleMarkAsPosted = async () => {
+    try {
+      await supabase
+        .from("scripts")
+        .update({
+          publish_status: "postado",
+          published_at: new Date().toISOString(),
+        })
+        .eq("id", script.id);
+
+      toast({
+        title: "✅ Marcado como postado!",
+        description: "Parabéns por publicar seu conteúdo!",
+      });
+      onRefresh?.();
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar o status.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUnmarkAsPosted = async () => {
+    // Determine new status based on workflow progress
+    const newStatus = script.shot_list && script.shot_list.length > 0 
+      ? "pronto_para_postar" 
+      : "planejado";
+    
+    try {
+      await supabase
+        .from("scripts")
+        .update({
+          publish_status: newStatus,
+          published_at: null,
+        })
+        .eq("id", script.id);
+
+      toast({
+        title: "Status atualizado",
+        description: "Conteúdo desmarcado como postado.",
+      });
+      onRefresh?.();
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar o status.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleReschedule = async () => {
+    if (!rescheduleDate) return;
+
+    try {
+      await supabase
+        .from("scripts")
+        .update({
+          publish_date: format(rescheduleDate, "yyyy-MM-dd"),
+          publish_status: script.shot_list && script.shot_list.length > 0 
+            ? "pronto_para_postar" 
+            : "planejado",
+        })
+        .eq("id", script.id);
+
+      toast({
+        title: "Data reagendada!",
+        description: `Novo agendamento: ${format(rescheduleDate, "d 'de' MMMM", { locale: ptBR })}`,
+      });
+      setShowReschedule(false);
+      setRescheduleDate(undefined);
+      onRefresh?.();
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível reagendar.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
-    <div className="p-4 rounded-lg border border-border bg-card space-y-3">
-      {/* Header with title */}
+    <div className={cn(
+      "p-4 rounded-lg border border-border bg-card space-y-3",
+      isPosted && "opacity-75 bg-green-500/5 border-green-500/20"
+    )}>
+      {/* Header with title and status */}
       <div className="flex items-start gap-3">
-        <div className="w-8 h-8 rounded-lg bg-accent/20 flex items-center justify-center shrink-0">
-          <FileText className="w-4 h-4 text-accent" />
+        <div className={cn(
+          "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
+          isPosted ? "bg-green-500/20" : "bg-accent/20"
+        )}>
+          {isPosted ? (
+            <Check className="w-4 h-4 text-green-500" />
+          ) : (
+            <FileText className="w-4 h-4 text-accent" />
+          )}
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-foreground line-clamp-2">
-            {script.title || "Sem título"}
-          </h3>
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="font-semibold text-foreground line-clamp-2">
+              {script.title || "Sem título"}
+            </h3>
+            <PublishStatusBadge status={script.publish_status} className="shrink-0" />
+          </div>
           {script.content_type && (
             <Badge variant="secondary" className="mt-1 text-xs">
               {script.content_type}
@@ -83,13 +195,99 @@ function IdeaCard({
         </div>
       )}
 
-      {/* CTA Button */}
-      <Button 
-        onClick={handleRoteirizar}
-        className="w-full bg-accent hover:bg-accent/90 text-accent-foreground"
-      >
-        Roteirizar essa ideia
-      </Button>
+      {/* Action Buttons - Conditional based on status */}
+      <div className="space-y-2">
+        {isPosted ? (
+          <>
+            <Button 
+              onClick={() => onViewScript(script.id)}
+              variant="outline"
+              className="w-full"
+            >
+              <Eye className="w-4 h-4 mr-2" />
+              Ver Detalhes
+            </Button>
+            <Button 
+              onClick={handleUnmarkAsPosted}
+              variant="ghost"
+              className="w-full text-muted-foreground"
+            >
+              Desmarcar como postado
+            </Button>
+          </>
+        ) : isLost ? (
+          <>
+            {!showReschedule ? (
+              <Button 
+                onClick={() => setShowReschedule(true)}
+                className="w-full bg-yellow-600 hover:bg-yellow-700 text-white"
+              >
+                <CalendarDays className="w-4 h-4 mr-2" />
+                Reagendar
+              </Button>
+            ) : (
+              <div className="space-y-2">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !rescheduleDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarDays className="mr-2 h-4 w-4" />
+                      {rescheduleDate ? format(rescheduleDate, "PPP", { locale: ptBR }) : "Escolha uma nova data"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="center">
+                    <Calendar
+                      mode="single"
+                      selected={rescheduleDate}
+                      onSelect={setRescheduleDate}
+                      disabled={(date) => date < new Date()}
+                      initialFocus
+                      className="pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+                {rescheduleDate && (
+                  <Button onClick={handleReschedule} className="w-full">
+                    Confirmar reagendamento
+                  </Button>
+                )}
+              </div>
+            )}
+            <Button 
+              onClick={handleMarkAsPosted}
+              variant="outline"
+              className="w-full"
+            >
+              <Check className="w-4 h-4 mr-2" />
+              Marcar como postado
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button 
+              onClick={() => onViewScript(script.id)}
+              className="w-full bg-accent hover:bg-accent/90 text-accent-foreground"
+            >
+              {isReady ? "Continuar" : "Roteirizar essa ideia"}
+            </Button>
+            {isReady && (
+              <Button 
+                onClick={handleMarkAsPosted}
+                variant="outline"
+                className="w-full border-green-500/30 text-green-500 hover:bg-green-500/10"
+              >
+                <Check className="w-4 h-4 mr-2" />
+                Marcar como postado
+              </Button>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -101,6 +299,7 @@ export function DayContentModal({
   scripts,
   onViewScript,
   onAddScript,
+  onRefresh,
 }: DayContentModalProps) {
   const deviceType = useDeviceType();
 
@@ -126,7 +325,8 @@ export function DayContentModal({
               <IdeaCard 
                 key={script.id} 
                 script={script} 
-                onViewScript={onViewScript} 
+                onViewScript={onViewScript}
+                onRefresh={onRefresh}
               />
             ))}
           </div>

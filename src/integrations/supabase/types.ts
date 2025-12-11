@@ -164,6 +164,8 @@ export type Database = {
           id: string
           original_content: string | null
           publish_date: string | null
+          publish_status: string | null
+          published_at: string | null
           reference_links: string[] | null
           reference_url: string | null
           shot_list: string[] | null
@@ -180,6 +182,8 @@ export type Database = {
           id?: string
           original_content?: string | null
           publish_date?: string | null
+          publish_status?: string | null
+          published_at?: string | null
           reference_links?: string[] | null
           reference_url?: string | null
           shot_list?: string[] | null
@@ -196,6 +200,8 @@ export type Database = {
           id?: string
           original_content?: string | null
           publish_date?: string | null
+          publish_status?: string | null
+          published_at?: string | null
           reference_links?: string[] | null
           reference_url?: string | null
           shot_list?: string[] | null

@@ -12,6 +12,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useDeviceType } from "@/hooks/useDeviceType";
 import { CalendarDay } from "@/components/calendar/CalendarDay";
 import { DayContentModal } from "@/components/calendar/DayContentModal";
+import { PostConfirmationPopup } from "@/components/calendar/PostConfirmationPopup";
+import { useOverdueContent } from "@/hooks/useOverdueContent";
+import { PublishStatus } from "@/components/calendar/PublishStatusBadge";
 
 interface Script {
   id: string;
@@ -24,6 +27,8 @@ interface Script {
   status: string | null;
   central_idea: string | null;
   reference_url: string | null;
+  publish_status?: PublishStatus | null;
+  published_at?: string | null;
 }
 
 const CalendarioEditorial = () => {
@@ -43,9 +48,42 @@ const CalendarioEditorial = () => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
-  useEffect(() => {
+  // Overdue content popup
+  const {
+    currentPopupScript,
+    isPopupOpen,
+    setIsPopupOpen,
+    markAsPosted,
+    reschedule,
+    remindLater,
+    refetch: refetchOverdue,
+  } = useOverdueContent();
+
+  const handlePopupMarkAsPosted = async (scriptId: string) => {
+    await markAsPosted(scriptId);
     fetchScripts();
-  }, []);
+    toast({
+      title: "✅ Marcado como postado!",
+      description: "Parabéns por publicar seu conteúdo!",
+    });
+  };
+
+  const handlePopupReschedule = async (scriptId: string, newDate: Date) => {
+    await reschedule(scriptId, newDate);
+    fetchScripts();
+    toast({
+      title: "Data reagendada!",
+      description: `Novo agendamento: ${format(newDate, "d 'de' MMMM", { locale: ptBR })}`,
+    });
+  };
+
+  const handlePopupRemindLater = (scriptId: string) => {
+    remindLater(scriptId);
+    toast({
+      title: "⏰ Lembrete definido",
+      description: "Vamos te lembrar novamente em 6 horas.",
+    });
+  };
 
   const fetchScripts = async () => {
     try {
@@ -56,7 +94,13 @@ const CalendarioEditorial = () => {
 
       if (error) throw error;
 
-      setScripts(data || []);
+      // Cast publish_status to the correct type
+      const typedScripts: Script[] = (data || []).map(script => ({
+        ...script,
+        publish_status: script.publish_status as PublishStatus | null,
+      }));
+
+      setScripts(typedScripts);
     } catch (error) {
       console.error('Error fetching scripts:', error);
       toast({
@@ -66,6 +110,10 @@ const CalendarioEditorial = () => {
       });
     }
   };
+
+  useEffect(() => {
+    fetchScripts();
+  }, []);
 
   const getScriptStage = (script: Script): string => {
     if (script.shot_list && script.shot_list.length > 0) {
@@ -424,6 +472,17 @@ const CalendarioEditorial = () => {
         scripts={selectedDate ? getScriptsForDate(selectedDate) : []}
         onViewScript={handleViewScript}
         onAddScript={handleAddScript}
+        onRefresh={fetchScripts}
+      />
+
+      {/* Popup for overdue content */}
+      <PostConfirmationPopup
+        open={isPopupOpen}
+        onOpenChange={setIsPopupOpen}
+        script={currentPopupScript}
+        onMarkAsPosted={handlePopupMarkAsPosted}
+        onReschedule={handlePopupReschedule}
+        onRemindLater={handlePopupRemindLater}
       />
     </div>
   );
