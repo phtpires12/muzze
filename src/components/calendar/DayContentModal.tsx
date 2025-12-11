@@ -72,6 +72,16 @@ const getStageBadgeClasses = (script: Script): string | null => {
   return null;
 };
 
+// Label dinâmico do botão de ação baseado no status
+const getActionButtonLabel = (script: Script): string => {
+  if (script.publish_status === "pronto_para_postar") return "Finalizar para postar";
+  if (script.status === "editing") return "Continuar editando";
+  if (script.status === "recording" || (script.shot_list && script.shot_list.length > 0)) return "Continuar gravando";
+  if (script.status === "review") return "Terminar revisão";
+  if (script.status === "draft" || (script.content && script.content.length > 100)) return "Continuar roteiro";
+  return "Roteirizar essa ideia";
+};
+
 function IdeaCard({ 
   script, 
   onViewScript,
@@ -318,7 +328,7 @@ function IdeaCard({
               onClick={() => onViewScript(script.id)}
               className="w-full bg-accent hover:bg-accent/90 text-accent-foreground"
             >
-              {isReady ? "Continuar" : "Roteirizar essa ideia"}
+              {getActionButtonLabel(script)}
             </Button>
             {isReady && (
               <Button 
@@ -357,10 +367,10 @@ export function DayContentModal({
     <div className="space-y-4">
       {scripts.length === 0 ? (
         <div className="text-center py-8">
-          <p className="text-muted-foreground mb-4">Nenhuma ideia agendada para este dia</p>
+          <p className="text-muted-foreground mb-4">Nenhum post agendado para este dia</p>
           <Button onClick={() => onAddScript(date)} className="mx-auto">
             <Plus className="w-4 h-4 mr-2" />
-            Adicionar Ideia
+            Adicionar Post
           </Button>
         </div>
       ) : (
@@ -378,7 +388,7 @@ export function DayContentModal({
 
           <Button onClick={() => onAddScript(date)} variant="outline" className="w-full">
             <Plus className="w-4 h-4 mr-2" />
-            Adicionar Mais Ideias
+            Adicionar Mais Posts
           </Button>
         </>
       )}
@@ -391,9 +401,9 @@ export function DayContentModal({
       <Drawer open={open} onOpenChange={onOpenChange}>
         <DrawerContent>
           <DrawerHeader>
-            <DrawerTitle>Ideias Agendadas - {formattedDate}</DrawerTitle>
+            <DrawerTitle>Publicações Agendadas - {formattedDate}</DrawerTitle>
             <DrawerDescription>
-              Visualize e roteirize suas ideias agendadas para este dia
+              Visualize e continue o progresso dos posts agendados para este dia
             </DrawerDescription>
           </DrawerHeader>
           <div className="px-4 pb-8 max-h-[70vh] overflow-y-auto">{content}</div>
@@ -407,9 +417,9 @@ export function DayContentModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Ideias Agendadas - {titleDate}</DialogTitle>
+          <DialogTitle>Publicações Agendadas - {titleDate}</DialogTitle>
           <DialogDescription>
-            Visualize e roteirize suas ideias agendadas para este dia
+            Visualize e continue o progresso dos posts agendados para este dia
           </DialogDescription>
         </DialogHeader>
         {content}
