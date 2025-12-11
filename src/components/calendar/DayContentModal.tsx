@@ -1,12 +1,12 @@
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Plus, ExternalLink, FileText, Check, CalendarDays, Eye, Copy } from "lucide-react";
+import { Plus, ExternalLink, FileText, Check, CalendarDays, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from "@/components/ui/drawer";
 import { useDeviceType } from "@/hooks/useDeviceType";
-import { PublishStatusBadge, PublishStatus } from "./PublishStatusBadge";
+import { PublishStatus } from "./PublishStatusBadge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
@@ -38,6 +38,39 @@ interface DayContentModalProps {
   onAddScript: (date: Date) => void;
   onRefresh?: () => void;
 }
+
+// Background translúcido do card (25% opacidade)
+const getCardBackground = (script: Script): string => {
+  if (script.publish_status === "perdido") return "bg-red-500/25";
+  if (script.publish_status === "postado") return "bg-green-500/25";
+  if (script.status === "editing") return "bg-blue-500/25";
+  if (script.status === "recording" || (script.shot_list && script.shot_list.length > 0)) return "bg-orange-500/25";
+  if (script.status === "review") return "bg-purple-300/25";
+  if (script.status === "draft" || (script.content && script.content.length > 100)) return "bg-purple-500/25";
+  return "";
+};
+
+// Label da etapa
+const getStageLabel = (script: Script): string | null => {
+  if (script.publish_status === "perdido") return "Perdido";
+  if (script.publish_status === "postado") return "Publicado";
+  if (script.status === "editing") return "Edição";
+  if (script.status === "recording" || (script.shot_list && script.shot_list.length > 0)) return "Gravação";
+  if (script.status === "review") return "Revisão";
+  if (script.status === "draft" || (script.content && script.content.length > 100)) return "Roteiro";
+  return null;
+};
+
+// Classes do badge de etapa (cor forte 70%)
+const getStageBadgeClasses = (script: Script): string | null => {
+  if (script.publish_status === "perdido") return "bg-red-500/70 text-white border-transparent";
+  if (script.publish_status === "postado") return "bg-green-500/70 text-white border-transparent";
+  if (script.status === "editing") return "bg-blue-500/70 text-white border-transparent";
+  if (script.status === "recording" || (script.shot_list && script.shot_list.length > 0)) return "bg-orange-500/70 text-white border-transparent";
+  if (script.status === "review") return "bg-purple-400/70 text-white border-transparent";
+  if (script.status === "draft" || (script.content && script.content.length > 100)) return "bg-purple-500/70 text-white border-transparent";
+  return null;
+};
 
 function IdeaCard({ 
   script, 
@@ -81,7 +114,6 @@ function IdeaCard({
   };
 
   const handleUnmarkAsPosted = async () => {
-    // Determine new status based on workflow progress
     const newStatus = script.shot_list && script.shot_list.length > 0 
       ? "pronto_para_postar" 
       : "planejado";
@@ -139,12 +171,15 @@ function IdeaCard({
     }
   };
 
+  const stageLabel = getStageLabel(script);
+  const cardBackground = getCardBackground(script);
+
   return (
     <div className={cn(
-      "p-4 rounded-lg border border-border bg-card space-y-3",
-      isPosted && "opacity-75 bg-green-500/5 border-green-500/20"
+      "p-4 rounded-lg border border-border space-y-3",
+      cardBackground || "bg-card"
     )}>
-      {/* Header with title and status */}
+      {/* Header with title and badges */}
       <div className="flex items-start gap-3">
         <div className={cn(
           "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
@@ -157,17 +192,27 @@ function IdeaCard({
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2">
-            <h3 className="font-semibold text-foreground line-clamp-2">
-              {script.title || "Sem título"}
-            </h3>
-            <PublishStatusBadge status={script.publish_status} className="shrink-0" />
+          <h3 className={cn(
+            "font-semibold line-clamp-2",
+            script.title?.trim() ? "text-foreground" : "text-muted-foreground"
+          )}>
+            {script.title?.trim() || "Sem título"}
+          </h3>
+          <div className="flex flex-wrap gap-1 mt-1">
+            {stageLabel && (
+              <Badge 
+                variant="outline" 
+                className={`text-xs ${getStageBadgeClasses(script) || ""}`}
+              >
+                {stageLabel}
+              </Badge>
+            )}
+            {script.content_type && (
+              <Badge variant="secondary" className="text-xs">
+                {script.content_type}
+              </Badge>
+            )}
           </div>
-          {script.content_type && (
-            <Badge variant="secondary" className="mt-1 text-xs">
-              {script.content_type}
-            </Badge>
-          )}
         </div>
       </div>
 
