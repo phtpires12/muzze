@@ -51,6 +51,8 @@ interface SessionContextProviderProps {
 const SessionContext = createContext<SessionContextValue | undefined>(undefined);
 
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
+const MAX_STAGE_SECONDS = 1800; // 30 minutos máximo por save (proteção)
+const INACTIVITY_PAUSE_MS = 5 * 60 * 1000; // 5 minutos de inatividade para pausar
 
 const defaultTimerState: TimerState = {
   isActive: false,
@@ -140,6 +142,8 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const stageStartRef = useRef<Date | null>(null);
   const autoSaveIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const lastSaveTimeRef = useRef<number>(0); // Previne saves duplicados
+  const hiddenSinceRef = useRef<number | null>(null); // Quando a aba ficou escondida
 
   // Validar frescor da sessão - retorna true se válida, false se foi resetada
   const validateSessionFreshness = useCallback((): boolean => {
@@ -155,10 +159,14 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
     return true;
   }, [timer]);
 
-  // Verificar frescor quando o usuário volta ao app
+  // Verificar frescor quando o usuário volta ao app E pausar quando inativo por muito tempo
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
+      if (document.visibilityState === 'hidden') {
+        // Aba ficou escondida - marcar o momento
+        hiddenSinceRef.current = Date.now();
+      } else if (document.visibilityState === 'visible') {
+        // Aba voltou visível
         if (timer.isActive && isSessionOrphan(timer)) {
           console.log('[SessionContext] Sessão órfã detectada ao voltar ao app');
           setTimer(defaultTimerState);
@@ -167,7 +175,23 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
             title: "Sessão expirada",
             description: "Sua sessão anterior expirou. Inicie uma nova.",
           });
+          hiddenSinceRef.current = null;
+          return;
         }
+        
+        // Verificar se ficou escondida por mais de 5 minutos
+        if (hiddenSinceRef.current && timer.isActive && !timer.isPaused) {
+          const hiddenDuration = Date.now() - hiddenSinceRef.current;
+          if (hiddenDuration > INACTIVITY_PAUSE_MS) {
+            console.log(`[SessionContext] Aba inativa por ${Math.round(hiddenDuration / 60000)} min, pausando timer`);
+            setTimer(prev => ({ ...prev, isPaused: true, lastActivityAt: new Date() }));
+            toast({
+              title: "Sessão pausada automaticamente",
+              description: "Você ficou ausente. Clique em retomar para continuar.",
+            });
+          }
+        }
+        hiddenSinceRef.current = null;
       }
     };
     
@@ -255,14 +279,30 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Proteção: verificar se tempo é razoável (máx 30 minutos por save)
+      if (timer.stageElapsedSeconds > MAX_STAGE_SECONDS) {
+        console.warn(`[SessionContext] ⚠️ Tempo suspeito detectado: ${timer.stageElapsedSeconds}s (>${MAX_STAGE_SECONDS}s), ignorando save`);
+        stageStartRef.current = new Date();
+        setTimer(prev => ({ ...prev, stageElapsedSeconds: 0 }));
+        return;
+      }
+
+      // Proteção: evitar saves duplicados muito próximos (min 10s entre saves)
+      const now = Date.now();
+      if (now - lastSaveTimeRef.current < 10000) {
+        console.log('[SessionContext] Save ignorado - muito próximo do anterior');
+        return;
+      }
+
       if (stageStartRef.current && timer.stageElapsedSeconds > 0) {
-        const now = new Date();
+        const nowDate = new Date();
+        lastSaveTimeRef.current = now;
 
         await supabase.from('stage_times').insert({
           user_id: user.id,
           stage: timer.stage,
           started_at: stageStartRef.current.toISOString(),
-          ended_at: now.toISOString(),
+          ended_at: nowDate.toISOString(),
           duration_seconds: timer.stageElapsedSeconds,
           content_item_id: timer.contentId || null,
         });
@@ -270,11 +310,11 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
         console.log(`[SessionContext] ✅ Salvou ${timer.stageElapsedSeconds}s na etapa ${timer.stage}`);
 
         // Resetar contadores da etapa após salvar
-        stageStartRef.current = now;
+        stageStartRef.current = nowDate;
         setTimer(prev => ({ 
           ...prev, 
           stageElapsedSeconds: 0,
-          lastActivityAt: now,
+          lastActivityAt: nowDate,
         }));
       }
     } catch (error) {
