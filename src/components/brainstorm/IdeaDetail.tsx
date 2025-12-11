@@ -13,9 +13,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { FileText, ExternalLink, Loader2, Check } from "lucide-react";
+import { FileText, ExternalLink, Loader2, Check, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface Idea {
   id: string;
@@ -39,6 +50,7 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
   const [idea, setIdea] = useState<Idea | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Form state
   const [title, setTitle] = useState("");
@@ -142,6 +154,33 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
     }
     // Navigate to script stage
     navigate(`/session?stage=script&scriptId=${scriptId}`);
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("scripts")
+        .delete()
+        .eq("id", scriptId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Ideia excluída",
+        description: "A ideia foi excluída com sucesso.",
+      });
+      navigate("/calendario");
+    } catch (error) {
+      console.error("Error deleting idea:", error);
+      toast({
+        title: "Erro ao excluir",
+        description: "Não foi possível excluir a ideia.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleting(false);
+    }
   };
 
   // Save status indicator component
@@ -302,6 +341,39 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
             >
               Voltar ao Calendário
             </Button>
+
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Excluir ideia
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Excluir ideia?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Esta ação não pode ser desfeita. A ideia "{title || "Sem título"}" será permanentemente excluída.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleDelete}
+                    disabled={deleting}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {deleting ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : null}
+                    Excluir
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </CardContent>
       </Card>
