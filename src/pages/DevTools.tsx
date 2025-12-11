@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Flame, Trophy, Navigation, Trash2, RotateCcw, Wrench, Timer } from "lucide-react";
+import { ArrowLeft, Flame, Trophy, Navigation, Trash2, RotateCcw, Wrench, Timer, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -10,9 +10,12 @@ import { TrophyCelebration } from "@/components/TrophyCelebration";
 import { TROPHIES } from "@/lib/gamification";
 import { Badge } from "@/components/ui/badge";
 import { DraggableSessionTimer } from "@/components/DraggableSessionTimer";
+import { PostConfirmationPopup } from "@/components/calendar/PostConfirmationPopup";
+import { useToast } from "@/hooks/use-toast";
 
 const DevTools = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const { isDeveloper, isAdmin, isLoading } = useUserRole();
   const { celebrationData, triggerCelebration, triggerTrophyDirectly, dismissStreakCelebration, dismissTrophyCelebration } = useStreakCelebration();
   
@@ -20,6 +23,36 @@ const DevTools = () => {
   const [showTimerSimulation, setShowTimerSimulation] = useState(false);
   const [timerSimulationMode, setTimerSimulationMode] = useState<'normal' | 'streak'>('streak');
   const [simulatedIsPaused, setSimulatedIsPaused] = useState(false);
+  
+  // Popup simulation state
+  const [showPopupSimulation, setShowPopupSimulation] = useState(false);
+  
+  const mockScript = {
+    id: "mock-script-id",
+    title: "Meu Conteúdo de Teste",
+    publish_date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+    publish_status: "planejado" as const,
+  };
+
+  const handleMockMarkAsPosted = async () => {
+    toast({ title: "✅ Simulação", description: "Marcar como postado: " + mockScript.id });
+    setShowPopupSimulation(false);
+  };
+
+  const handleMockReschedule = async (_: string, newDate: Date) => {
+    toast({ title: "📅 Simulação", description: `Remarcar para: ${newDate.toLocaleDateString()}` });
+    setShowPopupSimulation(false);
+  };
+
+  const handleMockRemindLater = () => {
+    toast({ title: "⏰ Simulação", description: "Lembrar mais tarde" });
+    setShowPopupSimulation(false);
+  };
+
+  const handleMockDelete = async () => {
+    toast({ title: "🗑️ Simulação", description: "Excluir conteúdo: " + mockScript.id });
+    setShowPopupSimulation(false);
+  };
   
   // Redirect non-developers to home
   useEffect(() => {
@@ -170,6 +203,29 @@ const DevTools = () => {
           </CardContent>
         </Card>
 
+        {/* Popup Simulation Section */}
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="w-5 h-5" />
+              Popups
+            </CardTitle>
+            <CardDescription>
+              Simular popups e modais do sistema
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Button
+              onClick={() => setShowPopupSimulation(true)}
+              className="w-full justify-start"
+              variant="outline"
+            >
+              <Calendar className="w-4 h-4 mr-2 text-purple-500" />
+              Simular Popup de Status de Publicação
+            </Button>
+          </CardContent>
+        </Card>
+
         {/* Navigation Section */}
         <Card className="mb-4">
           <CardHeader>
@@ -256,6 +312,17 @@ const DevTools = () => {
           progress={timerSimulationMode === 'streak' ? 100 : 20}
         />
       )}
+
+      {/* Popup Simulation */}
+      <PostConfirmationPopup
+        script={mockScript}
+        open={showPopupSimulation}
+        onOpenChange={setShowPopupSimulation}
+        onMarkAsPosted={handleMockMarkAsPosted}
+        onReschedule={handleMockReschedule}
+        onRemindLater={handleMockRemindLater}
+        onDelete={handleMockDelete}
+      />
     </div>
   );
 };
