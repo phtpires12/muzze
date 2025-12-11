@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Flame, Trophy, Navigation, Trash2, RotateCcw, Wrench } from "lucide-react";
+import { ArrowLeft, Flame, Trophy, Navigation, Trash2, RotateCcw, Wrench, Timer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -9,11 +9,17 @@ import { StreakCelebration } from "@/components/StreakCelebration";
 import { TrophyCelebration } from "@/components/TrophyCelebration";
 import { TROPHIES } from "@/lib/gamification";
 import { Badge } from "@/components/ui/badge";
+import { DraggableSessionTimer } from "@/components/DraggableSessionTimer";
 
 const DevTools = () => {
   const navigate = useNavigate();
   const { isDeveloper, isAdmin, isLoading } = useUserRole();
   const { celebrationData, triggerCelebration, triggerTrophyDirectly, dismissStreakCelebration, dismissTrophyCelebration } = useStreakCelebration();
+  
+  // Timer simulation state
+  const [showTimerSimulation, setShowTimerSimulation] = useState(false);
+  const [timerSimulationMode, setTimerSimulationMode] = useState<'normal' | 'streak'>('streak');
+  const [simulatedIsPaused, setSimulatedIsPaused] = useState(false);
   
   // Redirect non-developers to home
   useEffect(() => {
@@ -115,6 +121,55 @@ const DevTools = () => {
           </CardContent>
         </Card>
 
+        {/* Timer Simulation Section */}
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Timer className="w-5 h-5" />
+              Timer Flutuante
+            </CardTitle>
+            <CardDescription>
+              Simular o DraggableTimer em diferentes modos
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Button
+              onClick={() => {
+                setTimerSimulationMode('normal');
+                setShowTimerSimulation(true);
+                setSimulatedIsPaused(false);
+              }}
+              className="w-full justify-start"
+              variant="outline"
+            >
+              <Timer className="w-4 h-4 mr-2 text-blue-500" />
+              Simular Timer Normal (5 min)
+            </Button>
+            <Button
+              onClick={() => {
+                setTimerSimulationMode('streak');
+                setShowTimerSimulation(true);
+                setSimulatedIsPaused(false);
+              }}
+              className="w-full justify-start"
+              variant="outline"
+            >
+              <Flame className="w-4 h-4 mr-2 text-orange-500" />
+              Simular Timer Ofensiva (30 min)
+            </Button>
+            {showTimerSimulation && (
+              <Button
+                onClick={() => setShowTimerSimulation(false)}
+                className="w-full justify-start"
+                variant="destructive"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Fechar Simulação
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Navigation Section */}
         <Card className="mb-4">
           <CardHeader>
@@ -181,6 +236,26 @@ const DevTools = () => {
         xpGained={celebrationData.xpGained}
         onContinue={dismissTrophyCelebration}
       />
+
+      {/* Timer Simulation */}
+      {showTimerSimulation && (
+        <DraggableSessionTimer
+          stage={timerSimulationMode === 'streak' ? "🔥 MODO OFENSIVA" : "Ideação"}
+          icon={timerSimulationMode === 'streak' ? "Flame" : "Lightbulb"}
+          elapsedSeconds={timerSimulationMode === 'streak' ? 1800 : 300}
+          targetSeconds={timerSimulationMode === 'streak' ? 1800 : 1500}
+          isStreakMode={timerSimulationMode === 'streak'}
+          dailyGoalMinutes={30}
+          isPaused={simulatedIsPaused}
+          onPause={() => setSimulatedIsPaused(true)}
+          onResume={() => setSimulatedIsPaused(false)}
+          onStop={() => {
+            setShowTimerSimulation(false);
+            alert("Botão Finalizar clicado! Aqui seria ativada a celebração de ofensiva.");
+          }}
+          progress={timerSimulationMode === 'streak' ? 100 : 20}
+        />
+      )}
     </div>
   );
 };
