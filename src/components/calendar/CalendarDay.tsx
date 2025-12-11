@@ -62,14 +62,17 @@ const getContentTypeColor = (contentType: string | null) => {
 };
 
 const getStageInfo = (script: Script): { label: string; color: string } => {
-  // Prioridade: shot_list → review status → content → ideation
-  if (script.shot_list && script.shot_list.length > 0) {
+  // Prioridade: status primeiro, depois inferências
+  if (script.status === "editing") {
+    return { label: "Edição", color: "bg-pink-500" };
+  }
+  if (script.status === "recording" || (script.shot_list && script.shot_list.length > 0)) {
     return { label: "Gravação", color: "bg-orange-500" };
   }
   if (script.status === "review") {
     return { label: "Revisão", color: "bg-blue-500" };
   }
-  if (script.content && script.content.length > 100) {
+  if (script.status === "draft" || (script.content && script.content.length > 100)) {
     return { label: "Roteiro", color: "bg-green-500" };
   }
   return { label: "Ideação", color: "bg-gray-400" };

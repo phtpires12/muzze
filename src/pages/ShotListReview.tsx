@@ -349,6 +349,13 @@ const ShotListReview = () => {
   const handleAdvanceToRecord = async () => {
     await handleSave();
     await saveCurrentStageTime();
+    
+    // Update status to 'recording'
+    await supabase
+      .from('scripts')
+      .update({ status: 'recording' })
+      .eq('id', scriptId);
+    
     navigate(`/shot-list/record?scriptId=${scriptId}`);
   };
 

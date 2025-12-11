@@ -145,15 +145,20 @@ const CalendarioEditorial = () => {
   }, []);
 
   const getScriptStage = (script: Script): string => {
-    if (script.shot_list && script.shot_list.length > 0) {
-      return "record";
-    } else if (script.status === "review") {
-      return "review";
-    } else if (script.content && script.content.length > 100) {
-      return "script";
-    } else {
-      return "idea";
+    // Prioridade: status primeiro, depois inferências
+    if (script.status === "editing") {
+      return "edit";
     }
+    if (script.status === "recording" || (script.shot_list && script.shot_list.length > 0)) {
+      return "record";
+    }
+    if (script.status === "review") {
+      return "review";
+    }
+    if (script.status === "draft" || (script.content && script.content.length > 100)) {
+      return "script";
+    }
+    return "idea";
   };
 
   const getScriptsForDate = (checkDate: Date) => {
@@ -184,12 +189,14 @@ const CalendarioEditorial = () => {
     const script = scripts.find(s => s.id === scriptId);
     if (!script) return;
     
-    // Detectar estágio atual baseado na lógica do sistema
-    if (script.shot_list && script.shot_list.length > 0) {
+    // Detectar estágio atual baseado no status
+    if (script.status === "editing") {
+      navigate(`/session?stage=edit&scriptId=${scriptId}`);
+    } else if (script.status === "recording" || (script.shot_list && script.shot_list.length > 0)) {
       navigate(`/shot-list/record?scriptId=${scriptId}`);
     } else if (script.status === "review") {
       navigate(`/session?stage=review&scriptId=${scriptId}`);
-    } else if (script.content && script.content.length > 100) {
+    } else if (script.status === "draft" || (script.content && script.content.length > 100)) {
       navigate(`/session?stage=script&scriptId=${scriptId}`);
     } else {
       navigate(`/session?stage=idea&scriptId=${scriptId}`);
