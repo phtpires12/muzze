@@ -13,6 +13,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { PublishStatusBadge, PublishStatus } from "./PublishStatusBadge";
 
 interface Script {
   id: string;
@@ -23,6 +24,8 @@ interface Script {
   created_at: string;
   shot_list: string[];
   status: string | null;
+  publish_status?: PublishStatus | null;
+  published_at?: string | null;
 }
 
 interface CalendarDayProps {
@@ -187,16 +190,26 @@ export function CalendarDay({
       <div className="space-y-1.5">
         {scripts.slice(0, 4).map((script) => {
           const stageInfo = getStageInfo(script);
+          const isPosted = script.publish_status === "postado";
           return (
             <div
               key={script.id}
-              draggable
-              onDragStart={(e) => onDragStart?.(e, script)}
+              draggable={!isPosted}
+              onDragStart={(e) => !isPosted && onDragStart?.(e, script)}
               className={`group/card relative text-xs p-2 rounded bg-card border border-border/50 cursor-pointer hover:border-border hover:shadow-sm transition-all ${
                 draggedScript?.id === script.id ? "opacity-50" : ""
-              }`}
+              } ${isPosted ? "opacity-75" : ""}`}
               onClick={() => onViewScript?.(script.id)}
             >
+              {/* Publish Status Badge - Top Right */}
+              <div className="absolute top-1 right-6">
+                <PublishStatusBadge 
+                  status={script.publish_status} 
+                  compact 
+                  className="text-[8px] px-1 py-0"
+                />
+              </div>
+              
               <button
                 className="absolute top-1 right-1 opacity-0 group-hover/card:opacity-100 transition-opacity p-1 rounded hover:bg-destructive/20 z-10"
                 onClick={(e) => {
@@ -209,18 +222,20 @@ export function CalendarDay({
               
               <div className="flex items-start gap-2">
                 <div className="text-muted-foreground mt-0.5 flex-shrink-0">
-                  📄
+                  {isPosted ? "✅" : "📄"}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="font-medium truncate text-foreground mb-1.5">
                     {script.title}
                   </div>
                   <div className="flex flex-wrap gap-1">
-                    <Badge 
-                      className={`${stageInfo.color} text-white text-[10px] px-1.5 py-0 border-0`}
-                    >
-                      {stageInfo.label}
-                    </Badge>
+                    {!isPosted && (
+                      <Badge 
+                        className={`${stageInfo.color} text-white text-[10px] px-1.5 py-0 border-0`}
+                      >
+                        {stageInfo.label}
+                      </Badge>
+                    )}
                     {script.content_type && (
                       <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
                         {script.content_type}

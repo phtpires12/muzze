@@ -242,9 +242,21 @@ const Session = () => {
   };
 
   const handleEditingCompleted = async () => {
+    // Update publish_status to pronto_para_postar when editing is completed
+    if (scriptId) {
+      try {
+        await supabase
+          .from('scripts')
+          .update({ publish_status: 'pronto_para_postar' })
+          .eq('id', scriptId);
+      } catch (error) {
+        console.error('Error updating publish_status:', error);
+      }
+    }
+
     toast({
       title: "🎉 Edição Concluída!",
-      description: "Todas as etapas foram completadas com sucesso!",
+      description: "Seu conteúdo está pronto para publicar!",
     });
     await handleEnd();
   };
