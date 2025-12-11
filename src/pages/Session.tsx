@@ -128,9 +128,18 @@ const Session = () => {
     if (stageParam) {
       // Normalizar "ideation" para "idea" (são sinônimos no workflow)
       const normalizedStage = stageParam === "ideation" ? "idea" : stageParam;
-      startSession(normalizedStage as SessionStage);
+      
+      // Verificar se já existe sessão ativa
+      if (!session.isActive) {
+        // Nenhuma sessão ativa - iniciar nova
+        startSession(normalizedStage as SessionStage);
+      } else if (session.stage !== normalizedStage) {
+        // Sessão ativa mas etapa diferente - mudar etapa (preserva timer)
+        changeStage(normalizedStage as SessionStage);
+      }
+      // Se sessão ativa e mesma etapa, não faz nada
     }
-  }, [stageParam]);
+  }, [stageParam, session.isActive, session.stage]);
 
   useEffect(() => {
     if (scriptIdParam) {
