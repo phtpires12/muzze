@@ -85,6 +85,35 @@ const CalendarioEditorial = () => {
     });
   };
 
+  const handlePopupDelete = async (scriptId: string) => {
+    // Remover imediatamente da interface
+    setScripts(scripts.filter(s => s.id !== scriptId));
+    
+    // Excluir do banco de dados
+    try {
+      const { error } = await supabase
+        .from('scripts')
+        .delete()
+        .eq('id', scriptId);
+
+      if (error) throw error;
+
+      toast({
+        title: "🗑️ Conteúdo excluído",
+        description: "O conteúdo foi removido do seu calendário.",
+      });
+    } catch (error) {
+      console.error('Error deleting script:', error);
+      // Recarregar scripts em caso de erro
+      fetchScripts();
+      toast({
+        title: "Erro ao excluir",
+        description: "Não foi possível excluir o conteúdo.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const fetchScripts = async () => {
     try {
       const { data, error } = await supabase
@@ -483,6 +512,7 @@ const CalendarioEditorial = () => {
         onMarkAsPosted={handlePopupMarkAsPosted}
         onReschedule={handlePopupReschedule}
         onRemindLater={handlePopupRemindLater}
+        onDelete={handlePopupDelete}
       />
     </div>
   );

@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Check, CalendarDays, Clock } from "lucide-react";
+import { Check, CalendarDays, Clock, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from "@/components/ui/drawer";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useDeviceType } from "@/hooks/useDeviceType";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +25,7 @@ interface PostConfirmationPopupProps {
   onMarkAsPosted: (scriptId: string) => void;
   onReschedule: (scriptId: string, newDate: Date) => void;
   onRemindLater: (scriptId: string) => void;
+  onDelete?: (scriptId: string) => void;
 }
 
 export function PostConfirmationPopup({
@@ -33,6 +35,7 @@ export function PostConfirmationPopup({
   onMarkAsPosted,
   onReschedule,
   onRemindLater,
+  onDelete,
 }: PostConfirmationPopupProps) {
   const deviceType = useDeviceType();
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -57,6 +60,13 @@ export function PostConfirmationPopup({
   const handleRemindLater = () => {
     onRemindLater(script.id);
     onOpenChange(false);
+  };
+
+  const handleDelete = () => {
+    if (onDelete) {
+      onDelete(script.id);
+      onOpenChange(false);
+    }
   };
 
   const content = (
@@ -133,14 +143,41 @@ export function PostConfirmationPopup({
   const title = `Você conseguiu postar "${script.title}"?`;
   const description = "Atualize o status do seu conteúdo";
 
+  const deleteButton = onDelete && (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <button className="absolute top-4 right-4 p-2 text-muted-foreground hover:text-destructive transition-colors rounded-full hover:bg-destructive/10">
+          <Trash2 className="w-5 h-5" />
+        </button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Excluir conteúdo?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Tem certeza que deseja excluir "{script.title}"? Esta ação não pode ser desfeita.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            Excluir
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+
   if (deviceType === "mobile") {
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
         <DrawerContent>
-          <DrawerHeader>
-            <DrawerTitle className="text-center">{title}</DrawerTitle>
-            <DrawerDescription className="text-center">{description}</DrawerDescription>
-          </DrawerHeader>
+          <div className="relative">
+            {deleteButton}
+            <DrawerHeader>
+              <DrawerTitle className="text-center pr-8">{title}</DrawerTitle>
+              <DrawerDescription className="text-center">{description}</DrawerDescription>
+            </DrawerHeader>
+          </div>
           <div className="px-4 pb-8">{content}</div>
         </DrawerContent>
       </Drawer>
@@ -150,10 +187,13 @@ export function PostConfirmationPopup({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="text-center">{title}</DialogTitle>
-          <DialogDescription className="text-center">{description}</DialogDescription>
-        </DialogHeader>
+        <div className="relative">
+          {deleteButton}
+          <DialogHeader>
+            <DialogTitle className="text-center pr-8">{title}</DialogTitle>
+            <DialogDescription className="text-center">{description}</DialogDescription>
+          </DialogHeader>
+        </div>
         {content}
       </DialogContent>
     </Dialog>
