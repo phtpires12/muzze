@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { calculateLevelByXP } from "@/lib/gamification";
 
 export const useProfile = () => {
   const [profile, setProfile] = useState<any>(null);
@@ -125,15 +126,24 @@ export const useProfile = () => {
       if (!user) return;
 
       const newXP = (profile?.xp_points || 0) + amount;
+      const newCalculatedLevel = calculateLevelByXP(newXP);
+      const currentHighestLevel = profile?.highest_level || 1;
+
+      // Atualiza highest_level se o novo nível calculado for maior
+      const updates: any = { xp_points: newXP };
+      if (newCalculatedLevel > currentHighestLevel) {
+        updates.highest_level = newCalculatedLevel;
+        console.log(`🎯 Subiu de nível! highest_level: ${currentHighestLevel} → ${newCalculatedLevel}`);
+      }
 
       const { error } = await supabase
         .from('profiles')
-        .update({ xp_points: newXP })
+        .update(updates)
         .eq('user_id', user.id);
 
       if (error) throw error;
 
-      setProfile((prev: any) => ({ ...prev, xp_points: newXP }));
+      setProfile((prev: any) => ({ ...prev, ...updates }));
       
       return newXP;
     } catch (error: any) {
