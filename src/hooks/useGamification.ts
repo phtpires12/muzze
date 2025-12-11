@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { TROPHIES, Trophy } from "@/lib/gamification";
+import { TROPHIES, Trophy, getEffectiveLevel } from "@/lib/gamification";
 
 export interface GamificationStats {
   totalXP: number;
   level: number;
+  highestLevel: number;
   streak: number;
   totalHours: number;
   scriptsCreated: number;
@@ -17,6 +18,7 @@ export const useGamification = () => {
   const [stats, setStats] = useState<GamificationStats>({
     totalXP: 0,
     level: 1,
+    highestLevel: 1,
     streak: 0,
     totalHours: 0,
     scriptsCreated: 0,
@@ -67,10 +69,10 @@ export const useGamification = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Get profile data
+      // Get profile data (including highest_level for non-regressive levels)
       const { data: profile } = await supabase
         .from('profiles')
-        .select('xp_points, streak_freezes')
+        .select('xp_points, streak_freezes, highest_level')
         .eq('user_id', user.id)
         .single();
 
@@ -140,9 +142,15 @@ export const useGamification = () => {
         unlocked: t.requirement(currentStats)
       })));
 
+      const xpPoints = profile?.xp_points || 0;
+      const highestLevel = profile?.highest_level || 1;
+      // Usa nível efetivo: nunca menor que highest_level
+      const effectiveLevel = getEffectiveLevel(xpPoints, highestLevel);
+
       const newStats = {
-        totalXP: profile?.xp_points || 0,
-        level: calculateLevelFromXP(profile?.xp_points || 0),
+        totalXP: xpPoints,
+        level: effectiveLevel,
+        highestLevel: highestLevel,
         streak: streak?.current_streak || 0,
         totalHours,
         scriptsCreated: scriptsCount || 0,
@@ -151,7 +159,7 @@ export const useGamification = () => {
         freezes: profile?.streak_freezes || 0,
       };
       
-      console.log('💾 Salvando no estado:', newStats);
+      console.log('💾 Salvando no estado (nível efetivo):', newStats);
       setStats(newStats);
     } catch (error) {
       console.error('Error fetching gamification stats:', error);
@@ -163,22 +171,4 @@ export const useGamification = () => {
   return { stats, loading, refetch: fetchStats };
 };
 
-// Helper function to calculate level from XP
-function calculateLevelFromXP(xp: number): number {
-  const levels = [
-    { level: 1, xpRequired: 0 },
-    { level: 2, xpRequired: 1000 },
-    { level: 3, xpRequired: 3000 },
-    { level: 4, xpRequired: 7000 },
-    { level: 5, xpRequired: 15000 },
-    { level: 6, xpRequired: 30000 },
-    { level: 7, xpRequired: 60000 },
-  ];
-
-  for (let i = levels.length - 1; i >= 0; i--) {
-    if (xp >= levels[i].xpRequired) {
-      return levels[i].level;
-    }
-  }
-  return 1;
-}
+// Helper function removida - usar getEffectiveLevel de gamification.ts

@@ -90,21 +90,29 @@ export const useSession = (options: UseSessionOptions = {}) => {
       // Get user and update XP in database
       const { data: profile } = await supabase
         .from('profiles')
-        .select('xp_points')
+        .select('xp_points, highest_level')
         .eq('user_id', user.id)
         .single();
 
       const previousXP = profile?.xp_points || 0;
       const newXP = previousXP + xpGained;
+      const currentHighestLevel = profile?.highest_level || 1;
 
       // Calculate levels before and after XP update
       const previousLevel = calculateLevelByXP(previousXP);
       const newLevel = calculateLevelByXP(newXP);
 
+      // Prepare updates - always update xp_points, and highest_level if new level is higher
+      const updates: any = { xp_points: newXP };
+      if (newLevel > currentHighestLevel) {
+        updates.highest_level = newLevel;
+        console.log(`🎯 Subiu de nível! highest_level: ${currentHighestLevel} → ${newLevel}`);
+      }
+
       if (profile) {
         await supabase
           .from('profiles')
-          .update({ xp_points: newXP })
+          .update(updates)
           .eq('user_id', user.id);
       }
 

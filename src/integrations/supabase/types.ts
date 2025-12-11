@@ -101,6 +101,7 @@ export type Database = {
           current_workflow: string | null
           daily_goal_minutes: number | null
           first_login: boolean | null
+          highest_level: number | null
           min_streak_minutes: number | null
           notifications_enabled: boolean | null
           onboarding_data: Json | null
@@ -119,6 +120,7 @@ export type Database = {
           current_workflow?: string | null
           daily_goal_minutes?: number | null
           first_login?: boolean | null
+          highest_level?: number | null
           min_streak_minutes?: number | null
           notifications_enabled?: boolean | null
           onboarding_data?: Json | null
@@ -137,6 +139,7 @@ export type Database = {
           current_workflow?: string | null
           daily_goal_minutes?: number | null
           first_login?: boolean | null
+          highest_level?: number | null
           min_streak_minutes?: number | null
           notifications_enabled?: boolean | null
           onboarding_data?: Json | null

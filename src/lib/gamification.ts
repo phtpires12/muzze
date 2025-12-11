@@ -203,6 +203,28 @@ export function calculateLevelByXP(xp: number): number {
   return 1;
 }
 
+// Retorna o nível efetivo considerando o highest_level (não regressivo)
+export function getEffectiveLevel(xp: number, highestLevel: number): number {
+  const calculatedLevel = calculateLevelByXP(xp);
+  return Math.max(highestLevel, calculatedLevel);
+}
+
+// Calcula progresso para o próximo nível usando nível efetivo
+export function getProgressToNextLevelEffective(xp: number, effectiveLevel: number): number {
+  const currentLevelInfo = getLevelInfo(effectiveLevel);
+  const nextLevelInfo = getNextLevelInfo(effectiveLevel);
+  
+  if (!nextLevelInfo) return 100;
+  
+  const xpInCurrentLevel = xp - currentLevelInfo.xpRequired;
+  const xpNeededForNext = nextLevelInfo.xpRequired - currentLevelInfo.xpRequired;
+  
+  // Se XP está abaixo do nível atual (gastou XP), progresso pode ser negativo
+  // Mostramos 0% nesse caso
+  const progress = (xpInCurrentLevel / xpNeededForNext) * 100;
+  return Math.max(0, Math.min(100, progress));
+}
+
 export function getLevelInfo(level: number) {
   return XP_LEVELS.find((l) => l.level === level) || XP_LEVELS[0];
 }
