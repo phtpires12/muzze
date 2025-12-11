@@ -22,6 +22,8 @@ interface Script {
   created_at: string;
   shot_list: string[];
   status: string | null;
+  central_idea: string | null;
+  reference_url: string | null;
 }
 
 const CalendarioEditorial = () => {
