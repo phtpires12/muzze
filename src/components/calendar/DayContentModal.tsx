@@ -193,12 +193,14 @@ function IdeaCard({
       <div className="flex items-start gap-3">
         <div className={cn(
           "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
-          isPosted ? "bg-green-500/20" : "bg-accent/20"
+          isPosted 
+            ? "bg-green-500/20" 
+            : "bg-gradient-to-br from-primary/20 to-accent/20"
         )}>
           {isPosted ? (
             <Check className="w-4 h-4 text-green-500" />
           ) : (
-            <FileText className="w-4 h-4 text-accent" />
+            <FileText className="w-4 h-4 text-primary" />
           )}
         </div>
         <div className="flex-1 min-w-0">
@@ -326,7 +328,7 @@ function IdeaCard({
           <>
             <Button 
               onClick={() => onViewScript(script.id)}
-              className="w-full bg-accent hover:bg-accent/90 text-accent-foreground"
+              className="w-full bg-gradient-to-r from-primary to-accent hover:opacity-90 text-white"
             >
               {getActionButtonLabel(script)}
             </Button>
