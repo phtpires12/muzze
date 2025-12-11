@@ -219,9 +219,14 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
         publish_date: publishDate || null,
       };
 
-      // Save original_content only when NOT in review mode (preserve original during review)
+      // Atualizar status automaticamente baseado no modo atual
       if (!isReviewMode) {
+        // Se está na etapa de roteiro, garantir que status é 'draft'
+        scriptData.status = 'draft';
         scriptData.original_content = JSON.stringify(content);
+      } else {
+        // Se está na etapa de revisão, garantir que status é 'review'
+        scriptData.status = 'review';
       }
 
       if (scriptId) {
