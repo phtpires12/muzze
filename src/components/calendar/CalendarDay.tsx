@@ -60,32 +60,43 @@ const getContentTypeColor = (contentType: string | null) => {
   }
 };
 
-// Cor do header baseada no status/etapa (prioridade: status final > etapa)
-const getHeaderColor = (script: Script): string => {
+// Background translúcido do card baseado no status/etapa (prioridade: status final > etapa)
+const getCardBackground = (script: Script): string => {
   // Prioridade 1: Status finais de publicação
   if (script.publish_status === "perdido") {
-    return "bg-red-500";
+    return "bg-red-500/10"; // Vermelho translúcido
   }
   if (script.publish_status === "postado") {
-    return "bg-green-500";
+    return "bg-green-500/10"; // Verde translúcido
   }
   
   // Prioridade 2: Etapas do workflow
   if (script.status === "editing") {
-    return "bg-blue-500";
+    return "bg-blue-500/10"; // Azul translúcido
   }
   if (script.status === "recording" || (script.shot_list && script.shot_list.length > 0)) {
-    return "bg-orange-500";
+    return "bg-orange-500/10"; // Laranja translúcido
   }
   if (script.status === "review") {
-    return "bg-purple-300"; // Lilás
+    return "bg-purple-300/15"; // Lilás translúcido
   }
   if (script.status === "draft" || (script.content && script.content.length > 100)) {
-    return "bg-purple-500"; // Roxo
+    return "bg-purple-500/10"; // Roxo translúcido
   }
   
-  // Ideação: sem cor
+  // Ideação: sem cor (neutro)
   return "";
+};
+
+// Label da etapa para exibir no card
+const getStageLabel = (script: Script): string | null => {
+  if (script.publish_status === "perdido") return "Perdido";
+  if (script.publish_status === "postado") return "Publicado";
+  if (script.status === "editing") return "Edição";
+  if (script.status === "recording" || (script.shot_list && script.shot_list.length > 0)) return "Gravação";
+  if (script.status === "review") return "Revisão";
+  if (script.status === "draft" || (script.content && script.content.length > 100)) return "Roteiro";
+  return null; // Ideação não mostra label
 };
 
 export function CalendarDay({
@@ -202,23 +213,19 @@ export function CalendarDay({
 
       <div className="space-y-1.5">
         {scripts.slice(0, 4).map((script) => {
-          const headerColor = getHeaderColor(script);
+          const cardBackground = getCardBackground(script);
+          const stageLabel = getStageLabel(script);
           const isPosted = script.publish_status === "postado";
           return (
             <div
               key={script.id}
               draggable={!isPosted}
               onDragStart={(e) => !isPosted && onDragStart?.(e, script)}
-              className={`group/card relative text-xs rounded bg-card border border-border/50 cursor-pointer hover:border-border hover:shadow-sm transition-all overflow-hidden ${
+              className={`group/card relative text-xs rounded border border-border/50 cursor-pointer hover:border-border hover:shadow-sm transition-all ${cardBackground} ${
                 draggedScript?.id === script.id ? "opacity-50" : ""
               } ${isPosted ? "opacity-75" : ""}`}
               onClick={() => onViewScript?.(script.id)}
             >
-              {/* Header colorido baseado no status/etapa */}
-              {headerColor && (
-                <div className={`h-1.5 ${headerColor}`} />
-              )}
-              
               <div className="p-2">
                 <button
                   className="absolute top-1 right-1 opacity-0 group-hover/card:opacity-100 transition-opacity p-1 rounded hover:bg-destructive/20 z-10"
@@ -238,11 +245,18 @@ export function CalendarDay({
                     <div className="font-medium truncate text-foreground mb-1">
                       {script.title}
                     </div>
-                    {script.content_type && (
-                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                        {script.content_type}
-                      </Badge>
-                    )}
+                    <div className="flex flex-wrap gap-1">
+                      {stageLabel && (
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                          {stageLabel}
+                        </Badge>
+                      )}
+                      {script.content_type && (
+                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                          {script.content_type}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
