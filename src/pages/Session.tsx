@@ -51,7 +51,6 @@ const STAGES: {
   color: string;
 }[] = [
   { id: "idea", label: "Ideia", icon: Lightbulb, iconName: "Lightbulb", color: "text-yellow-500" },
-  { id: "ideation", label: "Ideação", icon: Lightbulb, iconName: "Lightbulb", color: "text-yellow-500" },
   { id: "script", label: "Roteiro", icon: FileText, iconName: "FileText", color: "text-blue-500" },
   { id: "review", label: "Revisão", icon: CheckCircle, iconName: "CheckCircle", color: "text-green-500" },
   { id: "record", label: "Gravação", icon: Video, iconName: "Video", color: "text-red-500" },
@@ -127,7 +126,9 @@ const Session = () => {
 
   useEffect(() => {
     if (stageParam) {
-      startSession(stageParam as SessionStage);
+      // Normalizar "ideation" para "idea" (são sinônimos no workflow)
+      const normalizedStage = stageParam === "ideation" ? "idea" : stageParam;
+      startSession(normalizedStage as SessionStage);
     }
   }, [stageParam]);
 
