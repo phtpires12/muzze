@@ -499,7 +499,7 @@ const CalendarioEditorial = () => {
                       isCurrentMonth={true}
                       isToday={isToday}
                       compact={false}
-                      compactCard={isMobile}
+                      weekMobile={isMobile}
                       onDayClick={handleDayClick}
                       onAddScript={handleAddScript}
                       onDragStart={handleDragStart}
