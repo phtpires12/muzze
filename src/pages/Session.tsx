@@ -379,7 +379,18 @@ const Session = () => {
     );
   }
 
-  const CurrentIcon = currentStage!.icon;
+  // Fallback seguro se currentStage for undefined
+  if (!currentStage) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5">
+        <div className="text-center">
+          <p className="text-lg text-muted-foreground">Carregando sessão...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const CurrentIcon = currentStage.icon;
 
   // If stage is "record", show loading while fetching script
   if (session.stage === "record") {

@@ -425,11 +425,16 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
   // Iniciar timer
   const startTimer = useCallback(async (initialStage: SessionStage) => {
     try {
+      // LIMPAR QUALQUER ESTADO ÓRFÃO ANTES DE INICIAR NOVA SESSÃO
+      localStorage.removeItem('muzze_global_timer');
+      localStorage.removeItem('muzze_session_state');
+      
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
       const now = new Date();
       stageStartRef.current = now;
+      stageElapsedRef.current = 0;
       lastRealInteractionRef.current = Date.now();
 
       const { data: profile } = await supabase
