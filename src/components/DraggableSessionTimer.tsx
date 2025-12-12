@@ -58,6 +58,7 @@ interface DraggableSessionTimerProps {
   progress: number;
   hidden?: boolean;
   isPopup?: boolean; // When true, render as centered popup (no drag, no fixed position)
+  todayMinutesFromDB?: number; // Minutos já acumulados hoje (do banco de dados)
 }
 
 export const DraggableSessionTimer = ({ 
@@ -74,6 +75,7 @@ export const DraggableSessionTimer = ({
   progress,
   hidden = false,
   isPopup = false,
+  todayMinutesFromDB = 0,
 }: DraggableSessionTimerProps) => {
   const isMobile = useIsMobile();
   const [showEndConfirmation, setShowEndConfirmation] = useState(false);
@@ -170,9 +172,21 @@ export const DraggableSessionTimer = ({
 
   const Icon = isStreakMode ? ICON_MAP['Flame'] : (ICON_MAP[icon] || ICON_MAP['Lightbulb']);
   const displayedTarget = isStreakMode ? dailyGoalMinutes * 60 : 25 * 60;
-  const goalText = isStreakMode 
-    ? `🎯 Meta diária: ${formatTime(dailyGoalMinutes * 60)}`
-    : `Meta: ${formatTime(25 * 60)}`;
+  
+  // Calcular tempo restante para a meta diária
+  const goalSeconds = dailyGoalMinutes * 60;
+  const alreadyDoneSeconds = todayMinutesFromDB * 60;
+  const totalWithCurrentSession = alreadyDoneSeconds + elapsedSeconds;
+  const remainingSeconds = goalSeconds - totalWithCurrentSession;
+  
+  // Gerar texto dinâmico baseado no progresso
+  let goalText: string;
+  if (remainingSeconds > 0) {
+    goalText = `Falta: ${formatTime(remainingSeconds)}`;
+  } else {
+    const bonusSeconds = Math.abs(remainingSeconds);
+    goalText = `Meta atingida! +${formatTime(bonusSeconds)}`; 
+  }
 
   const handleMouseDown = (e: React.MouseEvent) => {
     setIsDragging(true);

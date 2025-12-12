@@ -19,6 +19,7 @@ import { useInProgressProjects } from "@/hooks/useInProgressProjects";
 import { useSessionContext } from "@/contexts/SessionContext";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { toast } from "sonner";
 
 // Chaves de localStorage para limpar ao iniciar nova sessão
 const SESSION_STORAGE_KEYS = ['muzze_session_state', 'muzze_global_timer'];
@@ -124,10 +125,21 @@ export const BottomNav = () => {
       clearTimeout(longPressTimer.current);
     }
     if (!isLongPress) {
+      // Verificar se havia sessão órfã ANTES de limpar
+      const hadOrphanSession = localStorage.getItem('muzze_global_timer') !== null;
+      
       // LIMPAR COMPLETAMENTE qualquer sessão anterior antes de navegar
-      // Isso garante que sempre inicia uma nova sessão do zero
       SESSION_STORAGE_KEYS.forEach(key => localStorage.removeItem(key));
-      resetTimer(); // Resetar estado do contexto também
+      resetTimer();
+      
+      // Se havia sessão órfã, mostrar alerta educativo
+      if (hadOrphanSession) {
+        toast.info("Sessão anterior não finalizada", {
+          description: "Não se preocupe! Seu progresso em relação à meta diária foi salvo automaticamente.",
+          duration: 5000,
+        });
+      }
+      
       navigate('/session');
     }
   };

@@ -10,6 +10,7 @@ import { arrayMove } from '@dnd-kit/sortable';
 import { DraggableSessionTimer } from "@/components/DraggableSessionTimer";
 import { AutoHideNav } from "@/components/AutoHideNav";
 import { useSession } from "@/hooks/useSession";
+import { useDailyGoalProgress } from "@/hooks/useDailyGoalProgress";
 import { useAppVisibility } from "@/hooks/useAppVisibility";
 import { useWindowPortal } from "@/hooks/useWindowPortal";
 import { cn } from "@/lib/utils";
@@ -45,6 +46,7 @@ const ShotListReview = () => {
   });
   
   const isAppVisible = useAppVisibility();
+  const { progress: dailyProgress } = useDailyGoalProgress();
 
   // Celebration system
   const { 
@@ -528,6 +530,7 @@ const ShotListReview = () => {
             onResume={resumeSession}
             onStop={handleEndSession}
             progress={progress}
+            todayMinutesFromDB={dailyProgress.actualMinutes}
           />
         )}
 
@@ -548,6 +551,7 @@ const ShotListReview = () => {
             onStop={handleEndSession}
             progress={progress}
             isPopup={true}
+            todayMinutesFromDB={dailyProgress.actualMinutes}
           />
         </Portal>
 

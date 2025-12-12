@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useSession, SessionStage } from "@/hooks/useSession";
 import { useSessionContext } from "@/contexts/SessionContext";
+import { useDailyGoalProgress } from "@/hooks/useDailyGoalProgress";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -71,6 +72,7 @@ const Session = () => {
   const [showStreakHalo, setShowStreakHalo] = useState(false);
   const [streakCount, setStreakCount] = useState(0);
   const isAppVisible = useAppVisibility();
+  const { progress: dailyProgress } = useDailyGoalProgress();
   
   // Celebration system
   const { 
@@ -448,10 +450,10 @@ const Session = () => {
             onResume={resumeSession}
             onStop={handleEnd}
             progress={progress}
+            todayMinutesFromDB={dailyProgress.actualMinutes}
           />
         )}
 
-        {/* Timer in External Popup Window */}
         <Portal>
           <DraggableSessionTimer
             stage={currentStage!.label}
@@ -466,6 +468,7 @@ const Session = () => {
             onStop={handleEnd}
             progress={progress}
             isPopup={true}
+            todayMinutesFromDB={dailyProgress.actualMinutes}
           />
         </Portal>
 
@@ -541,6 +544,7 @@ const Session = () => {
             onResume={resumeSession}
             onStop={handleEnd}
             progress={progress}
+            todayMinutesFromDB={dailyProgress.actualMinutes}
           />
         )}
 
@@ -559,6 +563,7 @@ const Session = () => {
             onStop={handleEnd}
             progress={progress}
             isPopup={true}
+            todayMinutesFromDB={dailyProgress.actualMinutes}
           />
         </Portal>
 
