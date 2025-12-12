@@ -127,3 +127,24 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
   }
 }
+
+/* Safe Area Utility Classes for iOS Dynamic Island and Home Indicator */
+.safe-area-top {
+  padding-top: calc(env(safe-area-inset-top, 0px) + 0.5rem);
+}
+
+.safe-area-bottom {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.5rem);
+}
+
+.safe-area-header {
+  padding-top: calc(env(safe-area-inset-top, 0px) + 2rem);
+}
+
+.fixed-safe-top {
+  top: calc(env(safe-area-inset-top, 0px) + 1rem);
+}
+
+.fixed-safe-bottom {
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);
+}

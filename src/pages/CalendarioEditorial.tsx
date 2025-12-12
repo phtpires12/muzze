@@ -321,7 +321,10 @@ const CalendarioEditorial = () => {
   return (
     <div className="min-h-screen bg-background pb-24">
       <div className="border-b border-border bg-card">
-        <div className="container mx-auto px-4 py-4">
+        <div 
+          className="container mx-auto px-4 py-4"
+          style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}
+        >
           <div className="flex justify-between items-center">
             <h1 className="text-2xl font-bold">Calendário Editorial</h1>
             <Button onClick={handleCreateNewScript}>

@@ -134,7 +134,10 @@ export const BottomNav = () => {
 
   return (
     <>
-      <nav className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-2xl z-50">
+      <nav 
+        className="fixed left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-2xl z-50"
+        style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' }}
+      >
         <div className="bg-background/40 backdrop-blur-xl border border-border/50 rounded-3xl shadow-2xl px-4 py-3">
           <div className="flex items-center justify-around gap-2">
             {/* Left navigation items */}
