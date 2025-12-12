@@ -545,15 +545,39 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
           {/* Publish Date */}
           <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3 p-3 rounded-lg hover:bg-accent/10 transition-colors group">
             <div className="flex items-center gap-2 md:min-w-[180px] text-sm text-muted-foreground">
-              <Calendar className="w-4 h-4" />
+              <CalendarIcon className="w-4 h-4" />
               <span>Data de Publicação</span>
             </div>
-            <Input
-              type="date"
-              value={publishDate}
-              onChange={(e) => setPublishDate(e.target.value)}
-              className="w-full md:flex-1 border-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
-            />
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full md:w-auto justify-start text-left font-normal border-none bg-transparent hover:bg-accent/20",
+                    !publishDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {publishDate 
+                    ? format(new Date(publishDate + 'T00:00:00'), "dd/MM/yyyy", { locale: ptBR })
+                    : "Selecione uma data"
+                  }
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0 z-[200]" align="start">
+                <Calendar
+                  mode="single"
+                  selected={publishDate ? new Date(publishDate + 'T00:00:00') : undefined}
+                  onSelect={(date) => {
+                    if (date) {
+                      setPublishDate(format(date, "yyyy-MM-dd"));
+                    }
+                  }}
+                  initialFocus
+                  className="pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
           </div>
 
           {/* References */}
