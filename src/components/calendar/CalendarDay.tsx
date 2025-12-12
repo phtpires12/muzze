@@ -169,27 +169,45 @@ export function CalendarDay({
   const hasMultipleCards = scripts.length > 1;
 
   const AUTOPLAY_INTERVAL = 3500; // 3.5 seconds between transitions
+  const [autoplayProgress, setAutoplayProgress] = useState(0);
 
   // Reset carousel index when scripts change
   useEffect(() => {
     setCurrentCardIndex(0);
+    setAutoplayProgress(0);
   }, [scripts.length]);
 
-  // Auto-play carousel when multiple cards exist (pauses on hover)
+  // Auto-play carousel with progress indicator
   useEffect(() => {
     if (!hasMultipleCards || isHovered || weekMobile || compact) {
       return;
     }
 
-    const interval = setInterval(() => {
+    // Reset progress when starting
+    setAutoplayProgress(0);
+    
+    // Progress animation (updates every 50ms for smooth animation)
+    const progressInterval = setInterval(() => {
+      setAutoplayProgress(prev => {
+        const increment = (50 / AUTOPLAY_INTERVAL) * 100;
+        return Math.min(prev + increment, 100);
+      });
+    }, 50);
+
+    // Card transition
+    const transitionInterval = setInterval(() => {
       setCurrentCardIndex(prev => {
         const maxIndex = Math.min(scripts.length, maxScripts) - 1;
         return prev >= maxIndex ? 0 : prev + 1;
       });
+      setAutoplayProgress(0); // Reset progress on card change
     }, AUTOPLAY_INTERVAL);
 
-    return () => clearInterval(interval);
-  }, [hasMultipleCards, isHovered, weekMobile, compact, scripts.length, maxScripts]);
+    return () => {
+      clearInterval(progressInterval);
+      clearInterval(transitionInterval);
+    };
+  }, [hasMultipleCards, isHovered, weekMobile, compact, scripts.length, maxScripts, currentCardIndex]);
 
   // Carousel navigation handlers
   const goToPrevCard = (e: React.MouseEvent) => {
@@ -456,29 +474,41 @@ export function CalendarDay({
           </>
         )}
 
-        {/* Carousel indicators (dots + counter) */}
+        {/* Carousel indicators (dots + counter + progress bar) */}
         {hasMultipleCards && (
-          <div className="flex items-center justify-between mt-1">
-            <div className="flex gap-1 justify-center flex-1">
-              {scripts.slice(0, maxScripts).map((_, idx) => (
-                <button
-                  key={idx}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setCurrentCardIndex(idx);
-                  }}
-                  className={cn(
-                    "w-1.5 h-1.5 rounded-full transition-all",
-                    idx === currentCardIndex 
-                      ? "bg-primary scale-110" 
-                      : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
-                  )}
-                />
-              ))}
+          <div className="space-y-1 mt-1">
+            <div className="flex items-center justify-between">
+              <div className="flex gap-1 justify-center flex-1">
+                {scripts.slice(0, maxScripts).map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCurrentCardIndex(idx);
+                    }}
+                    className={cn(
+                      "w-1.5 h-1.5 rounded-full transition-all",
+                      idx === currentCardIndex 
+                        ? "bg-primary scale-110" 
+                        : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
+                    )}
+                  />
+                ))}
+              </div>
+              <span className="text-[9px] text-muted-foreground ml-1">
+                {currentCardIndex + 1}/{Math.min(scripts.length, maxScripts)}
+              </span>
             </div>
-            <span className="text-[9px] text-muted-foreground ml-1">
-              {currentCardIndex + 1}/{Math.min(scripts.length, maxScripts)}
-            </span>
+            
+            {/* Auto-play progress bar */}
+            {!isHovered && !weekMobile && !compact && (
+              <div className="h-0.5 bg-muted-foreground/20 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-primary/60 transition-all duration-75 ease-linear"
+                  style={{ width: `${autoplayProgress}%` }}
+                />
+              </div>
+            )}
           </div>
         )}
 
