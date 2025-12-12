@@ -1,9 +1,19 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
+interface StageBreakdown {
+  ideation: number;
+  script: number;
+  review: number;
+  record: number;
+  edit: number;
+}
+
 interface WeeklyData {
   day: string;
   hours: number;
+  date: Date;
+  stageBreakdown: StageBreakdown;
 }
 
 interface DailyGoalProgress {
@@ -146,10 +156,10 @@ export const useStatsPage = (): StatsPageData => {
           .select('duration_seconds, created_at')
           .eq('user_id', user.id),
         
-        // Weekly stage_times
+        // Weekly stage_times (com stage para breakdown)
         supabase
           .from('stage_times')
-          .select('duration_seconds, created_at')
+          .select('duration_seconds, created_at, stage')
           .eq('user_id', user.id)
           .gte('created_at', sevenDaysAgo.toISOString()),
         
@@ -191,7 +201,7 @@ export const useStatsPage = (): StatsPageData => {
       const totalSeconds = allStageTimes.reduce((sum, st) => sum + (st.duration_seconds || 0), 0);
       const totalHours = Math.round((totalSeconds / 3600) * 10) / 10;
 
-      // Calcular dados semanais (gráfico)
+      // Calcular dados semanais (gráfico) com breakdown por estágio
       const dayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
       const weeklyData: WeeklyData[] = [];
       
@@ -200,14 +210,34 @@ export const useStatsPage = (): StatsPageData => {
         date.setDate(date.getDate() - (6 - i));
         const dayName = dayNames[date.getDay()];
         
-        const dayTotal = weeklyStageTimes.filter(st => {
+        const dayRecords = weeklyStageTimes.filter(st => {
           const stDate = new Date(st.created_at!);
           return stDate.toDateString() === date.toDateString();
-        }).reduce((sum, st) => sum + (st.duration_seconds || 0), 0);
+        });
+        
+        const dayTotal = dayRecords.reduce((sum, st) => sum + (st.duration_seconds || 0), 0);
+        
+        // Agrupar por estágio
+        const stageBreakdown: StageBreakdown = {
+          ideation: 0,
+          script: 0,
+          review: 0,
+          record: 0,
+          edit: 0,
+        };
+        
+        dayRecords.forEach(record => {
+          const stage = record.stage as keyof StageBreakdown;
+          if (stage && stage in stageBreakdown) {
+            stageBreakdown[stage] += Math.round((record.duration_seconds || 0) / 60);
+          }
+        });
         
         weeklyData.push({
           day: dayName,
-          hours: Math.round((dayTotal / 3600) * 10) / 10
+          hours: Math.round((dayTotal / 3600) * 10) / 10,
+          date: new Date(date),
+          stageBreakdown,
         });
       }
 
