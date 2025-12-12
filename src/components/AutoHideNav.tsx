@@ -5,6 +5,7 @@ import { Button } from "./ui/button";
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const navigation = [
   { name: "Home", href: "/", icon: Home },
@@ -14,35 +15,37 @@ const navigation = [
 ];
 
 export const AutoHideNav = () => {
-  const [isVisible, setIsVisible] = useState(false);
+  const isMobile = useIsMobile();
+  const [isDesktopVisible, setIsDesktopVisible] = useState(false);
   const hideTimerRef = useRef<NodeJS.Timeout | null>(null);
   const navigate = useNavigate();
 
+  // No mobile, sempre visível. No desktop, controlado por hover
+  const isVisible = isMobile || isDesktopVisible;
+
   const showNav = () => {
-    // Cancelar timer de esconder se existir
+    if (isMobile) return; // No mobile não precisa controlar
     if (hideTimerRef.current) {
       clearTimeout(hideTimerRef.current);
       hideTimerRef.current = null;
     }
-    setIsVisible(true);
+    setIsDesktopVisible(true);
   };
 
   const scheduleHide = () => {
-    // Agendar para esconder após 300ms
+    if (isMobile) return; // No mobile não esconde
     hideTimerRef.current = setTimeout(() => {
-      setIsVisible(false);
+      setIsDesktopVisible(false);
     }, 300);
   };
 
   const cancelHide = () => {
-    // Cancelar agendamento de esconder
     if (hideTimerRef.current) {
       clearTimeout(hideTimerRef.current);
       hideTimerRef.current = null;
     }
   };
 
-  // Limpar timer ao desmontar
   useEffect(() => {
     return () => {
       if (hideTimerRef.current) {
@@ -53,27 +56,27 @@ export const AutoHideNav = () => {
 
   return (
     <>
-      {/* Zona de detecção invisível (sempre presente) */}
-      <div 
-        className="fixed left-0 right-0 z-40 pointer-events-auto"
-        style={{ 
-          bottom: 0, 
-          height: 'calc(env(safe-area-inset-bottom, 0px) + 50px)' 
-        }}
-        onMouseEnter={showNav}
-        onTouchStart={showNav}
-      />
+      {/* Zona de detecção invisível - APENAS no desktop */}
+      {!isMobile && (
+        <div 
+          className="fixed left-0 right-0 z-40 pointer-events-auto"
+          style={{ 
+            bottom: 0, 
+            height: 'calc(env(safe-area-inset-bottom, 0px) + 50px)' 
+          }}
+          onMouseEnter={showNav}
+        />
+      )}
       
-      {/* Barra de navegação animada */}
+      {/* Barra de navegação */}
       <nav 
         className={cn(
           "fixed left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-2xl z-50 transition-all duration-300 ease-out",
           isVisible ? "translate-y-0 opacity-100" : "translate-y-[calc(100%+2rem)] opacity-0 pointer-events-none"
         )}
         style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' }}
-        onMouseLeave={scheduleHide}
-        onMouseEnter={cancelHide}
-        onTouchEnd={scheduleHide}
+        onMouseLeave={!isMobile ? scheduleHide : undefined}
+        onMouseEnter={!isMobile ? cancelHide : undefined}
       >
         <div className="bg-background/40 backdrop-blur-xl border border-border/50 rounded-3xl shadow-2xl px-4 py-3">
           <div className="flex items-center justify-around gap-2">
