@@ -17,6 +17,7 @@ import { useSession } from "@/hooks/useSession";
 import { useDailyGoalProgress } from "@/hooks/useDailyGoalProgress";
 import { useAppVisibility } from "@/hooks/useAppVisibility";
 import { useWindowPortal } from "@/hooks/useWindowPortal";
+import { useTimerPermission } from "@/hooks/useTimerPermission";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useStreakCelebration } from "@/hooks/useStreakCelebration";
@@ -52,6 +53,9 @@ const ShotListRecord = () => {
   
   const isAppVisible = useAppVisibility();
   const { progress: dailyProgress } = useDailyGoalProgress();
+  
+  // Timer permission check
+  const { canUseTimer } = useTimerPermission(scriptId, 'recording');
 
   // Celebration system
   const { 
@@ -625,6 +629,7 @@ const ShotListRecord = () => {
             onStop={handleEndSession}
             progress={progress}
             todayMinutesFromDB={dailyProgress.actualMinutes}
+            permissionEnabled={canUseTimer}
           />
         )}
 
@@ -646,6 +651,7 @@ const ShotListRecord = () => {
             progress={progress}
             isPopup={true}
             todayMinutesFromDB={dailyProgress.actualMinutes}
+            permissionEnabled={canUseTimer}
           />
         </Portal>
 
