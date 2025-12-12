@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useSession, SessionStage } from "@/hooks/useSession";
 import { useSessionContext } from "@/contexts/SessionContext";
 import { useDailyGoalProgress } from "@/hooks/useDailyGoalProgress";
+import { useTimerPermission } from "@/hooks/useTimerPermission";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -38,6 +39,7 @@ import { useAppVisibility } from "@/hooks/useAppVisibility";
 import { useStreakCelebration } from "@/hooks/useStreakCelebration";
 import { DevToolsPanel } from "@/components/DevToolsPanel";
 import { TROPHIES } from "@/lib/gamification";
+import { CreativeStage } from "@/types/workspace";
 
 const STAGES: { 
   id: SessionStage; 
@@ -74,6 +76,18 @@ const Session = () => {
   const isAppVisible = useAppVisibility();
   const { progress: dailyProgress } = useDailyGoalProgress();
   
+  // Map session stage to CreativeStage for permission check
+  const stageMapping: Record<string, CreativeStage> = {
+    'idea': 'ideation',
+    'script': 'script',
+    'review': 'review',
+    'record': 'recording',
+    'edit': 'editing',
+  };
+  const currentCreativeStage = stageMapping[session.stage || 'idea'];
+  
+  // Timer permission check
+  const { canUseTimer } = useTimerPermission(scriptId, currentCreativeStage);
   // Celebration system
   const { 
     celebrationData, 
@@ -451,6 +465,7 @@ const Session = () => {
             onStop={handleEnd}
             progress={progress}
             todayMinutesFromDB={dailyProgress.actualMinutes}
+            permissionEnabled={canUseTimer}
           />
         )}
 
@@ -469,6 +484,7 @@ const Session = () => {
             progress={progress}
             isPopup={true}
             todayMinutesFromDB={dailyProgress.actualMinutes}
+            permissionEnabled={canUseTimer}
           />
         </Portal>
 
@@ -545,6 +561,7 @@ const Session = () => {
             onStop={handleEnd}
             progress={progress}
             todayMinutesFromDB={dailyProgress.actualMinutes}
+            permissionEnabled={canUseTimer}
           />
         )}
 
@@ -564,6 +581,7 @@ const Session = () => {
             progress={progress}
             isPopup={true}
             todayMinutesFromDB={dailyProgress.actualMinutes}
+            permissionEnabled={canUseTimer}
           />
         </Portal>
 

@@ -13,6 +13,7 @@ import { useSession } from "@/hooks/useSession";
 import { useDailyGoalProgress } from "@/hooks/useDailyGoalProgress";
 import { useAppVisibility } from "@/hooks/useAppVisibility";
 import { useWindowPortal } from "@/hooks/useWindowPortal";
+import { useTimerPermission } from "@/hooks/useTimerPermission";
 import { cn } from "@/lib/utils";
 import { useStreakCelebration } from "@/hooks/useStreakCelebration";
 import SessionSummary from "@/components/SessionSummary";
@@ -47,6 +48,9 @@ const ShotListReview = () => {
   
   const isAppVisible = useAppVisibility();
   const { progress: dailyProgress } = useDailyGoalProgress();
+  
+  // Timer permission check
+  const { canUseTimer } = useTimerPermission(scriptId, 'review');
 
   // Celebration system
   const { 
@@ -531,6 +535,7 @@ const ShotListReview = () => {
             onStop={handleEndSession}
             progress={progress}
             todayMinutesFromDB={dailyProgress.actualMinutes}
+            permissionEnabled={canUseTimer}
           />
         )}
 
@@ -552,6 +557,7 @@ const ShotListReview = () => {
             progress={progress}
             isPopup={true}
             todayMinutesFromDB={dailyProgress.actualMinutes}
+            permissionEnabled={canUseTimer}
           />
         </Portal>
 

@@ -59,6 +59,7 @@ interface DraggableSessionTimerProps {
   hidden?: boolean;
   isPopup?: boolean; // When true, render as centered popup (no drag, no fixed position)
   todayMinutesFromDB?: number; // Minutos já acumulados hoje (do banco de dados)
+  permissionEnabled?: boolean; // When false, timer is not rendered (permission denied)
 }
 
 export const DraggableSessionTimer = ({ 
@@ -76,6 +77,7 @@ export const DraggableSessionTimer = ({
   hidden = false,
   isPopup = false,
   todayMinutesFromDB = 0,
+  permissionEnabled = true,
 }: DraggableSessionTimerProps) => {
   const isMobile = useIsMobile();
   const [showEndConfirmation, setShowEndConfirmation] = useState(false);
@@ -252,9 +254,9 @@ export const DraggableSessionTimer = ({
     };
   }, [isDragging]);
 
-  // Don't render when hidden (user is outside app)
+  // Don't render when hidden (user is outside app) or permission denied
   // Moved here to respect Rules of Hooks
-  if (hidden) return null;
+  if (hidden || !permissionEnabled) return null;
 
   // Popup mode: centered, no dragging, no fixed positioning
   if (isPopup) {
