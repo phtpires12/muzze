@@ -33,7 +33,8 @@ interface CalendarDayProps {
   isCurrentMonth: boolean;
   isToday: boolean;
   compact?: boolean;
-  compactCard?: boolean; // New prop: render smaller cards for mobile week view
+  compactCard?: boolean; // Smaller cards for desktop/tablet
+  weekMobile?: boolean; // Ultra-compact for mobile week view
   onDayClick?: (day: Date, scripts: Script[]) => void;
   onAddScript?: (day: Date) => void;
   onDragStart?: (e: React.DragEvent, script: Script) => void;
@@ -127,6 +128,17 @@ const getStageBadgeClasses = (script: Script): string | null => {
   return null; // Ideação sem badge colorido
 };
 
+// Cor sólida da bolinha de status para modo ultra-compacto (weekMobile)
+const getStageIndicatorColor = (script: Script): string => {
+  if (script.publish_status === "perdido") return "bg-red-500";
+  if (script.publish_status === "postado") return "bg-green-500";
+  if (script.status === "editing") return "bg-blue-500";
+  if (script.status === "recording" || (script.shot_list && script.shot_list.length > 0)) return "bg-orange-500";
+  if (script.status === "review") return "bg-purple-400";
+  if (script.status === "draft" || (script.content && script.content.length > 100)) return "bg-purple-500";
+  return "bg-muted-foreground/50"; // Ideação
+};
+
 export function CalendarDay({
   day,
   scripts,
@@ -134,6 +146,7 @@ export function CalendarDay({
   isToday,
   compact = false,
   compactCard = false,
+  weekMobile = false,
   onDayClick,
   onAddScript,
   onDragStart,
@@ -158,8 +171,59 @@ export function CalendarDay({
     }
   };
 
+  // Ultra-compact mode for mobile week view
+  if (weekMobile) {
+    return (
+      <div
+        className={`group relative min-h-[80px] border-r border-b border-border p-1 transition-all cursor-pointer ${
+          !isCurrentMonth ? "bg-muted/10" : "bg-card"
+        } ${isDragOver ? "bg-primary/20 ring-1 ring-primary ring-inset" : ""}`}
+        onDragOver={(e) => onDragOver?.(e, day)}
+        onDragLeave={onDragLeave}
+        onDrop={(e) => onDrop?.(e, day)}
+        onClick={handleCellClick}
+      >
+        {/* Data pequena */}
+        <div className={`text-[10px] font-medium mb-1 ${
+          isToday ? "text-primary font-bold" : !isCurrentMonth ? "text-muted-foreground/50" : "text-muted-foreground"
+        }`}>
+          {format(day, "d")}
+        </div>
+
+        {/* Cards ultra-compactos */}
+        <div className="space-y-0.5">
+          {scripts.slice(0, 2).map((script) => {
+            const stageColor = getStageIndicatorColor(script);
+            return (
+              <div
+                key={script.id}
+                className="flex items-center gap-1 px-1 py-0.5 rounded bg-muted/60 hover:bg-muted transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onViewScript?.(script.id);
+                }}
+              >
+                {/* Bolinha de status */}
+                <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${stageColor}`} />
+                {/* Título truncado */}
+                <span className="text-[9px] truncate leading-tight text-foreground/80">
+                  {script.title?.trim()?.slice(0, 6) || "..."}
+                </span>
+              </div>
+            );
+          })}
+          {scripts.length > 2 && (
+            <div className="text-[8px] text-muted-foreground text-center opacity-70">
+              +{scripts.length - 2}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   if (compact) {
-    // Mobile/Tablet view - compact with dots
+    // Mobile/Tablet month view - compact with dots
     return (
       <div
         className={`group relative min-h-[80px] border-r border-b border-border p-2 transition-all ${
