@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -263,6 +264,19 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
   const handleBack = async () => {
     // Salvar tempo da sessão antes de navegar
     await saveCurrentStageTime();
+    
+    // Auto-agendar para hoje com status "perdido" se não tiver publish_date
+    if (!publishDate && scriptId) {
+      const today = format(new Date(), "yyyy-MM-dd");
+      await supabase
+        .from('scripts')
+        .update({ 
+          publish_date: today,
+          publish_status: 'perdido'
+        })
+        .eq('id', scriptId);
+    }
+    
     navigate('/calendario');
   };
 

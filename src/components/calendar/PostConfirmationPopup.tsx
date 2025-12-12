@@ -16,6 +16,7 @@ interface OverdueScript {
   title: string;
   publish_date: string;
   publish_status: string;
+  created_at: string;
 }
 
 interface PostConfirmationPopupProps {
@@ -42,6 +43,10 @@ export function PostConfirmationPopup({
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
   if (!script) return null;
+
+  // Detecta se o script foi auto-agendado (publish_date === created_at date)
+  const wasAutoScheduled = script.created_at && script.publish_date && 
+    format(new Date(script.created_at), "yyyy-MM-dd") === script.publish_date;
 
   const handleMarkAsPosted = () => {
     onMarkAsPosted(script.id);
@@ -72,17 +77,23 @@ export function PostConfirmationPopup({
   const content = (
     <div className="space-y-4 py-2">
       <p className="text-center text-muted-foreground">
-        Agendado para {format(new Date(script.publish_date), "d 'de' MMMM", { locale: ptBR })}
+        {wasAutoScheduled 
+          ? "Esse conteúdo foi salvo sem data de publicação."
+          : `Agendado para ${format(new Date(script.publish_date), "d 'de' MMMM", { locale: ptBR })}`
+        }
       </p>
 
       <div className="space-y-3">
-        <Button
-          onClick={handleMarkAsPosted}
-          className="w-full bg-green-600 hover:bg-green-700 text-white"
-        >
-          <Check className="w-4 h-4 mr-2" />
-          Sim, já publiquei
-        </Button>
+        {/* Só mostra "Sim, já publiquei" se não foi auto-agendado */}
+        {!wasAutoScheduled && (
+          <Button
+            onClick={handleMarkAsPosted}
+            className="w-full bg-green-600 hover:bg-green-700 text-white"
+          >
+            <Check className="w-4 h-4 mr-2" />
+            Sim, já publiquei
+          </Button>
+        )}
 
         {!showDatePicker ? (
           <Button
@@ -140,8 +151,12 @@ export function PostConfirmationPopup({
     </div>
   );
 
-  const title = `Você conseguiu postar "${script.title}"?`;
-  const description = "Atualize o status do seu conteúdo";
+  const title = wasAutoScheduled 
+    ? `Você esqueceu de agendar "${script.title}"`
+    : `Você conseguiu postar "${script.title}"?`;
+  const description = wasAutoScheduled 
+    ? "Agende uma data para este conteúdo ou exclua-o"
+    : "Atualize o status do seu conteúdo";
 
   const deleteButton = onDelete && (
     <AlertDialog>

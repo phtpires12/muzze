@@ -7,6 +7,7 @@ interface OverdueScript {
   title: string;
   publish_date: string;
   publish_status: string;
+  created_at: string;
 }
 
 const SNOOZE_KEY = "muzze_overdue_snooze";
@@ -55,10 +56,10 @@ export function useOverdueContent() {
 
     const { data, error } = await supabase
       .from("scripts")
-      .select("id, title, publish_date, publish_status")
+      .select("id, title, publish_date, publish_status, created_at")
       .eq("user_id", user.id)
       .lt("publish_date", today)
-      .in("publish_status", ["planejado", "pronto_para_postar"])
+      .in("publish_status", ["planejado", "pronto_para_postar", "perdido"])
       .order("publish_date", { ascending: true });
 
     if (error) {

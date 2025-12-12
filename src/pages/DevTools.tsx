@@ -30,8 +30,9 @@ const DevTools = () => {
   const mockScript = {
     id: "mock-script-id",
     title: "Meu Conteúdo de Teste",
-    publish_date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+    publish_date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     publish_status: "planejado" as const,
+    created_at: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(),
   };
 
   const handleMockMarkAsPosted = async () => {
