@@ -179,13 +179,16 @@ export const DraggableSessionTimer = ({
   const totalWithCurrentSession = alreadyDoneSeconds + elapsedSeconds;
   const remainingSeconds = goalSeconds - totalWithCurrentSession;
   
-    // Gerar texto dinâmico baseado no progresso
-    let goalText: string;
-    if (remainingSeconds > 0) {
-      goalText = `Falta: ${formatTime(remainingSeconds)}`;
-    } else {
-      const bonusSeconds = Math.abs(remainingSeconds);
-      goalText = `🔥 Bônus: +${formatTime(bonusSeconds)} além da meta`;
+  // Modo bônus: meta diária atingida (só ativa se NÃO estiver em streak mode)
+  const isBonusMode = remainingSeconds <= 0 && !isStreakMode;
+  
+  // Gerar texto dinâmico baseado no progresso
+  let goalText: string;
+  if (remainingSeconds > 0) {
+    goalText = `Falta: ${formatTime(remainingSeconds)}`;
+  } else {
+    const bonusSeconds = Math.abs(remainingSeconds);
+    goalText = `🔥 Bônus: +${formatTime(bonusSeconds)} além da meta`;
   }
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -260,15 +263,17 @@ export const DraggableSessionTimer = ({
         <Card className={cn(
           "backdrop-blur-md border-border/20 shadow-xl rounded-2xl transition-all duration-1000 w-full max-w-md",
           isStreakMode 
-            ? "bg-gradient-to-br from-orange-500/95 via-red-500/95 to-orange-600/95 border-orange-500 animate-pulse" 
-            : "bg-card/95"
+            ? "bg-gradient-to-br from-orange-500/95 via-red-500/95 to-orange-600/95 border-orange-500 animate-pulse"
+            : isBonusMode
+              ? "bg-gradient-to-br from-orange-400/90 via-purple-500/90 to-violet-600/90 border-purple-400"
+              : "bg-card/95"
         )}>
           {/* Timer Content */}
           <div className="p-6">
             <div className="text-center mb-4">
               <span className={cn(
                 "font-semibold text-sm transition-colors duration-1000",
-                isStreakMode ? "text-orange-100/80" : "text-muted-foreground"
+                isStreakMode ? "text-orange-100/80" : isBonusMode ? "text-purple-100/80" : "text-muted-foreground"
               )}>
                 {stage}
               </span>
@@ -280,11 +285,13 @@ export const DraggableSessionTimer = ({
                 "rounded-full flex items-center justify-center shadow-lg transition-all duration-1000 w-20 h-20",
                 isStreakMode
                   ? "bg-orange-100/20 animate-wiggle"
-                  : "bg-gradient-to-br from-accent to-primary"
+                  : isBonusMode
+                    ? "bg-white/20"
+                    : "bg-gradient-to-br from-accent to-primary"
               )}>
                 <Icon className={cn(
                   "transition-colors duration-1000 w-10 h-10",
-                  isStreakMode ? "text-orange-100" : "text-white"
+                  isStreakMode ? "text-orange-100" : isBonusMode ? "text-white" : "text-white"
                 )} />
               </div>
               
@@ -292,13 +299,13 @@ export const DraggableSessionTimer = ({
               <div className="text-center">
                 <div className={cn(
                   "font-bold tabular-nums text-5xl transition-colors duration-1000",
-                  isStreakMode ? "text-orange-100" : "text-foreground"
+                  isStreakMode ? "text-orange-100" : isBonusMode ? "text-white" : "text-foreground"
                 )}>
                   {formatTime(elapsedSeconds)}
                 </div>
                 <div className={cn(
                   "mt-2 text-sm transition-colors duration-1000",
-                  isStreakMode ? "text-orange-100/70" : "text-muted-foreground"
+                  isStreakMode ? "text-orange-100/70" : isBonusMode ? "text-purple-100/70" : "text-muted-foreground"
                 )}>
                   {goalText}
                 </div>
@@ -359,7 +366,8 @@ export const DraggableSessionTimer = ({
                 value={(elapsedSeconds / displayedTarget) * 100} 
                 className={cn(
                   "w-full h-2 transition-all duration-500",
-                  isStreakMode && "bg-orange-200 [&>div]:bg-gradient-to-r [&>div]:from-orange-500 [&>div]:to-red-600"
+                  isStreakMode && "bg-orange-200 [&>div]:bg-gradient-to-r [&>div]:from-orange-500 [&>div]:to-red-600",
+                  isBonusMode && "bg-purple-200 [&>div]:bg-gradient-to-r [&>div]:from-orange-400 [&>div]:to-purple-500"
                 )}
               />
             </div>
@@ -385,15 +393,17 @@ export const DraggableSessionTimer = ({
       <Card className={cn(
         "backdrop-blur-md border-border/20 shadow-xl rounded-2xl transition-all duration-1000",
         isStreakMode 
-          ? "bg-gradient-to-br from-orange-500/95 via-red-500/95 to-orange-600/95 border-orange-500 animate-pulse" 
-          : "bg-card/95",
+          ? "bg-gradient-to-br from-orange-500/95 via-red-500/95 to-orange-600/95 border-orange-500 animate-pulse"
+          : isBonusMode
+            ? "bg-gradient-to-br from-orange-400/90 via-purple-500/90 to-violet-600/90 border-purple-400"
+            : "bg-card/95",
         isMobile ? "w-[280px]" : "w-auto"
       )}>
         {/* Drag Handle - Compacto em mobile */}
         <div
           className={cn(
             "flex items-center justify-between rounded-t-2xl cursor-grab active:cursor-grabbing transition-all duration-1000",
-            isStreakMode ? "bg-orange-500/20" : "bg-primary/10",
+            isStreakMode ? "bg-orange-500/20" : isBonusMode ? "bg-purple-500/20" : "bg-primary/10",
             isMobile ? "px-3 py-1.5" : "px-4 py-2"
           )}
           onMouseDown={handleMouseDown}
@@ -401,14 +411,14 @@ export const DraggableSessionTimer = ({
         >
           <span className={cn(
             "font-semibold transition-colors duration-1000",
-            isStreakMode ? "text-orange-100/80" : "text-muted-foreground",
+            isStreakMode ? "text-orange-100/80" : isBonusMode ? "text-purple-100/80" : "text-muted-foreground",
             isMobile ? "text-[10px]" : "text-xs"
           )}>
             {stage}
           </span>
           <GripVertical className={cn(
             "transition-colors duration-1000",
-            isStreakMode ? "text-orange-100/60" : "text-muted-foreground",
+            isStreakMode ? "text-orange-100/60" : isBonusMode ? "text-purple-100/60" : "text-muted-foreground",
             isMobile ? "w-3 h-3" : "w-4 h-4"
           )} />
         </div>
@@ -424,12 +434,14 @@ export const DraggableSessionTimer = ({
               "rounded-full flex items-center justify-center shadow-lg flex-shrink-0 transition-all duration-1000",
               isStreakMode
                 ? "bg-orange-100/20 animate-wiggle"
-                : "bg-gradient-to-br from-accent to-primary",
+                : isBonusMode
+                  ? "bg-white/20"
+                  : "bg-gradient-to-br from-accent to-primary",
               isMobile ? "w-10 h-10" : "w-12 h-12"
             )}>
               <Icon className={cn(
                 "transition-colors duration-1000",
-                isStreakMode ? "text-orange-100" : "text-white",
+                isStreakMode ? "text-orange-100" : isBonusMode ? "text-white" : "text-white",
                 isMobile ? "w-5 h-5" : "w-6 h-6"
               )} />
             </div>
@@ -437,14 +449,14 @@ export const DraggableSessionTimer = ({
             <div className={cn(isMobile ? "min-w-[100px]" : "min-w-[140px]")}>
               <div className={cn(
                 "font-bold tabular-nums transition-colors duration-1000",
-                isStreakMode ? "text-orange-100" : "text-foreground",
+                isStreakMode ? "text-orange-100" : isBonusMode ? "text-white" : "text-foreground",
                 isMobile ? "text-xl" : "text-2xl"
               )}>
                 {formatTime(elapsedSeconds)}
               </div>
               <div className={cn(
                 "transition-colors duration-1000",
-                isStreakMode ? "text-orange-100/70" : "text-muted-foreground",
+                isStreakMode ? "text-orange-100/70" : isBonusMode ? "text-purple-100/70" : "text-muted-foreground",
                 isMobile ? "text-[10px]" : "text-xs"
               )}>
                 {goalText}
@@ -534,6 +546,7 @@ export const DraggableSessionTimer = ({
             className={cn(
               "transition-all duration-500",
               isStreakMode && "bg-orange-200 [&>div]:bg-gradient-to-r [&>div]:from-orange-500 [&>div]:to-red-600",
+              isBonusMode && "bg-purple-200 [&>div]:bg-gradient-to-r [&>div]:from-orange-400 [&>div]:to-purple-500",
               isMobile ? "mt-2 h-1" : "mt-3 h-1.5"
             )}
           />
