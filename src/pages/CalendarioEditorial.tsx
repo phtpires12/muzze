@@ -524,6 +524,9 @@ const CalendarioEditorial = () => {
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
                 dragOverDate={dragOverDate}
+                onPreviousWeek={goToPreviousWeek}
+                onNextWeek={goToNextWeek}
+                currentWeekLabel={`${format(weekStart, "d MMM", { locale: ptBR })} - ${format(weekEnd, "d MMM", { locale: ptBR })}`}
               />
             ) : (
               <div className="bg-card rounded-lg border border-border overflow-hidden">
