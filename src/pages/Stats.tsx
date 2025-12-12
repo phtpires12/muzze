@@ -7,6 +7,20 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { StatsPageSkeleton } from "@/components/stats/StatsPageSkeleton";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
+const STAGE_LABELS: Record<string, { label: string; emoji: string }> = {
+  ideation: { label: 'Ideação', emoji: '💡' },
+  script: { label: 'Roteiro', emoji: '📝' },
+  review: { label: 'Revisão', emoji: '🔍' },
+  record: { label: 'Gravação', emoji: '🎬' },
+  edit: { label: 'Edição', emoji: '✂️' },
+};
 
 const formatTimeDisplay = (hours: number): string => {
   if (hours < 1) {
@@ -190,24 +204,61 @@ const Stats = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="p-6">
           <h3 className="text-lg font-semibold mb-6">Horas por Dia (Esta Semana)</h3>
-          <div className="flex items-end justify-between gap-4 h-64">
-            {weeklyData.map((data) => {
-              const height = (data.hours / maxHours) * 100;
-              return (
-                <div key={data.day} className="flex-1 flex flex-col items-center gap-2">
-                  <div className="w-full flex items-end justify-center h-48">
-                    <div
-                      className="w-full bg-gradient-to-t from-accent to-primary rounded-t-lg transition-all duration-500 hover:opacity-80 flex items-end justify-center pb-2"
-                      style={{ height: `${height}%`, minHeight: '30px' }}
-                    >
-                      <span className="text-xs font-bold text-white">{formatTimeDisplay(data.hours)}</span>
-                    </div>
-                  </div>
-                  <span className="text-sm font-medium text-muted-foreground">{data.day}</span>
-                </div>
-              );
-            })}
-          </div>
+          <TooltipProvider>
+            <div className="flex items-end justify-between gap-4 h-64">
+              {weeklyData.map((data) => {
+                const height = (data.hours / maxHours) * 100;
+                const hasStageData = data.stageBreakdown && Object.values(data.stageBreakdown).some(v => v > 0);
+                
+                return (
+                  <Tooltip key={data.day}>
+                    <TooltipTrigger asChild>
+                      <div className="flex-1 flex flex-col items-center gap-2 cursor-pointer">
+                        <div className="w-full flex items-end justify-center h-48">
+                          <div
+                            className="w-full bg-gradient-to-t from-accent to-primary rounded-t-lg transition-all duration-500 hover:opacity-80 flex items-end justify-center pb-2"
+                            style={{ height: `${height}%`, minHeight: '30px' }}
+                          >
+                            <span className="text-xs font-bold text-white">{formatTimeDisplay(data.hours)}</span>
+                          </div>
+                        </div>
+                        <span className="text-sm font-medium text-muted-foreground">{data.day}</span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent className="p-3 max-w-xs">
+                      <div className="space-y-2">
+                        <p className="font-bold text-sm capitalize">
+                          {data.date.toLocaleDateString('pt-BR', { 
+                            weekday: 'long', 
+                            day: 'numeric', 
+                            month: 'short' 
+                          })}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Total: {formatTimeDisplay(data.hours)}
+                        </p>
+                        {hasStageData && (
+                          <div className="border-t pt-2 space-y-1">
+                            {Object.entries(data.stageBreakdown).map(([stage, minutes]) => {
+                              if (minutes === 0) return null;
+                              const info = STAGE_LABELS[stage];
+                              if (!info) return null;
+                              return (
+                                <div key={stage} className="flex justify-between text-xs">
+                                  <span>{info.emoji} {info.label}</span>
+                                  <span className="font-medium">{minutes}min</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              })}
+            </div>
+          </TooltipProvider>
         </Card>
 
         <Card className="p-6 bg-gradient-to-br from-primary/5 to-accent/5">
