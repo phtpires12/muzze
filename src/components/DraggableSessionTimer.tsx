@@ -17,6 +17,22 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const ICON_MAP: Record<string, LucideIcon> = {
   Lightbulb,
@@ -59,6 +75,7 @@ export const DraggableSessionTimer = ({
   isPopup = false,
 }: DraggableSessionTimerProps) => {
   const isMobile = useIsMobile();
+  const [showEndConfirmation, setShowEndConfirmation] = useState(false);
 
   const [position, setPosition] = useState({
     x: isMobile ? 16 : window.innerWidth - 370, 
@@ -272,7 +289,7 @@ export const DraggableSessionTimer = ({
                   </Button>
                 )}
                 <Button
-                  onClick={onStop}
+                  onClick={() => setShowEndConfirmation(true)}
                   variant={isStreakMode ? "secondary" : "outline"}
                   size="lg"
                 >
@@ -280,6 +297,25 @@ export const DraggableSessionTimer = ({
                   Finalizar
                 </Button>
               </div>
+
+              {/* Confirmation Dialog */}
+              <AlertDialog open={showEndConfirmation} onOpenChange={setShowEndConfirmation}>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Encerrar sessão?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Ao encerrar, seu tempo será salvo e você será redirecionado para a tela inicial.
+                      Tem certeza que deseja finalizar sua sessão criativa?
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Continuar trabalhando</AlertDialogCancel>
+                    <AlertDialogAction onClick={onStop}>
+                      Sim, encerrar
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
 
               {/* Progress bar */}
               <Progress 
@@ -379,38 +415,80 @@ export const DraggableSessionTimer = ({
             </div>
 
             {/* Controls - Mais compactos em mobile */}
-            <div className={cn(
-              "flex gap-2",
-              isMobile ? "flex-row" : "flex-col"
-            )}>
-              {!isPaused ? (
-                <Button
-                  onClick={onPause}
-                  variant={isStreakMode ? "secondary" : "outline"}
-                  size={isMobile ? "icon" : "sm"}
-                  className={cn(isMobile && "h-8 w-8")}
-                >
-                  <Pause className={cn(isMobile ? "w-3 h-3" : "w-4 h-4")} />
-                </Button>
-              ) : (
-                <Button
-                  onClick={onResume}
-                  variant={isStreakMode ? "secondary" : "default"}
-                  size={isMobile ? "icon" : "sm"}
-                  className={cn(isMobile && "h-8 w-8")}
-                >
-                  <Play className={cn(isMobile ? "w-3 h-3" : "w-4 h-4")} />
-                </Button>
-              )}
-              <Button
-                onClick={onStop}
-                variant={isStreakMode ? "secondary" : "outline"}
-                size={isMobile ? "icon" : "sm"}
-                className={cn(isMobile && "h-8 w-8")}
-              >
-                <Square className={cn(isMobile ? "w-3 h-3" : "w-4 h-4")} />
-              </Button>
-            </div>
+            <TooltipProvider delayDuration={300}>
+              <div className={cn(
+                "flex gap-2",
+                isMobile ? "flex-row" : "flex-col"
+              )}>
+                {!isPaused ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        onClick={onPause}
+                        variant={isStreakMode ? "secondary" : "outline"}
+                        size={isMobile ? "icon" : "sm"}
+                        className={cn(isMobile && "h-8 w-8")}
+                      >
+                        <Pause className={cn(isMobile ? "w-3 h-3" : "w-4 h-4")} />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>Pausar sessão</p>
+                    </TooltipContent>
+                  </Tooltip>
+                ) : (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        onClick={onResume}
+                        variant={isStreakMode ? "secondary" : "default"}
+                        size={isMobile ? "icon" : "sm"}
+                        className={cn(isMobile && "h-8 w-8")}
+                      >
+                        <Play className={cn(isMobile ? "w-3 h-3" : "w-4 h-4")} />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>Retomar sessão</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={() => setShowEndConfirmation(true)}
+                      variant={isStreakMode ? "secondary" : "outline"}
+                      size={isMobile ? "icon" : "sm"}
+                      className={cn(isMobile && "h-8 w-8")}
+                    >
+                      <Square className={cn(isMobile ? "w-3 h-3" : "w-4 h-4")} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    <p>Encerrar sessão</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            </TooltipProvider>
+
+            {/* Confirmation Dialog */}
+            <AlertDialog open={showEndConfirmation} onOpenChange={setShowEndConfirmation}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Encerrar sessão?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Ao encerrar, seu tempo será salvo e você será redirecionado para a tela inicial.
+                    Tem certeza que deseja finalizar sua sessão criativa?
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Continuar trabalhando</AlertDialogCancel>
+                  <AlertDialogAction onClick={onStop}>
+                    Sim, encerrar
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
 
           {/* Progress bar - Mais fino em mobile */}
