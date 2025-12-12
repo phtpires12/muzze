@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { BottomNav } from "@/components/BottomNav";
 import { SessionContextProvider } from "@/contexts/SessionContext";
+import { WorkspaceContextProvider } from "@/contexts/WorkspaceContext";
 import Onboarding from "./pages/NewOnboarding";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
@@ -113,8 +114,9 @@ const App = () => {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <SessionContextProvider>
-        <TooltipProvider>
+      <WorkspaceContextProvider>
+        <SessionContextProvider>
+          <TooltipProvider>
           <Toaster />
           <Sonner />
           {/* Modals must be inside BrowserRouter to use useNavigate */}
@@ -148,8 +150,9 @@ const App = () => {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
-        </TooltipProvider>
-      </SessionContextProvider>
+          </TooltipProvider>
+        </SessionContextProvider>
+      </WorkspaceContextProvider>
     </QueryClientProvider>
   );
 };

@@ -13,6 +13,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { ProfileSheet } from "@/components/ProfileSheet";
 import { Flame, Clock, Trophy, Lightbulb, Zap, Film, Mic, Scissors, AlertCircle, Lock, Sparkles, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -69,6 +72,16 @@ const Index = () => {
   const [isTimeModalOpen, setIsTimeModalOpen] = useState(false);
   const [recentSessions, setRecentSessions] = useState<any[]>([]);
   const [averageTimeByStage, setAverageTimeByStage] = useState<any>({});
+  
+  // Profile Sheet
+  const [isProfileSheetOpen, setIsProfileSheetOpen] = useState(false);
+
+  const getUserInitials = () => {
+    if (profile?.username) {
+      return profile.username.slice(0, 2).toUpperCase();
+    }
+    return 'U';
+  };
 
 
 
@@ -323,10 +336,21 @@ const Index = () => {
             <Flame className="w-5 h-5 text-accent" />
             <span className="font-semibold">{streakData?.current_streak ?? 0} dias</span>
           </button>
-          <div className="flex items-center gap-2 text-foreground">
-            <Clock className="w-5 h-5 text-primary" />
-            <span className="font-semibold">{weeklySessionsCount ?? 0} sessões</span>
-          </div>
+          
+          <Sheet open={isProfileSheetOpen} onOpenChange={setIsProfileSheetOpen}>
+            <SheetTrigger asChild>
+              <button className="focus:outline-none focus:ring-2 focus:ring-primary rounded-full transition-all hover:ring-2 hover:ring-primary/50">
+                <Avatar className="h-9 w-9 cursor-pointer">
+                  <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-white text-sm font-semibold">
+                    {getUserInitials()}
+                  </AvatarFallback>
+                </Avatar>
+              </button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-80">
+              <ProfileSheet onClose={() => setIsProfileSheetOpen(false)} />
+            </SheetContent>
+          </Sheet>
         </div>
       </header>
 
