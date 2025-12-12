@@ -19,13 +19,7 @@ import {
   Flame
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+// Dialog imports removed - now using SessionSummary component
 import { StreakHalo } from "@/components/StreakHalo";
 import { StreakCelebration } from "@/components/StreakCelebration";
 import { TrophyCelebration } from "@/components/TrophyCelebration";
@@ -70,8 +64,7 @@ const Session = () => {
     attachBeforeUnloadListener: true 
   });
   const { validateSessionFreshness } = useSessionContext();
-  const [showSummary, setShowSummary] = useState(false);
-  const [summary, setSummary] = useState<any>(null);
+  // Removed: showSummary and summary states - now using celebrationData.sessionSummary
   const [showStreakHalo, setShowStreakHalo] = useState(false);
   const [streakCount, setStreakCount] = useState(0);
   const isAppVisible = useAppVisibility();
@@ -231,9 +224,7 @@ const Session = () => {
   const handleEnd = async () => {
     const result = await endSession();
     if (result) {
-      setSummary(result);
-      
-      // Always use the new celebration flow with SessionSummary
+      // Use the new celebration flow with SessionSummary
       const sessionSummary = {
         duration: result.duration || 0,
         xpGained: result.xpGained || 0,
@@ -244,12 +235,6 @@ const Session = () => {
       
       await triggerFullCelebration(sessionSummary, streakCount, result.xpGained || 0);
     }
-  };
-
-  const handleCloseSummary = () => {
-    setShowSummary(false);
-    setShowStreakHalo(false);
-    navigate("/");
   };
 
   const handleEditingCompleted = async () => {
@@ -720,7 +705,15 @@ const Session = () => {
         </Card>
       </div>
 
-      {/* New Duolingo-style celebrations */}
+      {/* Celebration Components - Same order as other sections */}
+      <SessionSummary
+        show={celebrationData.showSessionSummary}
+        duration={celebrationData.sessionSummary?.duration || 0}
+        xpGained={celebrationData.sessionSummary?.xpGained || 0}
+        stage={celebrationData.sessionSummary?.stage || 'idea'}
+        onContinue={handleDismissSessionSummary}
+      />
+
       <StreakCelebration
         show={celebrationData.showStreakCelebration}
         streakCount={celebrationData.streakCount}
@@ -734,52 +727,6 @@ const Session = () => {
         xpGained={celebrationData.xpGained}
         onContinue={dismissTrophyCelebration}
       />
-
-      {/* Summary Dialog */}
-      <Dialog open={showSummary} onOpenChange={setShowSummary}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Sessão Concluída! 🎉</DialogTitle>
-            <DialogDescription>
-              Você completou uma sessão criativa
-            </DialogDescription>
-          </DialogHeader>
-          
-          {summary && (
-            <div className="space-y-4 pt-4">
-              <div className="p-4 bg-secondary/50 rounded-xl">
-                <p className="text-sm text-muted-foreground mb-1">Tempo total</p>
-                <p className="text-2xl font-bold text-foreground">
-                  {formatTime(summary.duration)}
-                </p>
-              </div>
-
-              <div className="p-4 bg-secondary/50 rounded-xl">
-                <p className="text-sm text-muted-foreground mb-1">XP Ganho</p>
-                <p className="text-2xl font-bold text-primary">
-                  +{summary.xpGained} XP
-                </p>
-              </div>
-
-              {summary.creativeMinutesToday && (
-                <div className="p-4 bg-primary/10 rounded-xl">
-                  <p className="text-sm text-muted-foreground mb-1">Minutos criativos hoje</p>
-                  <p className="text-2xl font-bold text-foreground">
-                    {Math.floor(summary.creativeMinutesToday)} min
-                  </p>
-                </div>
-              )}
-
-              <Button
-                onClick={handleCloseSummary}
-                className="w-full bg-gradient-to-r from-primary to-accent"
-              >
-                Continuar
-              </Button>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
 
 
       {/* Streak Halo Effect */}
