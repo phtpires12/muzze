@@ -124,13 +124,7 @@ export const useSession = (options: UseSessionOptions = {}) => {
         }));
       }
 
-      // Show XP gained toast
-      if (xpGained > 0) {
-        toast({
-          title: `+${xpGained} XP`,
-          description: `${totalMinutes} minutos de criação!`
-        });
-      }
+      // XP toast removed - SessionSummary component now displays XP visually
 
       // Track analytics
       await supabase.from('analytics_events').insert({

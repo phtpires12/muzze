@@ -33,12 +33,10 @@ const formatDuration = (seconds: number): string => {
 };
 
 const SessionSummary = ({ show, duration, xpGained, stage, onContinue }: SessionSummaryProps) => {
-  const [isVisible, setIsVisible] = useState(false);
   const [animatedXP, setAnimatedXP] = useState(0);
 
   useEffect(() => {
     if (show) {
-      setIsVisible(true);
       setAnimatedXP(0);
       
       // Animate XP count
@@ -61,7 +59,7 @@ const SessionSummary = ({ show, duration, xpGained, stage, onContinue }: Session
     }
   }, [show, xpGained]);
 
-  if (!isVisible) return null;
+  if (!show) return null;
 
   const stageLabel = STAGE_LABELS[stage] || stage;
 
