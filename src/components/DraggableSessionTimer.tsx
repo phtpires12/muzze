@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useSoundEffects } from '@/hooks/useSoundEffects';
 import {
   Tooltip,
   TooltipContent,
@@ -76,6 +77,28 @@ export const DraggableSessionTimer = ({
 }: DraggableSessionTimerProps) => {
   const isMobile = useIsMobile();
   const [showEndConfirmation, setShowEndConfirmation] = useState(false);
+  const { playSound, preloadSounds } = useSoundEffects(0.6);
+
+  // Preload sounds on mount
+  useEffect(() => {
+    preloadSounds();
+  }, [preloadSounds]);
+
+  const handlePause = useCallback(() => {
+    playSound('pause');
+    onPause();
+  }, [playSound, onPause]);
+
+  const handleResume = useCallback(() => {
+    playSound('resume');
+    onResume();
+  }, [playSound, onResume]);
+
+  const handleConfirmEnd = useCallback(() => {
+    playSound('complete');
+    setShowEndConfirmation(false);
+    onStop();
+  }, [playSound, onStop]);
 
   const [position, setPosition] = useState({
     x: isMobile ? 16 : window.innerWidth - 370, 
@@ -271,7 +294,7 @@ export const DraggableSessionTimer = ({
               <div className="flex gap-3">
                 {!isPaused ? (
                   <Button
-                    onClick={onPause}
+                    onClick={handlePause}
                     variant={isStreakMode ? "secondary" : "outline"}
                     size="lg"
                   >
@@ -280,7 +303,7 @@ export const DraggableSessionTimer = ({
                   </Button>
                 ) : (
                   <Button
-                    onClick={onResume}
+                    onClick={handleResume}
                     variant={isStreakMode ? "secondary" : "default"}
                     size="lg"
                   >
@@ -310,7 +333,7 @@ export const DraggableSessionTimer = ({
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Continuar trabalhando</AlertDialogCancel>
-                    <AlertDialogAction onClick={onStop}>
+                    <AlertDialogAction onClick={handleConfirmEnd}>
                       Sim, encerrar
                     </AlertDialogAction>
                   </AlertDialogFooter>
@@ -424,7 +447,7 @@ export const DraggableSessionTimer = ({
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
-                        onClick={onPause}
+                        onClick={handlePause}
                         variant={isStreakMode ? "secondary" : "outline"}
                         size={isMobile ? "icon" : "sm"}
                         className={cn(isMobile && "h-8 w-8")}
@@ -440,7 +463,7 @@ export const DraggableSessionTimer = ({
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
-                        onClick={onResume}
+                        onClick={handleResume}
                         variant={isStreakMode ? "secondary" : "default"}
                         size={isMobile ? "icon" : "sm"}
                         className={cn(isMobile && "h-8 w-8")}
@@ -483,7 +506,7 @@ export const DraggableSessionTimer = ({
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Continuar trabalhando</AlertDialogCancel>
-                  <AlertDialogAction onClick={onStop}>
+                  <AlertDialogAction onClick={handleConfirmEnd}>
                     Sim, encerrar
                   </AlertDialogAction>
                 </AlertDialogFooter>
