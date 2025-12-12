@@ -66,6 +66,8 @@ const Session = () => {
   const { validateSessionFreshness } = useSessionContext();
   // Flag para evitar flash de navegação durante celebração
   const [isShowingCelebration, setIsShowingCelebration] = useState(false);
+  // Flag para prevenir reinício de sessão após encerramento intencional
+  const [hasEndedSession, setHasEndedSession] = useState(false);
   const [showStreakHalo, setShowStreakHalo] = useState(false);
   const [streakCount, setStreakCount] = useState(0);
   const isAppVisible = useAppVisibility();
@@ -138,17 +140,18 @@ const Session = () => {
       // Normalizar "ideation" para "idea" (são sinônimos no workflow)
       const normalizedStage = stageParam === "ideation" ? "idea" : stageParam;
       
-      // Verificar se já existe sessão ativa
-      if (!session.isActive) {
-        // Nenhuma sessão ativa - iniciar nova
+      // NÃO iniciar nova sessão se o usuário acabou de encerrar ou está em celebração
+      if (!session.isActive && !hasEndedSession && !isShowingCelebration) {
+        // Nenhuma sessão ativa e usuário não encerrou - iniciar nova
         startSession(normalizedStage as SessionStage);
-      } else if (session.stage !== normalizedStage) {
+      } else if (session.isActive && session.stage !== normalizedStage) {
         // Sessão ativa mas etapa diferente - mudar etapa (preserva timer)
         changeStage(normalizedStage as SessionStage);
       }
       // Se sessão ativa e mesma etapa, não faz nada
+      // Se hasEndedSession ou isShowingCelebration, não iniciar nova sessão
     }
-  }, [stageParam, session.isActive, session.stage]);
+  }, [stageParam, session.isActive, session.stage, hasEndedSession, isShowingCelebration]);
 
   useEffect(() => {
     if (scriptIdParam) {
@@ -226,23 +229,29 @@ const Session = () => {
   };
 
   const handleEnd = async () => {
-    // Ativar flag ANTES de encerrar para evitar flash de navegação
+    // CRÍTICO: Capturar dados da sessão ANTES de qualquer reset
+    const capturedDuration = session.elapsedSeconds;
+    const capturedStage = session.stage || 'idea';
+    
+    // Ativar flags ANTES de encerrar para evitar reinício de sessão
+    setHasEndedSession(true);
     setIsShowingCelebration(true);
     
     const result = await endSession();
     if (result) {
-      // Use the new celebration flow with SessionSummary
+      // Usar dados capturados como fallback se result estiver corrompido
       const sessionSummary = {
-        duration: result.duration || 0,
+        duration: result.duration || capturedDuration || 0,
         xpGained: result.xpGained || 0,
-        stage: session.stage || 'idea',
+        stage: capturedStage,
       };
       
       const streakCount = (result as any).newStreak || 0;
       
       await triggerFullCelebration(sessionSummary, streakCount, result.xpGained || 0);
     } else {
-      // Se falhou, resetar flag
+      // Se falhou, resetar flags
+      setHasEndedSession(false);
       setIsShowingCelebration(false);
     }
   };
