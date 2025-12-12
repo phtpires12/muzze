@@ -50,9 +50,11 @@ interface SessionContextProviderProps {
 
 const SessionContext = createContext<SessionContextValue | undefined>(undefined);
 
+// Constantes de proteção
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
-const MAX_STAGE_SECONDS = 1800; // 30 minutos máximo por save (proteção)
-const INACTIVITY_PAUSE_MS = 5 * 60 * 1000; // 5 minutos de inatividade para pausar
+const MAX_STAGE_SECONDS = 1800; // 30 minutos máximo por save
+const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutos de inatividade = encerrar sessão
+const BACKGROUND_PAUSE_MS = 2 * 60 * 1000; // 2 minutos em background = pausar
 
 const defaultTimerState: TimerState = {
   isActive: false,
@@ -73,7 +75,6 @@ const defaultTimerState: TimerState = {
 const isSessionOrphan = (state: TimerState): boolean => {
   if (!state.isActive) return false;
   
-  // Usar lastActivityAt se disponível, senão startedAt
   const lastActivity = state.lastActivityAt 
     ? new Date(state.lastActivityAt) 
     : state.startedAt 
@@ -126,6 +127,12 @@ const loadTimerState = (): TimerState => {
         return defaultTimerState;
       }
       
+      // PROTEÇÃO: Validar stageElapsedSeconds no carregamento
+      if (parsed.stageElapsedSeconds > MAX_STAGE_SECONDS) {
+        console.warn(`[SessionContext] stageElapsedSeconds corrompido no load: ${parsed.stageElapsedSeconds}, resetando para 0`);
+        parsed.stageElapsedSeconds = 0;
+      }
+      
       return parsed;
     }
   } catch (error) {
@@ -140,16 +147,27 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
   const [timer, setTimer] = useState<TimerState>(loadTimerState);
   
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const stageStartRef = useRef<Date | null>(null);
   const autoSaveIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const lastSaveTimeRef = useRef<number>(0); // Previne saves duplicados
-  const hiddenSinceRef = useRef<number | null>(null); // Quando a aba ficou escondida
+  const lastSaveTimeRef = useRef<number>(0);
+  const hiddenSinceRef = useRef<number | null>(null);
+  
+  // REFS CRÍTICOS para evitar stale closures
+  const stageStartRef = useRef<Date | null>(null);
+  const stageElapsedRef = useRef<number>(0);
+  const lastRealInteractionRef = useRef<number>(Date.now());
+  const timerRef = useRef<TimerState>(timer);
+  
+  // Manter timerRef atualizado
+  useEffect(() => {
+    timerRef.current = timer;
+    stageElapsedRef.current = timer.stageElapsedSeconds;
+  }, [timer]);
 
-  // Validar frescor da sessão - retorna true se válida, false se foi resetada
+  // Validar frescor da sessão
   const validateSessionFreshness = useCallback((): boolean => {
-    if (!timer.isActive) return true;
+    if (!timerRef.current.isActive) return true;
     
-    if (isSessionOrphan(timer)) {
+    if (isSessionOrphan(timerRef.current)) {
       console.log('[SessionContext] Sessão órfã detectada via validateSessionFreshness');
       setTimer(defaultTimerState);
       localStorage.removeItem('muzze_global_timer');
@@ -157,17 +175,114 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
     }
     
     return true;
-  }, [timer]);
+  }, []);
 
-  // Verificar frescor quando o usuário volta ao app E pausar quando inativo por muito tempo
+  // RASTREAR INTERAÇÃO REAL DO USUÁRIO
   useEffect(() => {
-    const handleVisibilityChange = () => {
+    const updateLastInteraction = () => {
+      lastRealInteractionRef.current = Date.now();
+    };
+    
+    document.addEventListener('click', updateLastInteraction, { passive: true });
+    document.addEventListener('keydown', updateLastInteraction, { passive: true });
+    document.addEventListener('touchstart', updateLastInteraction, { passive: true });
+    document.addEventListener('scroll', updateLastInteraction, { passive: true });
+    
+    return () => {
+      document.removeEventListener('click', updateLastInteraction);
+      document.removeEventListener('keydown', updateLastInteraction);
+      document.removeEventListener('touchstart', updateLastInteraction);
+      document.removeEventListener('scroll', updateLastInteraction);
+    };
+  }, []);
+
+  // Função para salvar tempo - USA REFS para valores críticos
+  const saveStageTime = useCallback(async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      
+      const currentTimer = timerRef.current;
+      const currentStageElapsed = stageElapsedRef.current;
+      const currentStageStart = stageStartRef.current;
+
+      // Se não há tempo para salvar, retornar
+      if (!currentStageStart || currentStageElapsed <= 0) {
+        return;
+      }
+
+      // Proteção: evitar saves duplicados muito próximos (min 10s entre saves)
+      const now = Date.now();
+      if (now - lastSaveTimeRef.current < 10000) {
+        console.log('[SessionContext] Save ignorado - muito próximo do anterior');
+        return;
+      }
+
+      const nowDate = new Date();
+      
+      // VALIDAÇÃO TRIPLA: Calcular duração real baseada em timestamps
+      const realDurationFromTimestamps = Math.floor((nowDate.getTime() - currentStageStart.getTime()) / 1000);
+      
+      // Usar o MENOR valor entre: contador, cálculo real, e máximo permitido
+      const safeDuration = Math.min(
+        currentStageElapsed,
+        realDurationFromTimestamps,
+        MAX_STAGE_SECONDS
+      );
+
+      // Se duração é suspeita (muito maior que real), logar e usar valor calculado
+      if (currentStageElapsed > realDurationFromTimestamps + 60) {
+        console.warn(`[SessionContext] ⚠️ Duração suspeita: contador=${currentStageElapsed}s, real=${realDurationFromTimestamps}s, usando ${safeDuration}s`);
+      }
+
+      // Só salvar se tiver pelo menos 1 segundo
+      if (safeDuration < 1) {
+        console.log('[SessionContext] Duração muito baixa, ignorando save');
+        return;
+      }
+
+      lastSaveTimeRef.current = now;
+
+      await supabase.from('stage_times').insert({
+        user_id: user.id,
+        stage: currentTimer.stage,
+        started_at: currentStageStart.toISOString(),
+        ended_at: nowDate.toISOString(),
+        duration_seconds: safeDuration,
+        content_item_id: currentTimer.contentId || null,
+      });
+
+      console.log(`[SessionContext] ✅ Salvou ${safeDuration}s na etapa ${currentTimer.stage}`);
+
+      // Resetar contadores da etapa após salvar
+      stageStartRef.current = nowDate;
+      setTimer(prev => ({ 
+        ...prev, 
+        stageElapsedSeconds: 0,
+        lastActivityAt: nowDate,
+      }));
+    } catch (error) {
+      console.error('[SessionContext] Erro ao salvar stage_time:', error);
+    }
+  }, []);
+
+  // Verificar frescor e inatividade quando o app fica visível/invisível
+  useEffect(() => {
+    const handleVisibilityChange = async () => {
       if (document.visibilityState === 'hidden') {
-        // Aba ficou escondida - marcar o momento
+        // Aba ficou escondida - marcar o momento e SALVAR IMEDIATAMENTE
         hiddenSinceRef.current = Date.now();
+        
+        if (timerRef.current.isActive && !timerRef.current.isPaused && stageElapsedRef.current > 0) {
+          console.log('[SessionContext] Aba escondida, salvando tempo atual...');
+          await saveStageTime();
+        }
       } else if (document.visibilityState === 'visible') {
         // Aba voltou visível
-        if (timer.isActive && isSessionOrphan(timer)) {
+        const currentTimer = timerRef.current;
+        
+        // Verificar se sessão é órfã
+        if (currentTimer.isActive && isSessionOrphan(currentTimer)) {
           console.log('[SessionContext] Sessão órfã detectada ao voltar ao app');
           setTimer(defaultTimerState);
           localStorage.removeItem('muzze_global_timer');
@@ -179,10 +294,21 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
           return;
         }
         
-        // Verificar se ficou escondida por mais de 5 minutos
-        if (hiddenSinceRef.current && timer.isActive && !timer.isPaused) {
+        // Verificar se ficou escondida por muito tempo
+        if (hiddenSinceRef.current && currentTimer.isActive && !currentTimer.isPaused) {
           const hiddenDuration = Date.now() - hiddenSinceRef.current;
-          if (hiddenDuration > INACTIVITY_PAUSE_MS) {
+          
+          if (hiddenDuration > INACTIVITY_TIMEOUT_MS) {
+            // 30+ min em background = encerrar sessão
+            console.log(`[SessionContext] Aba inativa por ${Math.round(hiddenDuration / 60000)} min, encerrando sessão`);
+            setTimer(defaultTimerState);
+            localStorage.removeItem('muzze_global_timer');
+            toast({
+              title: "Sessão encerrada automaticamente",
+              description: "Você ficou ausente por mais de 30 minutos.",
+            });
+          } else if (hiddenDuration > BACKGROUND_PAUSE_MS) {
+            // 2+ min em background = pausar
             console.log(`[SessionContext] Aba inativa por ${Math.round(hiddenDuration / 60000)} min, pausando timer`);
             setTimer(prev => ({ ...prev, isPaused: true, lastActivityAt: new Date() }));
             toast({
@@ -197,32 +323,55 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
     
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [timer, toast]);
+  }, [toast, saveStageTime]);
 
   // Persistir estado em localStorage sempre que mudar
   useEffect(() => {
     localStorage.setItem('muzze_global_timer', JSON.stringify(timer));
   }, [timer]);
 
-  // Sync contentId to global window object (para hooks externos)
+  // Sync contentId to global window object
   useEffect(() => {
     (window as any).__muzzeSessionContentId = timer.contentId;
   }, [timer.contentId]);
 
-  // Timer tick - incrementa os dois contadores E atualiza lastActivityAt
+  // Timer tick - incrementa os dois contadores COM PROTEÇÕES
   useEffect(() => {
     if (timer.isActive && !timer.isPaused) {
       intervalRef.current = setInterval(() => {
+        // VERIFICAR INATIVIDADE REAL (30 min sem interação = encerrar)
+        const timeSinceLastInteraction = Date.now() - lastRealInteractionRef.current;
+        if (timeSinceLastInteraction > INACTIVITY_TIMEOUT_MS) {
+          console.log(`[SessionContext] Inatividade detectada (${Math.round(timeSinceLastInteraction / 60000)} min), encerrando sessão`);
+          
+          // Salvar antes de encerrar
+          saveStageTime();
+          
+          setTimer(defaultTimerState);
+          localStorage.removeItem('muzze_global_timer');
+          toast({
+            title: "Sessão encerrada",
+            description: "Inatividade detectada por mais de 30 minutos.",
+          });
+          return;
+        }
+
         setTimer(prev => {
           const newElapsedSeconds = prev.elapsedSeconds + 1;
-          const newStageElapsedSeconds = prev.stageElapsedSeconds + 1;
-          const streakThreshold = 25 * 60;
+          let newStageElapsedSeconds = prev.stageElapsedSeconds + 1;
           
-          // Detectar entrada no modo streak
+          // PROTEÇÃO: limitar stageElapsedSeconds
+          if (newStageElapsedSeconds > MAX_STAGE_SECONDS) {
+            console.warn(`[SessionContext] stageElapsedSeconds atingiu máximo (${MAX_STAGE_SECONDS}), resetando...`);
+            // Forçar save e resetar
+            saveStageTime();
+            newStageElapsedSeconds = 0;
+          }
+          
+          const streakThreshold = 25 * 60;
           const wasStreakMode = prev.isStreakMode;
           const isStreakMode = newElapsedSeconds >= streakThreshold;
           
-          // Celebrar ao entrar em modo streak
           if (!wasStreakMode && isStreakMode) {
             toast({
               title: "🔥 Modo Ofensiva Ativado!",
@@ -235,7 +384,7 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
             elapsedSeconds: newElapsedSeconds,
             stageElapsedSeconds: newStageElapsedSeconds,
             isStreakMode,
-            lastActivityAt: new Date(), // Atualiza a cada tick
+            lastActivityAt: new Date(),
           };
         });
       }, 1000);
@@ -251,9 +400,9 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
         clearInterval(intervalRef.current);
       }
     };
-  }, [timer.isActive, timer.isPaused, toast]);
+  }, [timer.isActive, timer.isPaused, toast, saveStageTime]);
 
-  // Auto-save incremental de stage_times a cada 30 segundos
+  // Auto-save incremental a cada 30 segundos
   useEffect(() => {
     if (timer.isActive && !timer.isPaused) {
       autoSaveIntervalRef.current = setInterval(() => {
@@ -271,56 +420,7 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
         clearInterval(autoSaveIntervalRef.current);
       }
     };
-  }, [timer.isActive, timer.isPaused]);
-
-  // Função para salvar tempo da etapa atual no banco
-  const saveStageTime = useCallback(async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // Proteção: verificar se tempo é razoável (máx 30 minutos por save)
-      if (timer.stageElapsedSeconds > MAX_STAGE_SECONDS) {
-        console.warn(`[SessionContext] ⚠️ Tempo suspeito detectado: ${timer.stageElapsedSeconds}s (>${MAX_STAGE_SECONDS}s), ignorando save`);
-        stageStartRef.current = new Date();
-        setTimer(prev => ({ ...prev, stageElapsedSeconds: 0 }));
-        return;
-      }
-
-      // Proteção: evitar saves duplicados muito próximos (min 10s entre saves)
-      const now = Date.now();
-      if (now - lastSaveTimeRef.current < 10000) {
-        console.log('[SessionContext] Save ignorado - muito próximo do anterior');
-        return;
-      }
-
-      if (stageStartRef.current && timer.stageElapsedSeconds > 0) {
-        const nowDate = new Date();
-        lastSaveTimeRef.current = now;
-
-        await supabase.from('stage_times').insert({
-          user_id: user.id,
-          stage: timer.stage,
-          started_at: stageStartRef.current.toISOString(),
-          ended_at: nowDate.toISOString(),
-          duration_seconds: timer.stageElapsedSeconds,
-          content_item_id: timer.contentId || null,
-        });
-
-        console.log(`[SessionContext] ✅ Salvou ${timer.stageElapsedSeconds}s na etapa ${timer.stage}`);
-
-        // Resetar contadores da etapa após salvar
-        stageStartRef.current = nowDate;
-        setTimer(prev => ({ 
-          ...prev, 
-          stageElapsedSeconds: 0,
-          lastActivityAt: nowDate,
-        }));
-      }
-    } catch (error) {
-      console.error('[SessionContext] Erro ao salvar stage_time:', error);
-    }
-  }, [timer.stage, timer.stageElapsedSeconds, timer.contentId]);
+  }, [timer.isActive, timer.isPaused, saveStageTime]);
 
   // Iniciar timer
   const startTimer = useCallback(async (initialStage: SessionStage) => {
@@ -330,8 +430,8 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
 
       const now = new Date();
       stageStartRef.current = now;
+      lastRealInteractionRef.current = Date.now();
 
-      // Buscar meta diária do usuário
       const { data: profile } = await supabase
         .from('profiles')
         .select('daily_goal_minutes')
@@ -353,7 +453,6 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
         contentId: null,
       });
 
-      // Track analytics
       await supabase.from('analytics_events').insert({
         user_id: user.id,
         event: 'session_started',
@@ -374,6 +473,7 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
   // Pausar timer
   const pauseTimer = useCallback(() => {
     const now = new Date();
+    lastRealInteractionRef.current = Date.now();
     setTimer(prev => ({ ...prev, isPaused: true, lastActivityAt: now }));
     toast({
       title: "Sessão pausada",
@@ -384,14 +484,16 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
   // Retomar timer
   const resumeTimer = useCallback(() => {
     const now = new Date();
-    setTimer(prev => ({ ...prev, isPaused: false, lastActivityAt: now }));
+    lastRealInteractionRef.current = Date.now();
+    stageStartRef.current = now; // Reiniciar contagem da etapa
+    setTimer(prev => ({ ...prev, isPaused: false, lastActivityAt: now, stageElapsedSeconds: 0 }));
     toast({
       title: "Sessão retomada",
       description: "Continue criando!",
     });
   }, [toast]);
 
-  // Resetar timer (quando volta para home ou finaliza)
+  // Resetar timer
   const resetTimer = useCallback(() => {
     stageStartRef.current = null;
     setTimer(defaultTimerState);
@@ -405,36 +507,43 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
+      const currentStageElapsed = stageElapsedRef.current;
+      const currentStageStart = stageStartRef.current;
+      const currentTimer = timerRef.current;
+
       // Salvar tempo da etapa ANTERIOR no banco
-      if (stageStartRef.current && timer.stageElapsedSeconds > 0) {
+      if (currentStageStart && currentStageElapsed > 0) {
         const now = new Date();
+        const realDuration = Math.floor((now.getTime() - currentStageStart.getTime()) / 1000);
+        const safeDuration = Math.min(currentStageElapsed, realDuration, MAX_STAGE_SECONDS);
 
-        await supabase.from('stage_times').insert({
-          user_id: user.id,
-          stage: timer.stage,
-          started_at: stageStartRef.current.toISOString(),
-          ended_at: now.toISOString(),
-          duration_seconds: timer.stageElapsedSeconds,
-          content_item_id: timer.contentId || null,
-        });
+        if (safeDuration > 0) {
+          await supabase.from('stage_times').insert({
+            user_id: user.id,
+            stage: currentTimer.stage,
+            started_at: currentStageStart.toISOString(),
+            ended_at: now.toISOString(),
+            duration_seconds: safeDuration,
+            content_item_id: currentTimer.contentId || null,
+          });
 
-        console.log(`[SessionContext] ✅ Salvou ${timer.stageElapsedSeconds}s da etapa ${timer.stage} antes de mudar`);
+          console.log(`[SessionContext] ✅ Salvou ${safeDuration}s da etapa ${currentTimer.stage} antes de mudar`);
+        }
       }
 
-      // Mudar etapa - reseta APENAS o timer da etapa
+      // Mudar etapa
       const now = new Date();
       stageStartRef.current = now;
+      lastRealInteractionRef.current = Date.now();
       
       setTimer(prev => ({ 
         ...prev, 
         stage: newStage,
         stageElapsedSeconds: 0,
         lastActivityAt: now,
-        // elapsedSeconds continua! (timer global não reseta)
-        // isStreakMode continua! (modo streak persiste)
       }));
 
-      console.log(`[SessionContext] Etapa mudada para ${newStage}, elapsedSeconds mantido`);
+      console.log(`[SessionContext] Etapa mudada para ${newStage}`);
     } catch (error: any) {
       console.error('[SessionContext] Erro ao mudar etapa:', error);
       toast({
@@ -443,15 +552,15 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
         variant: "destructive",
       });
     }
-  }, [timer.stage, timer.stageElapsedSeconds, timer.contentId, toast]);
+  }, [toast]);
 
   // Definir contentId
   const setContentId = useCallback((id: string | null) => {
+    lastRealInteractionRef.current = Date.now();
     setTimer(prev => ({ ...prev, contentId: id, lastActivityAt: new Date() }));
   }, []);
 
   // ============ Backward Compatibility ============
-  // Derivar muzzeSession do timer para compatibilidade
   const muzzeSession: MuzzeSessionType = {
     stage: timer.isActive ? timer.stage as MuzzeSessionType['stage'] : "",
     duration: timer.elapsedSeconds || null,
@@ -474,7 +583,6 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
   return (
     <SessionContext.Provider 
       value={{ 
-        // Novo timer global
         timer, 
         startTimer,
         pauseTimer,
@@ -484,8 +592,6 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
         setContentId,
         saveStageTime,
         validateSessionFreshness,
-        
-        // Backward compatibility
         muzzeSession,
         setMuzzeSession,
         resetMuzzeSession,
@@ -498,8 +604,8 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
 
 export const useSessionContext = () => {
   const context = useContext(SessionContext);
-  if (!context) {
-    throw new Error("useSessionContext must be used within SessionContextProvider");
+  if (context === undefined) {
+    throw new Error("useSessionContext must be used within a SessionContextProvider");
   }
   return context;
 };
