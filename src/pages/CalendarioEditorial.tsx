@@ -449,18 +449,31 @@ const CalendarioEditorial = () => {
 
           <TabsContent value="week" className="mt-0">
             <div className="bg-card rounded-lg border border-border overflow-hidden">
-              {/* Week Header */}
+              {/* Week Header - Responsive */}
               <div className="grid grid-cols-7 bg-muted/30 border-b border-border">
                 {weekDays.map((day) => {
                   const isToday = isSameDay(day, new Date());
+                  const isMobile = deviceType === "mobile" || deviceType === "tablet";
+                  const dayAbbreviations = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+                  
                   return (
-                    <div key={day.toISOString()} className="p-4 text-center border-r border-border last:border-r-0">
-                      <div className="text-xs text-muted-foreground">
-                        {format(day, "EEE", { locale: ptBR })}
-                      </div>
-                      <div className={`text-2xl font-semibold mt-1 ${
-                        isToday ? "text-primary" : "text-foreground"
+                    <div 
+                      key={day.toISOString()} 
+                      className={`text-center border-r border-border last:border-r-0 ${
+                        isMobile ? "p-2" : "p-4"
+                      }`}
+                    >
+                      <div className={`text-muted-foreground uppercase ${
+                        isMobile ? "text-[10px]" : "text-xs"
                       }`}>
+                        {isMobile 
+                          ? dayAbbreviations[day.getDay()]
+                          : format(day, "EEE", { locale: ptBR })
+                        }
+                      </div>
+                      <div className={`font-semibold mt-1 ${
+                        isMobile ? "text-lg" : "text-2xl"
+                      } ${isToday ? "text-primary" : "text-foreground"}`}>
                         {format(day, "d")}
                       </div>
                     </div>
@@ -468,11 +481,12 @@ const CalendarioEditorial = () => {
                 })}
               </div>
 
-              {/* Week Grid */}
+              {/* Week Grid - Always show cards (compact=false), use compactCard for mobile */}
               <div className="grid grid-cols-7">
                 {weekDays.map((day) => {
                   const dayScripts = getScriptsForDate(day);
                   const isToday = isSameDay(day, new Date());
+                  const isMobile = deviceType === "mobile" || deviceType === "tablet";
                   
                   return (
                     <CalendarDay
@@ -481,7 +495,8 @@ const CalendarioEditorial = () => {
                       scripts={dayScripts}
                       isCurrentMonth={true}
                       isToday={isToday}
-                      compact={deviceType === "mobile" || deviceType === "tablet"}
+                      compact={false}
+                      compactCard={isMobile}
                       onDayClick={handleDayClick}
                       onAddScript={handleAddScript}
                       onDragStart={handleDragStart}
