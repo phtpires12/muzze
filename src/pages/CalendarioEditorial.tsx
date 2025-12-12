@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useDeviceType } from "@/hooks/useDeviceType";
 import { CalendarDay } from "@/components/calendar/CalendarDay";
 import { DayContentModal } from "@/components/calendar/DayContentModal";
+import { MobileWeekAgendaView } from "@/components/calendar/MobileWeekAgendaView";
 import { PostConfirmationPopup } from "@/components/calendar/PostConfirmationPopup";
 import { useOverdueContent } from "@/hooks/useOverdueContent";
 import { PublishStatus } from "@/components/calendar/PublishStatusBadge";
@@ -512,70 +513,71 @@ const CalendarioEditorial = () => {
           </TabsContent>
 
           <TabsContent value="week" className="mt-0">
-            <div className="bg-card rounded-lg border border-border overflow-hidden">
-              {/* Week Header - Responsive */}
-              <div className="grid grid-cols-7 bg-muted/30 border-b border-border">
-                {weekDays.map((day) => {
-                  const isToday = isSameDay(day, new Date());
-                  const isMobile = deviceType === "mobile" || deviceType === "tablet";
-                  const dayAbbreviations = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
-                  
-                  return (
-                    <div 
-                      key={day.toISOString()} 
-                      className={`text-center border-r border-border last:border-r-0 ${
-                        isMobile ? "p-2" : "p-4"
-                      }`}
-                    >
-                      <div className={`text-muted-foreground uppercase ${
-                        isMobile ? "text-[10px]" : "text-xs"
-                      }`}>
-                        {isMobile 
-                          ? dayAbbreviations[day.getDay()]
-                          : format(day, "EEE", { locale: ptBR })
-                        }
+            {isMobile ? (
+              <MobileWeekAgendaView
+                weekDays={weekDays}
+                getScriptsForDate={getScriptsForDate}
+                onViewScript={handleViewScript}
+                onAddScript={handleAddScript}
+                onDeleteScript={handleDeleteScript}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                dragOverDate={dragOverDate}
+              />
+            ) : (
+              <div className="bg-card rounded-lg border border-border overflow-hidden">
+                {/* Week Header - Desktop */}
+                <div className="grid grid-cols-7 bg-muted/30 border-b border-border">
+                  {weekDays.map((day) => {
+                    const isToday = isSameDay(day, new Date());
+                    
+                    return (
+                      <div 
+                        key={day.toISOString()} 
+                        className="text-center border-r border-border last:border-r-0 p-4"
+                      >
+                        <div className="text-muted-foreground uppercase text-xs">
+                          {format(day, "EEE", { locale: ptBR })}
+                        </div>
+                        <div className={`font-semibold mt-1 text-2xl ${isToday ? "text-primary" : "text-foreground"}`}>
+                          {format(day, "d")}
+                        </div>
                       </div>
-                      <div className={`font-semibold mt-1 ${
-                        isMobile ? "text-lg" : "text-2xl"
-                      } ${isToday ? "text-primary" : "text-foreground"}`}>
-                        {format(day, "d")}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
 
-              {/* Week Grid - Always show cards (compact=false), use compactCard for mobile */}
-              <div className="grid grid-cols-7">
-                {weekDays.map((day) => {
-                  const dayScripts = getScriptsForDate(day);
-                  const isToday = isSameDay(day, new Date());
-                  const isMobile = deviceType === "mobile" || deviceType === "tablet";
-                  
-                  return (
-                    <CalendarDay
-                      key={day.toISOString()}
-                      day={day}
-                      scripts={dayScripts}
-                      isCurrentMonth={true}
-                      isToday={isToday}
-                      compact={false}
-                      weekMobile={isMobile}
-                      onDayClick={handleDayClick}
-                      onAddScript={handleAddScript}
-                      onDragStart={handleDragStart}
-                      onDragOver={handleDragOver}
-                      onDragLeave={handleDragLeave}
-                      onDrop={handleDrop}
-                      onViewScript={handleViewScript}
-                      onDeleteScript={handleDeleteScript}
-                      draggedScript={draggedScript}
-                      dragOverDate={dragOverDate}
-                    />
-                  );
-                })}
+                {/* Week Grid - Desktop */}
+                <div className="grid grid-cols-7">
+                  {weekDays.map((day) => {
+                    const dayScripts = getScriptsForDate(day);
+                    const isToday = isSameDay(day, new Date());
+                    
+                    return (
+                      <CalendarDay
+                        key={day.toISOString()}
+                        day={day}
+                        scripts={dayScripts}
+                        isCurrentMonth={true}
+                        isToday={isToday}
+                        compact={false}
+                        onDayClick={handleDayClick}
+                        onAddScript={handleAddScript}
+                        onDragStart={handleDragStart}
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                        onDrop={handleDrop}
+                        onViewScript={handleViewScript}
+                        onDeleteScript={handleDeleteScript}
+                        draggedScript={draggedScript}
+                        dragOverDate={dragOverDate}
+                      />
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            )}
           </TabsContent>
         </Tabs>
       </div>
