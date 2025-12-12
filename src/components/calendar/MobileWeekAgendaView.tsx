@@ -1,9 +1,9 @@
 import { format, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,6 +41,9 @@ interface MobileWeekAgendaViewProps {
   onDrop?: (e: React.DragEvent, day: Date) => void;
   draggedScript?: Script | null;
   dragOverDate?: string | null;
+  onPreviousWeek?: () => void;
+  onNextWeek?: () => void;
+  currentWeekLabel?: string;
 }
 
 // Background translúcido do card baseado no status/etapa
@@ -86,12 +89,78 @@ export function MobileWeekAgendaView({
   onDragLeave,
   onDrop,
   dragOverDate,
+  onPreviousWeek,
+  onNextWeek,
+  currentWeekLabel,
 }: MobileWeekAgendaViewProps) {
   const [scriptToDelete, setScriptToDelete] = useState<Script | null>(null);
   const dayAbbreviations = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"];
+  
+  // Swipe gesture state
+  const touchStartX = useRef<number | null>(null);
+  const touchEndX = useRef<number | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const minSwipeDistance = 50;
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchEndX.current = null;
+    touchStartX.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStartX.current || !touchEndX.current) return;
+    
+    const distance = touchStartX.current - touchEndX.current;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+    
+    if (isLeftSwipe && onNextWeek) {
+      onNextWeek();
+    } else if (isRightSwipe && onPreviousWeek) {
+      onPreviousWeek();
+    }
+    
+    touchStartX.current = null;
+    touchEndX.current = null;
+  };
 
   return (
-    <div className="space-y-2 px-2">
+    <div 
+      ref={containerRef}
+      className="space-y-2 px-2"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
+      {/* Week navigation header with swipe indicator */}
+      {(onPreviousWeek || onNextWeek) && (
+        <div className="flex items-center justify-between px-2 py-1 mb-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={onPreviousWeek}
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
+          <span className="text-xs text-muted-foreground">
+            {currentWeekLabel || "Deslize para navegar"}
+          </span>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={onNextWeek}
+          >
+            <ChevronRight className="h-5 w-5" />
+          </Button>
+        </div>
+      )}
+      
       {weekDays.map((day) => {
         const scripts = getScriptsForDate(day);
         const isToday = isSameDay(day, new Date());
