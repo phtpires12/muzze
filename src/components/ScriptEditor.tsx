@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
-  Calendar,
+  Calendar as CalendarIcon,
   FileText,
   Link as LinkIcon,
   ListChecks,
@@ -22,6 +23,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useSessionContext } from "@/contexts/SessionContext";
 import { useSession } from "@/hooks/useSession";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 
 interface ScriptEditorProps {
   onClose?: () => void;
@@ -62,6 +66,8 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
   const [showComparison, setShowComparison] = useState(false);
   const [hasLoadedOriginal, setHasLoadedOriginal] = useState(false);
   const [viewMode, setViewMode] = useState<'sections' | 'full-text'>('sections');
+  const [showScheduleAlert, setShowScheduleAlert] = useState(false);
+  const [scheduleDate, setScheduleDate] = useState<Date | undefined>(undefined);
 
   // Refs for auto-resize textareas
   const ganchoRef = useRef<HTMLTextAreaElement>(null);
@@ -261,12 +267,22 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
     }
   };
 
-  const handleBack = async () => {
+  const handleBackClick = () => {
+    // Se não tem publish_date e tem scriptId, mostra alerta
+    if (!publishDate && scriptId) {
+      setShowScheduleAlert(true);
+      return;
+    }
+    // Caso contrário, sai normalmente
+    proceedWithBack();
+  };
+
+  const proceedWithBack = async (shouldAutoSchedule = false) => {
     // Salvar tempo da sessão antes de navegar
     await saveCurrentStageTime();
     
     // Auto-agendar para hoje com status "perdido" se não tiver publish_date
-    if (!publishDate && scriptId) {
+    if (shouldAutoSchedule && !publishDate && scriptId) {
       const today = format(new Date(), "yyyy-MM-dd");
       await supabase
         .from('scripts')
@@ -278,6 +294,24 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
     }
     
     navigate('/calendario');
+  };
+
+  const handleScheduleAndBack = async () => {
+    if (scheduleDate && scriptId) {
+      const formattedDate = format(scheduleDate, "yyyy-MM-dd");
+      await supabase
+        .from('scripts')
+        .update({ 
+          publish_date: formattedDate,
+          publish_status: 'planejado'
+        })
+        .eq('id', scriptId);
+      
+      // Atualiza state local
+      setPublishDate(formattedDate);
+    }
+    setShowScheduleAlert(false);
+    await proceedWithBack(false);
   };
 
   const handleNextStage = async () => {
@@ -418,7 +452,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
           <Button 
             variant="ghost" 
             size="sm"
-            onClick={handleBack}
+            onClick={handleBackClick}
             className="gap-2 self-start"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -1152,6 +1186,67 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
           )}
         </div>
       </div>
+
+      {/* Alert Dialog para agendar antes de sair */}
+      <AlertDialog open={showScheduleAlert} onOpenChange={setShowScheduleAlert}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <CalendarIcon className="w-5 h-5 text-primary" />
+              Agendar Publicação?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Este conteúdo não tem data de publicação. Sem uma data, ele pode ser difícil de encontrar depois.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          <div className="py-4">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !scheduleDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {scheduleDate ? format(scheduleDate, "PPP", { locale: ptBR }) : "Escolha uma data"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={scheduleDate}
+                  onSelect={setScheduleDate}
+                  disabled={(date) => date < new Date()}
+                  initialFocus
+                  className="pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel 
+              onClick={() => {
+                setShowScheduleAlert(false);
+                proceedWithBack(true);
+              }}
+              className="text-muted-foreground"
+            >
+              Continuar Sem Agendar
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleScheduleAndBack}
+              disabled={!scheduleDate}
+              className="bg-primary hover:bg-primary/90"
+            >
+              Agendar e Sair
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
