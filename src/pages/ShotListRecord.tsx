@@ -18,6 +18,10 @@ import { useAppVisibility } from "@/hooks/useAppVisibility";
 import { useWindowPortal } from "@/hooks/useWindowPortal";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { useStreakCelebration } from "@/hooks/useStreakCelebration";
+import SessionSummary from "@/components/SessionSummary";
+import { StreakCelebration } from "@/components/StreakCelebration";
+import { TrophyCelebration } from "@/components/TrophyCelebration";
 
 const ShotListRecord = () => {
   const navigate = useNavigate();
@@ -47,10 +51,48 @@ const ShotListRecord = () => {
   
   const isAppVisible = useAppVisibility();
 
-  // Wrapper para encerrar sessão e redirecionar para home
+  // Celebration system
+  const { 
+    celebrationData, 
+    triggerFullCelebration,
+    dismissSessionSummary,
+    dismissStreakCelebration: originalDismissStreakCelebration,
+    dismissTrophyCelebration: originalDismissTrophyCelebration,
+  } = useStreakCelebration();
+
+  // Wrapper para encerrar sessão com celebração
   const handleEndSession = async () => {
     const result = await endSession();
     if (result) {
+      const sessionSummary = {
+        duration: result.duration || 0,
+        xpGained: result.xpGained || 0,
+        stage: 'record' as const,
+      };
+      const streakCount = (result as any).newStreak || 0;
+      await triggerFullCelebration(sessionSummary, streakCount, result.xpGained || 0);
+    }
+  };
+
+  // Handlers de dismiss com navegação
+  const handleDismissSessionSummary = () => {
+    dismissSessionSummary();
+    if (celebrationData.streakCount === 0 && celebrationData.unlockedTrophies.length === 0) {
+      navigate("/");
+    }
+  };
+
+  const handleDismissStreakCelebration = () => {
+    originalDismissStreakCelebration();
+    if (celebrationData.unlockedTrophies.length === 0) {
+      navigate("/");
+    }
+  };
+
+  const handleDismissTrophyCelebration = () => {
+    originalDismissTrophyCelebration();
+    const remainingTrophies = celebrationData.unlockedTrophies.slice(1);
+    if (remainingTrophies.length === 0) {
       navigate("/");
     }
   };
@@ -673,6 +715,29 @@ const ShotListRecord = () => {
 
       {/* Auto-hide Navigation */}
       <AutoHideNav />
+
+      {/* Celebration Components */}
+      <SessionSummary
+        show={celebrationData.showSessionSummary}
+        duration={celebrationData.sessionSummary?.duration || 0}
+        xpGained={celebrationData.sessionSummary?.xpGained || 0}
+        stage={celebrationData.sessionSummary?.stage || 'record'}
+        onContinue={handleDismissSessionSummary}
+      />
+
+      <StreakCelebration
+        show={celebrationData.showStreakCelebration}
+        streakCount={celebrationData.streakCount}
+        weekDays={celebrationData.weekDays}
+        onContinue={handleDismissStreakCelebration}
+      />
+
+      <TrophyCelebration
+        show={celebrationData.showTrophyCelebration}
+        trophy={celebrationData.currentTrophy}
+        xpGained={celebrationData.xpGained}
+        onContinue={handleDismissTrophyCelebration}
+      />
     </div>
   );
 };
