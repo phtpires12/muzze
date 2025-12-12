@@ -33,6 +33,7 @@ interface CalendarDayProps {
   isCurrentMonth: boolean;
   isToday: boolean;
   compact?: boolean;
+  compactCard?: boolean; // New prop: render smaller cards for mobile week view
   onDayClick?: (day: Date, scripts: Script[]) => void;
   onAddScript?: (day: Date) => void;
   onDragStart?: (e: React.DragEvent, script: Script) => void;
@@ -132,6 +133,7 @@ export function CalendarDay({
   isCurrentMonth,
   isToday,
   compact = false,
+  compactCard = false,
   onDayClick,
   onAddScript,
   onDragStart,
@@ -146,6 +148,9 @@ export function CalendarDay({
   const [isHovered, setIsHovered] = useState(false);
   const [scriptToDelete, setScriptToDelete] = useState<Script | null>(null);
   const isDragOver = dragOverDate === format(day, "yyyy-MM-dd");
+  
+  // Define limits based on card mode
+  const maxScripts = compactCard ? 2 : 4;
 
   const handleCellClick = () => {
     if (scripts.length > 0 && onDayClick) {
@@ -208,21 +213,23 @@ export function CalendarDay({
     );
   }
 
-  // Desktop view - Notion-style cards
+  // Desktop view OR compact card view (mobile week) - Notion-style cards
   return (
     <div
-      className={`group relative min-h-[120px] border-r border-b border-border p-2 transition-all ${
+      className={`group relative border-r border-b border-border transition-all ${
         !isCurrentMonth ? "bg-muted/10" : "bg-card"
-      } ${isDragOver ? "bg-primary/20 ring-2 ring-primary ring-inset shadow-lg" : ""}`}
+      } ${isDragOver ? "bg-primary/20 ring-2 ring-primary ring-inset shadow-lg" : ""} ${
+        compactCard ? "min-h-[100px] p-1.5" : "min-h-[120px] p-2"
+      }`}
       onDragOver={(e) => onDragOver?.(e, day)}
       onDragLeave={onDragLeave}
       onDrop={(e) => onDrop?.(e, day)}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div className="flex justify-between items-start mb-2">
+      <div className={`flex justify-between items-start ${compactCard ? "mb-1" : "mb-2"}`}>
         <div
-          className={`text-sm font-medium ${
+          className={`font-medium ${compactCard ? "text-xs" : "text-sm"} ${
             !isCurrentMonth ? "text-muted-foreground" : isToday ? "text-primary" : "text-foreground"
           }`}
         >
@@ -231,15 +238,17 @@ export function CalendarDay({
         <Button
           size="icon"
           variant="ghost"
-          className={`h-6 w-6 transition-opacity ${isHovered ? "opacity-100" : "opacity-0"}`}
+          className={`transition-opacity ${isHovered ? "opacity-100" : "opacity-0"} ${
+            compactCard ? "h-5 w-5" : "h-6 w-6"
+          }`}
           onClick={() => onAddScript?.(day)}
         >
-          <Plus className="w-4 h-4" />
+          <Plus className={compactCard ? "w-3 h-3" : "w-4 h-4"} />
         </Button>
       </div>
 
-      <div className="space-y-1.5">
-        {scripts.slice(0, 4).map((script) => {
+      <div className={compactCard ? "space-y-1" : "space-y-1.5"}>
+        {scripts.slice(0, maxScripts).map((script) => {
           const cardBackground = getCardBackground(script);
           const stageLabel = getStageLabel(script);
           const isPosted = script.publish_status === "postado";
@@ -248,42 +257,46 @@ export function CalendarDay({
               key={script.id}
               draggable={!isPosted}
               onDragStart={(e) => !isPosted && onDragStart?.(e, script)}
-              className={`group/card relative text-xs rounded border border-border/50 cursor-pointer hover:border-border hover:shadow-sm transition-all ${cardBackground} ${
+              className={`group/card relative rounded border border-border/50 cursor-pointer hover:border-border hover:shadow-sm transition-all ${cardBackground} ${
                 draggedScript?.id === script.id ? "opacity-50" : ""
-              } ${isPosted ? "opacity-75" : ""}`}
+              } ${isPosted ? "opacity-75" : ""} ${compactCard ? "text-[10px]" : "text-xs"}`}
               onClick={() => onViewScript?.(script.id)}
             >
-              <div className="p-2">
+              <div className={compactCard ? "p-1.5" : "p-2"}>
                 <button
-                  className="absolute top-1 right-1 opacity-0 group-hover/card:opacity-100 transition-opacity p-1 rounded hover:bg-destructive/20 z-10"
+                  className={`absolute opacity-0 group-hover/card:opacity-100 transition-opacity rounded hover:bg-destructive/20 z-10 ${
+                    compactCard ? "top-0.5 right-0.5 p-0.5" : "top-1 right-1 p-1"
+                  }`}
                   onClick={(e) => {
                     e.stopPropagation();
                     setScriptToDelete(script);
                   }}
                 >
-                  <Trash2 className="w-3 h-3 text-muted-foreground hover:text-destructive" />
+                  <Trash2 className={`text-muted-foreground hover:text-destructive ${
+                    compactCard ? "w-2.5 h-2.5" : "w-3 h-3"
+                  }`} />
                 </button>
                 
-                <div className="flex items-start gap-2">
-                  <div className="text-muted-foreground mt-0.5 flex-shrink-0">
+                <div className="flex items-start gap-1.5">
+                  <div className={`text-muted-foreground flex-shrink-0 ${compactCard ? "text-[8px]" : "mt-0.5"}`}>
                     {isPosted ? "✅" : "📄"}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className={`font-medium truncate mb-1 ${
+                  <div className="flex-1 min-w-0 overflow-hidden">
+                    <div className={`font-medium truncate ${
                       script.title?.trim() ? "text-foreground" : "text-muted-foreground"
-                    }`}>
+                    } ${compactCard ? "mb-0.5" : "mb-1"}`}>
                       {script.title?.trim() || "Sem título"}
                     </div>
-                    <div className="flex flex-wrap gap-1">
+                    <div className="flex flex-wrap gap-0.5">
                       {stageLabel && (
                         <Badge 
                           variant="outline" 
-                          className={`text-[10px] px-1.5 py-0 ${getStageBadgeClasses(script) || ""}`}
+                          className={`${compactCard ? "text-[8px] px-1 py-0" : "text-[10px] px-1.5 py-0"} ${getStageBadgeClasses(script) || ""}`}
                         >
                           {stageLabel}
                         </Badge>
                       )}
-                      {script.content_type && (
+                      {!compactCard && script.content_type && (
                         <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
                           {script.content_type}
                         </Badge>
@@ -295,8 +308,10 @@ export function CalendarDay({
             </div>
           );
         })}
-        {scripts.length > 4 && (
-          <div className="text-xs text-muted-foreground pl-2">+{scripts.length - 4} mais</div>
+        {scripts.length > maxScripts && (
+          <div className={`text-muted-foreground ${compactCard ? "text-[9px] pl-1" : "text-xs pl-2"}`}>
+            +{scripts.length - maxScripts} mais
+          </div>
         )}
       </div>
 
