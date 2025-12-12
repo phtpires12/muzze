@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Trophy, TROPHIES, checkNewTrophies, UserStats } from "@/lib/gamification";
-import { startOfWeek, addDays, format, isSameDay, isAfter, isBefore } from "date-fns";
+import { startOfWeek, addDays, format, isSameDay, isAfter } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 export interface WeekDay {
@@ -10,11 +10,22 @@ export interface WeekDay {
   status: 'completed' | 'freeze' | 'missed' | 'future' | 'today';
 }
 
+export interface SessionSummaryData {
+  duration: number;
+  xpGained: number;
+  stage: string;
+}
+
 export interface CelebrationData {
+  // Session Summary
+  showSessionSummary: boolean;
+  sessionSummary: SessionSummaryData | null;
+  // Streak Celebration
   showStreakCelebration: boolean;
-  showTrophyCelebration: boolean;
   streakCount: number;
   weekDays: WeekDay[];
+  // Trophy Celebration
+  showTrophyCelebration: boolean;
   unlockedTrophies: Trophy[];
   currentTrophy: Trophy | null;
   xpGained: number;
@@ -22,6 +33,8 @@ export interface CelebrationData {
 
 export const useStreakCelebration = () => {
   const [celebrationData, setCelebrationData] = useState<CelebrationData>({
+    showSessionSummary: false,
+    sessionSummary: null,
     showStreakCelebration: false,
     showTrophyCelebration: false,
     streakCount: 0,
@@ -34,41 +47,28 @@ export const useStreakCelebration = () => {
   const fetchWeekProgress = async (userId: string): Promise<WeekDay[]> => {
     try {
       const today = new Date();
-      const weekStart = startOfWeek(today, { weekStartsOn: 1 }); // Monday
-
+      const weekStart = startOfWeek(today, { weekStartsOn: 1 });
       const weekDays: WeekDay[] = [];
 
       for (let i = 0; i < 7; i++) {
         const currentDay = addDays(weekStart, i);
         const dayName = format(currentDay, 'EEE', { locale: ptBR });
-        
-        // Future days
+
         if (isAfter(currentDay, today)) {
-          weekDays.push({
-            date: currentDay,
-            dayName,
-            status: 'future'
-          });
+          weekDays.push({ date: currentDay, dayName, status: 'future' });
           continue;
         }
 
-        // Today
         if (isSameDay(currentDay, today)) {
-          weekDays.push({
-            date: currentDay,
-            dayName,
-            status: 'today'
-          });
+          weekDays.push({ date: currentDay, dayName, status: 'today' });
           continue;
         }
 
-        // Past days - check if completed or freeze
         const dayStart = new Date(currentDay);
         dayStart.setHours(0, 0, 0, 0);
         const dayEnd = new Date(currentDay);
         dayEnd.setHours(23, 59, 59, 999);
 
-        // Check for freeze usage
         const { data: freezeUsage } = await supabase
           .from('streak_freeze_usage')
           .select('*')
@@ -78,15 +78,10 @@ export const useStreakCelebration = () => {
           .maybeSingle();
 
         if (freezeUsage) {
-          weekDays.push({
-            date: currentDay,
-            dayName,
-            status: 'freeze'
-          });
+          weekDays.push({ date: currentDay, dayName, status: 'freeze' });
           continue;
         }
 
-        // Check for session completion
         const { data: sessions } = await supabase
           .from('stage_times')
           .select('duration_seconds')
@@ -95,20 +90,12 @@ export const useStreakCelebration = () => {
           .lte('started_at', dayEnd.toISOString());
 
         const totalMinutes = sessions?.reduce((sum, s) => sum + (s.duration_seconds || 0), 0) / 60 || 0;
-        
-        if (totalMinutes >= 25) {
-          weekDays.push({
-            date: currentDay,
-            dayName,
-            status: 'completed'
-          });
-        } else {
-          weekDays.push({
-            date: currentDay,
-            dayName,
-            status: 'missed'
-          });
-        }
+
+        weekDays.push({
+          date: currentDay,
+          dayName,
+          status: totalMinutes >= 25 ? 'completed' : 'missed'
+        });
       }
 
       return weekDays;
@@ -120,7 +107,6 @@ export const useStreakCelebration = () => {
 
   const checkForNewTrophies = async (userId: string): Promise<Trophy[]> => {
     try {
-      // Fetch user stats from Supabase
       const { data: profile } = await supabase
         .from('profiles')
         .select('xp_points')
@@ -145,7 +131,6 @@ export const useStreakCelebration = () => {
 
       const totalHours = stageTimes?.reduce((sum, s) => sum + (s.duration_seconds || 0), 0) / 3600 || 0;
 
-      // Get already unlocked trophies from localStorage (or we could store in DB)
       const unlockedTrophiesStr = localStorage.getItem('unlocked_trophies') || '[]';
       const unlockedTrophies: string[] = JSON.parse(unlockedTrophiesStr);
 
@@ -163,7 +148,6 @@ export const useStreakCelebration = () => {
 
       const newTrophies = checkNewTrophies(stats);
 
-      // Save newly unlocked trophies
       if (newTrophies.length > 0) {
         const updatedTrophies = [...unlockedTrophies, ...newTrophies.map(t => t.id)];
         localStorage.setItem('unlocked_trophies', JSON.stringify(updatedTrophies));
@@ -176,6 +160,57 @@ export const useStreakCelebration = () => {
     }
   };
 
+  // New: Trigger full celebration flow starting with session summary
+  const triggerFullCelebration = async (
+    sessionSummary: SessionSummaryData,
+    streakCount: number,
+    xpGained: number
+  ) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const weekDays = await fetchWeekProgress(user.id);
+    const newTrophies = await checkForNewTrophies(user.id);
+
+    setCelebrationData({
+      showSessionSummary: true,
+      sessionSummary,
+      showStreakCelebration: false,
+      showTrophyCelebration: false,
+      streakCount,
+      weekDays,
+      unlockedTrophies: newTrophies,
+      currentTrophy: null,
+      xpGained,
+    });
+  };
+
+  // Dismiss session summary and move to streak celebration
+  const dismissSessionSummary = () => {
+    const { streakCount, unlockedTrophies } = celebrationData;
+
+    if (streakCount > 0) {
+      // Move to streak celebration
+      setCelebrationData(prev => ({
+        ...prev,
+        showSessionSummary: false,
+        showStreakCelebration: true,
+      }));
+    } else if (unlockedTrophies.length > 0) {
+      // Skip streak, go to trophy celebration
+      setCelebrationData(prev => ({
+        ...prev,
+        showSessionSummary: false,
+        showTrophyCelebration: true,
+        currentTrophy: unlockedTrophies[0],
+      }));
+    } else {
+      // No celebrations left, reset everything
+      resetCelebrations();
+    }
+  };
+
+  // Legacy: Trigger streak celebration directly (for backwards compatibility)
   const triggerCelebration = async (streakCount: number, xpGained: number) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
@@ -184,6 +219,8 @@ export const useStreakCelebration = () => {
     const newTrophies = await checkForNewTrophies(user.id);
 
     setCelebrationData({
+      showSessionSummary: false,
+      sessionSummary: null,
       showStreakCelebration: true,
       showTrophyCelebration: false,
       streakCount,
@@ -195,7 +232,6 @@ export const useStreakCelebration = () => {
   };
 
   const dismissStreakCelebration = () => {
-    // Move to trophy celebration if there are trophies
     if (celebrationData.unlockedTrophies.length > 0) {
       setCelebrationData(prev => ({
         ...prev,
@@ -204,37 +240,42 @@ export const useStreakCelebration = () => {
         currentTrophy: prev.unlockedTrophies[0],
       }));
     } else {
-      // No trophies, dismiss everything
-      setCelebrationData(prev => ({
-        ...prev,
-        showStreakCelebration: false,
-      }));
+      resetCelebrations();
     }
   };
 
   const dismissTrophyCelebration = () => {
     const remainingTrophies = celebrationData.unlockedTrophies.slice(1);
-    
+
     if (remainingTrophies.length > 0) {
-      // Show next trophy
       setCelebrationData(prev => ({
         ...prev,
         currentTrophy: remainingTrophies[0],
         unlockedTrophies: remainingTrophies,
       }));
     } else {
-      // All done
-      setCelebrationData(prev => ({
-        ...prev,
-        showTrophyCelebration: false,
-        currentTrophy: null,
-        unlockedTrophies: [],
-      }));
+      resetCelebrations();
     }
+  };
+
+  const resetCelebrations = () => {
+    setCelebrationData({
+      showSessionSummary: false,
+      sessionSummary: null,
+      showStreakCelebration: false,
+      showTrophyCelebration: false,
+      streakCount: 0,
+      weekDays: [],
+      unlockedTrophies: [],
+      currentTrophy: null,
+      xpGained: 0,
+    });
   };
 
   const triggerTrophyDirectly = (trophy: Trophy, xpGained: number) => {
     setCelebrationData({
+      showSessionSummary: false,
+      sessionSummary: null,
       showStreakCelebration: false,
       showTrophyCelebration: true,
       streakCount: 0,
@@ -247,9 +288,12 @@ export const useStreakCelebration = () => {
 
   return {
     celebrationData,
+    triggerFullCelebration,
     triggerCelebration,
     triggerTrophyDirectly,
+    dismissSessionSummary,
     dismissStreakCelebration,
     dismissTrophyCelebration,
+    resetCelebrations,
   };
 };

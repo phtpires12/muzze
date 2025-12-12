@@ -29,6 +29,7 @@ import {
 import { StreakHalo } from "@/components/StreakHalo";
 import { StreakCelebration } from "@/components/StreakCelebration";
 import { TrophyCelebration } from "@/components/TrophyCelebration";
+import SessionSummary from "@/components/SessionSummary";
 import { ScriptEditor } from "@/components/ScriptEditor";
 import { BrainstormWorkspace } from "@/components/brainstorm/BrainstormWorkspace";
 import { IdeaDetail } from "@/components/brainstorm/IdeaDetail";
@@ -78,12 +79,23 @@ const Session = () => {
   // Celebration system
   const { 
     celebrationData, 
+    triggerFullCelebration,
     triggerCelebration, 
+    dismissSessionSummary,
     dismissStreakCelebration: originalDismissStreakCelebration,
-    dismissTrophyCelebration: originalDismissTrophyCelebration
+    dismissTrophyCelebration: originalDismissTrophyCelebration,
+    resetCelebrations,
   } = useStreakCelebration();
 
   // Wrap dismissal functions to handle navigation
+  const handleDismissSessionSummary = () => {
+    dismissSessionSummary();
+    // If no streak or trophies, navigate home
+    if (celebrationData.streakCount === 0 && celebrationData.unlockedTrophies.length === 0) {
+      navigate("/");
+    }
+  };
+
   const dismissStreakCelebration = () => {
     originalDismissStreakCelebration();
     // If no trophies to show, navigate to home
@@ -221,17 +233,16 @@ const Session = () => {
     if (result) {
       setSummary(result);
       
-      // Check if we should show celebration
-      if ((result as any).shouldShowCelebration && result.streakAchieved) {
-        const newStreak = (result as any).newStreak;
-        if (newStreak !== undefined) {
-          // Trigger the new Duolingo-style celebration
-          await triggerCelebration(newStreak, result.xpGained);
-        }
-      } else {
-        // Show old summary dialog for short sessions
-        setShowSummary(true);
-      }
+      // Always use the new celebration flow with SessionSummary
+      const sessionSummary = {
+        duration: result.duration || 0,
+        xpGained: result.xpGained || 0,
+        stage: session.stage || 'idea',
+      };
+      
+      const streakCount = (result as any).newStreak || 0;
+      
+      await triggerFullCelebration(sessionSummary, streakCount, result.xpGained || 0);
     }
   };
 
@@ -422,6 +433,15 @@ const Session = () => {
         />
 
         {/* Celebration Components */}
+        {/* Session Summary (first in celebration flow) */}
+        <SessionSummary
+          show={celebrationData.showSessionSummary}
+          duration={celebrationData.sessionSummary?.duration || 0}
+          xpGained={celebrationData.sessionSummary?.xpGained || 0}
+          stage={celebrationData.sessionSummary?.stage || 'idea'}
+          onContinue={handleDismissSessionSummary}
+        />
+
         <StreakCelebration
           show={celebrationData.showStreakCelebration}
           streakCount={celebrationData.streakCount}
@@ -509,6 +529,14 @@ const Session = () => {
         />
 
         {/* Celebration Components */}
+        <SessionSummary
+          show={celebrationData.showSessionSummary}
+          duration={celebrationData.sessionSummary?.duration || 0}
+          xpGained={celebrationData.sessionSummary?.xpGained || 0}
+          stage={celebrationData.sessionSummary?.stage || 'idea'}
+          onContinue={handleDismissSessionSummary}
+        />
+
         <StreakCelebration
           show={celebrationData.showStreakCelebration}
           streakCount={celebrationData.streakCount}
