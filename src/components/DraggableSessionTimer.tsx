@@ -179,13 +179,13 @@ export const DraggableSessionTimer = ({
   const totalWithCurrentSession = alreadyDoneSeconds + elapsedSeconds;
   const remainingSeconds = goalSeconds - totalWithCurrentSession;
   
-  // Gerar texto dinâmico baseado no progresso
-  let goalText: string;
-  if (remainingSeconds > 0) {
-    goalText = `Falta: ${formatTime(remainingSeconds)}`;
-  } else {
-    const bonusSeconds = Math.abs(remainingSeconds);
-    goalText = `Meta atingida! +${formatTime(bonusSeconds)}`; 
+    // Gerar texto dinâmico baseado no progresso
+    let goalText: string;
+    if (remainingSeconds > 0) {
+      goalText = `Falta: ${formatTime(remainingSeconds)}`;
+    } else {
+      const bonusSeconds = Math.abs(remainingSeconds);
+      goalText = `🔥 Bônus: +${formatTime(bonusSeconds)} além da meta`;
   }
 
   const handleMouseDown = (e: React.MouseEvent) => {
