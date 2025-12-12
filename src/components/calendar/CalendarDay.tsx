@@ -168,10 +168,28 @@ export function CalendarDay({
   const maxScripts = compactCard ? 2 : 4;
   const hasMultipleCards = scripts.length > 1;
 
+  const AUTOPLAY_INTERVAL = 3500; // 3.5 seconds between transitions
+
   // Reset carousel index when scripts change
   useEffect(() => {
     setCurrentCardIndex(0);
   }, [scripts.length]);
+
+  // Auto-play carousel when multiple cards exist (pauses on hover)
+  useEffect(() => {
+    if (!hasMultipleCards || isHovered || weekMobile || compact) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setCurrentCardIndex(prev => {
+        const maxIndex = Math.min(scripts.length, maxScripts) - 1;
+        return prev >= maxIndex ? 0 : prev + 1;
+      });
+    }, AUTOPLAY_INTERVAL);
+
+    return () => clearInterval(interval);
+  }, [hasMultipleCards, isHovered, weekMobile, compact, scripts.length, maxScripts]);
 
   // Carousel navigation handlers
   const goToPrevCard = (e: React.MouseEvent) => {
