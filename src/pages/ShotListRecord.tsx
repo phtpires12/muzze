@@ -47,6 +47,14 @@ const ShotListRecord = () => {
   
   const isAppVisible = useAppVisibility();
 
+  // Wrapper para encerrar sessão e redirecionar para home
+  const handleEndSession = async () => {
+    const result = await endSession();
+    if (result) {
+      navigate("/");
+    }
+  };
+
   // Filter states
   const [filterLocation, setFilterLocation] = useState<string>("all");
   const [showOnlyIncomplete, setShowOnlyIncomplete] = useState(false);
@@ -570,7 +578,7 @@ const ShotListRecord = () => {
             dailyGoalMinutes={session.dailyGoalMinutes}
             onPause={pauseSession}
             onResume={resumeSession}
-            onStop={endSession}
+            onStop={handleEndSession}
             progress={progress}
           />
         )}
@@ -589,7 +597,7 @@ const ShotListRecord = () => {
             dailyGoalMinutes={session.dailyGoalMinutes}
             onPause={pauseSession}
             onResume={resumeSession}
-            onStop={endSession}
+            onStop={handleEndSession}
             progress={progress}
             isPopup={true}
           />

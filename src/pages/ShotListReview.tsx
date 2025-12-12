@@ -42,6 +42,14 @@ const ShotListReview = () => {
   
   const isAppVisible = useAppVisibility();
 
+  // Wrapper para encerrar sessão e redirecionar para home
+  const handleEndSession = async () => {
+    const result = await endSession();
+    if (result) {
+      navigate("/");
+    }
+  };
+
   useEffect(() => {
     if (!scriptId || scriptId === 'null' || scriptId === 'undefined') {
       toast({
@@ -476,7 +484,7 @@ const ShotListReview = () => {
             dailyGoalMinutes={session.dailyGoalMinutes}
             onPause={pauseSession}
             onResume={resumeSession}
-            onStop={endSession}
+            onStop={handleEndSession}
             progress={progress}
           />
         )}
@@ -495,7 +503,7 @@ const ShotListReview = () => {
             dailyGoalMinutes={session.dailyGoalMinutes}
             onPause={pauseSession}
             onResume={resumeSession}
-            onStop={endSession}
+            onStop={handleEndSession}
             progress={progress}
             isPopup={true}
           />
