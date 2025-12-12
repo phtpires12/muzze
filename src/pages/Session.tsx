@@ -349,6 +349,36 @@ const Session = () => {
     );
   }
 
+  // Se estiver mostrando celebração mas sessão não está ativa, renderizar apenas componentes de celebração
+  if (!session.isActive && isShowingCelebration) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-accent/10 via-background to-primary/10">
+        {/* Celebration Components */}
+        <SessionSummary
+          show={celebrationData.showSessionSummary}
+          duration={celebrationData.sessionSummary?.duration || 0}
+          xpGained={celebrationData.sessionSummary?.xpGained || 0}
+          stage={celebrationData.sessionSummary?.stage || 'idea'}
+          onContinue={handleDismissSessionSummary}
+        />
+
+        <StreakCelebration
+          show={celebrationData.showStreakCelebration}
+          streakCount={celebrationData.streakCount}
+          weekDays={celebrationData.weekDays}
+          onContinue={dismissStreakCelebration}
+        />
+
+        <TrophyCelebration
+          show={celebrationData.showTrophyCelebration}
+          trophy={celebrationData.currentTrophy}
+          xpGained={celebrationData.xpGained}
+          onContinue={dismissTrophyCelebration}
+        />
+      </div>
+    );
+  }
+
   const CurrentIcon = currentStage!.icon;
 
   // If stage is "record", show loading while fetching script
