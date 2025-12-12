@@ -1,8 +1,9 @@
 import { format } from "date-fns";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { cn } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -160,10 +161,28 @@ export function CalendarDay({
 }: CalendarDayProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [scriptToDelete, setScriptToDelete] = useState<Script | null>(null);
+  const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const isDragOver = dragOverDate === format(day, "yyyy-MM-dd");
   
   // Define limits based on card mode
   const maxScripts = compactCard ? 2 : 4;
+  const hasMultipleCards = scripts.length > 1;
+
+  // Reset carousel index when scripts change
+  useEffect(() => {
+    setCurrentCardIndex(0);
+  }, [scripts.length]);
+
+  // Carousel navigation handlers
+  const goToPrevCard = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCurrentCardIndex(prev => Math.max(0, prev - 1));
+  };
+
+  const goToNextCard = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCurrentCardIndex(prev => Math.min(scripts.length - 1, prev + 1));
+  };
 
   const handleCellClick = () => {
     if (scripts.length > 0 && onDayClick) {
@@ -311,69 +330,143 @@ export function CalendarDay({
         </Button>
       </div>
 
-      <div className={compactCard ? "space-y-1" : "space-y-1.5"}>
-        {scripts.slice(0, maxScripts).map((script) => {
-          const cardBackground = getCardBackground(script);
-          const stageLabel = getStageLabel(script);
-          const isPosted = script.publish_status === "postado";
-          return (
-            <div
-              key={script.id}
-              draggable={!isPosted}
-              onDragStart={(e) => !isPosted && onDragStart?.(e, script)}
-              className={`group/card relative rounded border border-border/50 cursor-pointer hover:border-border hover:shadow-sm transition-all ${cardBackground} ${
-                draggedScript?.id === script.id ? "opacity-50" : ""
-              } ${isPosted ? "opacity-75" : ""} ${compactCard ? "text-[10px]" : "text-xs"}`}
-              onClick={() => onViewScript?.(script.id)}
-            >
-              <div className={compactCard ? "p-1.5" : "p-2"}>
-                <button
-                  className={`absolute opacity-0 group-hover/card:opacity-100 transition-opacity rounded hover:bg-destructive/20 z-10 ${
-                    compactCard ? "top-0.5 right-0.5 p-0.5" : "top-1 right-1 p-1"
-                  }`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setScriptToDelete(script);
-                  }}
+      {/* Carousel container */}
+      <div className="relative">
+        {/* Overflow hidden container */}
+        <div className="overflow-hidden">
+          {/* Track that slides */}
+          <div 
+            className="flex transition-transform duration-300 ease-out"
+            style={{ 
+              transform: hasMultipleCards ? `translateX(-${currentCardIndex * 100}%)` : undefined 
+            }}
+          >
+            {scripts.slice(0, maxScripts).map((script) => {
+              const cardBackground = getCardBackground(script);
+              const stageLabel = getStageLabel(script);
+              const isPosted = script.publish_status === "postado";
+              return (
+                <div 
+                  key={script.id} 
+                  className={cn(
+                    hasMultipleCards && "w-full flex-shrink-0"
+                  )}
                 >
-                  <Trash2 className={`text-muted-foreground hover:text-destructive ${
-                    compactCard ? "w-2.5 h-2.5" : "w-3 h-3"
-                  }`} />
-                </button>
-                
-                <div className="flex items-start gap-1.5">
-                  <div className={`text-muted-foreground flex-shrink-0 ${compactCard ? "text-[8px]" : "mt-0.5"}`}>
-                    {isPosted ? "✅" : "📄"}
-                  </div>
-                  <div className="flex-1 min-w-0 overflow-hidden">
-                    <div className={`font-medium truncate ${
-                      script.title?.trim() ? "text-foreground" : "text-muted-foreground"
-                    } ${compactCard ? "mb-0.5" : "mb-1"}`}>
-                      {script.title?.trim() || "Sem título"}
-                    </div>
-                    <div className="flex flex-wrap gap-0.5">
-                      {stageLabel && (
-                        <Badge 
-                          variant="outline" 
-                          className={`${compactCard ? "text-[8px] px-1 py-0" : "text-[10px] px-1.5 py-0"} ${getStageBadgeClasses(script) || ""}`}
-                        >
-                          {stageLabel}
-                        </Badge>
-                      )}
-                      {!compactCard && script.content_type && (
-                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                          {script.content_type}
-                        </Badge>
-                      )}
+                  <div
+                    draggable={!isPosted}
+                    onDragStart={(e) => !isPosted && onDragStart?.(e, script)}
+                    className={`group/card relative rounded border border-border/50 cursor-pointer hover:border-border hover:shadow-sm transition-all ${cardBackground} ${
+                      draggedScript?.id === script.id ? "opacity-50" : ""
+                    } ${isPosted ? "opacity-75" : ""} ${compactCard ? "text-[10px]" : "text-xs"}`}
+                    onClick={() => onViewScript?.(script.id)}
+                  >
+                    <div className={compactCard ? "p-1.5" : "p-2"}>
+                      <button
+                        className={`absolute opacity-0 group-hover/card:opacity-100 transition-opacity rounded hover:bg-destructive/20 z-10 ${
+                          compactCard ? "top-0.5 right-0.5 p-0.5" : "top-1 right-1 p-1"
+                        }`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setScriptToDelete(script);
+                        }}
+                      >
+                        <Trash2 className={`text-muted-foreground hover:text-destructive ${
+                          compactCard ? "w-2.5 h-2.5" : "w-3 h-3"
+                        }`} />
+                      </button>
+                      
+                      <div className="flex items-start gap-1.5">
+                        <div className={`text-muted-foreground flex-shrink-0 ${compactCard ? "text-[8px]" : "mt-0.5"}`}>
+                          {isPosted ? "✅" : "📄"}
+                        </div>
+                        <div className="flex-1 min-w-0 overflow-hidden">
+                          <div className={`font-medium truncate ${
+                            script.title?.trim() ? "text-foreground" : "text-muted-foreground"
+                          } ${compactCard ? "mb-0.5" : "mb-1"}`}>
+                            {script.title?.trim() || "Sem título"}
+                          </div>
+                          <div className="flex flex-wrap gap-0.5">
+                            {stageLabel && (
+                              <Badge 
+                                variant="outline" 
+                                className={`${compactCard ? "text-[8px] px-1 py-0" : "text-[10px] px-1.5 py-0"} ${getStageBadgeClasses(script) || ""}`}
+                              >
+                                {stageLabel}
+                              </Badge>
+                            )}
+                            {!compactCard && script.content_type && (
+                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                                {script.content_type}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Navigation arrows (hover only) */}
+        {hasMultipleCards && isHovered && (
+          <>
+            {currentCardIndex > 0 && (
+              <button
+                onClick={goToPrevCard}
+                className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 z-20 
+                           w-5 h-5 rounded-full bg-background/90 shadow-md border border-border
+                           flex items-center justify-center
+                           hover:bg-background transition-colors"
+              >
+                <ChevronLeft className="w-3 h-3" />
+              </button>
+            )}
+            {currentCardIndex < Math.min(scripts.length, maxScripts) - 1 && (
+              <button
+                onClick={goToNextCard}
+                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1 z-20 
+                           w-5 h-5 rounded-full bg-background/90 shadow-md border border-border
+                           flex items-center justify-center
+                           hover:bg-background transition-colors"
+              >
+                <ChevronRight className="w-3 h-3" />
+              </button>
+            )}
+          </>
+        )}
+
+        {/* Carousel indicators (dots + counter) */}
+        {hasMultipleCards && (
+          <div className="flex items-center justify-between mt-1">
+            <div className="flex gap-1 justify-center flex-1">
+              {scripts.slice(0, maxScripts).map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCurrentCardIndex(idx);
+                  }}
+                  className={cn(
+                    "w-1.5 h-1.5 rounded-full transition-all",
+                    idx === currentCardIndex 
+                      ? "bg-primary scale-110" 
+                      : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
+                  )}
+                />
+              ))}
             </div>
-          );
-        })}
+            <span className="text-[9px] text-muted-foreground ml-1">
+              {currentCardIndex + 1}/{Math.min(scripts.length, maxScripts)}
+            </span>
+          </div>
+        )}
+
+        {/* Extra scripts indicator */}
         {scripts.length > maxScripts && (
-          <div className={`text-muted-foreground ${compactCard ? "text-[9px] pl-1" : "text-xs pl-2"}`}>
+          <div className={`text-muted-foreground ${compactCard ? "text-[9px] pl-1" : "text-xs pl-2"} mt-1`}>
             +{scripts.length - maxScripts} mais
           </div>
         )}
