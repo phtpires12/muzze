@@ -1189,7 +1189,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
 
       {/* Alert Dialog para agendar antes de sair */}
       <AlertDialog open={showScheduleAlert} onOpenChange={setShowScheduleAlert}>
-        <AlertDialogContent>
+        <AlertDialogContent className="z-[150]">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <CalendarIcon className="w-5 h-5 text-primary" />
@@ -1214,7 +1214,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                   {scheduleDate ? format(scheduleDate, "PPP", { locale: ptBR }) : "Escolha uma data"}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
+              <PopoverContent className="w-auto p-0 z-[200]" align="start">
                 <Calendar
                   mode="single"
                   selected={scheduleDate}
