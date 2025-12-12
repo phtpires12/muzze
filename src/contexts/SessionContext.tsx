@@ -87,58 +87,15 @@ const isSessionOrphan = (state: TimerState): boolean => {
   return age > TWO_HOURS_MS;
 };
 
-// Carregar estado inicial do localStorage COM validação de órfãos
+// NOVA POLÍTICA: NUNCA restaurar sessões do localStorage
+// O tempo já está salvo no banco de dados (stage_times), não precisamos de persistência local
+// Isso elimina completamente o problema de sessões órfãs
 const loadTimerState = (): TimerState => {
-  try {
-    // Limpar chave antiga também
-    const savedOld = localStorage.getItem('muzze_session_state');
-    if (savedOld) {
-      try {
-        const parsedOld = JSON.parse(savedOld);
-        if (parsedOld.startedAt) {
-          const startedAt = new Date(parsedOld.startedAt);
-          const age = Date.now() - startedAt.getTime();
-          if (age > TWO_HOURS_MS) {
-            localStorage.removeItem('muzze_session_state');
-            console.log('[SessionContext] Chave antiga órfã removida');
-          }
-        }
-      } catch {
-        localStorage.removeItem('muzze_session_state');
-      }
-    }
-
-    const saved = localStorage.getItem('muzze_global_timer');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      
-      // Converter datas de string para Date
-      if (parsed.startedAt) {
-        parsed.startedAt = new Date(parsed.startedAt);
-      }
-      if (parsed.lastActivityAt) {
-        parsed.lastActivityAt = new Date(parsed.lastActivityAt);
-      }
-      
-      // Verificar se a sessão é órfã
-      if (isSessionOrphan(parsed)) {
-        console.log('[SessionContext] Timer órfão detectado no carregamento, resetando...');
-        localStorage.removeItem('muzze_global_timer');
-        return defaultTimerState;
-      }
-      
-      // PROTEÇÃO: Validar stageElapsedSeconds no carregamento
-      if (parsed.stageElapsedSeconds > MAX_STAGE_SECONDS) {
-        console.warn(`[SessionContext] stageElapsedSeconds corrompido no load: ${parsed.stageElapsedSeconds}, resetando para 0`);
-        parsed.stageElapsedSeconds = 0;
-      }
-      
-      return parsed;
-    }
-  } catch (error) {
-    console.error('[SessionContext] Error loading timer state:', error);
-    localStorage.removeItem('muzze_global_timer');
-  }
+  // Sempre limpar qualquer estado anterior
+  localStorage.removeItem('muzze_global_timer');
+  localStorage.removeItem('muzze_session_state');
+  
+  console.log('[SessionContext] Iniciando sem sessão prévia (sessões órfãs eliminadas)');
   return defaultTimerState;
 };
 
