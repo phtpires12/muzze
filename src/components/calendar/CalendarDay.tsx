@@ -346,18 +346,63 @@ export function CalendarDay({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div className={`flex justify-between items-start ${compactCard ? "mb-1" : "mb-2"}`}>
-        <div
-          className={`font-medium ${compactCard ? "text-xs" : "text-sm"} ${
-            !isCurrentMonth ? "text-muted-foreground" : isToday ? "text-primary" : "text-foreground"
-          }`}
-        >
-          {format(day, "d")}
+      <div className={`flex items-center justify-between ${compactCard ? "mb-1" : "mb-2"}`}>
+        {/* Left side: Day number + Carousel indicators */}
+        <div className="flex items-center gap-1.5 min-w-0 flex-1">
+          {/* Day number */}
+          <span
+            className={`font-medium flex-shrink-0 ${compactCard ? "text-xs" : "text-sm"} ${
+              !isCurrentMonth ? "text-muted-foreground" : isToday ? "text-primary" : "text-foreground"
+            }`}
+          >
+            {format(day, "d")}
+          </span>
+          
+          {/* Carousel indicators - only when multiple cards */}
+          {hasMultipleCards && (
+            <div className="flex items-center gap-1 min-w-0">
+              {/* Auto-play progress bar (inline, compact) */}
+              {!isHovered && !weekMobile && !compact && (
+                <div className="w-8 h-[3px] bg-muted-foreground/15 rounded-full overflow-hidden flex-shrink-0">
+                  <div 
+                    className="h-full bg-primary/50 transition-all duration-75 ease-linear"
+                    style={{ width: `${autoplayProgress}%` }}
+                  />
+                </div>
+              )}
+              
+              {/* Navigation dots */}
+              <div className="flex gap-0.5">
+                {scripts.slice(0, maxScripts).map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCurrentCardIndex(idx);
+                    }}
+                    className={cn(
+                      "w-1 h-1 rounded-full transition-all",
+                      idx === currentCardIndex 
+                        ? "bg-primary" 
+                        : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
+                    )}
+                  />
+                ))}
+              </div>
+              
+              {/* Counter */}
+              <span className="text-[7px] text-muted-foreground flex-shrink-0">
+                {currentCardIndex + 1}/{Math.min(scripts.length, maxScripts)}
+              </span>
+            </div>
+          )}
         </div>
+        
+        {/* Right side: Add button */}
         <Button
           size="icon"
           variant="ghost"
-          className={`transition-opacity ${isHovered ? "opacity-100" : "opacity-0"} ${
+          className={`transition-opacity flex-shrink-0 ${isHovered ? "opacity-100" : "opacity-0"} ${
             compactCard ? "h-5 w-5" : "h-6 w-6"
           }`}
           onClick={() => onAddScript?.(day)}
@@ -474,43 +519,6 @@ export function CalendarDay({
           </>
         )}
 
-        {/* Carousel indicators (dots + counter + progress bar) */}
-        {hasMultipleCards && (
-          <div className="space-y-1 mt-1">
-            <div className="flex items-center justify-between">
-              <div className="flex gap-1 justify-center flex-1">
-                {scripts.slice(0, maxScripts).map((_, idx) => (
-                  <button
-                    key={idx}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setCurrentCardIndex(idx);
-                    }}
-                    className={cn(
-                      "w-1.5 h-1.5 rounded-full transition-all",
-                      idx === currentCardIndex 
-                        ? "bg-primary scale-110" 
-                        : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
-                    )}
-                  />
-                ))}
-              </div>
-              <span className="text-[9px] text-muted-foreground ml-1">
-                {currentCardIndex + 1}/{Math.min(scripts.length, maxScripts)}
-              </span>
-            </div>
-            
-            {/* Auto-play progress bar */}
-            {!isHovered && !weekMobile && !compact && (
-              <div className="h-0.5 bg-muted-foreground/20 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-primary/60 transition-all duration-75 ease-linear"
-                  style={{ width: `${autoplayProgress}%` }}
-                />
-              </div>
-            )}
-          </div>
-        )}
 
         {/* Extra scripts indicator */}
         {scripts.length > maxScripts && (
