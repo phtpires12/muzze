@@ -3,17 +3,22 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "next-themes";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useProfile } from "@/hooks/useProfile";
+import { useWorkspaceContext } from "@/contexts/WorkspaceContext";
+import { GuestsModal } from "@/components/GuestsModal";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
+
 const Settings = () => {
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
   const { profile, updateProfile } = useProfile();
+  const { activeRole } = useWorkspaceContext();
   const [isInstalled, setIsInstalled] = useState(false);
+  const [isGuestsModalOpen, setIsGuestsModalOpen] = useState(false);
   const { 
     permission, 
     isSupported, 
@@ -23,6 +28,7 @@ const Settings = () => {
   } = useNotifications();
   
   const notificationsEnabled = profile?.notifications_enabled ?? false;
+  const isOwner = activeRole === 'owner';
 
   useEffect(() => {
     if (window.matchMedia("(display-mode: standalone)").matches) {
@@ -87,9 +93,33 @@ const Settings = () => {
           </CardContent>
         </Card>
 
+        {/* Convidados - apenas para owners */}
+        {isOwner && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Workspace</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button 
+                variant="outline" 
+                className="w-full justify-start"
+                onClick={() => setIsGuestsModalOpen(true)}
+              >
+                <Users className="w-4 h-4 mr-2" />
+                Gerenciar Convidados
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
         {/* PWA Install - only shows if not installed */}
         {!isInstalled && <PWAInstallPrompt variant="inline" />}
       </div>
+
+      <GuestsModal 
+        open={isGuestsModalOpen} 
+        onOpenChange={setIsGuestsModalOpen} 
+      />
     </div>
   );
 };
