@@ -26,20 +26,48 @@ export const DraggableTimer = ({
   const isMobile = useIsMobile();
   const [position, setPosition] = useState({ x: 20, y: 20 });
   const [isDragging, setIsDragging] = useState(false);
+  const [safeAreaTop, setSafeAreaTop] = useState(0);
   const dragRef = useRef<HTMLDivElement>(null);
   const startPos = useRef({ x: 0, y: 0 });
+
+  // Detect iOS safe area on mount
+  useEffect(() => {
+    const computeSafeArea = () => {
+      const computed = getComputedStyle(document.documentElement)
+        .getPropertyValue('--safe-area-inset-top')
+        .trim();
+      const safeArea = parseInt(computed.replace('px', '') || '0', 10);
+      // Fallback mínimo de 20px para dispositivos iOS sem safe area detectável
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      setSafeAreaTop(isIOS ? Math.max(safeArea, 20) : safeArea);
+    };
+    computeSafeArea();
+    window.addEventListener('resize', computeSafeArea);
+    return () => window.removeEventListener('resize', computeSafeArea);
+  }, []);
 
   // Load saved position from localStorage
   useEffect(() => {
     const saved = localStorage.getItem('draggable-timer-position');
     if (saved) {
       try {
-        setPosition(JSON.parse(saved));
+        const parsed = JSON.parse(saved);
+        // Ensure Y position respects safe area
+        setPosition({
+          ...parsed,
+          y: Math.max(parsed.y, safeAreaTop + 16)
+        });
       } catch (e) {
         console.error('Error loading timer position:', e);
       }
+    } else if (safeAreaTop > 0) {
+      // Set initial position below safe area
+      setPosition(prev => ({
+        ...prev,
+        y: Math.max(prev.y, safeAreaTop + 16)
+      }));
     }
-  }, []);
+  }, [safeAreaTop]);
 
   // Save position to localStorage
   useEffect(() => {
@@ -90,9 +118,12 @@ export const DraggableTimer = ({
       const maxX = window.innerWidth - timerWidth;
       const maxY = window.innerHeight - timerHeight;
 
+      // Minimum Y respects iOS safe area (Dynamic Island)
+      const minY = safeAreaTop + 8;
+
       setPosition({
         x: Math.max(0, Math.min(newX, maxX)),
-        y: Math.max(0, Math.min(newY, maxY))
+        y: Math.max(minY, Math.min(newY, maxY))
       });
     };
 
