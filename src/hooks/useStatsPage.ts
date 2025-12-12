@@ -29,6 +29,11 @@ interface WeeklyGoalStats {
   weeklyProductivityPercentage: number;
 }
 
+interface PreviousWeekStats {
+  weeklyTotalMinutes: number;
+  weeklyProductivityPercentage: number;
+}
+
 interface GamificationStats {
   xp: number;
   level: number;
@@ -45,6 +50,7 @@ interface StatsPageData {
   totalHours: number;
   weeklyAverage: number;
   weeklyGoalStats: WeeklyGoalStats;
+  previousWeekStats: PreviousWeekStats;
   dailyGoal: DailyGoalProgress;
   profile: {
     xp_points: number;
@@ -87,6 +93,10 @@ export const useStatsPage = (): StatsPageData => {
       weeklyGoalMinutes: 0,
       weeklyProductivityPercentage: 0,
     },
+    previousWeekStats: {
+      weeklyTotalMinutes: 0,
+      weeklyProductivityPercentage: 0,
+    },
     dailyGoal: {
       goalMinutes: 60,
       actualMinutes: 0,
@@ -126,12 +136,17 @@ export const useStatsPage = (): StatsPageData => {
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
       sevenDaysAgo.setHours(0, 0, 0, 0);
 
+      const fourteenDaysAgo = new Date();
+      fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 13);
+      fourteenDaysAgo.setHours(0, 0, 0, 0);
+
       // EXECUTAR TODAS AS QUERIES EM PARALELO
       const [
         profileResult,
         streakResult,
         allStageTimesResult,
         weeklyStageTimesResult,
+        previousWeekStageTimesResult,
         todayStageTimesResult,
         scriptsCountResult,
         ideasCountResult,
@@ -163,6 +178,14 @@ export const useStatsPage = (): StatsPageData => {
           .eq('user_id', user.id)
           .gte('created_at', sevenDaysAgo.toISOString()),
         
+        // Previous week stage_times (14 to 7 days ago)
+        supabase
+          .from('stage_times')
+          .select('duration_seconds, created_at')
+          .eq('user_id', user.id)
+          .gte('created_at', fourteenDaysAgo.toISOString())
+          .lt('created_at', sevenDaysAgo.toISOString()),
+        
         // Today stage_times
         supabase
           .from('stage_times')
@@ -192,6 +215,7 @@ export const useStatsPage = (): StatsPageData => {
       const streak = streakResult.data?.current_streak || 0;
       const allStageTimes = allStageTimesResult.data || [];
       const weeklyStageTimes = weeklyStageTimesResult.data || [];
+      const previousWeekStageTimes = previousWeekStageTimesResult.data || [];
       const todayStageTimes = todayStageTimesResult.data || [];
       const scriptsCount = scriptsCountResult.count || 0;
       const ideasCount = ideasCountResult.count || 0;
@@ -252,6 +276,15 @@ export const useStatsPage = (): StatsPageData => {
         ? Math.round(((weeklyTotalMinutes - weeklyGoalMinutes) / weeklyGoalMinutes) * 100)
         : 0;
 
+      // Previous week stats
+      const previousWeekTotalSeconds = previousWeekStageTimes.reduce(
+        (sum, st) => sum + (st.duration_seconds || 0), 0
+      );
+      const previousWeekTotalMinutes = Math.floor(previousWeekTotalSeconds / 60);
+      const previousWeekProductivityPercentage = weeklyGoalMinutes > 0
+        ? Math.round(((previousWeekTotalMinutes - weeklyGoalMinutes) / weeklyGoalMinutes) * 100)
+        : 0;
+
       // Daily goal progress
       const todayTotalSeconds = todayStageTimes.reduce((sum, st) => sum + (st.duration_seconds || 0), 0);
       const actualMinutes = Math.floor(todayTotalSeconds / 60);
@@ -282,6 +315,10 @@ export const useStatsPage = (): StatsPageData => {
           weeklyTotalMinutes,
           weeklyGoalMinutes,
           weeklyProductivityPercentage,
+        },
+        previousWeekStats: {
+          weeklyTotalMinutes: previousWeekTotalMinutes,
+          weeklyProductivityPercentage: previousWeekProductivityPercentage,
         },
         dailyGoal: {
           goalMinutes: dailyGoalMinutes,

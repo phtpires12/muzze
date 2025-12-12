@@ -13,6 +13,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { WeeklySummaryCarousel } from "@/components/stats/WeeklySummaryCarousel";
 
 const STAGE_LABELS: Record<string, { label: string; emoji: string }> = {
   ideation: { label: 'Ideação', emoji: '💡' },
@@ -36,6 +37,7 @@ const Stats = () => {
     totalSessions,
     weeklyAverage,
     weeklyGoalStats,
+    previousWeekStats,
     dailyGoal,
     profile,
     gamificationStats,
@@ -262,35 +264,17 @@ const Stats = () => {
         </Card>
 
         <Card className="p-6 bg-gradient-to-br from-primary/5 to-accent/5">
-          <h3 className="text-lg font-semibold mb-4">📊 Resumo da Semana</h3>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">⏱️ Total trabalhado</span>
-              <span className="font-bold">
-                {formatTimeDisplay(weeklyGoalStats.weeklyTotalMinutes / 60)}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">🎯 Meta da semana</span>
-              <span className="font-bold">{weeklyGoalStats.weeklyGoalMinutes} min</span>
-            </div>
-            <Separator />
-            <div className="flex items-center justify-between text-lg">
-              <span className="font-semibold">📈 Produtividade</span>
-              <span className={cn(
-                "font-bold",
-                weeklyGoalStats.weeklyProductivityPercentage >= 0 ? "text-green-600" : "text-orange-600"
-              )}>
-                {weeklyGoalStats.weeklyProductivityPercentage >= 0 ? '+' : ''}{weeklyGoalStats.weeklyProductivityPercentage}%
-              </span>
-            </div>
-            <p className="text-sm text-center text-muted-foreground mt-4">
-              {weeklyGoalStats.weeklyProductivityPercentage >= 0 
-                ? "Você está arrasando! Continue assim! 💪"
-                : "Pequenos passos todos os dias fazem diferença! 🌱"
-              }
-            </p>
-          </div>
+          <WeeklySummaryCarousel
+            currentWeek={{
+              totalMinutes: weeklyGoalStats.weeklyTotalMinutes,
+              goalMinutes: weeklyGoalStats.weeklyGoalMinutes,
+              productivity: weeklyGoalStats.weeklyProductivityPercentage,
+            }}
+            previousWeek={{
+              totalMinutes: previousWeekStats.weeklyTotalMinutes,
+              productivity: previousWeekStats.weeklyProductivityPercentage,
+            }}
+          />
         </Card>
       </div>
 
