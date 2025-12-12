@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek, addWeeks, subWeeks } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Plus, ChevronLeft, ChevronRight, Lightbulb, Filter } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, ChevronDown, Lightbulb, Filter } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useDeviceType } from "@/hooks/useDeviceType";
@@ -47,6 +47,11 @@ const CalendarioEditorial = () => {
   const [stageFilter, setStageFilter] = useState<string>("all");
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
+  
+  const isMobile = deviceType === 'mobile';
+  const hasActiveFilters = contentTypeFilter !== "all" || stageFilter !== "all";
+  const activeFilterCount = (contentTypeFilter !== "all" ? 1 : 0) + (stageFilter !== "all" ? 1 : 0);
 
   // Overdue content popup
   const {
@@ -348,17 +353,73 @@ const CalendarioEditorial = () => {
 
       <div className="container mx-auto px-4 py-4">
         <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "month" | "week")}>
-          <div className="flex justify-between items-center mb-4 flex-wrap gap-4">
-            <div className="flex items-center gap-3">
-              <TabsList>
-                <TabsTrigger value="month">Mês</TabsTrigger>
-                <TabsTrigger value="week">Semana</TabsTrigger>
-              </TabsList>
+          <div className="flex flex-col gap-3 mb-4">
+            <div className="flex justify-between items-center flex-wrap gap-4">
+              <div className="flex items-center gap-3">
+                <TabsList>
+                  <TabsTrigger value="month">Mês</TabsTrigger>
+                  <TabsTrigger value="week">Semana</TabsTrigger>
+                </TabsList>
+                
+                {/* Mobile: Botão de filtros colapsável */}
+                {isMobile && (
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setFiltersExpanded(!filtersExpanded)}
+                    className={hasActiveFilters ? "border-primary" : ""}
+                  >
+                    <Filter className="w-4 h-4 mr-2" />
+                    Filtros
+                    {hasActiveFilters && (
+                      <span className="ml-2 bg-primary text-primary-foreground text-xs rounded-full px-1.5 py-0.5">
+                        {activeFilterCount}
+                      </span>
+                    )}
+                    <ChevronDown className={`w-4 h-4 ml-1 transition-transform ${filtersExpanded ? "rotate-180" : ""}`} />
+                  </Button>
+                )}
+                
+                {/* Desktop: Filtros inline */}
+                {!isMobile && (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Filter className="w-4 h-4 text-muted-foreground" />
+                    <Select value={contentTypeFilter} onValueChange={setContentTypeFilter}>
+                      <SelectTrigger className="w-[160px]">
+                        <SelectValue placeholder="Filtrar por tipo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos os tipos</SelectItem>
+                        <SelectItem value="Reels">Reels</SelectItem>
+                        <SelectItem value="YouTube">YouTube</SelectItem>
+                        <SelectItem value="TikTok">TikTok</SelectItem>
+                        <SelectItem value="X (Twitter)">X (Twitter)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    
+                    <Select value={stageFilter} onValueChange={setStageFilter}>
+                      <SelectTrigger className="w-[160px]">
+                        <SelectValue placeholder="Filtrar por etapa" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todas as etapas</SelectItem>
+                        <SelectItem value="idea">Ideação</SelectItem>
+                        <SelectItem value="script">Roteiro</SelectItem>
+                        <SelectItem value="review">Revisão</SelectItem>
+                        <SelectItem value="record">Gravação</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
               
-              <div className="flex items-center gap-2 flex-wrap">
-                <Filter className="w-4 h-4 text-muted-foreground" />
+          </div>
+            
+            {/* Mobile: Painel expansível de filtros */}
+            {isMobile && filtersExpanded && (
+              <div className="flex flex-col gap-2 p-3 bg-muted/20 rounded-lg border border-border">
                 <Select value={contentTypeFilter} onValueChange={setContentTypeFilter}>
-                  <SelectTrigger className="w-[160px]">
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Filtrar por tipo" />
                   </SelectTrigger>
                   <SelectContent>
@@ -371,7 +432,7 @@ const CalendarioEditorial = () => {
                 </Select>
                 
                 <Select value={stageFilter} onValueChange={setStageFilter}>
-                  <SelectTrigger className="w-[160px]">
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Filtrar por etapa" />
                   </SelectTrigger>
                   <SelectContent>
@@ -383,7 +444,7 @@ const CalendarioEditorial = () => {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
+            )}
             
             <div className="flex items-center gap-2">
               <Button 
