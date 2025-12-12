@@ -594,7 +594,10 @@ const Index = () => {
 
       {/* Trophies Modal */}
       <Dialog open={isTrophiesModalOpen} onOpenChange={setIsTrophiesModalOpen}>
-        <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent 
+          className="sm:max-w-2xl max-h-[80vh] overflow-y-auto"
+          style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1.5rem)' }}
+        >
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold flex items-center gap-2">
               <Trophy className="w-6 h-6 text-accent" />
