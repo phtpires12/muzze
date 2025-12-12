@@ -55,7 +55,11 @@ export const AutoHideNav = () => {
     <>
       {/* Zona de detecção invisível (sempre presente) */}
       <div 
-        className="fixed bottom-0 left-0 right-0 h-[50px] z-40 pointer-events-auto"
+        className="fixed left-0 right-0 z-40 pointer-events-auto"
+        style={{ 
+          bottom: 0, 
+          height: 'calc(env(safe-area-inset-bottom, 0px) + 50px)' 
+        }}
         onMouseEnter={showNav}
         onTouchStart={showNav}
       />
@@ -63,9 +67,10 @@ export const AutoHideNav = () => {
       {/* Barra de navegação animada */}
       <nav 
         className={cn(
-          "fixed bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-2xl z-50 transition-all duration-300 ease-out",
+          "fixed left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-2xl z-50 transition-all duration-300 ease-out",
           isVisible ? "translate-y-0 opacity-100" : "translate-y-[calc(100%+2rem)] opacity-0 pointer-events-none"
         )}
+        style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' }}
         onMouseLeave={scheduleHide}
         onMouseEnter={cancelHide}
         onTouchEnd={scheduleHide}

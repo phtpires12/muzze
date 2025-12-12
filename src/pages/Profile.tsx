@@ -45,7 +45,10 @@ const Profile = () => {
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      <div className="container mx-auto p-4 max-w-2xl">
+      <div 
+        className="container mx-auto p-4 max-w-2xl"
+        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}
+      >
         <Card className="mb-6">
           <CardContent className="pt-8 pb-6">
             <div className="text-center mb-6">

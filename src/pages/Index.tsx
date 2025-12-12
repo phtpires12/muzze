@@ -311,7 +311,10 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-accent/10 via-background to-primary/10 pb-24">
       {/* Header */}
-      <header className="px-6 pt-8 pb-4">
+      <header 
+        className="px-6 pb-4"
+        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 2rem)' }}
+      >
         <div className="flex items-center justify-between mb-2">
           <button 
             onClick={() => navigate('/ofensiva')}

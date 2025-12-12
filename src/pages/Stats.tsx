@@ -115,7 +115,10 @@ const Stats = () => {
   };
 
   return (
-    <div className="p-8 space-y-8">
+    <div 
+      className="p-8 space-y-8 pb-24"
+      style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 2rem)' }}
+    >
       <div>
         <h1 className="text-4xl font-bold mb-2">Estatísticas</h1>
         <p className="text-muted-foreground">Acompanhe seu progresso e conquistas</p>
