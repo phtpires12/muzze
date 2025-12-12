@@ -8,6 +8,14 @@ import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { StatsPageSkeleton } from "@/components/stats/StatsPageSkeleton";
 
+const formatTimeDisplay = (hours: number): string => {
+  if (hours < 1) {
+    const minutes = Math.round(hours * 60);
+    return `${minutes}min`;
+  }
+  return `${hours.toFixed(1)}h`;
+};
+
 const Stats = () => {
   const {
     weeklyData,
@@ -159,9 +167,9 @@ const Stats = () => {
 
         <StatCard
           title="Média Semanal"
-          value={`${weeklyAverage}h`}
+          value={formatTimeDisplay(weeklyAverage)}
           icon={Target}
-          description="horas de trabalho"
+          description="por dia"
         />
         <StatCard
           title="Total de XP"
@@ -192,7 +200,7 @@ const Stats = () => {
                       className="w-full bg-gradient-to-t from-accent to-primary rounded-t-lg transition-all duration-500 hover:opacity-80 flex items-end justify-center pb-2"
                       style={{ height: `${height}%`, minHeight: '30px' }}
                     >
-                      <span className="text-xs font-bold text-white">{data.hours}h</span>
+                      <span className="text-xs font-bold text-white">{formatTimeDisplay(data.hours)}</span>
                     </div>
                   </div>
                   <span className="text-sm font-medium text-muted-foreground">{data.day}</span>
@@ -208,7 +216,7 @@ const Stats = () => {
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">⏱️ Total trabalhado</span>
               <span className="font-bold">
-                {weeklyGoalStats.weeklyTotalMinutes} min ({(weeklyGoalStats.weeklyTotalMinutes / 60).toFixed(1)}h)
+                {formatTimeDisplay(weeklyGoalStats.weeklyTotalMinutes / 60)}
               </span>
             </div>
             <div className="flex items-center justify-between">
