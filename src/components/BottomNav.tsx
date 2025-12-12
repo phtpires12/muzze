@@ -20,6 +20,9 @@ import { useSessionContext } from "@/contexts/SessionContext";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
+// Chaves de localStorage para limpar ao iniciar nova sessão
+const SESSION_STORAGE_KEYS = ['muzze_session_state', 'muzze_global_timer'];
+
 const navigation = [
   { name: "Home", href: "/", icon: Home },
   { name: "Calendário", href: "/calendario", icon: Calendar },
@@ -44,7 +47,7 @@ export const BottomNav = () => {
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   const [isLongPress, setIsLongPress] = useState(false);
   const { projects, mostRecentProject, hasInProgressProjects, loading } = useInProgressProjects();
-  const { setMuzzeSession } = useSessionContext();
+  const { setMuzzeSession, resetTimer } = useSessionContext();
 
   useEffect(() => {
     const checkDailyProgress = async () => {
@@ -121,9 +124,10 @@ export const BottomNav = () => {
       clearTimeout(longPressTimer.current);
     }
     if (!isLongPress) {
-      // Limpar estado de sessão órfã antes de navegar
-      // Isso garante que o modal de seleção de etapas será exibido
-      localStorage.removeItem('muzze_session_state');
+      // LIMPAR COMPLETAMENTE qualquer sessão anterior antes de navegar
+      // Isso garante que sempre inicia uma nova sessão do zero
+      SESSION_STORAGE_KEYS.forEach(key => localStorage.removeItem(key));
+      resetTimer(); // Resetar estado do contexto também
       navigate('/session');
     }
   };
