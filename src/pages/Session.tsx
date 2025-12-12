@@ -64,7 +64,8 @@ const Session = () => {
     attachBeforeUnloadListener: true 
   });
   const { validateSessionFreshness } = useSessionContext();
-  // Removed: showSummary and summary states - now using celebrationData.sessionSummary
+  // Flag para evitar flash de navegação durante celebração
+  const [isShowingCelebration, setIsShowingCelebration] = useState(false);
   const [showStreakHalo, setShowStreakHalo] = useState(false);
   const [streakCount, setStreakCount] = useState(0);
   const isAppVisible = useAppVisibility();
@@ -83,25 +84,28 @@ const Session = () => {
   // Wrap dismissal functions to handle navigation
   const handleDismissSessionSummary = () => {
     dismissSessionSummary();
-    // If no streak or trophies, navigate home
+    // If no streak or trophies, navigate home and reset flag
     if (celebrationData.streakCount === 0 && celebrationData.unlockedTrophies.length === 0) {
+      setIsShowingCelebration(false);
       navigate("/");
     }
   };
 
   const dismissStreakCelebration = () => {
     originalDismissStreakCelebration();
-    // If no trophies to show, navigate to home
+    // If no trophies to show, navigate to home and reset flag
     if (celebrationData.unlockedTrophies.length === 0) {
+      setIsShowingCelebration(false);
       navigate("/");
     }
   };
 
   const dismissTrophyCelebration = () => {
     originalDismissTrophyCelebration();
-    // After showing all trophies, navigate to home
+    // After showing all trophies, navigate to home and reset flag
     const remainingTrophies = celebrationData.unlockedTrophies.slice(1);
     if (remainingTrophies.length === 0) {
+      setIsShowingCelebration(false);
       navigate("/");
     }
   };
@@ -222,6 +226,9 @@ const Session = () => {
   };
 
   const handleEnd = async () => {
+    // Ativar flag ANTES de encerrar para evitar flash de navegação
+    setIsShowingCelebration(true);
+    
     const result = await endSession();
     if (result) {
       // Use the new celebration flow with SessionSummary
@@ -234,6 +241,9 @@ const Session = () => {
       const streakCount = (result as any).newStreak || 0;
       
       await triggerFullCelebration(sessionSummary, streakCount, result.xpGained || 0);
+    } else {
+      // Se falhou, resetar flag
+      setIsShowingCelebration(false);
     }
   };
 
@@ -279,7 +289,8 @@ const Session = () => {
   }, [isAppVisible, session.isPaused, session.isActive]);
 
 
-  if (!session.isActive) {
+  // Não mostrar tela de seleção se estiver exibindo celebração
+  if (!session.isActive && !isShowingCelebration) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-accent/10 via-background to-primary/10 p-6">
         <div className="max-w-2xl mx-auto">
