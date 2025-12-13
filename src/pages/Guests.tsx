@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Users, UserPlus, MoreVertical, Mail, Shield, UserMinus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,6 +22,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { useWorkspace } from "@/hooks/useWorkspace";
+import { useWorkspaceContext } from "@/contexts/WorkspaceContext";
 
 interface Guest {
   id: string;
@@ -28,38 +31,94 @@ interface Guest {
   email: string;
   role: "admin" | "collaborator";
   status: "active" | "pending";
+  type: "member" | "invite";
 }
+
+const GuestsSkeleton = () => (
+  <div className="min-h-screen bg-background pb-24">
+    <div 
+      className="flex items-center gap-4 p-4 border-b border-border"
+      style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}
+    >
+      <Skeleton className="h-10 w-10 rounded-md" />
+      <div>
+        <Skeleton className="h-6 w-48" />
+        <Skeleton className="h-4 w-24 mt-1" />
+      </div>
+    </div>
+    <div className="p-4 max-w-2xl mx-auto space-y-3">
+      {[1, 2, 3].map(i => (
+        <Skeleton key={i} className="h-20 w-full rounded-lg" />
+      ))}
+    </div>
+  </div>
+);
 
 const Guests = () => {
   const navigate = useNavigate();
+  const { activeRole, isLoading: contextLoading } = useWorkspaceContext();
+  const { 
+    members, 
+    invites, 
+    removeMember, 
+    cancelInvite, 
+    isLoading: workspaceLoading,
+    workspace 
+  } = useWorkspace();
+  
+  const [confirmRemove, setConfirmRemove] = useState<{ id: string; type: "member" | "invite" } | null>(null);
+  
+  const isLoading = contextLoading || workspaceLoading;
+  
+  // Verificar permissão (apenas owner/admin podem acessar)
+  useEffect(() => {
+    if (!isLoading && activeRole !== "owner" && activeRole !== "admin") {
+      toast.error("Acesso não autorizado");
+      navigate("/profile");
+    }
+  }, [isLoading, activeRole, navigate]);
 
-  // Dados mockados - não depende de backend
-  const initialGuests: Guest[] = [
-    { id: "1", name: "Maria Silva", email: "maria@email.com", role: "admin", status: "active" },
-    { id: "2", name: "João Santos", email: "joao@email.com", role: "collaborator", status: "active" },
-    { id: "3", email: "pendente@email.com", role: "collaborator", status: "pending" },
+  // Combinar membros + convites em lista unificada
+  const allGuests: Guest[] = [
+    ...members.map(m => ({
+      id: m.id,
+      name: m.username || undefined,
+      email: `User ${m.user_id.slice(0, 8)}...`, // Fallback - não temos email do member
+      role: (m.role === "owner" ? "admin" : m.role) as "admin" | "collaborator",
+      status: "active" as const,
+      type: "member" as const,
+    })),
+    ...invites.map(i => ({
+      id: i.id,
+      name: undefined,
+      email: i.email,
+      role: (i.role === "owner" ? "admin" : i.role) as "admin" | "collaborator",
+      status: "pending" as const,
+      type: "invite" as const,
+    })),
   ];
 
-  const [guests, setGuests] = useState<Guest[]>(initialGuests);
-  const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
-
-  const handleRoleChange = (guestId: string) => {
-    setGuests(prev => prev.map(g =>
-      g.id === guestId
-        ? { ...g, role: g.role === "admin" ? "collaborator" : "admin" }
-        : g
-    ));
-    toast.success("Papel alterado com sucesso");
+  const handleRoleChange = async (guestId: string) => {
+    toast.info("Funcionalidade em desenvolvimento");
   };
 
-  const handleRemove = (guestId: string) => {
-    setGuests(prev => prev.filter(g => g.id !== guestId));
-    toast.success("Convidado removido");
-    setConfirmRemove(null);
+  const handleRemove = async () => {
+    if (!confirmRemove) return;
+    
+    let success = false;
+    if (confirmRemove.type === "member") {
+      success = await removeMember(confirmRemove.id);
+    } else {
+      success = await cancelInvite(confirmRemove.id);
+    }
+    
+    if (success) {
+      setConfirmRemove(null);
+    }
   };
 
   const handleResendInvite = (guestId: string) => {
-    toast.success("Convite reenviado!");
+    toast.info("Funcionalidade em desenvolvimento");
   };
 
   const getInitials = (guest: Guest) => {
@@ -69,7 +128,12 @@ const Guests = () => {
     return guest.email[0].toUpperCase();
   };
 
-  const guestToRemove = guests.find(g => g.id === confirmRemove);
+  const guestToRemove = allGuests.find(g => g.id === confirmRemove?.id);
+  const maxGuests = workspace?.max_guests || 3;
+
+  if (isLoading) {
+    return <GuestsSkeleton />;
+  }
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -84,14 +148,14 @@ const Guests = () => {
         <div>
           <h1 className="text-xl font-semibold">Gerenciar Convidados</h1>
           <p className="text-sm text-muted-foreground">
-            {guests.length}/3 convidados
+            {allGuests.length}/{maxGuests} convidados
           </p>
         </div>
       </div>
 
       {/* Lista de convidados */}
       <div className="p-4 max-w-2xl mx-auto space-y-3">
-        {guests.map((guest) => (
+        {allGuests.map((guest) => (
           <div
             key={guest.id}
             className="flex items-center justify-between p-4 rounded-lg border border-border bg-card"
@@ -146,10 +210,10 @@ const Guests = () => {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   className="text-destructive focus:text-destructive"
-                  onClick={() => setConfirmRemove(guest.id)}
+                  onClick={() => setConfirmRemove({ id: guest.id, type: guest.type })}
                 >
                   <UserMinus className="h-4 w-4 mr-2" />
-                  Remover acesso
+                  {guest.type === "invite" ? "Cancelar convite" : "Remover acesso"}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -157,7 +221,7 @@ const Guests = () => {
         ))}
 
         {/* Estado vazio */}
-        {guests.length === 0 && (
+        {allGuests.length === 0 && (
           <div className="text-center py-12">
             <Users className="w-12 h-12 mx-auto mb-3 text-muted-foreground/40" />
             <p className="text-muted-foreground">
@@ -167,7 +231,11 @@ const Guests = () => {
         )}
 
         {/* Botão adicionar */}
-        <Button variant="outline" className="w-full mt-4">
+        <Button 
+          variant="outline" 
+          className="w-full mt-4"
+          onClick={() => toast.info("Funcionalidade de convite em desenvolvimento")}
+        >
           <UserPlus className="w-4 h-4 mr-2" />
           Convidar Pessoa
         </Button>
@@ -177,12 +245,17 @@ const Guests = () => {
       <AlertDialog open={!!confirmRemove} onOpenChange={() => setConfirmRemove(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remover convidado?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {confirmRemove?.type === "invite" ? "Cancelar convite?" : "Remover convidado?"}
+            </AlertDialogTitle>
             <AlertDialogDescription>
               {guestToRemove && (
                 <>
-                  <strong>{guestToRemove.name || guestToRemove.email}</strong> perderá acesso ao workspace.
-                  Esta ação pode ser desfeita convidando novamente.
+                  <strong>{guestToRemove.name || guestToRemove.email}</strong> 
+                  {confirmRemove?.type === "invite" 
+                    ? " não receberá mais o convite."
+                    : " perderá acesso ao workspace."}
+                  {" "}Esta ação pode ser desfeita convidando novamente.
                 </>
               )}
             </AlertDialogDescription>
@@ -191,9 +264,9 @@ const Guests = () => {
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => confirmRemove && handleRemove(confirmRemove)}
+              onClick={handleRemove}
             >
-              Remover
+              {confirmRemove?.type === "invite" ? "Cancelar Convite" : "Remover"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
