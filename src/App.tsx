@@ -33,6 +33,7 @@ import Ofensiva from "./pages/Ofensiva";
 import DevTools from "./pages/DevTools";
 import Install from "./pages/Install";
 import Guests from "./pages/Guests";
+import AcceptInvite from "./pages/AcceptInvite";
 import { LevelUpModal } from "./components/LevelUpModal";
 import { TrophyUnlockedModal } from "./components/TrophyUnlockedModal";
 
@@ -147,6 +148,7 @@ const App = () => {
                 <Route path="/ofensiva" element={<ProtectedRoute><Ofensiva /></ProtectedRoute>} />
                 <Route path="/dev-tools" element={<ProtectedRoute><Layout><DevTools /></Layout></ProtectedRoute>} />
                 <Route path="/guests" element={<ProtectedRoute><Layout><Guests /></Layout></ProtectedRoute>} />
+                <Route path="/invite" element={<AcceptInvite />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </WorkspaceContextProvider>
