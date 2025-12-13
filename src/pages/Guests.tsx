@@ -1,8 +1,15 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useWorkspace } from '@/hooks/useWorkspace';
-import { useWorkspaceContext } from '@/contexts/WorkspaceContext';
-import { WorkspaceRole, CREATIVE_STAGES, CreativeStage } from '@/types/workspace';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft, Users, UserPlus, MoreVertical, Mail, Shield, UserMinus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,377 +19,186 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, MoreVertical, UserPlus, Mail, Trash2, RefreshCw, Shield, User } from 'lucide-react';
-import { toast } from 'sonner';
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
+
+interface Guest {
+  id: string;
+  name?: string;
+  email: string;
+  role: "admin" | "collaborator";
+  status: "active" | "pending";
+}
 
 const Guests = () => {
   const navigate = useNavigate();
-  const { activeWorkspace, activeRole, isLoading: workspaceLoading } = useWorkspaceContext();
-  const { members, invites, inviteMember, removeMember, cancelInvite, isOwner, refetch } = useWorkspace();
-  
-  const [isInviteFormOpen, setIsInviteFormOpen] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole, setInviteRole] = useState<WorkspaceRole>('collaborator');
-  const [selectedTimerStages, setSelectedTimerStages] = useState<CreativeStage[]>([]);
-  const [selectedEditStages, setSelectedEditStages] = useState<CreativeStage[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+
+  // Dados mockados - não depende de backend
+  const initialGuests: Guest[] = [
+    { id: "1", name: "Maria Silva", email: "maria@email.com", role: "admin", status: "active" },
+    { id: "2", name: "João Santos", email: "joao@email.com", role: "collaborator", status: "active" },
+    { id: "3", email: "pendente@email.com", role: "collaborator", status: "pending" },
+  ];
+
+  const [guests, setGuests] = useState<Guest[]>(initialGuests);
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
 
-  // Authorization check
-  useEffect(() => {
-    if (!workspaceLoading && activeRole !== "owner" && activeRole !== "admin") {
-      toast.error("Acesso não autorizado");
-      navigate("/profile");
-    }
-  }, [workspaceLoading, activeRole, navigate]);
-
-  const totalGuests = members.length + invites.length;
-  const maxGuests = activeWorkspace?.max_guests || 3;
-
-  const handleInvite = async () => {
-    if (!inviteEmail.trim()) {
-      toast.error('Digite um email válido');
-      return;
-    }
-
-    setIsLoading(true);
-    const success = await inviteMember(inviteEmail, inviteRole, {
-      allowed_timer_stages: selectedTimerStages,
-      can_edit_stages: selectedEditStages,
-    });
-
-    if (success) {
-      setInviteEmail('');
-      setInviteRole('collaborator');
-      setSelectedTimerStages([]);
-      setSelectedEditStages([]);
-      setIsInviteFormOpen(false);
-    }
-    setIsLoading(false);
+  const handleRoleChange = (guestId: string) => {
+    setGuests(prev => prev.map(g =>
+      g.id === guestId
+        ? { ...g, role: g.role === "admin" ? "collaborator" : "admin" }
+        : g
+    ));
+    toast.success("Papel alterado com sucesso");
   };
 
-  const handleRemoveMember = async (memberId: string) => {
-    await removeMember(memberId);
+  const handleRemove = (guestId: string) => {
+    setGuests(prev => prev.filter(g => g.id !== guestId));
+    toast.success("Convidado removido");
     setConfirmRemove(null);
   };
 
-  const handleCancelInvite = async (inviteId: string) => {
-    await cancelInvite(inviteId);
+  const handleResendInvite = (guestId: string) => {
+    toast.success("Convite reenviado!");
   };
 
-  const handleResendInvite = async (inviteId: string, email: string) => {
-    await cancelInvite(inviteId);
-    await inviteMember(email, 'collaborator', {
-      allowed_timer_stages: [],
-      can_edit_stages: [],
-    });
-    toast.success('Convite reenviado');
-  };
-
-  const toggleStage = (stage: CreativeStage, list: CreativeStage[], setList: (stages: CreativeStage[]) => void) => {
-    if (list.includes(stage)) {
-      setList(list.filter(s => s !== stage));
-    } else {
-      setList([...list, stage]);
+  const getInitials = (guest: Guest) => {
+    if (guest.name) {
+      return guest.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
     }
+    return guest.email[0].toUpperCase();
   };
 
-  // Loading state
-  if (workspaceLoading) {
-    return (
-      <div className="min-h-screen bg-background pb-24">
-        <div className="flex items-center gap-4 p-4 border-b">
-          <Skeleton className="h-10 w-10 rounded-full" />
-          <div className="space-y-2">
-            <Skeleton className="h-5 w-48" />
-            <Skeleton className="h-4 w-32" />
-          </div>
-        </div>
-        <div className="p-4 space-y-3">
-          {[...Array(3)].map((_, i) => (
-            <Skeleton key={i} className="h-20 w-full rounded-lg" />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  // If not authorized, don't render (useEffect will redirect)
-  if (activeRole !== "owner" && activeRole !== "admin") {
-    return null;
-  }
+  const guestToRemove = guests.find(g => g.id === confirmRemove);
 
   return (
-    <>
-      <div className="min-h-screen bg-background pb-24">
-        {/* Header */}
-        <div 
-          className="flex items-center gap-4 p-4 border-b"
-          style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}
-        >
-          <Button variant="ghost" size="icon" onClick={() => navigate("/profile")}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div>
-            <h1 className="text-xl font-semibold">Convidados do Workspace</h1>
-            <p className="text-sm text-muted-foreground">
-              {activeWorkspace?.name} • {totalGuests}/{maxGuests} convidados
-            </p>
-          </div>
-        </div>
-
-        <div className="p-4 max-w-2xl mx-auto">
-          {/* Guest List */}
-          <div className="space-y-3">
-            {/* Active Members */}
-            {members.map((member) => (
-              <div
-                key={member.id}
-                className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg"
-              >
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-9 w-9">
-                    <AvatarFallback className="bg-primary/20 text-primary text-sm">
-                      {(member.username || member.email || 'U').slice(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="text-sm font-medium text-foreground">
-                      {member.username || member.email || 'Usuário'}
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-xs bg-green-500/10 text-green-600 border-green-500/30">
-                        Ativo
-                      </Badge>
-                      <Badge variant="secondary" className="text-xs flex items-center gap-1">
-                        {member.role === 'admin' ? <Shield className="w-3 h-3" /> : <User className="w-3 h-3" />}
-                        {member.role === 'admin' ? 'Admin' : 'Colaborador'}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-                
-                {isOwner && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => setConfirmRemove(member.id)}>
-                        <Trash2 className="w-4 h-4 mr-2 text-destructive" />
-                        Remover
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
-              </div>
-            ))}
-
-            {/* Pending Invites */}
-            {invites.map((invite) => (
-              <div
-                key={invite.id}
-                className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg"
-              >
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-9 w-9">
-                    <AvatarFallback className="bg-yellow-500/20 text-yellow-600 text-sm">
-                      <Mail className="w-4 h-4" />
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{invite.email}</p>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-xs bg-yellow-500/10 text-yellow-600 border-yellow-500/30">
-                        Pendente
-                      </Badge>
-                      <Badge variant="secondary" className="text-xs">
-                        {invite.role === 'admin' ? 'Admin' : 'Colaborador'}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-                
-                {isOwner && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleResendInvite(invite.id, invite.email)}>
-                        <RefreshCw className="w-4 h-4 mr-2" />
-                        Reenviar convite
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => handleCancelInvite(invite.id)}>
-                        <Trash2 className="w-4 h-4 mr-2 text-destructive" />
-                        Cancelar convite
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
-              </div>
-            ))}
-
-            {totalGuests === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                <User className="w-10 h-10 mx-auto mb-2 opacity-50" />
-                <p>Nenhum convidado ainda</p>
-              </div>
-            )}
-          </div>
-
-          {/* Invite Form */}
-          {isInviteFormOpen ? (
-            <div className="border-t pt-4 mt-4 space-y-4">
-              <div className="space-y-2">
-                <Label>Email do convidado</Label>
-                <Input
-                  type="email"
-                  placeholder="email@exemplo.com"
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Papel</Label>
-                <div className="flex gap-2">
-                  <Button
-                    variant={inviteRole === 'collaborator' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setInviteRole('collaborator')}
-                  >
-                    Colaborador
-                  </Button>
-                  <Button
-                    variant={inviteRole === 'admin' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setInviteRole('admin')}
-                  >
-                    Admin
-                  </Button>
-                </div>
-              </div>
-
-              {inviteRole === 'collaborator' && (
-                <>
-                  <div className="space-y-2">
-                    <Label className="text-xs text-muted-foreground">Pode usar timer em:</Label>
-                    <div className="flex flex-wrap gap-2">
-                      {Object.values(CREATIVE_STAGES).map((stage) => (
-                        <div key={stage.key} className="flex items-center gap-1.5">
-                          <Checkbox
-                            id={`timer-${stage.key}`}
-                            checked={selectedTimerStages.includes(stage.key)}
-                            onCheckedChange={() => toggleStage(stage.key, selectedTimerStages, setSelectedTimerStages)}
-                          />
-                          <label htmlFor={`timer-${stage.key}`} className="text-xs">
-                            {stage.label}
-                          </label>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-xs text-muted-foreground">Pode editar em:</Label>
-                    <div className="flex flex-wrap gap-2">
-                      {Object.values(CREATIVE_STAGES).map((stage) => (
-                        <div key={stage.key} className="flex items-center gap-1.5">
-                          <Checkbox
-                            id={`edit-${stage.key}`}
-                            checked={selectedEditStages.includes(stage.key)}
-                            onCheckedChange={() => toggleStage(stage.key, selectedEditStages, setSelectedEditStages)}
-                          />
-                          <label htmlFor={`edit-${stage.key}`} className="text-xs">
-                            {stage.label}
-                          </label>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </>
-              )}
-
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => setIsInviteFormOpen(false)}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  className="flex-1"
-                  onClick={handleInvite}
-                  disabled={isLoading || !inviteEmail.trim()}
-                >
-                  {isLoading ? 'Enviando...' : 'Enviar convite'}
-                </Button>
-              </div>
-            </div>
-          ) : (
-            isOwner && totalGuests < maxGuests && (
-              <Button
-                variant="outline"
-                className="w-full mt-4"
-                onClick={() => setIsInviteFormOpen(true)}
-              >
-                <UserPlus className="w-4 h-4 mr-2" />
-                Convidar Pessoa
-              </Button>
-            )
-          )}
-
-          {isOwner && totalGuests >= maxGuests && (
-            <p className="text-xs text-center text-muted-foreground mt-4">
-              Limite de {maxGuests} convidados atingido
-            </p>
-          )}
+    <div className="min-h-screen bg-background pb-24">
+      {/* Header */}
+      <div 
+        className="flex items-center gap-4 p-4 border-b border-border"
+        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}
+      >
+        <Button variant="ghost" size="icon" onClick={() => navigate("/profile")}>
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <div>
+          <h1 className="text-xl font-semibold">Gerenciar Convidados</h1>
+          <p className="text-sm text-muted-foreground">
+            {guests.length}/3 convidados
+          </p>
         </div>
       </div>
 
-      {/* Confirm Remove Dialog */}
+      {/* Lista de convidados */}
+      <div className="p-4 max-w-2xl mx-auto space-y-3">
+        {guests.map((guest) => (
+          <div
+            key={guest.id}
+            className="flex items-center justify-between p-4 rounded-lg border border-border bg-card"
+          >
+            <div className="flex items-center gap-3">
+              {/* Avatar */}
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/60 to-primary flex items-center justify-center text-primary-foreground font-medium text-sm">
+                {getInitials(guest)}
+              </div>
+
+              {/* Info */}
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">{guest.name || guest.email}</span>
+                  {guest.status === "pending" ? (
+                    <Badge variant="outline" className="text-yellow-600 border-yellow-600/50 text-xs">
+                      Pendente
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-green-600 border-green-600/50 text-xs">
+                      Ativo
+                    </Badge>
+                  )}
+                </div>
+                {guest.name && (
+                  <p className="text-sm text-muted-foreground">{guest.email}</p>
+                )}
+                <Badge variant="secondary" className="mt-1 text-xs">
+                  {guest.role === "admin" ? "Admin" : "Colaborador"}
+                </Badge>
+              </div>
+            </div>
+
+            {/* Ações */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleRoleChange(guest.id)}>
+                  <Shield className="h-4 w-4 mr-2" />
+                  {guest.role === "admin" ? "Tornar Colaborador" : "Tornar Admin"}
+                </DropdownMenuItem>
+                {guest.status === "pending" && (
+                  <DropdownMenuItem onClick={() => handleResendInvite(guest.id)}>
+                    <Mail className="h-4 w-4 mr-2" />
+                    Reenviar convite
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => setConfirmRemove(guest.id)}
+                >
+                  <UserMinus className="h-4 w-4 mr-2" />
+                  Remover acesso
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        ))}
+
+        {/* Estado vazio */}
+        {guests.length === 0 && (
+          <div className="text-center py-12">
+            <Users className="w-12 h-12 mx-auto mb-3 text-muted-foreground/40" />
+            <p className="text-muted-foreground">
+              Nenhum convidado adicionado ainda
+            </p>
+          </div>
+        )}
+
+        {/* Botão adicionar */}
+        <Button variant="outline" className="w-full mt-4">
+          <UserPlus className="w-4 h-4 mr-2" />
+          Convidar Pessoa
+        </Button>
+      </div>
+
+      {/* AlertDialog para confirmação de remoção */}
       <AlertDialog open={!!confirmRemove} onOpenChange={() => setConfirmRemove(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Remover convidado?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta pessoa perderá acesso ao workspace imediatamente.
+              {guestToRemove && (
+                <>
+                  <strong>{guestToRemove.name || guestToRemove.email}</strong> perderá acesso ao workspace.
+                  Esta ação pode ser desfeita convidando novamente.
+                </>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => confirmRemove && handleRemoveMember(confirmRemove)}
+              onClick={() => confirmRemove && handleRemove(confirmRemove)}
             >
               Remover
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </div>
   );
 };
 
