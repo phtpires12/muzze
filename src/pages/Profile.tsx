@@ -9,21 +9,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useWorkspaceContext } from "@/contexts/WorkspaceContext";
-import { GuestsModal } from "@/components/GuestsModal";
 
 type MenuItemWithPath = {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   path: string;
 };
-
-type MenuItemWithAction = {
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  action: "openGuestsModal";
-};
-
-type MenuItem = MenuItemWithPath | MenuItemWithAction;
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -32,7 +23,6 @@ const Profile = () => {
   const { activeWorkspace, activeRole, isLoading: workspaceLoading } = useWorkspaceContext();
   const [userEmail, setUserEmail] = useState<string>("");
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [isGuestsModalOpen, setIsGuestsModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchUserEmail = async () => {
@@ -63,10 +53,10 @@ const Profile = () => {
   ];
 
   // Guests menu item (only for owners/admins)
-  const guestsMenuItem: MenuItemWithAction = {
+  const guestsMenuItem: MenuItemWithPath = {
     icon: Users,
     label: "Gerenciar Convidados",
-    action: "openGuestsModal",
+    path: "/guests",
   };
 
   // Other menu items
@@ -83,7 +73,7 @@ const Profile = () => {
     : [];
 
   // Build final menu with explicit insertion
-  const allMenuItems: MenuItem[] = [
+  const allMenuItems: MenuItemWithPath[] = [
     ...baseMenuItems,
     ...(canManageGuests ? [guestsMenuItem] : []),
     ...otherMenuItems,
@@ -91,14 +81,8 @@ const Profile = () => {
   ];
 
   // Handle menu item click
-  const handleMenuClick = (item: MenuItem) => {
-    if ("action" in item && item.action === "openGuestsModal") {
-      setIsGuestsModalOpen(true);
-      return;
-    }
-    if ("path" in item) {
-      navigate(item.path);
-    }
+  const handleMenuClick = (item: MenuItemWithPath) => {
+    navigate(item.path);
   };
 
   // Show loading skeleton while workspace context is loading
@@ -174,11 +158,6 @@ const Profile = () => {
           </Button>
         </div>
       </div>
-
-      <GuestsModal 
-        open={isGuestsModalOpen} 
-        onOpenChange={setIsGuestsModalOpen} 
-      />
     </div>
   );
 };
