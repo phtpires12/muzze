@@ -4,6 +4,9 @@ import { ArrowLeft, Users, UserPlus, MoreVertical, Mail, Shield, UserMinus } fro
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,9 +24,18 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useWorkspaceContext } from "@/contexts/WorkspaceContext";
+import { StagePermissions } from "@/types/workspace";
 
 interface Guest {
   id: string;
@@ -61,12 +73,17 @@ const Guests = () => {
     members, 
     invites, 
     removeMember, 
-    cancelInvite, 
+    cancelInvite,
+    inviteMember,
     isLoading: workspaceLoading,
     workspace 
   } = useWorkspace();
   
   const [confirmRemove, setConfirmRemove] = useState<{ id: string; type: "member" | "invite" } | null>(null);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<"admin" | "collaborator">("collaborator");
+  const [isInviting, setIsInviting] = useState(false);
   
   const isLoading = contextLoading || workspaceLoading;
   
@@ -119,6 +136,38 @@ const Guests = () => {
 
   const handleResendInvite = (guestId: string) => {
     toast.info("Funcionalidade em desenvolvimento");
+  };
+
+  const handleInvite = async () => {
+    const email = inviteEmail.trim();
+    if (!email) {
+      toast.error("Digite um email");
+      return;
+    }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      toast.error("Email inválido");
+      return;
+    }
+    
+    setIsInviting(true);
+    
+    // Para MVP: dar acesso total a todas as etapas
+    const permissions: StagePermissions = {
+      allowed_timer_stages: ['ideation', 'script', 'review', 'recording', 'editing'],
+      can_edit_stages: ['ideation', 'script', 'review', 'recording', 'editing'],
+    };
+    
+    const success = await inviteMember(email, inviteRole, permissions);
+    
+    if (success) {
+      setShowInviteModal(false);
+      setInviteEmail("");
+      setInviteRole("collaborator");
+    }
+    
+    setIsInviting(false);
   };
 
   const getInitials = (guest: Guest) => {
@@ -230,16 +279,92 @@ const Guests = () => {
           </div>
         )}
 
+        {/* Limite atingido */}
+        {allGuests.length >= maxGuests && (
+          <p className="text-sm text-muted-foreground text-center mt-4">
+            Limite de {maxGuests} convidados atingido
+          </p>
+        )}
+
         {/* Botão adicionar */}
-        <Button 
-          variant="outline" 
-          className="w-full mt-4"
-          onClick={() => toast.info("Funcionalidade de convite em desenvolvimento")}
-        >
-          <UserPlus className="w-4 h-4 mr-2" />
-          Convidar Pessoa
-        </Button>
+        {allGuests.length < maxGuests && (
+          <Button 
+            variant="outline" 
+            className="w-full mt-4"
+            onClick={() => setShowInviteModal(true)}
+          >
+            <UserPlus className="w-4 h-4 mr-2" />
+            Convidar Pessoa
+          </Button>
+        )}
       </div>
+
+      {/* Modal de convite */}
+      <Dialog open={showInviteModal} onOpenChange={setShowInviteModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Convidar Pessoa</DialogTitle>
+            <DialogDescription>
+              Envie um convite para alguém colaborar no seu workspace.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="invite-email">Email</Label>
+              <Input
+                id="invite-email"
+                type="email"
+                placeholder="pessoa@email.com"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                disabled={isInviting}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Papel</Label>
+              <RadioGroup 
+                value={inviteRole} 
+                onValueChange={(v) => setInviteRole(v as "admin" | "collaborator")}
+                className="space-y-2"
+              >
+                <div className="flex items-start gap-3 p-3 border border-border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
+                  <RadioGroupItem value="collaborator" id="collaborator" className="mt-1" />
+                  <div className="flex-1">
+                    <Label htmlFor="collaborator" className="font-medium cursor-pointer">
+                      Colaborador
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      Pode criar e editar conteúdo
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 p-3 border border-border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
+                  <RadioGroupItem value="admin" id="admin" className="mt-1" />
+                  <div className="flex-1">
+                    <Label htmlFor="admin" className="font-medium cursor-pointer">
+                      Admin
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      Acesso total, pode gerenciar membros
+                    </p>
+                  </div>
+                </div>
+              </RadioGroup>
+            </div>
+          </div>
+          
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setShowInviteModal(false)} disabled={isInviting}>
+              Cancelar
+            </Button>
+            <Button onClick={handleInvite} disabled={isInviting || !inviteEmail.trim()}>
+              {isInviting ? "Enviando..." : "Enviar Convite"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* AlertDialog para confirmação de remoção */}
       <AlertDialog open={!!confirmRemove} onOpenChange={() => setConfirmRemove(null)}>
