@@ -152,18 +152,51 @@ export const useWorkspace = (): UseWorkspaceReturn => {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) return false;
 
-      const { error } = await supabase.from('workspace_invites').insert({
+      // Inserir convite no banco
+      const { data: inviteData, error } = await supabase.from('workspace_invites').insert({
         workspace_id: workspace.id,
         email: email.toLowerCase(),
         role,
         allowed_timer_stages: permissions.allowed_timer_stages,
         can_edit_stages: permissions.can_edit_stages,
         invited_by: userData.user.id,
-      });
+      }).select().single();
 
       if (error) throw error;
 
-      toast.success('Convite enviado com sucesso');
+      // Buscar dados do profile para pegar o nome do usuário que está convidando
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('user_id', userData.user.id)
+        .single();
+
+      const inviterName = profile?.username || userData.user.email?.split('@')[0] || 'Um usuário';
+
+      // Enviar email de convite via Edge Function
+      try {
+        const { error: emailError } = await supabase.functions.invoke('send-invite-email', {
+          body: {
+            inviteId: inviteData.id,
+            toEmail: email.toLowerCase(),
+            inviterName,
+            workspaceName: workspace.name,
+            role,
+          },
+        });
+
+        if (emailError) {
+          console.error('Error sending invite email:', emailError);
+          // Não falhar a operação se o email não for enviado
+          toast.success('Convite criado! (Email pode demorar alguns minutos)');
+        } else {
+          toast.success('Convite enviado por email!');
+        }
+      } catch (emailErr) {
+        console.error('Error invoking email function:', emailErr);
+        toast.success('Convite criado! (Email pode demorar alguns minutos)');
+      }
+
       await fetchWorkspace();
       return true;
     } catch (error) {
