@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { User, Mail, CheckCircle, Wrench } from "lucide-react";
+import { User, Mail, CheckCircle, Wrench, Users } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,12 +7,17 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useWorkspaceContext } from "@/contexts/WorkspaceContext";
+import { GuestsModal } from "@/components/GuestsModal";
 
 const Profile = () => {
   const navigate = useNavigate();
   const { profile } = useProfile();
   const { isDeveloper, isAdmin } = useUserRole();
+  const { activeWorkspace } = useWorkspaceContext();
   const [userEmail, setUserEmail] = useState<string>("");
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [isGuestsModalOpen, setIsGuestsModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchUserEmail = async () => {
@@ -20,9 +25,14 @@ const Profile = () => {
       if (user?.email) {
         setUserEmail(user.email);
       }
+      if (user?.id) {
+        setCurrentUserId(user.id);
+      }
     };
     fetchUserEmail();
   }, []);
+
+  const isOwner = activeWorkspace?.owner_id === currentUserId && currentUserId !== null;
 
   const displayName = profile?.username || userEmail.split('@')[0] || "Usuário";
 
@@ -36,12 +46,23 @@ const Profile = () => {
     { icon: User, label: "Política de Privacidade", path: "/privacy" },
   ];
 
+  // Add Convidados for workspace owners
+  const guestMenuItem = isOwner 
+    ? [{ icon: Users, label: "Convidados", isModal: true }]
+    : [];
+
   // Add Dev Tools for developers/admins
   const devMenuItem = (isDeveloper || isAdmin) 
     ? [{ icon: Wrench, label: "Dev Tools", path: "/dev-tools" }]
     : [];
 
-  const allMenuItems = [...menuItems, ...devMenuItem];
+  // Insert guestMenuItem after Configurações (index 2)
+  const allMenuItems = [
+    ...menuItems.slice(0, 3),
+    ...guestMenuItem,
+    ...menuItems.slice(3),
+    ...devMenuItem,
+  ];
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -68,7 +89,13 @@ const Profile = () => {
               key={index}
               variant="ghost"
               className="w-full justify-between h-auto py-4 px-6"
-              onClick={() => navigate(item.path)}
+              onClick={() => {
+                if ('isModal' in item && item.isModal) {
+                  setIsGuestsModalOpen(true);
+                } else if ('path' in item) {
+                  navigate(item.path);
+                }
+              }}
             >
               <div className="flex items-center gap-3">
                 <item.icon className="w-5 h-5" />
@@ -81,15 +108,20 @@ const Profile = () => {
           <Button
             variant="ghost"
             className="w-full justify-start h-auto py-4 px-6 text-destructive hover:text-destructive"
-            onClick={() => {
-              // Handle logout
-              console.log("Logout");
+            onClick={async () => {
+              await supabase.auth.signOut();
+              navigate("/auth");
             }}
           >
             Sair
           </Button>
         </div>
       </div>
+
+      <GuestsModal 
+        open={isGuestsModalOpen} 
+        onOpenChange={setIsGuestsModalOpen} 
+      />
     </div>
   );
 };
