@@ -110,6 +110,10 @@ const Profile = () => {
         className="container mx-auto p-4 max-w-2xl"
         style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}
       >
+        {/* Marcador canônico - confirma que esta é a página Profile correta */}
+        <div className="bg-yellow-500/20 border border-yellow-500 rounded px-3 py-1 text-xs font-mono text-yellow-700 dark:text-yellow-400 mb-4 inline-block">
+          PROFILE_CANONICO_v1
+        </div>
         <Card className="mb-6">
           <CardContent className="pt-8 pb-6">
             <div className="text-center mb-6">
