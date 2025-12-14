@@ -117,10 +117,31 @@ const Ofensiva = () => {
     }
   };
 
-  const handleShare = () => {
-    toast("Em breve!", {
-      description: "A funcionalidade de compartilhamento estará disponível em breve.",
-    });
+  const handleShare = async () => {
+    const shareText = `🔥 Estou há ${streakCount} dia${streakCount !== 1 ? 's' : ''} criando sem parar na Muzze!\n\nMantenha sua consistência criativa: muzze.app`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Minha Ofensiva na Muzze',
+          text: shareText,
+          url: 'https://muzze.app'
+        });
+      } catch (error: any) {
+        if (error.name !== 'AbortError') {
+          console.error('Erro ao compartilhar:', error);
+        }
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(shareText);
+        toast.success("Copiado para a área de transferência!", {
+          description: "Cole sua ofensiva onde quiser compartilhar."
+        });
+      } catch {
+        toast.error("Não foi possível copiar o texto.");
+      }
+    }
   };
 
   const handleBuyFreeze = async () => {
