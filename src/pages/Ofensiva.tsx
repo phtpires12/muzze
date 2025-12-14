@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,10 +10,13 @@ import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { calculateXPFromMinutes, calculateFreezeCost } from "@/lib/gamification";
 import { useProfile } from "@/hooks/useProfile";
+import * as htmlToImage from 'html-to-image';
+import StreakShareCard from "@/components/StreakShareCard";
 
 const Ofensiva = () => {
   const navigate = useNavigate();
   const { profile, loading: profileLoading } = useProfile();
+  const cardRef = useRef<HTMLDivElement>(null);
   const [streakCount, setStreakCount] = useState(0);
   const [longestStreak, setLongestStreak] = useState(0);
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -21,6 +24,7 @@ const Ofensiva = () => {
   const [freezeDays, setFreezeDays] = useState<Date[]>([]);
   const [freezesUsedThisMonth, setFreezesUsedThisMonth] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
 
   useEffect(() => {
     fetchStreakData();
@@ -120,27 +124,67 @@ const Ofensiva = () => {
   const handleShare = async () => {
     const shareText = `🔥 Estou há ${streakCount} dia${streakCount !== 1 ? 's' : ''} criando sem parar na Muzze!\n\nMantenha sua consistência criativa: muzze.app`;
     
-    if (navigator.share) {
-      try {
+    if (!cardRef.current) {
+      // Fallback para texto se card não existir
+      if (navigator.share) {
+        await navigator.share({ title: 'Minha Ofensiva na Muzze', text: shareText, url: 'https://muzze.app' });
+      } else {
+        await navigator.clipboard.writeText(shareText);
+        toast.success("Copiado para a área de transferência!");
+      }
+      return;
+    }
+
+    setIsGeneratingImage(true);
+    
+    try {
+      const blob = await htmlToImage.toBlob(cardRef.current, {
+        pixelRatio: 2,
+        backgroundColor: '#0A0A0A',
+      });
+      
+      if (!blob) throw new Error('Falha ao gerar imagem');
+      
+      const file = new File([blob], 'minha-ofensiva-muzze.png', { type: 'image/png' });
+      
+      // Verificar se pode compartilhar arquivos (mobile)
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: 'Minha Ofensiva na Muzze',
+        });
+      } else if (navigator.share) {
+        // Fallback: compartilhar só texto
         await navigator.share({
           title: 'Minha Ofensiva na Muzze',
           text: shareText,
           url: 'https://muzze.app'
         });
-      } catch (error: any) {
-        if (error.name !== 'AbortError') {
-          console.error('Erro ao compartilhar:', error);
+      } else {
+        // Desktop: baixar imagem
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'minha-ofensiva-muzze.png';
+        a.click();
+        URL.revokeObjectURL(url);
+        toast.success("Imagem salva!", {
+          description: "Compartilhe nas suas redes sociais."
+        });
+      }
+    } catch (error: any) {
+      if (error.name !== 'AbortError') {
+        console.error('Erro ao compartilhar:', error);
+        // Fallback para texto
+        try {
+          await navigator.clipboard.writeText(shareText);
+          toast.success("Copiado para a área de transferência!");
+        } catch {
+          toast.error("Não foi possível compartilhar.");
         }
       }
-    } else {
-      try {
-        await navigator.clipboard.writeText(shareText);
-        toast.success("Copiado para a área de transferência!", {
-          description: "Cole sua ofensiva onde quiser compartilhar."
-        });
-      } catch {
-        toast.error("Não foi possível copiar o texto.");
-      }
+    } finally {
+      setIsGeneratingImage(false);
     }
   };
 
@@ -558,6 +602,11 @@ const Ofensiva = () => {
             </p>
           </div>
         </div>
+      </div>
+
+      {/* Card oculto para geração de imagem de compartilhamento */}
+      <div className="fixed -left-[9999px]" aria-hidden="true">
+        <StreakShareCard ref={cardRef} streakCount={streakCount} />
       </div>
     </div>
   );
