@@ -142,10 +142,17 @@ export const useWorkspace = (): UseWorkspaceReturn => {
         return false;
       }
 
-      // Verificar se já existe convite para este email
-      const existingInvite = invites.find(i => i.email.toLowerCase() === email.toLowerCase());
+      // Verificar se já existe convite pendente no banco (fonte da verdade)
+      const { data: existingInvite } = await supabase
+        .from('workspace_invites')
+        .select('id')
+        .eq('workspace_id', workspace.id)
+        .eq('email', email.toLowerCase())
+        .gt('expires_at', new Date().toISOString())
+        .maybeSingle();
+
       if (existingInvite) {
-        toast.error('Já existe um convite pendente para este email');
+        toast.error('Já existe um convite pendente para este email. Use a opção "Reenviar".');
         return false;
       }
 
@@ -163,7 +170,14 @@ export const useWorkspace = (): UseWorkspaceReturn => {
         invited_by: userData.user.id,
       }).select().single();
 
-      if (error) throw error;
+      if (error) {
+        // Tratar erro de duplicata como fallback (race condition)
+        if (error.code === '23505') {
+          toast.error('Já existe um convite pendente para este email. Use a opção "Reenviar".');
+          return false;
+        }
+        throw error;
+      }
 
       // Buscar dados do profile para pegar o nome do usuário que está convidando
       const { data: profile } = await supabase
