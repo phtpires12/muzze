@@ -112,7 +112,14 @@ const NewOnboarding = () => {
   const handleComplete = async () => {
     const success = await completeOnboarding();
     if (success) {
-      navigate("/", { replace: true });
+      // Verificar convite pendente
+      const pendingInviteId = localStorage.getItem("pendingInviteId");
+      if (pendingInviteId) {
+        localStorage.removeItem("pendingInviteId");
+        navigate(`/invite?id=${pendingInviteId}`, { replace: true });
+      } else {
+        navigate("/", { replace: true });
+      }
     }
   };
 
