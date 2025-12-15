@@ -22,6 +22,7 @@ interface UseWorkspaceReturn {
   removeMember: (memberId: string) => Promise<boolean>;
   updateMemberPermissions: (memberId: string, permissions: StagePermissions) => Promise<boolean>;
   cancelInvite: (inviteId: string) => Promise<boolean>;
+  resendInvite: (inviteId: string) => Promise<boolean>;
   refetch: () => Promise<void>;
 }
 
@@ -206,6 +207,55 @@ export const useWorkspace = (): UseWorkspaceReturn => {
     }
   };
 
+  const resendInvite = async (inviteId: string): Promise<boolean> => {
+    if (!workspace) return false;
+
+    try {
+      // Buscar dados do convite
+      const invite = invites.find(i => i.id === inviteId);
+      if (!invite) {
+        toast.error('Convite não encontrado');
+        return false;
+      }
+
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) return false;
+
+      // Buscar dados do profile para pegar o nome do usuário que está convidando
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('user_id', userData.user.id)
+        .single();
+
+      const inviterName = profile?.username || userData.user.email?.split('@')[0] || 'Um usuário';
+
+      // Reenviar email de convite via Edge Function
+      const { error: emailError } = await supabase.functions.invoke('send-invite-email', {
+        body: {
+          inviteId: invite.id,
+          toEmail: invite.email,
+          inviterName,
+          workspaceName: workspace.name,
+          role: invite.role,
+        },
+      });
+
+      if (emailError) {
+        console.error('Error resending invite email:', emailError);
+        toast.error('Erro ao reenviar email');
+        return false;
+      }
+
+      toast.success('Convite reenviado por email!');
+      return true;
+    } catch (error) {
+      console.error('Error resending invite:', error);
+      toast.error('Erro ao reenviar convite');
+      return false;
+    }
+  };
+
   const removeMember = async (memberId: string): Promise<boolean> => {
     if (!workspace) return false;
 
@@ -290,6 +340,7 @@ export const useWorkspace = (): UseWorkspaceReturn => {
     removeMember,
     updateMemberPermissions,
     cancelInvite,
+    resendInvite,
     refetch: fetchWorkspace,
   };
 };
