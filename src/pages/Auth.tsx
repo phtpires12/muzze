@@ -50,7 +50,14 @@ const Auth = () => {
         
         // Só redireciona para home se o onboarding foi completado
         if (profile && profile.first_login === false) {
-          navigate("/");
+          // Verificar convite pendente
+          const pendingInviteId = localStorage.getItem("pendingInviteId");
+          if (pendingInviteId) {
+            localStorage.removeItem("pendingInviteId");
+            navigate(`/invite?id=${pendingInviteId}`);
+          } else {
+            navigate("/");
+          }
         } else {
           // Se o usuário tem sessão mas não completou onboarding,
           // faz logout para permitir login com outra conta
@@ -83,7 +90,15 @@ const Auth = () => {
         password,
       });
       if (error) throw error;
-      navigate("/");
+      
+      // Verificar convite pendente
+      const pendingInviteId = localStorage.getItem("pendingInviteId");
+      if (pendingInviteId) {
+        localStorage.removeItem("pendingInviteId");
+        navigate(`/invite?id=${pendingInviteId}`);
+      } else {
+        navigate("/");
+      }
     } catch (error: any) {
       toast({
         title: "Erro ao entrar",
