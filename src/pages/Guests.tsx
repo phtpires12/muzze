@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Users, UserPlus, MoreVertical, Mail, Shield, UserMinus } from "lucide-react";
+import { 
+  ArrowLeft, Users, UserPlus, MoreVertical, Mail, Shield, UserMinus, 
+  Clock, AlertTriangle, Send, X, RefreshCw, Calendar
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -35,15 +38,16 @@ import {
 import { toast } from "sonner";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useWorkspaceContext } from "@/contexts/WorkspaceContext";
-import { StagePermissions } from "@/types/workspace";
+import { StagePermissions, WorkspaceInvite } from "@/types/workspace";
+import { format, differenceInDays, differenceInHours } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
-interface Guest {
+interface ActiveMember {
   id: string;
   name?: string;
   email: string;
   role: "admin" | "collaborator";
-  status: "active" | "pending";
-  type: "member" | "invite";
+  userId: string;
 }
 
 const GuestsSkeleton = () => (
@@ -74,16 +78,18 @@ const Guests = () => {
     invites, 
     removeMember, 
     cancelInvite,
+    resendInvite,
     inviteMember,
     isLoading: workspaceLoading,
     workspace 
   } = useWorkspace();
   
-  const [confirmRemove, setConfirmRemove] = useState<{ id: string; type: "member" | "invite" } | null>(null);
+  const [confirmRemove, setConfirmRemove] = useState<{ id: string; type: "member" | "invite"; name: string } | null>(null);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<"admin" | "collaborator">("collaborator");
   const [isInviting, setIsInviting] = useState(false);
+  const [resendingId, setResendingId] = useState<string | null>(null);
   
   const isLoading = contextLoading || workspaceLoading;
   
@@ -95,27 +101,16 @@ const Guests = () => {
     }
   }, [isLoading, activeRole, navigate]);
 
-  // Combinar membros + convites em lista unificada
-  const allGuests: Guest[] = [
-    ...members.map(m => ({
-      id: m.id,
-      name: m.username || undefined,
-      email: `User ${m.user_id.slice(0, 8)}...`, // Fallback - não temos email do member
-      role: (m.role === "owner" ? "admin" : m.role) as "admin" | "collaborator",
-      status: "active" as const,
-      type: "member" as const,
-    })),
-    ...invites.map(i => ({
-      id: i.id,
-      name: undefined,
-      email: i.email,
-      role: (i.role === "owner" ? "admin" : i.role) as "admin" | "collaborator",
-      status: "pending" as const,
-      type: "invite" as const,
-    })),
-  ];
+  // Membros ativos (já aceitaram o convite)
+  const activeMembers: ActiveMember[] = members.map(m => ({
+    id: m.id,
+    name: m.username || undefined,
+    email: `User ${m.user_id.slice(0, 8)}...`,
+    role: (m.role === "owner" ? "admin" : m.role) as "admin" | "collaborator",
+    userId: m.user_id,
+  }));
 
-  const handleRoleChange = async (guestId: string) => {
+  const handleRoleChange = async (memberId: string) => {
     toast.info("Funcionalidade em desenvolvimento");
   };
 
@@ -134,8 +129,10 @@ const Guests = () => {
     }
   };
 
-  const handleResendInvite = (guestId: string) => {
-    toast.info("Funcionalidade em desenvolvimento");
+  const handleResendInvite = async (inviteId: string) => {
+    setResendingId(inviteId);
+    await resendInvite(inviteId);
+    setResendingId(null);
   };
 
   const handleInvite = async () => {
@@ -170,15 +167,38 @@ const Guests = () => {
     setIsInviting(false);
   };
 
-  const getInitials = (guest: Guest) => {
-    if (guest.name) {
-      return guest.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+  const getInitials = (name?: string, email?: string) => {
+    if (name) {
+      return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
     }
-    return guest.email[0].toUpperCase();
+    return email?.[0]?.toUpperCase() || "?";
   };
 
-  const guestToRemove = allGuests.find(g => g.id === confirmRemove?.id);
+  const getInviteStatus = (invite: WorkspaceInvite) => {
+    const expiresAt = new Date(invite.expires_at);
+    const now = new Date();
+    const hoursRemaining = differenceInHours(expiresAt, now);
+    const daysRemaining = differenceInDays(expiresAt, now);
+    
+    if (hoursRemaining < 24) {
+      return { 
+        label: "Expirando", 
+        variant: "warning" as const, 
+        icon: AlertTriangle,
+        detail: `${hoursRemaining}h restantes`
+      };
+    }
+    
+    return { 
+      label: "Aguardando", 
+      variant: "pending" as const, 
+      icon: Clock,
+      detail: `${daysRemaining} dias restantes`
+    };
+  };
+
   const maxGuests = workspace?.max_guests || 3;
+  const totalGuests = activeMembers.length + invites.length;
 
   if (isLoading) {
     return <GuestsSkeleton />;
@@ -197,80 +217,168 @@ const Guests = () => {
         <div>
           <h1 className="text-xl font-semibold">Gerenciar Convidados</h1>
           <p className="text-sm text-muted-foreground">
-            {allGuests.length}/{maxGuests} convidados
+            {totalGuests}/{maxGuests} convidados
           </p>
         </div>
       </div>
 
-      {/* Lista de convidados */}
-      <div className="p-4 max-w-2xl mx-auto space-y-3">
-        {allGuests.map((guest) => (
-          <div
-            key={guest.id}
-            className="flex items-center justify-between p-4 rounded-lg border border-border bg-card"
-          >
-            <div className="flex items-center gap-3">
-              {/* Avatar */}
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/60 to-primary flex items-center justify-center text-primary-foreground font-medium text-sm">
-                {getInitials(guest)}
-              </div>
-
-              {/* Info */}
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">{guest.name || guest.email}</span>
-                  {guest.status === "pending" ? (
-                    <Badge variant="outline" className="text-yellow-600 border-yellow-600/50 text-xs">
-                      Pendente
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="text-green-600 border-green-600/50 text-xs">
-                      Ativo
-                    </Badge>
-                  )}
-                </div>
-                {guest.name && (
-                  <p className="text-sm text-muted-foreground">{guest.email}</p>
-                )}
-                <Badge variant="secondary" className="mt-1 text-xs">
-                  {guest.role === "admin" ? "Admin" : "Colaborador"}
-                </Badge>
-              </div>
+      <div className="p-4 max-w-2xl mx-auto space-y-6">
+        
+        {/* Seção: Membros Ativos */}
+        {activeMembers.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-green-500" />
+              <h2 className="text-sm font-medium text-muted-foreground">
+                Membros Ativos ({activeMembers.length})
+              </h2>
             </div>
+            
+            {activeMembers.map((member) => (
+              <div
+                key={member.id}
+                className="flex items-center justify-between p-4 rounded-lg border border-border bg-card"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500/60 to-green-600 flex items-center justify-center text-white font-medium text-sm">
+                    {getInitials(member.name, member.email)}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{member.name || member.email}</span>
+                      <Badge variant="outline" className="text-green-600 border-green-600/50 text-xs">
+                        Ativo
+                      </Badge>
+                    </div>
+                    {member.name && (
+                      <p className="text-sm text-muted-foreground">{member.email}</p>
+                    )}
+                    <Badge variant="secondary" className="mt-1 text-xs">
+                      {member.role === "admin" ? "Admin" : "Colaborador"}
+                    </Badge>
+                  </div>
+                </div>
 
-            {/* Ações */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleRoleChange(guest.id)}>
-                  <Shield className="h-4 w-4 mr-2" />
-                  {guest.role === "admin" ? "Tornar Colaborador" : "Tornar Admin"}
-                </DropdownMenuItem>
-                {guest.status === "pending" && (
-                  <DropdownMenuItem onClick={() => handleResendInvite(guest.id)}>
-                    <Mail className="h-4 w-4 mr-2" />
-                    Reenviar convite
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="text-destructive focus:text-destructive"
-                  onClick={() => setConfirmRemove({ id: guest.id, type: guest.type })}
-                >
-                  <UserMinus className="h-4 w-4 mr-2" />
-                  {guest.type === "invite" ? "Cancelar convite" : "Remover acesso"}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleRoleChange(member.id)}>
+                      <Shield className="h-4 w-4 mr-2" />
+                      {member.role === "admin" ? "Tornar Colaborador" : "Tornar Admin"}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="text-destructive focus:text-destructive"
+                      onClick={() => setConfirmRemove({ id: member.id, type: "member", name: member.name || member.email })}
+                    >
+                      <UserMinus className="h-4 w-4 mr-2" />
+                      Remover acesso
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            ))}
           </div>
-        ))}
+        )}
+
+        {/* Seção: Convites Pendentes */}
+        {invites.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Mail className="h-4 w-4 text-yellow-500" />
+              <h2 className="text-sm font-medium text-muted-foreground">
+                Convites Pendentes ({invites.length})
+              </h2>
+            </div>
+            
+            {invites.map((invite) => {
+              const status = getInviteStatus(invite);
+              const StatusIcon = status.icon;
+              const isResending = resendingId === invite.id;
+              
+              return (
+                <div
+                  key={invite.id}
+                  className="p-4 rounded-lg border-2 border-dashed border-border/70 bg-card/50 opacity-80 space-y-3"
+                >
+                  {/* Header do convite */}
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-500/40 to-orange-500/40 border-2 border-dashed border-yellow-500/50 flex items-center justify-center text-yellow-600 font-medium text-sm">
+                        {getInitials(undefined, invite.email)}
+                      </div>
+                      <div>
+                        <span className="font-medium">{invite.email}</span>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <Badge 
+                            variant="outline" 
+                            className={`text-xs ${
+                              status.variant === "warning" 
+                                ? "text-orange-600 border-orange-600/50 bg-orange-500/10" 
+                                : "text-yellow-600 border-yellow-600/50 bg-yellow-500/10"
+                            }`}
+                          >
+                            <StatusIcon className="h-3 w-3 mr-1" />
+                            {status.label}
+                          </Badge>
+                          <Badge variant="secondary" className="text-xs">
+                            {invite.role === "admin" ? "Admin" : "Colaborador"}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Detalhes do convite */}
+                  <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground pl-[52px]">
+                    <div className="flex items-center gap-1.5">
+                      <Calendar className="h-3 w-3" />
+                      <span>Enviado em {format(new Date(invite.created_at), "dd/MM/yyyy", { locale: ptBR })}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Clock className="h-3 w-3" />
+                      <span>Expira em {format(new Date(invite.expires_at), "dd/MM/yyyy", { locale: ptBR })}</span>
+                    </div>
+                  </div>
+
+                  {/* Ações */}
+                  <div className="flex items-center gap-2 pl-[52px]">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs h-8"
+                      onClick={() => handleResendInvite(invite.id)}
+                      disabled={isResending}
+                    >
+                      {isResending ? (
+                        <RefreshCw className="h-3 w-3 mr-1.5 animate-spin" />
+                      ) : (
+                        <Send className="h-3 w-3 mr-1.5" />
+                      )}
+                      {isResending ? "Enviando..." : "Reenviar"}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs h-8 text-destructive hover:text-destructive"
+                      onClick={() => setConfirmRemove({ id: invite.id, type: "invite", name: invite.email })}
+                    >
+                      <X className="h-3 w-3 mr-1.5" />
+                      Cancelar
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* Estado vazio */}
-        {allGuests.length === 0 && (
+        {activeMembers.length === 0 && invites.length === 0 && (
           <div className="text-center py-12">
             <Users className="w-12 h-12 mx-auto mb-3 text-muted-foreground/40" />
             <p className="text-muted-foreground">
@@ -280,14 +388,14 @@ const Guests = () => {
         )}
 
         {/* Limite atingido */}
-        {allGuests.length >= maxGuests && (
+        {totalGuests >= maxGuests && (
           <p className="text-sm text-muted-foreground text-center mt-4">
             Limite de {maxGuests} convidados atingido
           </p>
         )}
 
         {/* Botão adicionar */}
-        {allGuests.length < maxGuests && (
+        {totalGuests < maxGuests && (
           <Button 
             variant="outline" 
             className="w-full mt-4"
@@ -374,10 +482,10 @@ const Guests = () => {
               {confirmRemove?.type === "invite" ? "Cancelar convite?" : "Remover convidado?"}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {guestToRemove && (
+              {confirmRemove && (
                 <>
-                  <strong>{guestToRemove.name || guestToRemove.email}</strong> 
-                  {confirmRemove?.type === "invite" 
+                  <strong>{confirmRemove.name}</strong> 
+                  {confirmRemove.type === "invite" 
                     ? " não receberá mais o convite."
                     : " perderá acesso ao workspace."}
                   {" "}Esta ação pode ser desfeita convidando novamente.
@@ -386,7 +494,7 @@ const Guests = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>Voltar</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={handleRemove}
