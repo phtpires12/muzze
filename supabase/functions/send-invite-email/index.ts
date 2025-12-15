@@ -27,14 +27,13 @@ serve(async (req: Request): Promise<Response> => {
 
     console.log(`Sending invite email to ${toEmail} for workspace ${workspaceName}`);
 
-    // Build the invite link using the project ID
-    const projectId = "lxjhrnbxwknobcgnuruk";
-    const inviteLink = `https://${projectId}.lovableproject.com/invite?id=${inviteId}`;
+    // Build the invite link using production domain
+    const inviteLink = `https://muzze.app/invite?id=${inviteId}`;
 
     const roleLabel = role === "admin" ? "Administrador" : "Colaborador";
 
     const emailResponse = await resend.emails.send({
-      from: "Muzze <onboarding@resend.dev>",
+      from: "Muzze <noreply@muzze.app>",
       to: [toEmail],
       subject: `${inviterName} convidou você para colaborar na Muzze`,
       html: `
