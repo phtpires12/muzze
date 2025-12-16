@@ -26,6 +26,7 @@ import { useSession } from "@/hooks/useSession";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { ThumbnailUploader } from "@/components/ThumbnailUploader";
 
 interface ScriptEditorProps {
   onClose?: () => void;
@@ -55,6 +56,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
   const [newReference, setNewReference] = useState("");
   const [contentType, setContentType] = useState("");
   const [publishDate, setPublishDate] = useState("");
+  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const autoSaveTimer = useRef<NodeJS.Timeout | null>(null);
   const [reviewedSections, setReviewedSections] = useState<{[key: string]: boolean}>({
@@ -107,7 +109,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
         clearTimeout(autoSaveTimer.current);
       }
     };
-  }, [title, content, references, contentType, publishDate]);
+  }, [title, content, references, contentType, publishDate, thumbnailUrl]);
 
   const loadScript = async () => {
     try {
@@ -187,6 +189,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
         setReferences(savedReferences);
         setContentType(data.content_type || "");
         setPublishDate(data.publish_date || "");
+        setThumbnailUrl(data.thumbnail_url || null);
       }
     } catch (error) {
       console.error('Error loading script:', error);
@@ -224,6 +227,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
         reference_links: references.filter(ref => ref.trim() !== ""),
         content_type: contentType,
         publish_date: publishDate || null,
+        thumbnail_url: thumbnailUrl,
       };
 
       // Atualizar status automaticamente baseado no modo atual
@@ -477,6 +481,15 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
             )}
           </div>
         </div>
+
+        {/* Thumbnail (YouTube only) */}
+        {contentType === "YouTube" && (
+          <ThumbnailUploader
+            thumbnailUrl={thumbnailUrl}
+            onThumbnailChange={setThumbnailUrl}
+            scriptId={scriptId}
+          />
+        )}
 
         {/* Title */}
         <div className="mb-4 md:mb-6">

@@ -170,6 +170,7 @@ export type Database = {
           reference_url: string | null
           shot_list: string[] | null
           status: string | null
+          thumbnail_url: string | null
           title: string
           updated_at: string
           user_id: string
@@ -189,6 +190,7 @@ export type Database = {
           reference_url?: string | null
           shot_list?: string[] | null
           status?: string | null
+          thumbnail_url?: string | null
           title: string
           updated_at?: string
           user_id: string
@@ -208,6 +210,7 @@ export type Database = {
           reference_url?: string | null
           shot_list?: string[] | null
           status?: string | null
+          thumbnail_url?: string | null
           title?: string
           updated_at?: string
           user_id?: string
