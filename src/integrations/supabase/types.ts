@@ -482,6 +482,21 @@ export type Database = {
         Args: { _email: string; _workspace_id: string }
         Returns: boolean
       }
+      get_invite_by_id: {
+        Args: { invite_id: string }
+        Returns: {
+          allowed_timer_stages: string[]
+          can_edit_stages: string[]
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string
+          role: Database["public"]["Enums"]["workspace_role"]
+          workspace_id: string
+          workspace_name: string
+          workspace_owner_id: string
+        }[]
+      }
       get_user_workspace: { Args: { _user_id: string }; Returns: string }
       get_weekly_leaderboard: {
         Args: never
