@@ -396,44 +396,6 @@ const Ofensiva = () => {
           </div>
         </Card>
 
-        {/* Histórico do Mês */}
-        <div className="space-y-4">
-          <h2 className="text-2xl font-bold text-foreground">Histórico do mês</h2>
-          
-          {/* Seletor de Mês */}
-          <div className="flex items-center justify-between bg-card/30 p-4 rounded-xl border border-border/30">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handlePreviousMonth}
-              className="hover:bg-accent/10"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </Button>
-
-            <div className="flex items-center gap-3">
-              <h3 className="text-xl font-bold text-foreground capitalize">
-                {format(currentMonth, 'MMMM yyyy', { locale: ptBR })}
-              </h3>
-              {monthBadge && (
-                <Badge className="bg-orange-500 text-white hover:bg-orange-600">
-                  {monthBadge}
-                </Badge>
-              )}
-            </div>
-
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleNextMonth}
-              disabled={!canGoNext}
-              className="hover:bg-accent/10 disabled:opacity-30"
-            >
-              <ChevronRight className="w-5 h-5" />
-            </Button>
-          </div>
-        </div>
-
         {/* Estatísticas do Mês */}
         <div className="grid grid-cols-2 gap-4">
           <Card className="p-4 bg-card/50 border border-border/50 rounded-2xl text-center">
