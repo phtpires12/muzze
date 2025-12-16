@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Shield, Snowflake } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Confetti } from './Confetti';
+import { useSoundEffects } from '@/hooks/useSoundEffects';
 
 interface StreakProtectedCelebrationProps {
   show: boolean;
@@ -17,12 +18,15 @@ const StreakProtectedCelebration = ({
   onContinue,
 }: StreakProtectedCelebrationProps) => {
   const [isVisible, setIsVisible] = useState(false);
+  const { playSound } = useSoundEffects(0.6);
 
   useEffect(() => {
     if (show) {
       setIsVisible(true);
+      // Play protection sound when celebration appears
+      playSound('protect');
     }
-  }, [show]);
+  }, [show, playSound]);
 
   if (!isVisible) return null;
 

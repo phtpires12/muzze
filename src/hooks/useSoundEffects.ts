@@ -1,11 +1,12 @@
 import { useCallback, useRef } from 'react';
 
-type SoundType = 'pause' | 'resume' | 'complete';
+type SoundType = 'pause' | 'resume' | 'complete' | 'protect';
 
 const SOUND_FILES: Record<SoundType, string> = {
   pause: '/sounds/pause.mp3',
   resume: '/sounds/resume.mp3',
   complete: '/sounds/complete.mp3',
+  protect: '/sounds/protect.mp3',
 };
 
 export const useSoundEffects = (volume: number = 0.5) => {
