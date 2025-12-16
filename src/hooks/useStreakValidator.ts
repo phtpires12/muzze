@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfile } from './useProfile';
+import { calculateFreezeCost, MAX_STREAK_FREEZES } from '@/lib/gamification';
 
 interface LostDaysResult {
   hasLostDays: boolean;
@@ -12,10 +13,12 @@ interface LostDaysResult {
 }
 
 export const useStreakValidator = () => {
-  const { profile } = useProfile();
+  const { profile, refetch: refetchProfile } = useProfile();
   const [result, setResult] = useState<LostDaysResult | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasChecked, setHasChecked] = useState(false);
+
+  const freezeCost = calculateFreezeCost(profile?.min_streak_minutes || 20);
 
   const checkLostDays = useCallback(async () => {
     try {
@@ -172,12 +175,103 @@ export const useStreakValidator = () => {
         .update({ last_event_date: yesterdayStr })
         .eq('user_id', user.id);
 
+      await refetchProfile();
       return true;
     } catch (error) {
       console.error('[useStreakValidator] Error using freezes:', error);
       return false;
     }
-  }, [result]);
+  }, [result, refetchProfile]);
+
+  // Buy freezes and use them to recover streak
+  const buyFreezesAndRecover = useCallback(async () => {
+    if (!result || !profile) return false;
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return false;
+
+      // Calculate how many freezes to buy
+      const freezesToBuy = result.lostDaysCount - result.availableFreezes;
+      if (freezesToBuy <= 0) return false;
+
+      // Check limit
+      const newTotalFreezes = result.availableFreezes + freezesToBuy;
+      if (newTotalFreezes > MAX_STREAK_FREEZES) {
+        console.error('[buyFreezesAndRecover] Would exceed max freezes limit');
+        return false;
+      }
+
+      // Calculate cost and check XP
+      const totalCost = freezesToBuy * freezeCost;
+      const userXP = profile.xp_points || 0;
+      if (userXP < totalCost) {
+        console.error('[buyFreezesAndRecover] Insufficient XP');
+        return false;
+      }
+
+      // Get fresh profile data
+      const { data: userProfile } = await supabase
+        .from('profiles')
+        .select('streak_freezes, timezone, xp_points')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!userProfile) return false;
+
+      const timezone = userProfile.timezone || 'America/Sao_Paulo';
+      const now = new Date();
+      const userDate = new Date(now.toLocaleString('en-US', { timeZone: timezone }));
+
+      // 1. Buy freezes: Deduct XP and add freezes to profile
+      const currentFreezes = userProfile.streak_freezes || 0;
+      const newFreezesAfterBuy = currentFreezes + freezesToBuy;
+      
+      await supabase
+        .from('profiles')
+        .update({
+          xp_points: (userProfile.xp_points || 0) - totalCost,
+          streak_freezes: newFreezesAfterBuy
+        })
+        .eq('user_id', user.id);
+
+      // 2. Use all needed freezes to cover lost days
+      const lastEventDate = new Date(result.lastEventDate + 'T12:00:00');
+      
+      for (let i = 1; i <= result.lostDaysCount; i++) {
+        const freezeDate = new Date(lastEventDate);
+        freezeDate.setDate(freezeDate.getDate() + i);
+
+        await supabase.from('streak_freeze_usage').insert({
+          user_id: user.id,
+          used_at: freezeDate.toISOString(),
+        });
+      }
+
+      // 3. Deduct all used freezes from profile
+      const finalFreezeCount = newFreezesAfterBuy - result.lostDaysCount;
+      await supabase
+        .from('profiles')
+        .update({ streak_freezes: Math.max(0, finalFreezeCount) })
+        .eq('user_id', user.id);
+
+      // 4. Update last_event_date to yesterday
+      const yesterday = new Date(userDate);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+      await supabase
+        .from('streaks')
+        .update({ last_event_date: yesterdayStr })
+        .eq('user_id', user.id);
+
+      await refetchProfile();
+      return true;
+    } catch (error) {
+      console.error('[useStreakValidator] Error buying freezes and recovering:', error);
+      return false;
+    }
+  }, [result, profile, freezeCost, refetchProfile]);
 
   // Reset streak (user chose not to use freezes)
   const resetStreak = useCallback(async () => {
@@ -217,7 +311,10 @@ export const useStreakValidator = () => {
     hasChecked,
     checkLostDays,
     useFreezesToRecover,
+    buyFreezesAndRecover,
     resetStreak,
     dismissCheck,
+    freezeCost,
+    maxFreezes: MAX_STREAK_FREEZES,
   };
 };

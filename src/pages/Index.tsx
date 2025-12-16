@@ -59,8 +59,11 @@ const Index = () => {
     result: streakValidation, 
     isLoading: streakValidationLoading,
     useFreezesToRecover,
+    buyFreezesAndRecover,
     resetStreak,
     dismissCheck,
+    freezeCost,
+    maxFreezes,
   } = useStreakValidator();
   const [streakData, setStreakData] = useState<any>(null);
   const [weeklySessionsCount, setWeeklySessionsCount] = useState(0);
@@ -810,7 +813,11 @@ const Index = () => {
           availableFreezes={streakValidation.availableFreezes}
           currentStreak={streakValidation.currentStreak}
           canUseFreeze={streakValidation.canUseFreeze}
+          userXP={profile?.xp_points || 0}
+          freezeCost={freezeCost}
+          maxFreezes={maxFreezes}
           onUseFreeze={useFreezesToRecover}
+          onBuyFreezesAndRecover={buyFreezesAndRecover}
           onResetStreak={resetStreak}
           onDismiss={dismissCheck}
         />
