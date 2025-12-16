@@ -77,6 +77,7 @@ export const useWorkspace = (): UseWorkspaceReturn => {
             allowed_timer_stages: (m.allowed_timer_stages || []) as CreativeStage[],
             can_edit_stages: (m.can_edit_stages || []) as CreativeStage[],
             username: profileMap.get(m.user_id) || undefined,
+            email: m.email || undefined,
           })));
         }
 

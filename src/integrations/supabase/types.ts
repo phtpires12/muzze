@@ -398,6 +398,7 @@ export type Database = {
           accepted_at: string | null
           allowed_timer_stages: string[]
           can_edit_stages: string[]
+          email: string | null
           id: string
           invited_at: string | null
           invited_by: string | null
@@ -409,6 +410,7 @@ export type Database = {
           accepted_at?: string | null
           allowed_timer_stages?: string[]
           can_edit_stages?: string[]
+          email?: string | null
           id?: string
           invited_at?: string | null
           invited_by?: string | null
@@ -420,6 +422,7 @@ export type Database = {
           accepted_at?: string | null
           allowed_timer_stages?: string[]
           can_edit_stages?: string[]
+          email?: string | null
           id?: string
           invited_at?: string | null
           invited_by?: string | null

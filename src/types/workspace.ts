@@ -20,7 +20,7 @@ export interface WorkspaceMember {
   invited_by: string | null;
   invited_at: string | null;
   accepted_at: string | null;
-  // Dados do usuário (join)
+  // Dados do usuário (join ou salvos no aceite)
   username?: string;
   email?: string;
 }
