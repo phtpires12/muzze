@@ -15,6 +15,7 @@ interface Idea {
   content_type?: string | null;
   central_idea?: string | null;
   reference_url?: string | null;
+  thumbnail_url?: string | null;
   status?: string | null;
   publish_date?: string | null;
 }
@@ -79,6 +80,7 @@ export const IdeaCarousel = ({
                     contentType={idea.content_type || ""}
                     centralIdea={idea.central_idea || ""}
                     referenceUrl={idea.reference_url || ""}
+                    thumbnailUrl={idea.thumbnail_url || ""}
                     onUpdate={onUpdateIdea}
                     onDelete={onDeleteIdea}
                     onSchedule={() => onScheduleIdea(idea.id)}
