@@ -624,6 +624,20 @@ const Session = () => {
   }
 
 
+  // Calculate bonus mode for edit stage (same logic as DraggableSessionTimer)
+  const goalSeconds = session.dailyGoalMinutes * 60;
+  const alreadyDoneSeconds = (dailyProgress.actualMinutes || 0) * 60;
+  const totalWithCurrentSession = alreadyDoneSeconds + session.elapsedSeconds;
+  const remainingSeconds = goalSeconds - totalWithCurrentSession;
+  const isBonusMode = remainingSeconds <= 0 && !session.isStreakMode;
+
+  // Dynamic goal text
+  const goalText = session.isStreakMode 
+    ? `🎯 Meta diária: ${formatTime(session.dailyGoalMinutes * 60)}`
+    : remainingSeconds > 0 
+      ? `Falta: ${formatTime(remainingSeconds)}`
+      : `🔥 Bônus: +${formatTime(Math.abs(remainingSeconds))} além da meta`;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-accent/10 via-background to-primary/10 p-6">
       <div className="max-w-2xl mx-auto">
@@ -631,7 +645,9 @@ const Session = () => {
           "p-8 backdrop-blur-md border-border/20 shadow-lg rounded-[28px] transition-all duration-1000",
           session.isStreakMode 
             ? "bg-gradient-to-br from-orange-500/10 via-red-500/10 to-orange-600/10 border-orange-500/30" 
-            : "bg-card/85"
+            : isBonusMode
+              ? "bg-gradient-to-br from-orange-400/10 via-purple-500/10 to-violet-600/10 border-purple-400/30"
+              : "bg-card/85"
         )}>
           {/* Timer Display */}
           <div className="text-center mb-8">
@@ -639,9 +655,13 @@ const Session = () => {
               "w-24 h-24 mx-auto mb-4 rounded-full flex items-center justify-center shadow-lg transition-all duration-1000",
               session.isStreakMode
                 ? "bg-gradient-to-br from-orange-500 to-red-600 animate-wiggle"
-                : "bg-gradient-to-br from-accent to-primary"
+                : isBonusMode
+                  ? "bg-gradient-to-br from-orange-400 via-purple-500 to-violet-600"
+                  : "bg-gradient-to-br from-accent to-primary"
             )}>
               {session.isStreakMode ? (
+                <Flame className="w-12 h-12 text-white" />
+              ) : isBonusMode ? (
                 <Flame className="w-12 h-12 text-white" />
               ) : (
                 <CurrentIcon className="w-12 h-12 text-white" />
@@ -654,25 +674,32 @@ const Session = () => {
             
             <div className={cn(
               "text-6xl font-bold mb-2 tabular-nums transition-colors duration-1000",
-              session.isStreakMode ? "text-orange-600" : "text-foreground"
+              session.isStreakMode 
+                ? "text-orange-600" 
+                : isBonusMode 
+                  ? "text-purple-600"
+                  : "text-foreground"
             )}>
               {formatTime(session.elapsedSeconds)}
             </div>
 
             <div className={cn(
               "text-sm mb-2 transition-colors duration-1000",
-              session.isStreakMode ? "text-orange-600/70" : "text-muted-foreground"
+              session.isStreakMode 
+                ? "text-orange-600/70" 
+                : isBonusMode
+                  ? "text-purple-600/70"
+                  : "text-muted-foreground"
             )}>
-              {session.isStreakMode 
-                ? `🎯 Meta diária: ${formatTime(session.dailyGoalMinutes * 60)}`
-                : `Meta: ${formatTime(25 * 60)}`}
+              {goalText}
             </div>
 
             <Progress 
               value={progress} 
               className={cn(
                 "max-w-xs mx-auto mb-4 transition-all duration-500",
-                session.isStreakMode && "bg-orange-200 [&>div]:bg-gradient-to-r [&>div]:from-orange-500 [&>div]:to-red-600"
+                session.isStreakMode && "bg-orange-200 [&>div]:bg-gradient-to-r [&>div]:from-orange-500 [&>div]:to-red-600",
+                isBonusMode && !session.isStreakMode && "bg-purple-200 [&>div]:bg-gradient-to-r [&>div]:from-orange-400 [&>div]:via-purple-500 [&>div]:to-violet-600"
               )}
             />
             
@@ -788,6 +815,45 @@ const Session = () => {
               )}
         </Card>
       </div>
+
+      {/* Floating Draggable Timer for edit stage (same as other stages) */}
+      {!isOpen && (
+        <DraggableSessionTimer
+          stage={currentStage.label}
+          icon={currentStage.iconName}
+          elapsedSeconds={session.elapsedSeconds}
+          targetSeconds={session.targetSeconds}
+          isStreakMode={session.isStreakMode}
+          dailyGoalMinutes={session.dailyGoalMinutes}
+          isPaused={session.isPaused}
+          onPause={pauseSession}
+          onResume={resumeSession}
+          onStop={handleEnd}
+          progress={progress}
+          todayMinutesFromDB={dailyProgress.actualMinutes}
+          permissionEnabled={canUseTimer}
+        />
+      )}
+
+      {/* Portal for popup window when user leaves app */}
+      <Portal>
+        <DraggableSessionTimer
+          stage={currentStage.label}
+          icon={currentStage.iconName}
+          elapsedSeconds={session.elapsedSeconds}
+          targetSeconds={session.targetSeconds}
+          isStreakMode={session.isStreakMode}
+          dailyGoalMinutes={session.dailyGoalMinutes}
+          isPaused={session.isPaused}
+          onPause={pauseSession}
+          onResume={resumeSession}
+          onStop={handleEnd}
+          progress={progress}
+          todayMinutesFromDB={dailyProgress.actualMinutes}
+          permissionEnabled={canUseTimer}
+          isPopup={true}
+        />
+      </Portal>
 
       {/* Celebration Components - Same order as other sections */}
       <SessionSummary
