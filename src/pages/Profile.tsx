@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { User, Mail, CheckCircle, Wrench, Users } from "lucide-react";
+import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -138,16 +139,20 @@ const Profile = () => {
     ? [{ icon: Wrench, label: "Dev Tools", path: "/dev-tools" }]
     : [];
 
-  // Build final menu with explicit insertion using FINAL permission
+  // Build final menu - guests item ALWAYS included (disabled if no permission)
   const allMenuItems: MenuItemWithPath[] = [
     ...baseMenuItems,
-    ...(canManageGuestsFinal ? [guestsMenuItem] : []),
+    guestsMenuItem, // Always visible
     ...otherMenuItems,
     ...devMenuItem,
   ];
 
-  // Handle menu item click
+  // Handle menu item click - check permission for guests
   const handleMenuClick = (item: MenuItemWithPath) => {
+    if (item.path === "/guests" && !canManageGuestsFinal) {
+      toast.error("Você não tem permissão para gerenciar convidados neste workspace.");
+      return;
+    }
     navigate(item.path);
   };
 
@@ -189,30 +194,40 @@ const Profile = () => {
           </CardContent>
         </Card>
 
-        {/* Debug info - temporary */}
+        {/* Visual proof + Debug info - temporary */}
+        <div className="text-[10px] text-muted-foreground mb-2 font-mono">
+          PROFILE_RENDER: src/pages/Profile.tsx
+        </div>
         {process.env.NODE_ENV !== "production" && (
           <div className="text-xs opacity-60 p-2 bg-muted rounded mb-4 font-mono space-y-1">
-            <div>ctx: role={String(activeRole)} | ws={String(activeWorkspace?.id?.slice(0, 8))} | owner={String(activeWorkspace?.owner_id?.slice(0, 8))}</div>
+            <div>ctx: role={String(activeRole)} | ws={String(activeWorkspace?.id?.slice(0, 8))} | owner={String(activeWorkspace?.owner_id?.slice(0, 8))} | loading={String(workspaceLoading)}</div>
             <div>fallback: isOwner={String(fallbackData?.isOwnerWorkspace)} | isAdmin={String(fallbackData?.isAdminMember)} | wsId={String(fallbackData?.foundWorkspaceId?.slice(0, 8))}</div>
+            <div>user: {String(currentUserId?.slice(0, 8))}</div>
             <div className="text-green-500 font-semibold">canManageGuestsFinal: {String(canManageGuestsFinal)}</div>
           </div>
         )}
 
         <div className="space-y-2">
-          {allMenuItems.map((item, index) => (
-            <Button
-              key={index}
-              variant="ghost"
-              className="w-full justify-between h-auto py-4 px-6"
-              onClick={() => handleMenuClick(item)}
-            >
-              <div className="flex items-center gap-3">
-                <item.icon className="w-5 h-5" />
-                <span className="text-base">{item.label}</span>
-              </div>
-              <span className="text-muted-foreground">›</span>
-            </Button>
-          ))}
+          {allMenuItems.map((item, index) => {
+            const isGuestsItem = item.path === "/guests";
+            const isDisabled = isGuestsItem && !canManageGuestsFinal;
+            
+            return (
+              <Button
+                key={index}
+                variant="ghost"
+                className={`w-full justify-between h-auto py-4 px-6 ${isDisabled ? 'opacity-50' : ''}`}
+                onClick={() => handleMenuClick(item)}
+                disabled={false} // Keep clickable to show toast
+              >
+                <div className="flex items-center gap-3">
+                  <item.icon className="w-5 h-5" />
+                  <span className="text-base">{item.label}</span>
+                </div>
+                <span className="text-muted-foreground">›</span>
+              </Button>
+            );
+          })}
 
           <Button
             variant="ghost"
