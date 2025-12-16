@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { 
   Film, 
@@ -11,6 +11,8 @@ import {
   Clock
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { EDITING_STEP_IDS } from "@/lib/kanban-columns";
 
 interface EditStep {
   id: string;
@@ -26,6 +28,7 @@ interface StepState {
 }
 
 interface EditingChecklistProps {
+  scriptId?: string;
   onAllCompleted: () => void;
 }
 
@@ -38,7 +41,7 @@ const EDIT_STEPS: EditStep[] = [
   { id: "cor", label: "Cor", icon: Palette, color: "text-green-500" },
 ];
 
-export const EditingChecklist = ({ onAllCompleted }: EditingChecklistProps) => {
+export const EditingChecklist = ({ scriptId, onAllCompleted }: EditingChecklistProps) => {
   const { toast } = useToast();
   
   const [stepStates, setStepStates] = useState<Record<string, StepState>>({
@@ -49,6 +52,53 @@ export const EditingChecklist = ({ onAllCompleted }: EditingChecklistProps) => {
     legenda: { isActive: false, isCompleted: false, elapsedSeconds: 0 },
     cor: { isActive: false, isCompleted: false, elapsedSeconds: 0 },
   });
+
+  // Carregar progresso salvo do banco
+  useEffect(() => {
+    const loadProgress = async () => {
+      if (!scriptId) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('scripts')
+          .select('editing_progress')
+          .eq('id', scriptId)
+          .single();
+        
+        if (error) throw error;
+        
+        if (data?.editing_progress?.length) {
+          setStepStates(prev => {
+            const updated = { ...prev };
+            (data.editing_progress as string[]).forEach((stepId: string) => {
+              if (updated[stepId]) {
+                updated[stepId].isCompleted = true;
+              }
+            });
+            return updated;
+          });
+        }
+      } catch (error) {
+        console.error('Error loading editing progress:', error);
+      }
+    };
+    
+    loadProgress();
+  }, [scriptId]);
+
+  // Persistir progresso no banco
+  const persistProgress = useCallback(async (completedSteps: string[]) => {
+    if (!scriptId) return;
+    
+    try {
+      await supabase
+        .from('scripts')
+        .update({ editing_progress: completedSteps })
+        .eq('id', scriptId);
+    } catch (error) {
+      console.error('Error persisting editing progress:', error);
+    }
+  }, [scriptId]);
 
   // Timer effect - incrementa cronômetros ativos
   useEffect(() => {
@@ -73,7 +123,7 @@ export const EditingChecklist = ({ onAllCompleted }: EditingChecklistProps) => {
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
-  const handleStepClick = (stepId: string) => {
+  const handleStepClick = async (stepId: string) => {
     setStepStates((prev) => {
       const updated = { ...prev };
       
@@ -85,6 +135,14 @@ export const EditingChecklist = ({ onAllCompleted }: EditingChecklistProps) => {
         updated[stepId].isActive = false;
         updated[stepId].isCompleted = true;
         
+        // Calcular etapas completadas para persistir
+        const completedSteps = Object.entries(updated)
+          .filter(([_, state]) => state.isCompleted)
+          .map(([id]) => id);
+        
+        // Persistir no banco
+        persistProgress(completedSteps);
+        
         // Feedback de sucesso
         toast({
           title: `✓ ${EDIT_STEPS.find(s => s.id === stepId)?.label} completa!`,
@@ -94,6 +152,20 @@ export const EditingChecklist = ({ onAllCompleted }: EditingChecklistProps) => {
         // Verificar se todas foram completadas
         const allCompleted = Object.values(updated).every(s => s.isCompleted);
         if (allCompleted) {
+          // Atualizar status e publish_status no banco
+          if (scriptId) {
+            supabase
+              .from('scripts')
+              .update({ 
+                status: 'completed',
+                publish_status: 'pronto_para_postar'
+              })
+              .eq('id', scriptId)
+              .then(() => {
+                console.log('Script marked as completed and ready to post');
+              });
+          }
+          
           // Delay para o usuário ver a última sub-etapa ficando verde
           setTimeout(() => {
             onAllCompleted();
@@ -176,3 +248,6 @@ export const EditingChecklist = ({ onAllCompleted }: EditingChecklistProps) => {
     </div>
   );
 };
+
+// Export step IDs for use elsewhere
+export { EDITING_STEP_IDS };

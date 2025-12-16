@@ -6,9 +6,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek, addWeeks, subWeeks } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Plus, ChevronLeft, ChevronRight, ChevronDown, Lightbulb, Filter, CalendarIcon, LayoutGrid, Columns3 } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, ChevronDown, Lightbulb, Filter, CalendarIcon, LayoutGrid, Columns3, ArrowUpDown } from "lucide-react";
 import { YouTubeGalleryView } from "@/components/calendar/YouTubeGalleryView";
-import { EditorialBoardView } from "@/components/calendar/EditorialBoardView";
+import { ProductionBoardView } from "@/components/calendar/ProductionBoardView";
+import { PublicationBoardView } from "@/components/calendar/PublicationBoardView";
+import { RescheduleDateModal } from "@/components/calendar/RescheduleDateModal";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useDeviceType } from "@/hooks/useDeviceType";
@@ -45,6 +47,7 @@ const CalendarioEditorial = () => {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<"month" | "week">("month");
   const [viewType, setViewType] = useState<"calendar" | "gallery" | "board">("calendar");
+  const [boardSubView, setBoardSubView] = useState<"production" | "publication">("production");
   const [scripts, setScripts] = useState<Script[]>([]);
   const [draggedScript, setDraggedScript] = useState<Script | null>(null);
   const [dragOverDate, setDragOverDate] = useState<string | null>(null);
@@ -53,6 +56,8 @@ const CalendarioEditorial = () => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [filtersExpanded, setFiltersExpanded] = useState(false);
+  const [rescheduleScriptId, setRescheduleScriptId] = useState<string | null>(null);
+  const [rescheduleModalOpen, setRescheduleModalOpen] = useState(false);
   
   const isMobile = deviceType === 'mobile';
   const hasActiveFilters = contentTypeFilter !== "all" || stageFilter !== "all";
@@ -340,10 +345,60 @@ const CalendarioEditorial = () => {
   };
 
   const handleUpdateStatus = (scriptId: string, newStatus: string) => {
-    // Atualizar estado local (banco já foi atualizado no EditorialBoardView)
     setScripts(prev =>
       prev.map(s => (s.id === scriptId ? { ...s, status: newStatus } : s))
     );
+  };
+
+  const handleUpdatePublishStatus = (scriptId: string, newPublishStatus: string) => {
+    setScripts(prev =>
+      prev.map(s => (s.id === scriptId ? { ...s, publish_status: newPublishStatus as PublishStatus } : s))
+    );
+  };
+
+  const handleRescheduleScript = (scriptId: string) => {
+    setRescheduleScriptId(scriptId);
+    setRescheduleModalOpen(true);
+  };
+
+  const handleRescheduleConfirm = async (newDate: Date) => {
+    if (!rescheduleScriptId) return;
+    
+    const newPublishDate = format(newDate, "yyyy-MM-dd");
+    
+    // Update local state optimistically
+    setScripts(prev =>
+      prev.map(s => 
+        s.id === rescheduleScriptId 
+          ? { ...s, publish_date: newPublishDate, publish_status: 'planejado' as PublishStatus }
+          : s
+      )
+    );
+    
+    try {
+      const { error } = await supabase
+        .from('scripts')
+        .update({ publish_date: newPublishDate, publish_status: 'planejado' })
+        .eq('id', rescheduleScriptId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Data reagendada!",
+        description: `Novo agendamento: ${format(newDate, "d 'de' MMMM", { locale: ptBR })}`,
+      });
+    } catch (error) {
+      console.error('Error rescheduling script:', error);
+      fetchScripts(); // Revert on error
+      toast({
+        title: "Erro ao reagendar",
+        description: "Não foi possível atualizar a data.",
+        variant: "destructive",
+      });
+    }
+    
+    setRescheduleModalOpen(false);
+    setRescheduleScriptId(null);
   };
 
   const youtubeScripts = scripts.filter(s => s.content_type === "YouTube");
@@ -643,13 +698,56 @@ const CalendarioEditorial = () => {
             onDeleteScript={handleDeleteScript}
           />
         ) : viewType === "board" ? (
-          <EditorialBoardView
-            scripts={scripts}
-            onViewScript={handleViewScript}
-            onDeleteScript={handleDeleteScript}
-            onUpdateStatus={handleUpdateStatus}
-            stageFilter={stageFilter}
-          />
+          <div className="space-y-4">
+            {/* Toggle Produção/Publicação */}
+            <div className="flex items-center gap-3">
+              <Select value={boardSubView} onValueChange={(v) => setBoardSubView(v as "production" | "publication")}>
+                <SelectTrigger className="w-[180px]">
+                  <div className="flex items-center gap-2">
+                    <ArrowUpDown className="w-4 h-4" />
+                    <SelectValue />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="production">
+                    <div className="flex items-center gap-2">
+                      <Columns3 className="w-4 h-4" />
+                      Produção
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="publication">
+                    <div className="flex items-center gap-2">
+                      <CalendarIcon className="w-4 h-4" />
+                      Publicação
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <span className="text-sm text-muted-foreground">
+                {boardSubView === "production" 
+                  ? "Workflow de criação" 
+                  : "Status de publicação"}
+              </span>
+            </div>
+
+            {/* Renderizar apenas UM Kanban por vez */}
+            {boardSubView === "production" ? (
+              <ProductionBoardView
+                scripts={scripts}
+                onViewScript={handleViewScript}
+                onDeleteScript={handleDeleteScript}
+                onUpdateStatus={handleUpdateStatus}
+              />
+            ) : (
+              <PublicationBoardView
+                scripts={scripts}
+                onViewScript={handleViewScript}
+                onDeleteScript={handleDeleteScript}
+                onUpdatePublishStatus={handleUpdatePublishStatus}
+                onReschedule={handleRescheduleScript}
+              />
+            )}
+          </div>
         ) : null}
       </div>
 
@@ -672,6 +770,15 @@ const CalendarioEditorial = () => {
         onReschedule={handlePopupReschedule}
         onRemindLater={handlePopupRemindLater}
         onDelete={handlePopupDelete}
+      />
+
+      {/* Modal de reagendamento para cards perdidos */}
+      <RescheduleDateModal
+        open={rescheduleModalOpen}
+        onOpenChange={setRescheduleModalOpen}
+        onSelectDate={handleRescheduleConfirm}
+        title="Reagendar conteúdo"
+        description="Escolha uma nova data de publicação"
       />
     </div>
   );
