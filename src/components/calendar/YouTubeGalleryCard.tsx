@@ -1,8 +1,19 @@
+import { useState } from "react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ImagePlus, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { PublishStatus } from "./PublishStatusBadge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Script {
   id: string;
@@ -68,71 +79,99 @@ const getStatusColor = (script: Script): string => {
 };
 
 export function YouTubeGalleryCard({ script, onClick, onDelete }: YouTubeGalleryCardProps) {
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
   return (
-    <Card 
-      className="group/card cursor-pointer hover:shadow-lg hover:scale-[1.02] transition-all duration-200 overflow-hidden bg-card border-border"
-      onClick={onClick}
-    >
-      {/* Thumbnail Container - 16:9 aspect ratio */}
-      <div className="relative w-full aspect-video bg-muted overflow-hidden">
-        {/* Delete button - top right corner */}
-        <button
-          className="absolute top-2 right-2 p-1.5 rounded-md bg-destructive/10 
-                     opacity-0 group-hover/card:opacity-100 transition-opacity z-10
-                     hover:bg-destructive/20"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete(e);
-          }}
-        >
-          <Trash2 className="w-4 h-4 text-destructive" />
-        </button>
+    <>
+      <Card 
+        className="group/card cursor-pointer hover:shadow-lg hover:scale-[1.02] transition-all duration-200 overflow-hidden bg-card border-border"
+        onClick={onClick}
+      >
+        {/* Thumbnail Container - 16:9 aspect ratio */}
+        <div className="relative w-full aspect-video bg-muted overflow-hidden">
+          {/* Delete button - top right corner */}
+          <button
+            className="absolute top-2 right-2 p-1.5 rounded-md bg-destructive/10 
+                       opacity-0 group-hover/card:opacity-100 transition-opacity z-10
+                       hover:bg-destructive/20"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowDeleteConfirm(true);
+            }}
+          >
+            <Trash2 className="w-4 h-4 text-destructive" />
+          </button>
+          
+          {script.thumbnail_url ? (
+            <img 
+              src={script.thumbnail_url} 
+              alt={script.title || "Thumbnail"}
+              className="w-full h-full object-contain"
+            />
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+              <ImagePlus className="w-10 h-10 mb-2 opacity-40" />
+              <span className="text-xs">Sem thumbnail</span>
+            </div>
+          )}
+        </div>
         
-        {script.thumbnail_url ? (
-          <img 
-            src={script.thumbnail_url} 
-            alt={script.title || "Thumbnail"}
-            className="w-full h-full object-contain"
-          />
-        ) : (
-          <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-            <ImagePlus className="w-10 h-10 mb-2 opacity-40" />
-            <span className="text-xs">Sem thumbnail</span>
-          </div>
-        )}
-      </div>
-      
-      {/* Content */}
-      <div className="p-4 space-y-3">
-        {/* Título */}
-        <h3 className="font-medium text-sm leading-snug line-clamp-2 text-foreground">
-          {script.title?.trim() || "Sem título"}
-        </h3>
-        
-        {/* Data */}
-        <p className="text-sm text-muted-foreground">
-          {script.publish_date 
-            ? format(parseISO(script.publish_date), "d 'de' MMMM 'de' yyyy", { locale: ptBR })
-            : "Sem data agendada"}
-        </p>
-        
-        {/* URL de Referência como Chip */}
-        {script.reference_url && (
-          <div className="flex flex-wrap gap-1.5">
-            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-muted text-muted-foreground max-w-[180px] truncate">
-              {script.reference_url.replace(/^https?:\/\/(www\.)?/, '').slice(0, 25)}...
+        {/* Content */}
+        <div className="p-4 space-y-3">
+          {/* Título */}
+          <h3 className="font-medium text-sm leading-snug line-clamp-2 text-foreground">
+            {script.title?.trim() || "Sem título"}
+          </h3>
+          
+          {/* Data */}
+          <p className="text-sm text-muted-foreground">
+            {script.publish_date 
+              ? format(parseISO(script.publish_date), "d 'de' MMMM 'de' yyyy", { locale: ptBR })
+              : "Sem data agendada"}
+          </p>
+          
+          {/* URL de Referência como Chip */}
+          {script.reference_url && (
+            <div className="flex flex-wrap gap-1.5">
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-muted text-muted-foreground max-w-[180px] truncate">
+                {script.reference_url.replace(/^https?:\/\/(www\.)?/, '').slice(0, 25)}...
+              </span>
+            </div>
+          )}
+          
+          {/* Status Badge (estilo Notion com bolinha) */}
+          <div className="flex items-center gap-2">
+            <span className={`w-2 h-2 rounded-full ${getStatusColor(script)}`} />
+            <span className="text-xs font-medium text-muted-foreground">
+              {getStageLabel(script)}
             </span>
           </div>
-        )}
-        
-        {/* Status Badge (estilo Notion com bolinha) */}
-        <div className="flex items-center gap-2">
-          <span className={`w-2 h-2 rounded-full ${getStatusColor(script)}`} />
-          <span className="text-xs font-medium text-muted-foreground">
-            {getStageLabel(script)}
-          </span>
         </div>
-      </div>
-    </Card>
+      </Card>
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir conteúdo</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir "{script.title?.trim() || "Sem título"}"? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(e) => {
+                onDelete(e);
+                setShowDeleteConfirm(false);
+              }}
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
