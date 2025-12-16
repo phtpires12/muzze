@@ -1,16 +1,18 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { X, GripVertical, Video, Clapperboard, Music, FileText } from "lucide-react";
+import { X, GripVertical, Video, Clapperboard, Music, FileText, RefreshCw } from "lucide-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { cn } from "@/lib/utils";
 import { DatePickerModal } from "./DatePickerModal";
 import { useDeviceType } from "@/hooks/useDeviceType";
 import { ThumbnailUploader } from "@/components/ThumbnailUploader";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const CONTENT_TYPES = [
   { value: "Reels", label: "Reels", icon: Clapperboard },
@@ -46,12 +48,14 @@ export const IdeaCard = ({
   isDragging = false,
   compact = false,
 }: IdeaCardProps) => {
+  const { toast } = useToast();
   const deviceType = useDeviceType();
   const [localTitle, setLocalTitle] = useState(title || "");
   const [localContentType, setLocalContentType] = useState(contentType || "");
   const [localCentralIdea, setLocalCentralIdea] = useState(centralIdea || "");
   const [localReferenceUrl, setLocalReferenceUrl] = useState(referenceUrl || "");
   const [localThumbnailUrl, setLocalThumbnailUrl] = useState<string | null>(thumbnailUrl || null);
+  const [isUploadingThumb, setIsUploadingThumb] = useState(false);
 
   const {
     attributes,
@@ -77,13 +81,114 @@ export const IdeaCard = ({
   const ContentIcon = CONTENT_TYPES.find(t => t.value === localContentType)?.icon || FileText;
   const isMobile = deviceType === "mobile";
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isHoveringThumb, setIsHoveringThumb] = useState(false);
+  const hasYouTubeThumbnail = localContentType === "YouTube" && localThumbnailUrl;
+
+  const handleThumbnailChange = (url: string | null) => {
+    setLocalThumbnailUrl(url);
+    onUpdate(id, { thumbnail_url: url });
+  };
+
+  const handleThumbnailUpload = async (file: File) => {
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      toast({ title: "Formato inválido", description: "Use JPG, PNG ou WebP.", variant: "destructive" });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "Arquivo muito grande", description: "Máximo 5MB.", variant: "destructive" });
+      return;
+    }
+
+    setIsUploadingThumb(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Não autenticado");
+
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/${id}_${Date.now()}.${fileExt}`;
+
+      if (localThumbnailUrl) {
+        const oldPath = localThumbnailUrl.split('/thumbnails/')[1];
+        if (oldPath) await supabase.storage.from('thumbnails').remove([oldPath]);
+      }
+
+      const { error } = await supabase.storage.from('thumbnails').upload(fileName, file, { upsert: true });
+      if (error) throw error;
+
+      const { data: { publicUrl } } = supabase.storage.from('thumbnails').getPublicUrl(fileName);
+      handleThumbnailChange(publicUrl);
+      toast({ title: "Thumbnail atualizada" });
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast({ title: "Erro no upload", variant: "destructive" });
+    } finally {
+      setIsUploadingThumb(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   return (
     <div ref={setNodeRef} style={style} className={cn("h-full", isDragging && "opacity-50")}>
       <Card className={cn(
-        "h-full flex flex-col transition-all",
+        "h-full flex flex-col transition-all overflow-hidden",
         isComplete ? "border-primary/50 shadow-md" : "border-dashed border-muted-foreground/30",
         compact && "min-h-[320px]"
       )}>
+        {/* YouTube Thumbnail Header - when has thumbnail */}
+        {hasYouTubeThumbnail && (
+          <div 
+            className="relative w-full aspect-video bg-muted overflow-hidden"
+            onMouseEnter={() => setIsHoveringThumb(true)}
+            onMouseLeave={() => setIsHoveringThumb(false)}
+          >
+            <img
+              src={localThumbnailUrl!}
+              alt="Thumbnail"
+              className="w-full h-full object-contain"
+            />
+            {/* Hover overlay with controls */}
+            <div 
+              className={cn(
+                "absolute inset-0 bg-black/60 flex items-center justify-center gap-2 transition-opacity duration-200",
+                isHoveringThumb ? "opacity-100" : "opacity-0"
+              )}
+            >
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploadingThumb}
+                className="gap-1.5 h-7 text-xs"
+              >
+                <RefreshCw className={cn("w-3 h-3", isUploadingThumb && "animate-spin")} />
+                {isUploadingThumb ? "..." : "Trocar"}
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => handleThumbnailChange(null)}
+                className="gap-1.5 h-7 text-xs"
+              >
+                <X className="w-3 h-3" />
+                Remover
+              </Button>
+            </div>
+            {/* Hidden file input for replacing */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleThumbnailUpload(file);
+              }}
+              className="hidden"
+            />
+          </div>
+        )}
+
         <div className={cn("flex items-center gap-2 pb-2", compact ? "p-3" : "p-4")}>
           {!isMobile && (
             <div {...attributes} {...listeners} className={cn(
@@ -131,14 +236,11 @@ export const IdeaCard = ({
             </SelectContent>
           </Select>
 
-          {/* Thumbnail - Only for YouTube */}
-          {localContentType === "YouTube" && (
+          {/* Thumbnail Uploader - Only for YouTube when NO thumbnail exists */}
+          {localContentType === "YouTube" && !localThumbnailUrl && (
             <ThumbnailUploader
               thumbnailUrl={localThumbnailUrl}
-              onThumbnailChange={(url) => {
-                setLocalThumbnailUrl(url);
-                onUpdate(id, { thumbnail_url: url });
-              }}
+              onThumbnailChange={handleThumbnailChange}
               scriptId={id}
             />
           )}
