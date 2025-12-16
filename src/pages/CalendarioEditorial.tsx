@@ -171,19 +171,14 @@ const CalendarioEditorial = () => {
   }, [location.key]);
 
   const getScriptStage = (script: Script): string => {
-    // Prioridade: status primeiro, depois inferências
-    if (script.status === "editing") {
-      return "edit";
-    }
-    if (script.status === "recording" || (script.shot_list && script.shot_list.length > 0)) {
-      return "record";
-    }
-    if (script.status === "review") {
-      return "review";
-    }
-    if (script.status === "draft" || (script.content && script.content.length > 100)) {
-      return "script";
-    }
+    // Prioridade 1: status explícito do banco
+    if (script.status === "editing") return "edit";
+    if (script.status === "review") return "review";
+    if (script.status === "recording") return "record";
+    if (script.status === "draft") return "script";
+    // Prioridade 2: inferências como fallback
+    if (script.shot_list && script.shot_list.length > 0) return "record";
+    if (script.content && script.content.length > 100) return "script";
     return "idea";
   };
 
@@ -215,14 +210,19 @@ const CalendarioEditorial = () => {
     const script = scripts.find(s => s.id === scriptId);
     if (!script) return;
     
-    // Detectar estágio atual baseado no status
+    // Prioridade 1: status explícito do banco
     if (script.status === "editing") {
       navigate(`/session?stage=edit&scriptId=${scriptId}`);
-    } else if (script.status === "recording" || (script.shot_list && script.shot_list.length > 0)) {
-      navigate(`/shot-list/record?scriptId=${scriptId}`);
     } else if (script.status === "review") {
       navigate(`/session?stage=review&scriptId=${scriptId}`);
-    } else if (script.status === "draft" || (script.content && script.content.length > 100)) {
+    } else if (script.status === "recording") {
+      navigate(`/shot-list/record?scriptId=${scriptId}`);
+    } else if (script.status === "draft") {
+      navigate(`/session?stage=script&scriptId=${scriptId}`);
+    // Prioridade 2: inferências como fallback
+    } else if (script.shot_list && script.shot_list.length > 0) {
+      navigate(`/shot-list/record?scriptId=${scriptId}`);
+    } else if (script.content && script.content.length > 100) {
       navigate(`/session?stage=script&scriptId=${scriptId}`);
     } else {
       navigate(`/session?stage=idea&scriptId=${scriptId}`);

@@ -73,17 +73,24 @@ const getCardBackground = (script: Script): string => {
     return "bg-green-500/25";
   }
   
-  // Prioridade 2: Etapas do workflow
+// Prioridade 2: Etapas do workflow - status explícito primeiro
   if (script.status === "editing") {
     return "bg-blue-500/25";
-  }
-  if (script.status === "recording" || (script.shot_list && script.shot_list.length > 0)) {
-    return "bg-orange-500/25";
   }
   if (script.status === "review") {
     return "bg-purple-300/25";
   }
-  if (script.status === "draft" || (script.content && script.content.length > 100)) {
+  if (script.status === "recording") {
+    return "bg-orange-500/25";
+  }
+  if (script.status === "draft") {
+    return "bg-purple-500/25";
+  }
+  // Prioridade 3: Inferências (fallback quando não há status)
+  if (script.shot_list && script.shot_list.length > 0) {
+    return "bg-orange-500/25";
+  }
+  if (script.content && script.content.length > 100) {
     return "bg-purple-500/25";
   }
   
@@ -91,18 +98,21 @@ const getCardBackground = (script: Script): string => {
   return "";
 };
 
-// Label da etapa para exibir no card
+// Label da etapa para exibir no card - status explícito primeiro
 const getStageLabel = (script: Script): string | null => {
   if (script.publish_status === "perdido") return "Perdido";
   if (script.publish_status === "postado") return "Publicado";
   if (script.status === "editing") return "Edição";
-  if (script.status === "recording" || (script.shot_list && script.shot_list.length > 0)) return "Gravação";
   if (script.status === "review") return "Revisão";
-  if (script.status === "draft" || (script.content && script.content.length > 100)) return "Roteiro";
+  if (script.status === "recording") return "Gravação";
+  if (script.status === "draft") return "Roteiro";
+  // Inferências como fallback
+  if (script.shot_list && script.shot_list.length > 0) return "Gravação";
+  if (script.content && script.content.length > 100) return "Roteiro";
   return null; // Ideação não mostra label
 };
 
-// Classes do badge de etapa (cor forte + texto branco)
+// Classes do badge de etapa (cor forte + texto branco) - status explícito primeiro
 const getStageBadgeClasses = (script: Script): string | null => {
   // Prioridade 1: Status finais de publicação
   if (script.publish_status === "perdido") {
@@ -112,31 +122,42 @@ const getStageBadgeClasses = (script: Script): string | null => {
     return "bg-green-500/70 text-white border-transparent";
   }
   
-  // Prioridade 2: Etapas do workflow
+  // Prioridade 2: Etapas do workflow - status explícito primeiro
   if (script.status === "editing") {
     return "bg-blue-500/70 text-white border-transparent";
-  }
-  if (script.status === "recording" || (script.shot_list && script.shot_list.length > 0)) {
-    return "bg-orange-500/70 text-white border-transparent";
   }
   if (script.status === "review") {
     return "bg-purple-400/70 text-white border-transparent";
   }
-  if (script.status === "draft" || (script.content && script.content.length > 100)) {
+  if (script.status === "recording") {
+    return "bg-orange-500/70 text-white border-transparent";
+  }
+  if (script.status === "draft") {
+    return "bg-purple-500/70 text-white border-transparent";
+  }
+  
+  // Prioridade 3: Inferências como fallback
+  if (script.shot_list && script.shot_list.length > 0) {
+    return "bg-orange-500/70 text-white border-transparent";
+  }
+  if (script.content && script.content.length > 100) {
     return "bg-purple-500/70 text-white border-transparent";
   }
   
   return null; // Ideação sem badge colorido
 };
 
-// Cor sólida da bolinha de status para modo ultra-compacto (weekMobile)
+// Cor sólida da bolinha de status para modo ultra-compacto (weekMobile) - status explícito primeiro
 const getStageIndicatorColor = (script: Script): string => {
   if (script.publish_status === "perdido") return "bg-red-500";
   if (script.publish_status === "postado") return "bg-green-500";
   if (script.status === "editing") return "bg-blue-500";
-  if (script.status === "recording" || (script.shot_list && script.shot_list.length > 0)) return "bg-orange-500";
   if (script.status === "review") return "bg-purple-400";
-  if (script.status === "draft" || (script.content && script.content.length > 100)) return "bg-purple-500";
+  if (script.status === "recording") return "bg-orange-500";
+  if (script.status === "draft") return "bg-purple-500";
+  // Inferências como fallback
+  if (script.shot_list && script.shot_list.length > 0) return "bg-orange-500";
+  if (script.content && script.content.length > 100) return "bg-purple-500";
   return "bg-muted-foreground/50"; // Ideação
 };
 
