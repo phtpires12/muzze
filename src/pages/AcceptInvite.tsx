@@ -16,10 +16,8 @@ interface InviteData {
   expires_at: string;
   allowed_timer_stages: string[];
   can_edit_stages: string[];
-  workspaces: {
-    name: string;
-    owner_id: string;
-  };
+  workspace_name: string;
+  workspace_owner_id: string;
 }
 
 export default function AcceptInvite() {
@@ -47,15 +45,10 @@ export default function AcceptInvite() {
       const { data: { user: currentUser } } = await supabase.auth.getUser();
       setUser(currentUser);
 
-      // Fetch invite details
+      // Fetch invite details using RPC to bypass RLS
       const { data: inviteData, error } = await supabase
-        .from("workspace_invites")
-        .select(`
-          *,
-          workspaces (name, owner_id)
-        `)
-        .eq("id", inviteId)
-        .single();
+        .rpc('get_invite_by_id', { invite_id: inviteId })
+        .maybeSingle();
 
       if (error || !inviteData) {
         console.error("Invite not found:", error);
@@ -174,7 +167,7 @@ export default function AcceptInvite() {
               <Users className="h-12 w-12 mx-auto text-primary" />
               <CardTitle className="mt-4">Convite para Colaborar</CardTitle>
               <CardDescription className="text-base mt-2">
-                Você foi convidado para o workspace <strong>"{invite.workspaces.name}"</strong> como{" "}
+                Você foi convidado para o workspace <strong>"{invite.workspace_name}"</strong> como{" "}
                 <strong>{invite.role === "admin" ? "Administrador" : "Colaborador"}</strong>
               </CardDescription>
             </>
