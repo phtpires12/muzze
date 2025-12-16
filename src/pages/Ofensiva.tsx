@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { X, Share2, ChevronLeft, ChevronRight, Flame, Check, Snowflake, Gem, Info } from "lucide-react";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isFuture, isToday, getDaysInMonth } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isFuture, isToday, getDaysInMonth, isSameMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { calculateXPFromMinutes, calculateFreezeCost } from "@/lib/gamification";
@@ -492,6 +492,35 @@ const Ofensiva = () => {
 
         {/* Calendário Visual */}
         <Card className="p-6 bg-card/50 border border-border/50 rounded-2xl">
+          {/* Header de navegação do mês */}
+          <div className="flex items-center justify-between mb-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handlePreviousMonth}
+              className="h-8 w-8 text-muted-foreground hover:text-foreground"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            
+            <h3 className="text-lg font-semibold text-foreground capitalize">
+              {format(currentMonth, 'MMMM yyyy', { locale: ptBR })}
+            </h3>
+            
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleNextMonth}
+              disabled={isSameMonth(currentMonth, new Date())}
+              className="h-8 w-8 text-muted-foreground hover:text-foreground disabled:opacity-30"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </Button>
+          </div>
+
+          {/* Separador */}
+          <div className="border-t border-border/50 mb-4" />
+
           {/* Cabeçalho dos dias da semana */}
           <div className="grid grid-cols-7 gap-2 mb-4">
             {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(day => (
