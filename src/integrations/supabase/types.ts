@@ -523,6 +523,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      has_valid_invite: { Args: { _workspace_id: string }; Returns: boolean }
       is_workspace_member: {
         Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
