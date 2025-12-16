@@ -9,7 +9,8 @@ const corsHeaders = {
 const SOUND_PROMPTS: Record<string, string> = {
   pause: "Soft UI click sound, gentle pause notification, subtle and modern, 0.5 seconds",
   resume: "Positive UI notification sound, gentle chime, encouraging resume action, 0.8 seconds",
-  complete: "Achievement unlocked sound, celebratory chime, success notification, uplifting, 1.5 seconds"
+  complete: "Achievement unlocked sound, celebratory chime, success notification, uplifting, 1.5 seconds",
+  protect: "Magical ice shield activation sound, crystalline protective barrier, mystical frost spell cast, 1 second"
 };
 
 serve(async (req) => {
@@ -42,7 +43,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         text: SOUND_PROMPTS[type],
-        duration_seconds: type === 'complete' ? 1.5 : type === 'resume' ? 0.8 : 0.5,
+        duration_seconds: type === 'complete' ? 1.5 : type === 'protect' ? 1 : type === 'resume' ? 0.8 : 0.5,
         prompt_influence: 0.5,
       }),
     });
