@@ -24,6 +24,7 @@ interface StreakRecoveryModalProps {
   onBuyFreezesAndRecover: () => Promise<boolean>;
   onResetStreak: () => Promise<boolean>;
   onDismiss: () => void;
+  onProtectionSuccess?: (freezesUsed: number, currentStreak: number) => void;
 }
 
 export const StreakRecoveryModal = ({
@@ -40,6 +41,7 @@ export const StreakRecoveryModal = ({
   onBuyFreezesAndRecover,
   onResetStreak,
   onDismiss,
+  onProtectionSuccess,
 }: StreakRecoveryModalProps) => {
   const [isLoading, setIsLoading] = useState(false);
 
@@ -56,10 +58,8 @@ export const StreakRecoveryModal = ({
     setIsLoading(false);
 
     if (success) {
-      toast.success('Ofensiva protegida!', {
-        description: `${lostDaysCount} bloqueio(s) usado(s). Sua ofensiva de ${currentStreak} dias continua!`,
-      });
       onOpenChange(false);
+      onProtectionSuccess?.(lostDaysCount, currentStreak);
     } else {
       toast.error('Erro ao usar bloqueio', {
         description: 'Tente novamente mais tarde.',
@@ -73,10 +73,9 @@ export const StreakRecoveryModal = ({
     setIsLoading(false);
 
     if (success) {
-      toast.success('Bloqueios comprados e ofensiva protegida!', {
-        description: `Você gastou ${totalCost} XP para comprar ${freezesToBuy} bloqueio(s). Sua ofensiva de ${currentStreak} dias continua!`,
-      });
       onOpenChange(false);
+      // Total freezes used = freezesToBuy (purchased) + availableFreezes (existing)
+      onProtectionSuccess?.(lostDaysCount, currentStreak);
     } else {
       toast.error('Erro ao comprar bloqueios', {
         description: 'Tente novamente mais tarde.',

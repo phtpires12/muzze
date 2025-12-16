@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 import { StreakRecoveryModal } from "@/components/StreakRecoveryModal";
+import StreakProtectedCelebration from "@/components/StreakProtectedCelebration";
 import {
   Dialog,
   DialogContent,
@@ -62,6 +63,7 @@ const Index = () => {
     buyFreezesAndRecover,
     resetStreak,
     dismissCheck,
+    autoUseFreezesIfAvailable,
     freezeCost,
     maxFreezes,
   } = useStreakValidator();
@@ -88,6 +90,13 @@ const Index = () => {
   
   // Profile Sheet
   const [isProfileSheetOpen, setIsProfileSheetOpen] = useState(false);
+  
+  // Streak Protection Celebration
+  const [showProtectedCelebration, setShowProtectedCelebration] = useState(false);
+  const [protectedCelebrationData, setProtectedCelebrationData] = useState({
+    freezesUsed: 0,
+    currentStreak: 0,
+  });
 
   const getUserInitials = () => {
     if (profile?.username) {
@@ -98,12 +107,31 @@ const Index = () => {
 
 
 
-  // Verificar se há dias perdidos na ofensiva
+  // Verificar se há dias perdidos na ofensiva e auto-usar freezes se possível
   useEffect(() => {
-    if (!streakValidationLoading && streakValidation?.hasLostDays) {
+    const handleStreakRecovery = async () => {
+      if (streakValidationLoading || !streakValidation?.hasLostDays) return;
+      
+      // Se pode usar freeze automaticamente
+      if (streakValidation.canUseFreeze) {
+        const result = await autoUseFreezesIfAvailable();
+        if (result.success) {
+          // Mostrar celebração de proteção
+          setProtectedCelebrationData({
+            freezesUsed: result.freezesUsed,
+            currentStreak: streakValidation.currentStreak,
+          });
+          setShowProtectedCelebration(true);
+          return;
+        }
+      }
+      
+      // Se não pode auto-usar, abre modal
       setIsStreakRecoveryModalOpen(true);
-    }
-  }, [streakValidation, streakValidationLoading]);
+    };
+    
+    handleStreakRecovery();
+  }, [streakValidation, streakValidationLoading, autoUseFreezesIfAvailable]);
 
   useEffect(() => {
     if (profile && !profileLoading) {
@@ -820,8 +848,20 @@ const Index = () => {
           onBuyFreezesAndRecover={buyFreezesAndRecover}
           onResetStreak={resetStreak}
           onDismiss={dismissCheck}
+          onProtectionSuccess={(freezesUsed, streak) => {
+            setProtectedCelebrationData({ freezesUsed, currentStreak: streak });
+            setShowProtectedCelebration(true);
+          }}
         />
       )}
+
+      {/* Streak Protected Celebration */}
+      <StreakProtectedCelebration
+        show={showProtectedCelebration}
+        freezesUsed={protectedCelebrationData.freezesUsed}
+        currentStreak={protectedCelebrationData.currentStreak}
+        onContinue={() => setShowProtectedCelebration(false)}
+      />
 
       {/* PWA Install Prompt */}
       <PWAInstallPrompt variant="popup" />

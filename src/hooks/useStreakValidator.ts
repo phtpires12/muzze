@@ -305,6 +305,19 @@ export const useStreakValidator = () => {
     }
   }, [hasChecked, checkLostDays]);
 
+  // Auto-use freezes if available (without modal)
+  const autoUseFreezesIfAvailable = useCallback(async (): Promise<{ success: boolean; freezesUsed: number }> => {
+    if (!result?.canUseFreeze) {
+      return { success: false, freezesUsed: 0 };
+    }
+    
+    const success = await useFreezesToRecover();
+    return { 
+      success, 
+      freezesUsed: success ? result.lostDaysCount : 0 
+    };
+  }, [result, useFreezesToRecover]);
+
   return {
     result,
     isLoading,
@@ -314,6 +327,7 @@ export const useStreakValidator = () => {
     buyFreezesAndRecover,
     resetStreak,
     dismissCheck,
+    autoUseFreezesIfAvailable,
     freezeCost,
     maxFreezes: MAX_STREAK_FREEZES,
   };
