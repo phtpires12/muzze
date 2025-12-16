@@ -65,16 +65,13 @@ export const ThumbnailUploader = ({
       return;
     }
 
-    // Validate aspect ratio
-    const { valid, ratio } = await validateAspectRatio(file);
+    // Check aspect ratio and show tip if not 16:9 (but don't block)
+    const { valid } = await validateAspectRatio(file);
     if (!valid) {
-      const actualRatio = ratio.toFixed(2);
       toast({
-        title: "Proporção incorreta",
-        description: `A thumbnail deve estar no formato 16:9 (ex: 1280x720, 1920x1080). A imagem enviada tem proporção ${actualRatio}:1.`,
-        variant: "destructive",
+        title: "💡 Dica",
+        description: "Para thumbnail final do YouTube, use formato 16:9 (1280x720). Prints de referência são aceitos em qualquer tamanho.",
       });
-      return;
     }
 
     // Upload to Supabase Storage
@@ -172,9 +169,6 @@ export const ThumbnailUploader = ({
         >
           <ImagePlus className="w-4 h-4" />
           <span>{isUploading ? "Carregando..." : "Adicionar Thumbnail"}</span>
-          <span className="text-xs text-muted-foreground/50 group-hover:text-muted-foreground/70">
-            (16:9)
-          </span>
         </button>
       </div>
     );
@@ -192,7 +186,7 @@ export const ThumbnailUploader = ({
         <img
           src={thumbnailUrl}
           alt="Thumbnail preview"
-          className="w-full h-full object-cover"
+          className="w-full h-full object-contain bg-black/20"
         />
         
         {/* Hover overlay with controls */}
@@ -241,7 +235,7 @@ export const ThumbnailUploader = ({
       {/* Helper text */}
       <p className="text-xs text-muted-foreground/60 mt-2 flex items-center gap-1">
         <AlertCircle className="w-3 h-3" />
-        Formato recomendado: 1280x720 ou 1920x1080 (16:9)
+        Para thumbnail final, use 16:9. Prints de referência são aceitos em qualquer tamanho.
       </p>
     </div>
   );
