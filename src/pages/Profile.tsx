@@ -16,32 +16,98 @@ type MenuItemWithPath = {
   path: string;
 };
 
+type FallbackData = {
+  isOwnerWorkspace: boolean;
+  isAdminMember: boolean;
+  foundWorkspaceId: string | null;
+};
+
 const Profile = () => {
   const navigate = useNavigate();
   const { profile } = useProfile();
   const { isDeveloper, isAdmin } = useUserRole();
-  const { activeWorkspace, activeRole, isLoading: workspaceLoading } = useWorkspaceContext();
+  const { activeWorkspace, activeRole, isLoading: workspaceLoading, refetch } = useWorkspaceContext();
   const [userEmail, setUserEmail] = useState<string>("");
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [fallbackData, setFallbackData] = useState<FallbackData | null>(null);
+  const [fallbackLoading, setFallbackLoading] = useState(true);
 
+  // Fetch user email + direct fallback query
   useEffect(() => {
-    const fetchUserEmail = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user?.email) {
-        setUserEmail(user.email);
-      }
-      if (user?.id) {
+    const fetchUserAndFallback = async () => {
+      setFallbackLoading(true);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user?.id) {
+          setFallbackLoading(false);
+          return;
+        }
+
+        setUserEmail(user.email || "");
         setCurrentUserId(user.id);
+
+        // Fallback: Query direta - sou owner de algum workspace?
+        const { data: ownedWorkspace } = await supabase
+          .from('workspaces')
+          .select('id, owner_id')
+          .eq('owner_id', user.id)
+          .limit(1)
+          .maybeSingle();
+
+        let isOwnerWorkspace = !!ownedWorkspace;
+        let foundWorkspaceId = ownedWorkspace?.id || null;
+
+        // Se não é owner, verificar se é admin em algum workspace
+        let isAdminMember = false;
+        if (!isOwnerWorkspace) {
+          const { data: adminMembership } = await supabase
+            .from('workspace_members')
+            .select('role, workspace_id')
+            .eq('user_id', user.id)
+            .in('role', ['owner', 'admin'])
+            .limit(1)
+            .maybeSingle();
+          
+          isAdminMember = !!adminMembership;
+          foundWorkspaceId = adminMembership?.workspace_id || null;
+        }
+
+        setFallbackData({ isOwnerWorkspace, isAdminMember, foundWorkspaceId });
+      } catch (error) {
+        console.error('[Profile] Fallback query error:', error);
+        setFallbackData({ isOwnerWorkspace: false, isAdminMember: false, foundWorkspaceId: null });
+      } finally {
+        setFallbackLoading(false);
       }
     };
-    fetchUserEmail();
+    fetchUserAndFallback();
   }, []);
 
-  // Robust permission check - works with activeRole OR owner_id fallback
-  const canManageGuests =
+  // Auto-heal: se fallback encontrou workspace mas contexto falhou
+  useEffect(() => {
+    if (
+      fallbackData?.foundWorkspaceId &&
+      !activeWorkspace &&
+      !workspaceLoading &&
+      !fallbackLoading
+    ) {
+      console.log('[Profile] Auto-heal: triggering context refetch');
+      refetch();
+    }
+  }, [fallbackData, activeWorkspace, workspaceLoading, fallbackLoading, refetch]);
+
+  // Context-based permission
+  const canManageGuestsFromContext =
     activeRole === "owner" ||
     activeRole === "admin" ||
     (activeWorkspace?.owner_id != null && activeWorkspace.owner_id === currentUserId);
+
+  // Fallback-based permission
+  const canManageGuestsFallback = 
+    fallbackData?.isOwnerWorkspace || fallbackData?.isAdminMember || false;
+
+  // Final combined permission - works even if context fails
+  const canManageGuestsFinal = canManageGuestsFromContext || canManageGuestsFallback;
 
   const displayName = profile?.username || userEmail.split('@')[0] || "Usuário";
 
@@ -72,10 +138,10 @@ const Profile = () => {
     ? [{ icon: Wrench, label: "Dev Tools", path: "/dev-tools" }]
     : [];
 
-  // Build final menu with explicit insertion
+  // Build final menu with explicit insertion using FINAL permission
   const allMenuItems: MenuItemWithPath[] = [
     ...baseMenuItems,
-    ...(canManageGuests ? [guestsMenuItem] : []),
+    ...(canManageGuestsFinal ? [guestsMenuItem] : []),
     ...otherMenuItems,
     ...devMenuItem,
   ];
@@ -85,8 +151,8 @@ const Profile = () => {
     navigate(item.path);
   };
 
-  // Show loading skeleton while workspace context is loading
-  if (workspaceLoading) {
+  // Show loading skeleton while workspace context OR fallback is loading
+  if (workspaceLoading || fallbackLoading) {
     return (
       <div className="min-h-screen bg-background pb-24">
         <div 
@@ -110,10 +176,6 @@ const Profile = () => {
         className="container mx-auto p-4 max-w-2xl"
         style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}
       >
-        {/* Marcador canônico - confirma que esta é a página Profile correta */}
-        <div className="bg-yellow-500/20 border border-yellow-500 rounded px-3 py-1 text-xs font-mono text-yellow-700 dark:text-yellow-400 mb-4 inline-block">
-          PROFILE_CANONICO_v1
-        </div>
         <Card className="mb-6">
           <CardContent className="pt-8 pb-6">
             <div className="text-center mb-6">
@@ -129,8 +191,10 @@ const Profile = () => {
 
         {/* Debug info - temporary */}
         {process.env.NODE_ENV !== "production" && (
-          <div className="text-xs opacity-60 p-2 bg-muted rounded mb-4 font-mono">
-            role: {String(activeRole)} | ws: {String(activeWorkspace?.id?.slice(0, 8))} | owner: {String(activeWorkspace?.owner_id?.slice(0, 8))} | me: {String(currentUserId?.slice(0, 8))} | canManageGuests: {String(canManageGuests)}
+          <div className="text-xs opacity-60 p-2 bg-muted rounded mb-4 font-mono space-y-1">
+            <div>ctx: role={String(activeRole)} | ws={String(activeWorkspace?.id?.slice(0, 8))} | owner={String(activeWorkspace?.owner_id?.slice(0, 8))}</div>
+            <div>fallback: isOwner={String(fallbackData?.isOwnerWorkspace)} | isAdmin={String(fallbackData?.isAdminMember)} | wsId={String(fallbackData?.foundWorkspaceId?.slice(0, 8))}</div>
+            <div className="text-green-500 font-semibold">canManageGuestsFinal: {String(canManageGuestsFinal)}</div>
           </div>
         )}
 
