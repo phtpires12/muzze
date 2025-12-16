@@ -161,6 +161,7 @@ export type Database = {
           content: string | null
           content_type: string | null
           created_at: string
+          editing_progress: string[] | null
           id: string
           original_content: string | null
           publish_date: string | null
@@ -181,6 +182,7 @@ export type Database = {
           content?: string | null
           content_type?: string | null
           created_at?: string
+          editing_progress?: string[] | null
           id?: string
           original_content?: string | null
           publish_date?: string | null
@@ -201,6 +203,7 @@ export type Database = {
           content?: string | null
           content_type?: string | null
           created_at?: string
+          editing_progress?: string[] | null
           id?: string
           original_content?: string | null
           publish_date?: string | null
