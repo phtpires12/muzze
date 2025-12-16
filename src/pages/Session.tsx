@@ -654,12 +654,18 @@ const Session = () => {
             variant="ghost"
             size="sm"
             onClick={async () => {
+              if (!scriptId) {
+                console.error('scriptId não encontrado para atualizar status');
+                return;
+              }
               await saveCurrentStageTime();
-              // Update status to 'recording' before navigating back
-              await supabase
+              const { error } = await supabase
                 .from('scripts')
                 .update({ status: 'recording' })
                 .eq('id', scriptId);
+              if (error) {
+                console.error('Erro ao atualizar status para recording:', error);
+              }
               navigate(`/shot-list/record?scriptId=${scriptId}`);
             }}
             className="absolute top-4 left-4 gap-2 text-muted-foreground hover:text-foreground hover:bg-red-500/10"

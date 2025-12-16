@@ -425,12 +425,18 @@ const ShotListReview = () => {
               variant="ghost"
               size="icon"
               onClick={async () => {
+                if (!scriptId) {
+                  console.error('scriptId não encontrado para atualizar status');
+                  return;
+                }
                 await saveCurrentStageTime();
-                // Update status to 'draft' before navigating back
-                await supabase
+                const { error } = await supabase
                   .from('scripts')
                   .update({ status: 'draft' })
                   .eq('id', scriptId);
+                if (error) {
+                  console.error('Erro ao atualizar status para draft:', error);
+                }
                 navigate(`/session?stage=script&scriptId=${scriptId}`);
               }}
             >
@@ -471,12 +477,18 @@ const ShotListReview = () => {
             <Button
               variant="ghost"
               onClick={async () => {
+                if (!scriptId) {
+                  console.error('scriptId não encontrado para atualizar status');
+                  return;
+                }
                 await saveCurrentStageTime();
-                // Update status to 'draft' before navigating back
-                await supabase
+                const { error } = await supabase
                   .from('scripts')
                   .update({ status: 'draft' })
                   .eq('id', scriptId);
+                if (error) {
+                  console.error('Erro ao atualizar status para draft:', error);
+                }
                 navigate(`/session?stage=script&scriptId=${scriptId}`);
               }}
               className="hover:bg-accent/10"
