@@ -492,12 +492,18 @@ const ShotListRecord = () => {
               variant="ghost"
               size="icon"
               onClick={async () => {
+                if (!scriptId) {
+                  console.error('scriptId não encontrado para atualizar status');
+                  return;
+                }
                 await saveCurrentStageTime();
-                // Update status to 'review' before navigating back
-                await supabase
+                const { error } = await supabase
                   .from('scripts')
                   .update({ status: 'review' })
                   .eq('id', scriptId);
+                if (error) {
+                  console.error('Erro ao atualizar status para review:', error);
+                }
                 navigate(`/shot-list/review?scriptId=${scriptId}`);
               }}
             >
@@ -589,12 +595,18 @@ const ShotListRecord = () => {
             <Button
               variant="ghost"
               onClick={async () => {
+                if (!scriptId) {
+                  console.error('scriptId não encontrado para atualizar status');
+                  return;
+                }
                 await saveCurrentStageTime();
-                // Update status to 'review' before navigating back
-                await supabase
+                const { error } = await supabase
                   .from('scripts')
                   .update({ status: 'review' })
                   .eq('id', scriptId);
+                if (error) {
+                  console.error('Erro ao atualizar status para review:', error);
+                }
                 navigate(`/shot-list/review?scriptId=${scriptId}`);
               }}
               className="hover:bg-accent/10"
