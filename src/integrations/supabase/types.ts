@@ -503,6 +503,10 @@ export type Database = {
         Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
       }
+      is_workspace_owner_safe: {
+        Args: { _user_id: string; _workspace_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "developer" | "admin" | "user"
