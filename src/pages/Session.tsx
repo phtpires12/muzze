@@ -63,7 +63,7 @@ const Session = () => {
   const { toast } = useToast();
   
   const [scriptId, setScriptId] = useState<string | undefined>(scriptIdParam || undefined);
-  const { session, startSession, pauseSession, resumeSession, changeStage, endSession } = useSession({ 
+  const { session, startSession, pauseSession, resumeSession, changeStage, endSession, saveCurrentStageTime } = useSession({ 
     attachBeforeUnloadListener: true 
   });
   const { validateSessionFreshness } = useSessionContext();
@@ -653,7 +653,15 @@ const Session = () => {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate(`/shot-list/record?scriptId=${scriptId}`)}
+            onClick={async () => {
+              await saveCurrentStageTime();
+              // Update status to 'recording' before navigating back
+              await supabase
+                .from('scripts')
+                .update({ status: 'recording' })
+                .eq('id', scriptId);
+              navigate(`/shot-list/record?scriptId=${scriptId}`);
+            }}
             className="absolute top-4 left-4 gap-2 text-muted-foreground hover:text-foreground hover:bg-red-500/10"
           >
             <ChevronLeft className="w-4 h-4" />

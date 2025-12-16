@@ -493,6 +493,11 @@ const ShotListRecord = () => {
               size="icon"
               onClick={async () => {
                 await saveCurrentStageTime();
+                // Update status to 'review' before navigating back
+                await supabase
+                  .from('scripts')
+                  .update({ status: 'review' })
+                  .eq('id', scriptId);
                 navigate(`/shot-list/review?scriptId=${scriptId}`);
               }}
             >
@@ -585,6 +590,11 @@ const ShotListRecord = () => {
               variant="ghost"
               onClick={async () => {
                 await saveCurrentStageTime();
+                // Update status to 'review' before navigating back
+                await supabase
+                  .from('scripts')
+                  .update({ status: 'review' })
+                  .eq('id', scriptId);
                 navigate(`/shot-list/review?scriptId=${scriptId}`);
               }}
               className="hover:bg-accent/10"
