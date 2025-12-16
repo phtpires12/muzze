@@ -469,6 +469,10 @@ export type Database = {
         Args: { _stage: string; _user_id: string; _workspace_id: string }
         Returns: boolean
       }
+      can_view_workspace_as_invitee: {
+        Args: { _email: string; _workspace_id: string }
+        Returns: boolean
+      }
       get_user_workspace: { Args: { _user_id: string }; Returns: string }
       get_weekly_leaderboard: {
         Args: never
