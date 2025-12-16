@@ -17,7 +17,7 @@ import {
   Scissors, 
   CheckCircle,
   ArrowLeft,
-  Home,
+  ChevronLeft,
   Flame
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -642,13 +642,25 @@ const Session = () => {
     <div className="min-h-screen bg-gradient-to-br from-accent/10 via-background to-primary/10 p-6">
       <div className="max-w-2xl mx-auto">
         <Card className={cn(
-          "p-8 backdrop-blur-md border-border/20 shadow-lg rounded-[28px] transition-all duration-1000",
+          "relative p-8 backdrop-blur-md border-border/20 shadow-lg rounded-[28px] transition-all duration-1000",
           session.isStreakMode 
             ? "bg-gradient-to-br from-orange-500/10 via-red-500/10 to-orange-600/10 border-orange-500/30" 
             : isBonusMode
               ? "bg-gradient-to-br from-orange-400/10 via-purple-500/10 to-violet-600/10 border-purple-400/30"
               : "bg-card/85"
         )}>
+          {/* Back to Recording Button - top left */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate(`/shot-list/record?scriptId=${scriptId}`)}
+            className="absolute top-4 left-4 gap-2 text-muted-foreground hover:text-foreground hover:bg-red-500/10"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            <Video className="w-4 h-4 text-red-500" />
+            <span className="text-xs">Gravação</span>
+          </Button>
+
           {/* Timer Display */}
           <div className="text-center mb-8">
             <div className={cn(
@@ -748,31 +760,6 @@ const Session = () => {
                   </h3>
                   <EditingChecklist onAllCompleted={handleEditingCompleted} />
                   
-                  {/* Botões de Navegação */}
-                  <div className="pt-4 border-t border-border/20">
-                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-                      Navegação
-                    </h3>
-                    <div className="grid grid-cols-2 gap-3">
-                      <Button
-                        onClick={() => changeStage("record")}
-                        variant="outline"
-                        className="h-14 flex flex-col items-center justify-center gap-1 hover:border-red-500/50 hover:bg-red-500/10"
-                      >
-                        <Video className="w-5 h-5 text-red-500" />
-                        <span className="text-xs font-medium">Etapa Anterior</span>
-                      </Button>
-                      
-                      <Button
-                        onClick={() => navigate("/")}
-                        variant="outline"
-                        className="h-14 flex flex-col items-center justify-center gap-1 hover:border-primary/50 hover:bg-accent/10"
-                      >
-                        <Home className="w-5 h-5" />
-                        <span className="text-xs font-medium">Home</span>
-                      </Button>
-                    </div>
-                  </div>
                 </div>
               ) : (
                 // Botões de mudança de etapa para outras etapas
