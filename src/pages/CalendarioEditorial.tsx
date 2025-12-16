@@ -634,6 +634,7 @@ const CalendarioEditorial = () => {
           <YouTubeGalleryView
             scripts={youtubeScripts}
             onViewScript={handleViewScript}
+            onDeleteScript={handleDeleteScript}
           />
         ) : (
           <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
