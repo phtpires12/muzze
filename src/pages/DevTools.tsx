@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Flame, Trophy, Navigation, Trash2, RotateCcw, Wrench, Timer, Calendar } from "lucide-react";
+import { ArrowLeft, Flame, Trophy, Navigation, Trash2, RotateCcw, Wrench, Timer, Calendar, Search, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useStreakCelebration } from "@/hooks/useStreakCelebration";
 import { StreakCelebration } from "@/components/StreakCelebration";
@@ -27,12 +28,46 @@ const DevTools = () => {
   // Popup simulation state
   const [showPopupSimulation, setShowPopupSimulation] = useState(false);
   
+  // Workspace Debug state
+  const [debugData, setDebugData] = useState<any>(null);
+  const [debugOverlayEnabled, setDebugOverlayEnabled] = useState(
+    typeof window !== 'undefined' && localStorage.getItem('muzze_debug_overlay') === '1'
+  );
+  
   const mockScript = {
     id: "mock-script-id",
     title: "Meu Conteúdo de Teste",
     publish_date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     publish_status: "planejado" as const,
     created_at: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(),
+  };
+  
+  // Refresh debug data periodicamente
+  useEffect(() => {
+    const updateDebugData = () => {
+      setDebugData((window as any).__MUZZE_DEBUG__);
+    };
+    updateDebugData();
+    const interval = setInterval(updateDebugData, 1000);
+    return () => clearInterval(interval);
+  }, []);
+  
+  // Toggle handler
+  const handleToggleOverlay = () => {
+    const newValue = !debugOverlayEnabled;
+    setDebugOverlayEnabled(newValue);
+    if (newValue) {
+      localStorage.setItem('muzze_debug_overlay', '1');
+    } else {
+      localStorage.removeItem('muzze_debug_overlay');
+    }
+    toast({ title: newValue ? "Debug Overlay ativado" : "Debug Overlay desativado" });
+  };
+  
+  // Copiar JSON
+  const handleCopyDebug = () => {
+    navigator.clipboard.writeText(JSON.stringify(debugData, null, 2));
+    toast({ title: "Debug copiado para clipboard!" });
   };
 
   const handleMockMarkAsPosted = async () => {
@@ -245,6 +280,45 @@ const DevTools = () => {
             >
               <Navigation className="w-4 h-4 mr-2" />
               Ir para Onboarding
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Workspace Debug Section */}
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Search className="w-5 h-5" />
+              Workspace Debug
+            </CardTitle>
+            <CardDescription>
+              Informações do WorkspaceContext e fallback
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {/* Toggle Debug Overlay */}
+            <div className="flex items-center justify-between p-3 bg-muted rounded">
+              <span className="text-sm">Debug Overlay no Profile</span>
+              <Switch
+                checked={debugOverlayEnabled}
+                onCheckedChange={handleToggleOverlay}
+              />
+            </div>
+
+            {/* Debug Data Display */}
+            <div className="bg-zinc-900 text-green-400 p-3 rounded font-mono text-xs overflow-x-auto max-h-48">
+              <pre>{JSON.stringify(debugData?.workspace || { status: "Navegue para /profile para carregar dados" }, null, 2)}</pre>
+            </div>
+
+            {/* Copy Button */}
+            <Button
+              onClick={handleCopyDebug}
+              variant="outline"
+              className="w-full"
+              disabled={!debugData}
+            >
+              <Copy className="w-4 h-4 mr-2" />
+              Copiar JSON
             </Button>
           </CardContent>
         </Card>

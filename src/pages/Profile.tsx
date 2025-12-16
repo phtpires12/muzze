@@ -156,6 +156,26 @@ const Profile = () => {
     navigate(item.path);
   };
 
+  // Expor debug para DevTools via window (apenas runtime)
+  useEffect(() => {
+    (window as any).__MUZZE_DEBUG__ = {
+      workspace: {
+        activeRole,
+        activeWorkspaceId: activeWorkspace?.id || null,
+        activeWorkspaceOwnerId: activeWorkspace?.owner_id || null,
+        workspaceLoading,
+        currentUserId,
+        canManageGuestsFinal,
+        fallback: fallbackData,
+      }
+    };
+  }, [activeRole, activeWorkspace, workspaceLoading, currentUserId, canManageGuestsFinal, fallbackData]);
+
+  // Debug overlay só para developers com toggle ativo
+  const showDebugOverlay = (isDeveloper || isAdmin) && 
+    typeof window !== 'undefined' && 
+    localStorage.getItem('muzze_debug_overlay') === '1';
+
   // Show loading skeleton while workspace context OR fallback is loading
   if (workspaceLoading || fallbackLoading) {
     return (
@@ -181,6 +201,17 @@ const Profile = () => {
         className="container mx-auto p-4 max-w-2xl"
         style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}
       >
+        {/* Debug overlay apenas para devs com toggle ativo */}
+        {showDebugOverlay && (
+          <div className="text-[10px] text-muted-foreground mb-2 font-mono bg-yellow-500/10 p-2 rounded border border-yellow-500/30">
+            <div className="font-bold text-yellow-600 mb-1">🔧 DEV OVERLAY</div>
+            <div>ctx: role={activeRole || 'null'} | ws={activeWorkspace?.id?.slice(0,8) || 'null'} | owner={activeWorkspace?.owner_id?.slice(0,8) || 'null'}</div>
+            <div>fallback: isOwner={String(fallbackData?.isOwnerWorkspace)} | isAdmin={String(fallbackData?.isAdminMember)}</div>
+            <div>user: {currentUserId?.slice(0,8) || 'null'}</div>
+            <div className="text-green-500">canManageGuestsFinal: {String(canManageGuestsFinal)}</div>
+          </div>
+        )}
+
         <Card className="mb-6">
           <CardContent className="pt-8 pb-6">
             <div className="text-center mb-6">
@@ -193,19 +224,6 @@ const Profile = () => {
             </div>
           </CardContent>
         </Card>
-
-        {/* Visual proof + Debug info - temporary */}
-        <div className="text-[10px] text-muted-foreground mb-2 font-mono">
-          PROFILE_RENDER: src/pages/Profile.tsx
-        </div>
-        {process.env.NODE_ENV !== "production" && (
-          <div className="text-xs opacity-60 p-2 bg-muted rounded mb-4 font-mono space-y-1">
-            <div>ctx: role={String(activeRole)} | ws={String(activeWorkspace?.id?.slice(0, 8))} | owner={String(activeWorkspace?.owner_id?.slice(0, 8))} | loading={String(workspaceLoading)}</div>
-            <div>fallback: isOwner={String(fallbackData?.isOwnerWorkspace)} | isAdmin={String(fallbackData?.isAdminMember)} | wsId={String(fallbackData?.foundWorkspaceId?.slice(0, 8))}</div>
-            <div>user: {String(currentUserId?.slice(0, 8))}</div>
-            <div className="text-green-500 font-semibold">canManageGuestsFinal: {String(canManageGuestsFinal)}</div>
-          </div>
-        )}
 
         <div className="space-y-2">
           {allMenuItems.map((item, index) => {
