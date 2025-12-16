@@ -10,6 +10,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { cn } from "@/lib/utils";
 import { DatePickerModal } from "./DatePickerModal";
 import { useDeviceType } from "@/hooks/useDeviceType";
+import { ThumbnailUploader } from "@/components/ThumbnailUploader";
 
 const CONTENT_TYPES = [
   { value: "Reels", label: "Reels", icon: Clapperboard },
@@ -24,7 +25,8 @@ interface IdeaCardProps {
   contentType?: string;
   centralIdea?: string;
   referenceUrl?: string;
-  onUpdate: (id: string, data: { title?: string; content_type?: string; central_idea?: string; reference_url?: string }) => void;
+  thumbnailUrl?: string;
+  onUpdate: (id: string, data: { title?: string; content_type?: string; central_idea?: string; reference_url?: string; thumbnail_url?: string }) => void;
   onDelete: (id: string) => void;
   onSchedule?: () => void;
   isDragging?: boolean;
@@ -37,6 +39,7 @@ export const IdeaCard = ({
   contentType = "",
   centralIdea = "",
   referenceUrl = "",
+  thumbnailUrl = "",
   onUpdate,
   onDelete,
   onSchedule,
@@ -48,6 +51,7 @@ export const IdeaCard = ({
   const [localContentType, setLocalContentType] = useState(contentType || "");
   const [localCentralIdea, setLocalCentralIdea] = useState(centralIdea || "");
   const [localReferenceUrl, setLocalReferenceUrl] = useState(referenceUrl || "");
+  const [localThumbnailUrl, setLocalThumbnailUrl] = useState<string | null>(thumbnailUrl || null);
 
   const {
     attributes,
@@ -126,6 +130,18 @@ export const IdeaCard = ({
               ))}
             </SelectContent>
           </Select>
+
+          {/* Thumbnail - Only for YouTube */}
+          {localContentType === "YouTube" && (
+            <ThumbnailUploader
+              thumbnailUrl={localThumbnailUrl}
+              onThumbnailChange={(url) => {
+                setLocalThumbnailUrl(url);
+                onUpdate(id, { thumbnail_url: url });
+              }}
+              scriptId={id}
+            />
+          )}
 
           <div className="flex-1 flex flex-col">
             <Textarea

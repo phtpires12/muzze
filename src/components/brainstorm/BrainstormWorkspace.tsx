@@ -20,6 +20,7 @@ interface Idea {
   content_type?: string | null;
   central_idea?: string | null;
   reference_url?: string | null;
+  thumbnail_url?: string | null;
   status?: string | null;
   publish_date?: string | null;
 }
@@ -56,7 +57,7 @@ export const BrainstormWorkspace = () => {
 
     const { data, error } = await supabase
       .from("scripts")
-      .select("id, title, content_type, central_idea, reference_url, status, publish_date") as any;
+      .select("id, title, content_type, central_idea, reference_url, thumbnail_url, status, publish_date") as any;
       
     if (error) {
       console.error("Error loading ideas:", error);
@@ -77,7 +78,7 @@ export const BrainstormWorkspace = () => {
 
     const result = await supabase
       .from("scripts")
-      .select("id, title, content_type, central_idea, reference_url, status, publish_date");
+      .select("id, title, content_type, central_idea, reference_url, thumbnail_url, status, publish_date");
     
     const { data, error } = result as { data: Idea[] | null, error: any };
 
@@ -305,6 +306,7 @@ export const BrainstormWorkspace = () => {
                           contentType={idea.content_type || undefined}
                           centralIdea={idea.central_idea || undefined}
                           referenceUrl={idea.reference_url || undefined}
+                          thumbnailUrl={idea.thumbnail_url || undefined}
                           onUpdate={updateIdea}
                           onDelete={deleteIdea}
                         />
@@ -343,6 +345,7 @@ export const BrainstormWorkspace = () => {
               contentType={activeIdea.content_type || undefined}
               centralIdea={activeIdea.central_idea || undefined}
               referenceUrl={activeIdea.reference_url || undefined}
+              thumbnailUrl={activeIdea.thumbnail_url || undefined}
               onUpdate={() => {}}
               onDelete={() => {}}
               isDragging

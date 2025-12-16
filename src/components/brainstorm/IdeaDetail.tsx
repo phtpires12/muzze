@@ -16,6 +16,7 @@ import {
 import { FileText, ExternalLink, Loader2, Check, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { ThumbnailUploader } from "@/components/ThumbnailUploader";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,6 +37,7 @@ interface Idea {
   reference_url: string | null;
   status: string | null;
   publish_date: string | null;
+  thumbnail_url: string | null;
 }
 
 interface IdeaDetailProps {
@@ -57,6 +59,7 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
   const [contentType, setContentType] = useState<string>("");
   const [centralIdea, setCentralIdea] = useState("");
   const [referenceUrl, setReferenceUrl] = useState("");
+  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
 
   // Auto-save state
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -72,7 +75,7 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
     try {
       const { data, error } = await supabase
         .from("scripts")
-        .select("id, title, content_type, central_idea, reference_url, status, publish_date")
+        .select("id, title, content_type, central_idea, reference_url, status, publish_date, thumbnail_url")
         .eq("id", scriptId)
         .single();
 
@@ -84,6 +87,7 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
         setContentType(data.content_type || "");
         setCentralIdea(data.central_idea || "");
         setReferenceUrl(data.reference_url || "");
+        setThumbnailUrl(data.thumbnail_url);
         isInitialLoad.current = false;
       }
     } catch (error) {
@@ -109,6 +113,7 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
           content_type: contentType || null,
           central_idea: centralIdea || null,
           reference_url: referenceUrl || null,
+          thumbnail_url: thumbnailUrl,
         })
         .eq("id", scriptId);
 
@@ -121,7 +126,7 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
     } finally {
       setSaving(false);
     }
-  }, [title, contentType, centralIdea, referenceUrl, scriptId]);
+  }, [title, contentType, centralIdea, referenceUrl, thumbnailUrl, scriptId]);
 
   // Debounced auto-save effect
   useEffect(() => {
@@ -145,7 +150,7 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [title, contentType, centralIdea, referenceUrl, loading, idea, autoSave]);
+  }, [title, contentType, centralIdea, referenceUrl, thumbnailUrl, loading, idea, autoSave]);
 
   const handleRoteirizar = async () => {
     // Save any pending changes first
@@ -258,6 +263,18 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
           )}
         </CardHeader>
         <CardContent className="space-y-5">
+          {/* Thumbnail - Only for YouTube */}
+          {contentType === "YouTube" && (
+            <ThumbnailUploader
+              thumbnailUrl={thumbnailUrl}
+              onThumbnailChange={(url) => {
+                setThumbnailUrl(url);
+                setHasUnsavedChanges(true);
+              }}
+              scriptId={scriptId}
+            />
+          )}
+
           {/* Title */}
           <div className="space-y-2">
             <Label htmlFor="title">Título</Label>
