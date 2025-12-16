@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Plus, FileText } from "lucide-react";
+import { ArrowLeft, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ShotListTable, ShotItem } from "@/components/shotlist/ShotListTable";
@@ -436,22 +436,6 @@ const ShotListReview = () => {
               <h1 className="text-lg font-bold text-foreground">Shot List</h1>
               <p className="text-xs text-muted-foreground truncate">{scriptTitle}</p>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={async () => {
-                if (!scriptId) return;
-                await saveCurrentStageTime();
-                await supabase
-                  .from('scripts')
-                  .update({ status: 'draft' })
-                  .eq('id', scriptId);
-                navigate(`/session?stage=script&scriptId=${scriptId}`);
-              }}
-              title="Voltar para Roteiro"
-            >
-              <FileText className="w-5 h-5" />
-            </Button>
           </div>
           <div className="flex gap-2">
             <Button
@@ -490,23 +474,6 @@ const ShotListReview = () => {
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Voltar para Revisão
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={async () => {
-                if (!scriptId) return;
-                await saveCurrentStageTime();
-                await supabase
-                  .from('scripts')
-                  .update({ status: 'draft' })
-                  .eq('id', scriptId);
-                navigate(`/session?stage=script&scriptId=${scriptId}`);
-              }}
-              className="hover:bg-accent/10"
-            >
-              <FileText className="w-4 h-4 mr-2" />
-              Voltar para Roteiro
             </Button>
             <div>
               <h1 className="text-2xl font-bold text-foreground">Shot List - Revisão</h1>
