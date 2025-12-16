@@ -8,6 +8,7 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSam
 import { ptBR } from "date-fns/locale";
 import { Plus, ChevronLeft, ChevronRight, ChevronDown, Lightbulb, Filter, CalendarIcon, LayoutGrid, Columns3 } from "lucide-react";
 import { YouTubeGalleryView } from "@/components/calendar/YouTubeGalleryView";
+import { EditorialBoardView } from "@/components/calendar/EditorialBoardView";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useDeviceType } from "@/hooks/useDeviceType";
@@ -338,6 +339,13 @@ const CalendarioEditorial = () => {
     }
   };
 
+  const handleUpdateStatus = (scriptId: string, newStatus: string) => {
+    // Atualizar estado local (banco já foi atualizado no EditorialBoardView)
+    setScripts(prev =>
+      prev.map(s => (s.id === scriptId ? { ...s, status: newStatus } : s))
+    );
+  };
+
   const youtubeScripts = scripts.filter(s => s.content_type === "YouTube");
 
   return (
@@ -388,14 +396,12 @@ const CalendarioEditorial = () => {
             Galeria
           </Button>
           <Button 
-            variant="ghost" 
-            size="sm" 
-            disabled 
-            className="opacity-50"
+            variant={viewType === "board" ? "secondary" : "ghost"} 
+            size="sm"
+            onClick={() => setViewType("board")}
           >
             <Columns3 className="w-4 h-4 mr-1.5" />
             Quadro
-            <span className="ml-1 text-[10px] text-muted-foreground">Em breve</span>
           </Button>
         </div>
 
@@ -636,13 +642,15 @@ const CalendarioEditorial = () => {
             onViewScript={handleViewScript}
             onDeleteScript={handleDeleteScript}
           />
-        ) : (
-          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-            <Columns3 className="w-16 h-16 mb-4 opacity-30" />
-            <p className="font-medium text-lg">Quadro Kanban</p>
-            <p className="text-sm mt-1">Em breve!</p>
-          </div>
-        )}
+        ) : viewType === "board" ? (
+          <EditorialBoardView
+            scripts={scripts}
+            onViewScript={handleViewScript}
+            onDeleteScript={handleDeleteScript}
+            onUpdateStatus={handleUpdateStatus}
+            stageFilter={stageFilter}
+          />
+        ) : null}
       </div>
 
       <DayContentModal
