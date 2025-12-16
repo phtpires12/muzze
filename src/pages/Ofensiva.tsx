@@ -8,7 +8,7 @@ import { X, Share2, ChevronLeft, ChevronRight, Flame, Check, Snowflake, Gem, Inf
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isFuture, isToday, getDaysInMonth, isSameMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
-import { calculateXPFromMinutes, calculateFreezeCost } from "@/lib/gamification";
+import { calculateXPFromMinutes, calculateFreezeCost, MAX_STREAK_FREEZES } from "@/lib/gamification";
 import { useProfile } from "@/hooks/useProfile";
 import * as htmlToImage from 'html-to-image';
 import StreakShareCard from "@/components/StreakShareCard";
@@ -223,6 +223,16 @@ const Ofensiva = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user || !profile) return;
 
+    const currentFreezes = profile.streak_freezes || 0;
+    
+    // Check limit before buying
+    if (currentFreezes >= MAX_STREAK_FREEZES) {
+      toast.error("Limite atingido", {
+        description: `Você já tem o máximo de ${MAX_STREAK_FREEZES} bloqueios de ofensiva.`
+      });
+      return;
+    }
+
     const freezeCost = calculateFreezeCost(profile.min_streak_minutes || 20);
     const userXP = profile.xp_points || 0;
 
@@ -237,7 +247,7 @@ const Ofensiva = () => {
       .from('profiles')
       .update({
         xp_points: userXP - freezeCost,
-        streak_freezes: (profile.streak_freezes || 0) + 1
+        streak_freezes: currentFreezes + 1
       })
       .eq('user_id', user.id);
 
@@ -593,7 +603,10 @@ const Ofensiva = () => {
 
               <div className="text-right">
                 <p className="text-xs text-muted-foreground">Bloqueios disponíveis</p>
-                <p className="text-lg font-bold text-cyan-500">{profile?.streak_freezes || 0}</p>
+                <p className="text-lg font-bold text-cyan-500">
+                  {profile?.streak_freezes || 0}
+                  <span className="text-muted-foreground font-normal">/{MAX_STREAK_FREEZES}</span>
+                </p>
               </div>
             </div>
           </Card>
@@ -617,7 +630,11 @@ const Ofensiva = () => {
 
                 <Button
                   onClick={handleBuyFreeze}
-                  disabled={!profile || (profile.xp_points || 0) < calculateFreezeCost(profile?.min_streak_minutes || 20)}
+                  disabled={
+                    !profile || 
+                    (profile.xp_points || 0) < calculateFreezeCost(profile?.min_streak_minutes || 20) ||
+                    (profile.streak_freezes || 0) >= MAX_STREAK_FREEZES
+                  }
                   className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-bold"
                 >
                   <div className="flex items-center justify-center gap-2">
@@ -627,7 +644,13 @@ const Ofensiva = () => {
                   </div>
                 </Button>
 
-                {profile && (profile.xp_points || 0) < calculateFreezeCost(profile.min_streak_minutes || 20) && (
+                {profile && (profile.streak_freezes || 0) >= MAX_STREAK_FREEZES && (
+                  <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-2 text-center">
+                    Você já tem o máximo de {MAX_STREAK_FREEZES} bloqueios
+                  </p>
+                )}
+
+                {profile && (profile.streak_freezes || 0) < MAX_STREAK_FREEZES && (profile.xp_points || 0) < calculateFreezeCost(profile.min_streak_minutes || 20) && (
                   <p className="text-xs text-destructive mt-2 text-center">
                     Você precisa de mais {calculateFreezeCost(profile.min_streak_minutes || 20) - (profile.xp_points || 0)} XP
                   </p>

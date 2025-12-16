@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Flame, Snowflake, AlertTriangle, X } from 'lucide-react';
+import { Flame, Snowflake, AlertTriangle, X, Gem } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -17,7 +17,11 @@ interface StreakRecoveryModalProps {
   availableFreezes: number;
   currentStreak: number;
   canUseFreeze: boolean;
+  userXP: number;
+  freezeCost: number;
+  maxFreezes: number;
   onUseFreeze: () => Promise<boolean>;
+  onBuyFreezesAndRecover: () => Promise<boolean>;
   onResetStreak: () => Promise<boolean>;
   onDismiss: () => void;
 }
@@ -29,11 +33,22 @@ export const StreakRecoveryModal = ({
   availableFreezes,
   currentStreak,
   canUseFreeze,
+  userXP,
+  freezeCost,
+  maxFreezes,
   onUseFreeze,
+  onBuyFreezesAndRecover,
   onResetStreak,
   onDismiss,
 }: StreakRecoveryModalProps) => {
   const [isLoading, setIsLoading] = useState(false);
+
+  // Calcular quantos bloqueios precisam ser comprados
+  const freezesToBuy = Math.max(0, lostDaysCount - availableFreezes);
+  const totalCost = freezesToBuy * freezeCost;
+  const canAfford = userXP >= totalCost;
+  const wouldExceedLimit = availableFreezes + freezesToBuy > maxFreezes;
+  const canBuyAndRecover = !canUseFreeze && freezesToBuy > 0 && canAfford && !wouldExceedLimit;
 
   const handleUseFreeze = async () => {
     setIsLoading(true);
@@ -47,6 +62,23 @@ export const StreakRecoveryModal = ({
       onOpenChange(false);
     } else {
       toast.error('Erro ao usar bloqueio', {
+        description: 'Tente novamente mais tarde.',
+      });
+    }
+  };
+
+  const handleBuyFreezesAndRecover = async () => {
+    setIsLoading(true);
+    const success = await onBuyFreezesAndRecover();
+    setIsLoading(false);
+
+    if (success) {
+      toast.success('Bloqueios comprados e ofensiva protegida!', {
+        description: `Você gastou ${totalCost} XP para comprar ${freezesToBuy} bloqueio(s). Sua ofensiva de ${currentStreak} dias continua!`,
+      });
+      onOpenChange(false);
+    } else {
+      toast.error('Erro ao comprar bloqueios', {
         description: 'Tente novamente mais tarde.',
       });
     }
@@ -91,7 +123,7 @@ export const StreakRecoveryModal = ({
         </DialogHeader>
 
         <div className="space-y-4 mt-4">
-          {/* Option 1: Use Freezes */}
+          {/* Option 1: Use Freezes (when has enough) */}
           {canUseFreeze && (
             <Button
               onClick={handleUseFreeze}
@@ -112,12 +144,47 @@ export const StreakRecoveryModal = ({
             </Button>
           )}
 
-          {/* Not enough freezes warning */}
-          {!canUseFreeze && availableFreezes > 0 && (
-            <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg text-sm text-yellow-600 dark:text-yellow-400">
-              <strong>Bloqueios insuficientes:</strong> Você tem {availableFreezes} bloqueio{availableFreezes > 1 ? 's' : ''}, 
-              mas precisa de {lostDaysCount} para cobrir os dias perdidos.
-            </div>
+          {/* Not enough freezes warning + Buy option */}
+          {!canUseFreeze && availableFreezes < lostDaysCount && (
+            <>
+              <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg text-sm text-yellow-600 dark:text-yellow-400">
+                <strong>Bloqueios insuficientes:</strong> Você tem {availableFreezes} bloqueio{availableFreezes !== 1 ? 's' : ''}, 
+                mas precisa de {lostDaysCount} para cobrir os dias perdidos.
+              </div>
+
+              {/* Option to buy freezes and recover */}
+              <Button
+                onClick={handleBuyFreezesAndRecover}
+                disabled={isLoading || !canBuyAndRecover}
+                className="w-full h-auto py-4 bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700 text-white disabled:opacity-50"
+              >
+                <div className="flex items-center gap-3 w-full">
+                  <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+                    <Gem className="w-5 h-5" />
+                  </div>
+                  <div className="text-left flex-1">
+                    <div className="font-semibold">
+                      Comprar {freezesToBuy} bloqueio{freezesToBuy > 1 ? 's' : ''} e proteger
+                    </div>
+                    <div className="text-xs text-white/80">
+                      Custo: {totalCost} XP (você tem {userXP} XP)
+                    </div>
+                  </div>
+                </div>
+              </Button>
+
+              {/* Error messages */}
+              {!canAfford && (
+                <p className="text-xs text-destructive text-center">
+                  ❌ XP insuficiente para comprar {freezesToBuy} bloqueio{freezesToBuy > 1 ? 's' : ''}
+                </p>
+              )}
+              {wouldExceedLimit && canAfford && (
+                <p className="text-xs text-destructive text-center">
+                  ❌ Limite de {maxFreezes} bloqueios atingido
+                </p>
+              )}
+            </>
           )}
 
           {/* Option 2: Reset Streak */}
@@ -143,7 +210,7 @@ export const StreakRecoveryModal = ({
           {/* Info about freezes */}
           <div className="text-center pt-2">
             <p className="text-xs text-muted-foreground">
-              💡 Ganhe bloqueios usando XP na página de Ofensiva
+              💡 Limite: máximo {maxFreezes} bloqueios de ofensiva
             </p>
           </div>
         </div>

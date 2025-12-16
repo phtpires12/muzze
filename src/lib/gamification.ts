@@ -22,6 +22,7 @@ export const POINTS = {
 // XP System Constants
 export const XP_PER_MINUTE = 2;
 export const FREEZE_COST_MULTIPLIER = 2;
+export const MAX_STREAK_FREEZES = 5;
 
 export function calculateXPFromMinutes(minutes: number): number {
   return Math.floor(minutes * XP_PER_MINUTE);
