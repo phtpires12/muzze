@@ -28,9 +28,15 @@ const Ofensiva = () => {
 
   useEffect(() => {
     fetchStreakData();
-    fetchMonthProgress();
-    fetchFreezesUsedThisMonth();
-  }, [currentMonth]);
+  }, []);
+
+  // Só buscar dados do mês quando profile carregar (timezone correto)
+  useEffect(() => {
+    if (profile) {
+      fetchMonthProgress();
+      fetchFreezesUsedThisMonth();
+    }
+  }, [currentMonth, profile]);
 
   const fetchStreakData = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -390,37 +396,42 @@ const Ofensiva = () => {
           </div>
         </Card>
 
-        {/* Seletor de Mês */}
-        <div className="flex items-center justify-between">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handlePreviousMonth}
-            className="hover:bg-accent/10"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </Button>
+        {/* Histórico do Mês */}
+        <div className="space-y-4">
+          <h2 className="text-2xl font-bold text-foreground">Histórico do mês</h2>
+          
+          {/* Seletor de Mês */}
+          <div className="flex items-center justify-between bg-card/30 p-4 rounded-xl border border-border/30">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handlePreviousMonth}
+              className="hover:bg-accent/10"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </Button>
 
-          <div className="flex items-center gap-3">
-            <h3 className="text-lg font-bold text-foreground capitalize">
-              {format(currentMonth, 'MMMM yyyy', { locale: ptBR })}
-            </h3>
-            {monthBadge && (
-              <Badge className="bg-orange-500 text-white hover:bg-orange-600">
-                {monthBadge}
-              </Badge>
-            )}
+            <div className="flex items-center gap-3">
+              <h3 className="text-xl font-bold text-foreground capitalize">
+                {format(currentMonth, 'MMMM yyyy', { locale: ptBR })}
+              </h3>
+              {monthBadge && (
+                <Badge className="bg-orange-500 text-white hover:bg-orange-600">
+                  {monthBadge}
+                </Badge>
+              )}
+            </div>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleNextMonth}
+              disabled={!canGoNext}
+              className="hover:bg-accent/10 disabled:opacity-30"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </Button>
           </div>
-
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleNextMonth}
-            disabled={!canGoNext}
-            className="hover:bg-accent/10 disabled:opacity-30"
-          >
-            <ChevronRight className="w-5 h-5" />
-          </Button>
         </div>
 
         {/* Estatísticas do Mês */}
