@@ -6,7 +6,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek, addWeeks, subWeeks } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Plus, ChevronLeft, ChevronRight, ChevronDown, Lightbulb, Filter } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, ChevronDown, Lightbulb, Filter, CalendarIcon, LayoutGrid, Columns3 } from "lucide-react";
+import { YouTubeGalleryView } from "@/components/calendar/YouTubeGalleryView";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useDeviceType } from "@/hooks/useDeviceType";
@@ -28,6 +29,7 @@ interface Script {
   status: string | null;
   central_idea: string | null;
   reference_url: string | null;
+  thumbnail_url?: string | null;
   publish_status?: PublishStatus | null;
   published_at?: string | null;
 }
@@ -41,6 +43,7 @@ const CalendarioEditorial = () => {
   
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<"month" | "week">("month");
+  const [viewType, setViewType] = useState<"calendar" | "gallery" | "board">("calendar");
   const [scripts, setScripts] = useState<Script[]>([]);
   const [draggedScript, setDraggedScript] = useState<Script | null>(null);
   const [dragOverDate, setDragOverDate] = useState<string | null>(null);
@@ -324,6 +327,19 @@ const CalendarioEditorial = () => {
   const goToPreviousWeek = () => setCurrentDate(subWeeks(currentDate, 1));
   const goToNextWeek = () => setCurrentDate(addWeeks(currentDate, 1));
 
+  const handleGalleryClick = () => {
+    setViewType("gallery");
+    if (contentTypeFilter !== "YouTube") {
+      setContentTypeFilter("YouTube");
+      toast({
+        title: "🎬 Galeria YouTube",
+        description: "Mostrando apenas conteúdos do YouTube.",
+      });
+    }
+  };
+
+  const youtubeScripts = scripts.filter(s => s.content_type === "YouTube");
+
   return (
     <div className="min-h-screen bg-background pb-24">
       <div className="border-b border-border bg-card">
@@ -353,6 +369,37 @@ const CalendarioEditorial = () => {
       )}
 
       <div className="container mx-auto px-4 py-4">
+        {/* View Switcher */}
+        <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1 mb-4 w-fit">
+          <Button 
+            variant={viewType === "calendar" ? "secondary" : "ghost"} 
+            size="sm"
+            onClick={() => setViewType("calendar")}
+          >
+            <CalendarIcon className="w-4 h-4 mr-1.5" />
+            Calendário
+          </Button>
+          <Button 
+            variant={viewType === "gallery" ? "secondary" : "ghost"} 
+            size="sm"
+            onClick={handleGalleryClick}
+          >
+            <LayoutGrid className="w-4 h-4 mr-1.5" />
+            Galeria
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            disabled 
+            className="opacity-50"
+          >
+            <Columns3 className="w-4 h-4 mr-1.5" />
+            Quadro
+            <span className="ml-1 text-[10px] text-muted-foreground">Em breve</span>
+          </Button>
+        </div>
+
+        {viewType === "calendar" ? (
         <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "month" | "week")}>
           <div className="flex flex-col gap-3 mb-4">
             <div className="flex justify-between items-center flex-wrap gap-4">
@@ -583,6 +630,18 @@ const CalendarioEditorial = () => {
             )}
           </TabsContent>
         </Tabs>
+        ) : viewType === "gallery" ? (
+          <YouTubeGalleryView
+            scripts={youtubeScripts}
+            onViewScript={handleViewScript}
+          />
+        ) : (
+          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+            <Columns3 className="w-16 h-16 mb-4 opacity-30" />
+            <p className="font-medium text-lg">Quadro Kanban</p>
+            <p className="text-sm mt-1">Em breve!</p>
+          </div>
+        )}
       </div>
 
       <DayContentModal
