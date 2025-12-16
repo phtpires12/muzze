@@ -4,6 +4,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { useSessionContext } from "@/contexts/SessionContext";
 import { useInProgressProjects } from "@/hooks/useInProgressProjects";
+import { useStreakValidator } from "@/hooks/useStreakValidator";
 import { supabase } from "@/integrations/supabase/client";
 import { getLevelByXP, TROPHIES } from "@/lib/gamification";
 import { useGamification } from "@/hooks/useGamification";
@@ -20,6 +21,7 @@ import { Flame, Clock, Trophy, Lightbulb, Zap, Film, Mic, Scissors, AlertCircle,
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
+import { StreakRecoveryModal } from "@/components/StreakRecoveryModal";
 import {
   Dialog,
   DialogContent,
@@ -53,9 +55,17 @@ const Index = () => {
   const { muzzeSession, setMuzzeSession, resetMuzzeSession } = useSessionContext();
   const { stats } = useGamification();
   const { mostRecentProject } = useInProgressProjects();
+  const { 
+    result: streakValidation, 
+    isLoading: streakValidationLoading,
+    useFreezesToRecover,
+    resetStreak,
+    dismissCheck,
+  } = useStreakValidator();
   const [streakData, setStreakData] = useState<any>(null);
   const [weeklySessionsCount, setWeeklySessionsCount] = useState(0);
   const [isWorkflowModalOpen, setIsWorkflowModalOpen] = useState(false);
+  const [isStreakRecoveryModalOpen, setIsStreakRecoveryModalOpen] = useState(false);
   
   // Novos estados para seleção de item
   const [isPickItemModalOpen, setIsPickItemModalOpen] = useState(false);
@@ -84,6 +94,13 @@ const Index = () => {
   };
 
 
+
+  // Verificar se há dias perdidos na ofensiva
+  useEffect(() => {
+    if (!streakValidationLoading && streakValidation?.hasLostDays) {
+      setIsStreakRecoveryModalOpen(true);
+    }
+  }, [streakValidation, streakValidationLoading]);
 
   useEffect(() => {
     if (profile && !profileLoading) {
@@ -783,6 +800,21 @@ const Index = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Streak Recovery Modal */}
+      {streakValidation && (
+        <StreakRecoveryModal
+          open={isStreakRecoveryModalOpen}
+          onOpenChange={setIsStreakRecoveryModalOpen}
+          lostDaysCount={streakValidation.lostDaysCount}
+          availableFreezes={streakValidation.availableFreezes}
+          currentStreak={streakValidation.currentStreak}
+          canUseFreeze={streakValidation.canUseFreeze}
+          onUseFreeze={useFreezesToRecover}
+          onResetStreak={resetStreak}
+          onDismiss={dismissCheck}
+        />
+      )}
 
       {/* PWA Install Prompt */}
       <PWAInstallPrompt variant="popup" />

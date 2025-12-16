@@ -53,10 +53,18 @@ const Ofensiva = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
+    // Usar timezone do usuário para calcular datas corretamente
+    const userTimezone = profile?.timezone || 'America/Sao_Paulo';
+    
+    // Criar datas no timezone do usuário
+    const now = new Date();
+    const userNow = new Date(now.toLocaleString('en-US', { timeZone: userTimezone }));
+    
+    // Ajustar currentMonth para o timezone do usuário
     const monthStart = startOfMonth(currentMonth);
     const monthEnd = endOfMonth(currentMonth);
 
-    const minMinutes = profile?.min_streak_minutes || 20;
+    const minMinutes = profile?.min_streak_minutes || 25; // Default para 25 minutos
 
     const { data: sessions } = await supabase
       .from('stage_times')
@@ -65,10 +73,16 @@ const Ofensiva = () => {
       .gte('started_at', monthStart.toISOString())
       .lte('started_at', monthEnd.toISOString());
 
-    // Group sessions by day and check if they meet minimum minutes
+    // Group sessions by day in user's timezone
     const dayMap = new Map<string, number>();
     sessions?.forEach(session => {
-      const day = format(new Date(session.started_at!), 'yyyy-MM-dd');
+      if (!session.started_at) return;
+      
+      // Converter para timezone do usuário
+      const sessionDate = new Date(session.started_at);
+      const userSessionDate = new Date(sessionDate.toLocaleString('en-US', { timeZone: userTimezone }));
+      const day = format(userSessionDate, 'yyyy-MM-dd');
+      
       const minutes = (session.duration_seconds || 0) / 60;
       dayMap.set(day, (dayMap.get(day) || 0) + minutes);
     });
@@ -76,7 +90,9 @@ const Ofensiva = () => {
     const completedDays: Date[] = [];
     dayMap.forEach((minutes, dayStr) => {
       if (minutes >= minMinutes) {
-        completedDays.push(new Date(dayStr));
+        // Criar data no timezone local para exibição correta no calendário
+        const [year, month, dayNum] = dayStr.split('-').map(Number);
+        completedDays.push(new Date(year, month - 1, dayNum));
       }
     });
 
@@ -87,6 +103,7 @@ const Ofensiva = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
+    const userTimezone = profile?.timezone || 'America/Sao_Paulo';
     const monthStart = startOfMonth(currentMonth);
     const monthEnd = endOfMonth(currentMonth);
 
@@ -99,7 +116,15 @@ const Ofensiva = () => {
 
     setFreezesUsedThisMonth(freezeUsage?.length || 0);
 
-    const freezeDates = freezeUsage?.map(f => new Date(f.used_at!)) || [];
+    // Converter freeze dates para timezone do usuário
+    const freezeDates = freezeUsage?.map(f => {
+      if (!f.used_at) return new Date();
+      const freezeDate = new Date(f.used_at);
+      const userFreezeDate = new Date(freezeDate.toLocaleString('en-US', { timeZone: userTimezone }));
+      const [year, month, day] = format(userFreezeDate, 'yyyy-MM-dd').split('-').map(Number);
+      return new Date(year, month - 1, day);
+    }) || [];
+    
     setFreezeDays(freezeDates);
   };
 
