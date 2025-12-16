@@ -1,6 +1,6 @@
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ImagePlus } from "lucide-react";
+import { ImagePlus, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { PublishStatus } from "./PublishStatusBadge";
 
@@ -22,6 +22,7 @@ interface Script {
 interface YouTubeGalleryCardProps {
   script: Script;
   onClick: () => void;
+  onDelete: (e: React.MouseEvent) => void;
 }
 
 const getScriptStage = (script: Script): string => {
@@ -66,14 +67,27 @@ const getStatusColor = (script: Script): string => {
   return statusColors[stage] || 'bg-zinc-400';
 };
 
-export function YouTubeGalleryCard({ script, onClick }: YouTubeGalleryCardProps) {
+export function YouTubeGalleryCard({ script, onClick, onDelete }: YouTubeGalleryCardProps) {
   return (
     <Card 
-      className="cursor-pointer hover:shadow-lg hover:scale-[1.02] transition-all duration-200 overflow-hidden bg-card border-border"
+      className="group/card cursor-pointer hover:shadow-lg hover:scale-[1.02] transition-all duration-200 overflow-hidden bg-card border-border"
       onClick={onClick}
     >
       {/* Thumbnail Container - 16:9 aspect ratio */}
       <div className="relative w-full aspect-video bg-muted overflow-hidden">
+        {/* Delete button - top right corner */}
+        <button
+          className="absolute top-2 right-2 p-1.5 rounded-md bg-destructive/10 
+                     opacity-0 group-hover/card:opacity-100 transition-opacity z-10
+                     hover:bg-destructive/20"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(e);
+          }}
+        >
+          <Trash2 className="w-4 h-4 text-destructive" />
+        </button>
+        
         {script.thumbnail_url ? (
           <img 
             src={script.thumbnail_url} 
