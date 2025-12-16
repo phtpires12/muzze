@@ -97,6 +97,7 @@ export default function AcceptInvite() {
           accepted_at: new Date().toISOString(),
           allowed_timer_stages: invite.allowed_timer_stages,
           can_edit_stages: invite.can_edit_stages,
+          email: user.email,
         });
 
       if (insertError) {

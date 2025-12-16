@@ -105,7 +105,7 @@ const Guests = () => {
   const activeMembers: ActiveMember[] = members.map(m => ({
     id: m.id,
     name: m.username || undefined,
-    email: `User ${m.user_id.slice(0, 8)}...`,
+    email: m.email || `user_${m.user_id.slice(0, 8)}@...`,
     role: (m.role === "owner" ? "admin" : m.role) as "admin" | "collaborator",
     userId: m.user_id,
   }));
