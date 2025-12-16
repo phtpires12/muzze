@@ -530,11 +530,27 @@ const Ofensiva = () => {
               if (freezeUsed && !hasProgress) {
                 return (
                   <div key={day.toString()} className="relative aspect-square flex items-center justify-center">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center">
+                    <div className={`w-10 h-10 rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center ${isDayToday ? 'ring-2 ring-orange-500 ring-offset-2 ring-offset-background' : ''}`}>
                       <Snowflake className="w-5 h-5 text-white" />
                     </div>
                     <div className="absolute -bottom-1 text-xs text-muted-foreground">
                       {dayNumber}
+                    </div>
+                  </div>
+                );
+              }
+
+              // Hoje sem progresso - destaque especial
+              if (isDayToday && !hasProgress) {
+                return (
+                  <div
+                    key={day.toString()}
+                    className="aspect-square flex items-center justify-center"
+                  >
+                    <div className="relative w-10 h-10 rounded-full border-2 border-dashed border-orange-500 flex items-center justify-center animate-pulse">
+                      <span className="text-sm font-bold text-orange-500">{dayNumber}</span>
+                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full animate-ping" />
+                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full" />
                     </div>
                   </div>
                 );
@@ -556,7 +572,7 @@ const Ofensiva = () => {
                   key={day.toString()}
                   className={`aspect-square flex items-center justify-center text-sm font-bold rounded-full ${
                     isDayToday
-                      ? 'bg-gradient-to-br from-orange-500 to-orange-600 text-white shadow-lg shadow-orange-500/50'
+                      ? 'bg-gradient-to-br from-orange-500 to-orange-600 text-white shadow-lg shadow-orange-500/50 ring-2 ring-orange-300 ring-offset-2 ring-offset-background'
                       : 'bg-gradient-to-br from-orange-400 to-orange-500 text-white shadow-md'
                   }`}
                 >
