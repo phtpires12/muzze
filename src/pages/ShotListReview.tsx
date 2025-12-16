@@ -426,7 +426,12 @@ const ShotListReview = () => {
               size="icon"
               onClick={async () => {
                 await saveCurrentStageTime();
-                navigate(`/session?stage=review&scriptId=${scriptId}`);
+                // Update status to 'draft' before navigating back
+                await supabase
+                  .from('scripts')
+                  .update({ status: 'draft' })
+                  .eq('id', scriptId);
+                navigate(`/session?stage=script&scriptId=${scriptId}`);
               }}
             >
               <ArrowLeft className="w-5 h-5" />
@@ -467,12 +472,17 @@ const ShotListReview = () => {
               variant="ghost"
               onClick={async () => {
                 await saveCurrentStageTime();
-                navigate(`/session?stage=review&scriptId=${scriptId}`);
+                // Update status to 'draft' before navigating back
+                await supabase
+                  .from('scripts')
+                  .update({ status: 'draft' })
+                  .eq('id', scriptId);
+                navigate(`/session?stage=script&scriptId=${scriptId}`);
               }}
               className="hover:bg-accent/10"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Voltar
+              Voltar para Roteiro
             </Button>
             <div>
               <h1 className="text-2xl font-bold text-foreground">Shot List - Revisão</h1>
