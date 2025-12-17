@@ -282,8 +282,17 @@ const Session = () => {
   }, [isAppVisible, session.isPaused, session.isActive]);
 
 
+  // Se celebração está ativa, renderizar tela mínima para evitar flash
+  if (isShowingAnyCelebration) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-accent/10 via-background to-primary/10">
+        {/* Tela em branco - celebração aparece como overlay via GlobalCelebrations */}
+      </div>
+    );
+  }
+
   // Detectar se estamos inicializando a partir de URL (evita flash do modal)
-  const isInitializingFromUrl = stageParam && !session.isActive && !hasEndedSession && !isShowingAnyCelebration;
+  const isInitializingFromUrl = stageParam && !session.isActive && !hasEndedSession;
 
   if (isInitializingFromUrl) {
     return (

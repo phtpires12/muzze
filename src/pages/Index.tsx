@@ -6,6 +6,7 @@ import { useSessionContext } from "@/contexts/SessionContext";
 import { useInProgressProjects } from "@/hooks/useInProgressProjects";
 import { useStreakValidator } from "@/hooks/useStreakValidator";
 import { useStreakAutoRecovery } from "@/hooks/useStreakAutoRecovery";
+import { useCelebration } from "@/contexts/CelebrationContext";
 import { supabase } from "@/integrations/supabase/client";
 import { getLevelByXP, TROPHIES } from "@/lib/gamification";
 import { useGamification } from "@/hooks/useGamification";
@@ -57,6 +58,7 @@ const Index = () => {
   const { muzzeSession, setMuzzeSession, resetMuzzeSession } = useSessionContext();
   const { stats } = useGamification();
   const { mostRecentProject } = useInProgressProjects();
+  const { isShowingAnyCelebration } = useCelebration();
   const { 
     result: streakValidation, 
     isLoading: streakValidationLoading,
@@ -306,6 +308,15 @@ const Index = () => {
     setIsAlertOpen(false);
     navigate("/scripts");
   };
+
+  // Se celebração está ativa, renderizar tela mínima para evitar flash
+  if (isShowingAnyCelebration) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-accent/10 via-background to-primary/10">
+        {/* Tela em branco - celebração aparece como overlay via GlobalCelebrations */}
+      </div>
+    );
+  }
 
   if (profileLoading || !profile) {
     return (

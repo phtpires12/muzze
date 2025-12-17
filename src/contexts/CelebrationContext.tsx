@@ -220,29 +220,43 @@ export const CelebrationContextProvider = ({ children }: { children: ReactNode }
       setOnCompleteCallback(() => onComplete);
     }
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      console.log('[CelebrationContext] Sem usuário autenticado');
-      onComplete?.();
-      return;
-    }
-
-    const weekDays = await fetchWeekProgress(user.id);
-    const newTrophies = await checkForNewTrophies(user.id);
-
-    console.log('[CelebrationContext] Dados carregados, exibindo SessionSummary');
-    
+    // ✅ MOSTRAR SESSIONSUMMARY IMEDIATAMENTE - sem esperar dados
     setCelebrationData({
       showSessionSummary: true,
       sessionSummary,
       showStreakCelebration: false,
       showTrophyCelebration: false,
       streakCount,
-      weekDays,
-      unlockedTrophies: newTrophies,
+      weekDays: [], // Inicialmente vazio, carregado depois
+      unlockedTrophies: [],
       currentTrophy: null,
       xpGained,
     });
+
+    // ✅ Carregar dados em BACKGROUND (não bloqueia a UI)
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.log('[CelebrationContext] Sem usuário autenticado');
+        return;
+      }
+
+      const [weekDays, newTrophies] = await Promise.all([
+        fetchWeekProgress(user.id),
+        checkForNewTrophies(user.id),
+      ]);
+
+      console.log('[CelebrationContext] Dados carregados em background');
+      
+      // Atualizar dados quando disponíveis (celebração já está visível)
+      setCelebrationData(prev => ({
+        ...prev,
+        weekDays,
+        unlockedTrophies: newTrophies,
+      }));
+    } catch (error) {
+      console.error('[CelebrationContext] Erro ao carregar dados em background:', error);
+    }
   }, []);
 
   const triggerCelebration = useCallback(async (
