@@ -20,6 +20,7 @@ import { MobileWeekAgendaView } from "@/components/calendar/MobileWeekAgendaView
 import { PostConfirmationPopup } from "@/components/calendar/PostConfirmationPopup";
 import { useOverdueContent } from "@/hooks/useOverdueContent";
 import { PublishStatus } from "@/components/calendar/PublishStatusBadge";
+import { useWorkspaceContext } from "@/contexts/WorkspaceContext";
 
 interface Script {
   id: string;
@@ -43,6 +44,7 @@ const CalendarioEditorial = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const deviceType = useDeviceType();
+  const { activeWorkspace } = useWorkspaceContext();
   const isIdeationMode = searchParams.get("mode") === "ideation";
   
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
@@ -131,10 +133,13 @@ const CalendarioEditorial = () => {
   };
 
   const fetchScripts = async () => {
+    if (!activeWorkspace?.id) return;
+    
     try {
       const { data, error } = await supabase
         .from('scripts')
         .select('*')
+        .eq('workspace_id', activeWorkspace.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -156,7 +161,7 @@ const CalendarioEditorial = () => {
     }
   };
 
-  // Refetch scripts when navigating back to this page or when tab becomes visible
+  // Refetch scripts when navigating back to this page, when tab becomes visible, or when workspace changes
   useEffect(() => {
     fetchScripts();
     
@@ -168,7 +173,7 @@ const CalendarioEditorial = () => {
     
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [location.key]);
+  }, [location.key, activeWorkspace?.id]);
 
   const getScriptStage = (script: Script): string => {
     // Prioridade 1: status explícito do banco

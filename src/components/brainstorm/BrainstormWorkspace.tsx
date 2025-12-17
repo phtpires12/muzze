@@ -11,6 +11,7 @@ import { IdeaCarousel } from "./IdeaCarousel";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useDeviceType } from "@/hooks/useDeviceType";
+import { useWorkspaceContext } from "@/contexts/WorkspaceContext";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -35,6 +36,7 @@ export const BrainstormWorkspace = () => {
   const [selectedIdeas, setSelectedIdeas] = useState<Idea[]>([]);
   const { toast } = useToast();
   const deviceType = useDeviceType();
+  const { activeWorkspace } = useWorkspaceContext();
   const isMobile = deviceType === "mobile";
 
   const sensors = useSensors(
@@ -49,38 +51,37 @@ export const BrainstormWorkspace = () => {
   useEffect(() => {
     loadIdeas();
     loadScheduledIdeas();
-  }, []);
+  }, [activeWorkspace?.id]);
 
   const loadIdeas = async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user || !activeWorkspace?.id) return;
 
     const { data, error } = await supabase
       .from("scripts")
-      .select("id, title, content_type, central_idea, reference_url, thumbnail_url, status, publish_date") as any;
+      .select("id, title, content_type, central_idea, reference_url, thumbnail_url, status, publish_date")
+      .eq("workspace_id", activeWorkspace.id)
+      .eq("status", "draft_idea")
+      .limit(3);
       
     if (error) {
       console.error("Error loading ideas:", error);
       return;
     }
 
-    if (data) {
-      const filteredData = (data as any[]).filter(
-        (item: any) => item.user_id === user.id && item.status === "draft_idea"
-      ).slice(0, 3);
-      setIdeas(filteredData || []);
-    }
+    setIdeas(data || []);
   };
 
   const loadScheduledIdeas = async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user || !activeWorkspace?.id) return;
 
-    const result = await supabase
+    const { data, error } = await supabase
       .from("scripts")
-      .select("id, title, content_type, central_idea, reference_url, thumbnail_url, status, publish_date");
-    
-    const { data, error } = result as { data: Idea[] | null, error: any };
+      .select("id, title, content_type, central_idea, reference_url, thumbnail_url, status, publish_date")
+      .eq("workspace_id", activeWorkspace.id)
+      .eq("status", "draft_idea")
+      .not("publish_date", "is", null);
 
     if (error) {
       console.error("Error loading scheduled ideas:", error);
@@ -88,11 +89,7 @@ export const BrainstormWorkspace = () => {
     }
 
     const grouped: Record<string, Idea[]> = {};
-    data?.filter((item: any) => 
-      item.publish_date && 
-      item.user_id === user.id && 
-      item.status === "draft_idea"
-    ).forEach((item: any) => {
+    data?.forEach((item) => {
       if (item.publish_date) {
         if (!grouped[item.publish_date]) {
           grouped[item.publish_date] = [];
@@ -115,7 +112,7 @@ export const BrainstormWorkspace = () => {
     }
 
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user || !activeWorkspace?.id) return;
 
     const { data, error } = await supabase
       .from("scripts")
@@ -123,6 +120,7 @@ export const BrainstormWorkspace = () => {
         user_id: user.id,
         title: "",
         status: "draft_idea",
+        workspace_id: activeWorkspace.id,
       } as any)
       .select("id, title, content_type, central_idea, reference_url, status, publish_date")
       .single() as any;

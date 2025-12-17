@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useWorkspaceContext } from "@/contexts/WorkspaceContext";
 import { ArrowRight } from "lucide-react";
 
 const CONTENT_TYPES = [
@@ -24,6 +25,7 @@ export const IdeaForm = ({ scriptId }: IdeaFormProps) => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { activeWorkspace } = useWorkspaceContext();
   
   const [title, setTitle] = useState("");
   const [contentType, setContentType] = useState("");
@@ -101,6 +103,7 @@ export const IdeaForm = ({ scriptId }: IdeaFormProps) => {
         reference_url: referenceUrl.trim() || null,
         user_id: user.id,
         publish_date: publishDate,
+        workspace_id: activeWorkspace?.id,
       };
 
       let savedScriptId = currentScriptId;

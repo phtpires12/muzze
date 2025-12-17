@@ -23,6 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useSessionContext } from "@/contexts/SessionContext";
 import { useSession } from "@/hooks/useSession";
+import { useWorkspaceContext } from "@/contexts/WorkspaceContext";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -39,6 +40,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
   const navigate = useNavigate();
   const { setMuzzeSession } = useSessionContext();
   const { saveCurrentStageTime } = useSession();
+  const { activeWorkspace } = useWorkspaceContext();
   const [title, setTitle] = useState("Novo Roteiro");
   const [content, setContent] = useState({
     gancho: "",
@@ -228,6 +230,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
         content_type: contentType,
         publish_date: publishDate || null,
         thumbnail_url: thumbnailUrl,
+        workspace_id: activeWorkspace?.id,
       };
 
       // Atualizar status automaticamente baseado no modo atual
