@@ -21,6 +21,7 @@ import { useTimerPermission } from "@/hooks/useTimerPermission";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useStreakCelebration } from "@/hooks/useStreakCelebration";
+import { useCelebration } from "@/contexts/CelebrationContext";
 import SessionSummary from "@/components/SessionSummary";
 import { StreakCelebration } from "@/components/StreakCelebration";
 import { TrophyCelebration } from "@/components/TrophyCelebration";
@@ -57,7 +58,10 @@ const ShotListRecord = () => {
   // Timer permission check
   const { canUseTimer } = useTimerPermission(scriptId, 'recording');
 
-  // Celebration system
+  // Global celebration context (for hiding timer during celebrations)
+  const { isShowingAnyCelebration } = useCelebration();
+
+  // Celebration system (local, for legacy flow)
   const { 
     celebrationData, 
     triggerFullCelebration,
@@ -636,7 +640,7 @@ const ShotListRecord = () => {
           </div>
         </div>
 
-        {/* Unified Session Timer (in-app) - Hidden when user leaves app */}
+        {/* Unified Session Timer (in-app) - Hidden when user leaves app or during celebrations */}
         {!isOpen && (
           <DraggableSessionTimer
             stage="Gravação"
@@ -655,6 +659,7 @@ const ShotListRecord = () => {
             todayMinutesFromDB={dailyProgress.actualMinutes}
             permissionEnabled={canUseTimer}
             savedSecondsThisSession={session.savedSecondsThisSession}
+            hidden={isShowingAnyCelebration}
           />
         )}
 
