@@ -413,8 +413,8 @@ const Index = () => {
         >
           <h2 className="text-2xl font-bold text-foreground mb-6">
             {mostRecentProject 
-              ? `${profile?.username ? profile.username + ", essa" : "Essa"} foi sua última atividade criativa`
-              : `Bem-vindo de volta${profile?.username ? ", " + profile.username : ""}`}
+              ? `${profile?.username ? profile.username.split(' ')[0] + ", essa" : "Essa"} foi sua última atividade criativa`
+              : `Bem-vindo de volta${profile?.username ? ", " + profile.username.split(' ')[0] : ""}`}
           </h2>
 
           {mostRecentProject ? (

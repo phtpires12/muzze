@@ -212,7 +212,7 @@ export const useOnboarding = () => {
 
       toast({
         title: state.data.username 
-          ? `Bem-vindo à Muzze, ${state.data.username}!` 
+          ? `Bem-vindo à Muzze, ${state.data.username.split(' ')[0]}!` 
           : "Bem-vindo à Muzze!",
         description: "Vamos começar sua jornada criativa.",
       });
