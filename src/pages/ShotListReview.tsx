@@ -16,6 +16,7 @@ import { useWindowPortal } from "@/hooks/useWindowPortal";
 import { useTimerPermission } from "@/hooks/useTimerPermission";
 import { cn } from "@/lib/utils";
 import { useStreakCelebration } from "@/hooks/useStreakCelebration";
+import { useCelebration } from "@/contexts/CelebrationContext";
 import SessionSummary from "@/components/SessionSummary";
 import { StreakCelebration } from "@/components/StreakCelebration";
 import { TrophyCelebration } from "@/components/TrophyCelebration";
@@ -52,7 +53,10 @@ const ShotListReview = () => {
   // Timer permission check
   const { canUseTimer } = useTimerPermission(scriptId, 'review');
 
-  // Celebration system
+  // Global celebration context (for hiding timer during celebrations)
+  const { isShowingAnyCelebration } = useCelebration();
+
+  // Celebration system (local, for legacy flow)
   const { 
     celebrationData, 
     triggerFullCelebration,
@@ -521,7 +525,7 @@ const ShotListReview = () => {
           <Plus className="w-6 h-6" />
         </Button>
 
-        {/* Unified Session Timer (in-app) - Hidden when user leaves app */}
+        {/* Unified Session Timer (in-app) - Hidden when user leaves app or during celebrations */}
         {!isOpen && (
           <DraggableSessionTimer
             stage="Revisão"
@@ -540,6 +544,7 @@ const ShotListReview = () => {
             todayMinutesFromDB={dailyProgress.actualMinutes}
             permissionEnabled={canUseTimer}
             savedSecondsThisSession={session.savedSecondsThisSession}
+            hidden={isShowingAnyCelebration}
           />
         )}
 
