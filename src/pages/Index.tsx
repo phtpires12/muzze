@@ -57,7 +57,7 @@ const Index = () => {
   const { trackEvent } = useAnalytics();
   const { muzzeSession, setMuzzeSession, resetMuzzeSession } = useSessionContext();
   const { stats } = useGamification();
-  const { mostRecentProject } = useInProgressProjects();
+  const { mostRecentProject, loading: projectsLoading } = useInProgressProjects();
   const { isShowingAnyCelebration } = useCelebration();
   const { 
     result: streakValidation, 
@@ -443,14 +443,24 @@ const Index = () => {
             "rounded-[28px] animate-fade-in"
           )}
         >
-          <h2 className="text-2xl font-bold text-foreground mb-6">
-            {mostRecentProject 
-              ? `${profile?.username ? profile.username.split(' ')[0] + ", essa" : "Essa"} foi sua última atividade criativa`
-              : `Bem-vindo de volta${profile?.username ? ", " + profile.username.split(' ')[0] : ""}`}
-          </h2>
-
-          {mostRecentProject ? (
+          {projectsLoading ? (
+            // Skeleton enquanto carrega
+            <div className="animate-pulse space-y-4">
+              <div className="h-7 bg-secondary/50 rounded w-4/5"></div>
+              <div className="p-4 bg-secondary/30 rounded-2xl space-y-2">
+                <div className="h-5 bg-secondary/50 rounded w-3/4"></div>
+                <div className="h-4 bg-secondary/40 rounded w-1/2"></div>
+                <div className="h-3 bg-secondary/30 rounded w-2/3"></div>
+              </div>
+              <div className="h-12 bg-secondary/50 rounded-xl"></div>
+            </div>
+          ) : mostRecentProject ? (
+            // Com projeto em andamento: mostra ambas opções
             <div className="space-y-4">
+              <h2 className="text-2xl font-bold text-foreground">
+                {profile?.username ? profile.username.split(' ')[0] + ", essa" : "Essa"} foi sua última atividade criativa
+              </h2>
+              
               <div className="p-4 bg-secondary/50 rounded-2xl">
                 <h3 className="font-semibold text-foreground mb-2">
                   📝 {mostRecentProject.title}
@@ -473,15 +483,28 @@ const Index = () => {
                   </p>
                 </div>
               </div>
+              
               <Button
                 onClick={handleContinueActivity}
                 className="w-full bg-gradient-to-r from-primary to-accent hover:opacity-90 text-white shadow-lg h-12 rounded-xl font-semibold"
               >
                 Continuar criando →
               </Button>
+              
+              <button 
+                onClick={handleStartSession}
+                className="w-full text-center text-sm text-muted-foreground hover:text-primary transition-colors py-2"
+              >
+                ou iniciar nova sessão
+              </button>
             </div>
           ) : (
+            // Sem projeto: mostra apenas iniciar
             <div className="space-y-4 text-center">
+              <h2 className="text-2xl font-bold text-foreground mb-2">
+                Bem-vindo de volta{profile?.username ? ", " + profile.username.split(' ')[0] : ""}
+              </h2>
+              
               <Button
                 data-testid="cta-start-session"
                 onClick={handleStartSession}
