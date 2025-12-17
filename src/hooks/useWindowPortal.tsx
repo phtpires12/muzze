@@ -148,10 +148,8 @@ export function useWindowPortal(options: UseWindowPortalOptions = {}) {
         containerRef.current = null;
       };
 
-      // Wait for next frame to ensure styles are applied before rendering content
-      requestAnimationFrame(() => {
-        setIsOpen(true);
-      });
+      // Styles are copied synchronously, so we can render immediately
+      setIsOpen(true);
     }, 50);
   };
 
