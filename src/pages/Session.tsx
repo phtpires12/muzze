@@ -4,6 +4,7 @@ import { useSession, SessionStage } from "@/hooks/useSession";
 import { useSessionContext } from "@/contexts/SessionContext";
 import { useDailyGoalProgress } from "@/hooks/useDailyGoalProgress";
 import { useTimerPermission } from "@/hooks/useTimerPermission";
+import { useCelebration } from "@/contexts/CelebrationContext";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -21,11 +22,7 @@ import {
   Flame
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-// Dialog imports removed - now using SessionSummary component
 import { StreakHalo } from "@/components/StreakHalo";
-import { StreakCelebration } from "@/components/StreakCelebration";
-import { TrophyCelebration } from "@/components/TrophyCelebration";
-import SessionSummary from "@/components/SessionSummary";
 import { ScriptEditor } from "@/components/ScriptEditor";
 import { BrainstormWorkspace } from "@/components/brainstorm/BrainstormWorkspace";
 import { IdeaDetail } from "@/components/brainstorm/IdeaDetail";
@@ -36,7 +33,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useWindowPortal } from "@/hooks/useWindowPortal";
 import { useAppVisibility } from "@/hooks/useAppVisibility";
-import { useStreakCelebration } from "@/hooks/useStreakCelebration";
 import { DevToolsPanel } from "@/components/DevToolsPanel";
 import { TROPHIES } from "@/lib/gamification";
 import { CreativeStage } from "@/types/workspace";
@@ -67,45 +63,10 @@ const Session = () => {
     attachBeforeUnloadListener: true 
   });
   const { validateSessionFreshness } = useSessionContext();
-  // Flag para evitar flash de navegação durante celebração
-  const [isShowingCelebration, setIsShowingCelebration] = useState(false);
   // Flag para prevenir reinício de sessão após encerramento intencional
   const [hasEndedSession, setHasEndedSession] = useState(false);
   const [showStreakHalo, setShowStreakHalo] = useState(false);
   const [streakCount, setStreakCount] = useState(0);
-  // Destino de navegação pendente após celebrações (via NavBar)
-  const [pendingNavigationAfterCelebration, setPendingNavigationAfterCelebration] = useState<string | null>(null);
-  
-  // Verificar se há dados de celebração pendentes ao montar (via NavBar)
-  useEffect(() => {
-    const pendingDataStr = localStorage.getItem('pending_celebration_data');
-    if (pendingDataStr) {
-      try {
-        const pendingData = JSON.parse(pendingDataStr);
-        localStorage.removeItem('pending_celebration_data');
-        
-        console.log('[Session] Dados de celebração pendentes encontrados:', pendingData);
-        
-        // Salvar destino para navegação final
-        if (pendingData.destination) {
-          setPendingNavigationAfterCelebration(pendingData.destination);
-        }
-        
-        // Ativar flags de celebração
-        setHasEndedSession(true);
-        setIsShowingCelebration(true);
-        
-        // CRÍTICO: Disparar celebração com os dados salvos
-        triggerFullCelebration(
-          pendingData.sessionSummary,
-          pendingData.streakCount,
-          pendingData.xpGained
-        );
-      } catch (error) {
-        console.error('[Session] Erro ao parsear dados de celebração:', error);
-      }
-    }
-  }, []);
   const isAppVisible = useAppVisibility();
   const { progress: dailyProgress } = useDailyGoalProgress();
   
@@ -121,51 +82,13 @@ const Session = () => {
   
   // Timer permission check
   const { canUseTimer } = useTimerPermission(scriptId, currentCreativeStage);
-  // Celebration system
+  
+  // Global celebration system
   const { 
-    celebrationData, 
     triggerFullCelebration,
-    triggerCelebration, 
-    dismissSessionSummary,
-    dismissStreakCelebration: originalDismissStreakCelebration,
-    dismissTrophyCelebration: originalDismissTrophyCelebration,
-    resetCelebrations,
-  } = useStreakCelebration();
-
-  // Destino final após celebrações (usa pendente se existir, senão home)
-  const getFinalDestination = () => pendingNavigationAfterCelebration || "/";
-
-  // Wrap dismissal functions to handle navigation
-  const handleDismissSessionSummary = () => {
-    dismissSessionSummary();
-    // If no streak or trophies, navigate to final destination and reset flag
-    if (celebrationData.streakCount === 0 && celebrationData.unlockedTrophies.length === 0) {
-      setIsShowingCelebration(false);
-      setPendingNavigationAfterCelebration(null);
-      navigate(getFinalDestination());
-    }
-  };
-
-  const dismissStreakCelebration = () => {
-    originalDismissStreakCelebration();
-    // If no trophies to show, navigate to final destination and reset flag
-    if (celebrationData.unlockedTrophies.length === 0) {
-      setIsShowingCelebration(false);
-      setPendingNavigationAfterCelebration(null);
-      navigate(getFinalDestination());
-    }
-  };
-
-  const dismissTrophyCelebration = () => {
-    originalDismissTrophyCelebration();
-    // After showing all trophies, navigate to final destination and reset flag
-    const remainingTrophies = celebrationData.unlockedTrophies.slice(1);
-    if (remainingTrophies.length === 0) {
-      setIsShowingCelebration(false);
-      setPendingNavigationAfterCelebration(null);
-      navigate(getFinalDestination());
-    }
-  };
+    triggerCelebration,
+    isShowingAnyCelebration,
+  } = useCelebration();
 
   // Developer tools handlers
   const handleSimulateSession = async () => {
@@ -196,7 +119,7 @@ const Session = () => {
       const normalizedStage = stageParam === "ideation" ? "idea" : stageParam;
       
       // NÃO iniciar nova sessão se o usuário acabou de encerrar ou está em celebração
-      if (!session.isActive && !hasEndedSession && !isShowingCelebration) {
+      if (!session.isActive && !hasEndedSession && !isShowingAnyCelebration) {
         // Nenhuma sessão ativa e usuário não encerrou - iniciar nova
         startSession(normalizedStage as SessionStage);
       } else if (session.isActive && session.stage !== normalizedStage) {
@@ -204,9 +127,9 @@ const Session = () => {
         changeStage(normalizedStage as SessionStage);
       }
       // Se sessão ativa e mesma etapa, não faz nada
-      // Se hasEndedSession ou isShowingCelebration, não iniciar nova sessão
+      // Se hasEndedSession ou isShowingAnyCelebration, não iniciar nova sessão
     }
-  }, [stageParam, session.isActive, session.stage, hasEndedSession, isShowingCelebration]);
+  }, [stageParam, session.isActive, session.stage, hasEndedSession, isShowingAnyCelebration]);
 
   useEffect(() => {
     if (scriptIdParam) {
@@ -288,9 +211,8 @@ const Session = () => {
     const capturedDuration = session.elapsedSeconds;
     const capturedStage = session.stage || 'idea';
     
-    // Ativar flags ANTES de encerrar para evitar reinício de sessão
+    // Ativar flag ANTES de encerrar para evitar reinício de sessão
     setHasEndedSession(true);
-    setIsShowingCelebration(true);
     
     const result = await endSession();
     if (result) {
@@ -304,13 +226,15 @@ const Session = () => {
       // ✅ Só mostrar celebração de streak se NÃO foi contado antes hoje
       const alreadyCounted = (result as any).alreadyCounted || false;
       const shouldShowStreak = (result as any).shouldShowCelebration && !alreadyCounted;
-      const streakCount = shouldShowStreak ? ((result as any).newStreak || 0) : 0;
+      const streakCountResult = shouldShowStreak ? ((result as any).newStreak || 0) : 0;
       
-      await triggerFullCelebration(sessionSummary, streakCount, result.xpGained || 0);
+      // Disparar celebração global - navegação para home no callback
+      await triggerFullCelebration(sessionSummary, streakCountResult, result.xpGained || 0, () => {
+        navigate('/');
+      });
     } else {
-      // Se falhou, resetar flags
+      // Se falhou, resetar flag
       setHasEndedSession(false);
-      setIsShowingCelebration(false);
     }
   };
 
@@ -359,7 +283,7 @@ const Session = () => {
 
 
   // Detectar se estamos inicializando a partir de URL (evita flash do modal)
-  const isInitializingFromUrl = stageParam && !session.isActive && !hasEndedSession && !isShowingCelebration;
+  const isInitializingFromUrl = stageParam && !session.isActive && !hasEndedSession && !isShowingAnyCelebration;
 
   if (isInitializingFromUrl) {
     return (
@@ -372,7 +296,7 @@ const Session = () => {
   }
 
   // Não mostrar tela de seleção se estiver exibindo celebração
-  if (!session.isActive && !isShowingCelebration) {
+  if (!session.isActive && !isShowingAnyCelebration) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-accent/10 via-background to-primary/10 p-6">
         <div className="max-w-2xl mx-auto">
@@ -431,35 +355,8 @@ const Session = () => {
     );
   }
 
-  // Se estiver mostrando celebração mas sessão não está ativa, renderizar apenas componentes de celebração
-  if (!session.isActive && isShowingCelebration) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-accent/10 via-background to-primary/10">
-        {/* Celebration Components */}
-        <SessionSummary
-          show={celebrationData.showSessionSummary}
-          duration={celebrationData.sessionSummary?.duration || 0}
-          xpGained={celebrationData.sessionSummary?.xpGained || 0}
-          stage={celebrationData.sessionSummary?.stage || 'idea'}
-          onContinue={handleDismissSessionSummary}
-        />
-
-        <StreakCelebration
-          show={celebrationData.showStreakCelebration}
-          streakCount={celebrationData.streakCount}
-          weekDays={celebrationData.weekDays}
-          onContinue={dismissStreakCelebration}
-        />
-
-        <TrophyCelebration
-          show={celebrationData.showTrophyCelebration}
-          trophy={celebrationData.currentTrophy}
-          xpGained={celebrationData.xpGained}
-          onContinue={dismissTrophyCelebration}
-        />
-      </div>
-    );
-  }
+  // Celebrações são renderizadas globalmente via GlobalCelebrations em App.tsx
+  // Quando celebração está ativa, ela aparece como overlay sobre qualquer página
 
   // Fallback seguro se currentStage for undefined
   if (!currentStage) {
@@ -556,29 +453,7 @@ const Session = () => {
           onSimulateTrophy={handleSimulateTrophy}
         />
 
-        {/* Celebration Components */}
-        {/* Session Summary (first in celebration flow) */}
-        <SessionSummary
-          show={celebrationData.showSessionSummary}
-          duration={celebrationData.sessionSummary?.duration || 0}
-          xpGained={celebrationData.sessionSummary?.xpGained || 0}
-          stage={celebrationData.sessionSummary?.stage || 'idea'}
-          onContinue={handleDismissSessionSummary}
-        />
-
-        <StreakCelebration
-          show={celebrationData.showStreakCelebration}
-          streakCount={celebrationData.streakCount}
-          weekDays={celebrationData.weekDays}
-          onContinue={dismissStreakCelebration}
-        />
-
-        <TrophyCelebration
-          show={celebrationData.showTrophyCelebration}
-          trophy={celebrationData.currentTrophy}
-          xpGained={celebrationData.xpGained}
-          onContinue={dismissTrophyCelebration}
-        />
+        {/* Celebration Components rendered globally via GlobalCelebrations */}
       </div>
     );
   }
@@ -658,28 +533,7 @@ const Session = () => {
           onSimulateTrophy={handleSimulateTrophy}
         />
 
-        {/* Celebration Components */}
-        <SessionSummary
-          show={celebrationData.showSessionSummary}
-          duration={celebrationData.sessionSummary?.duration || 0}
-          xpGained={celebrationData.sessionSummary?.xpGained || 0}
-          stage={celebrationData.sessionSummary?.stage || 'idea'}
-          onContinue={handleDismissSessionSummary}
-        />
-
-        <StreakCelebration
-          show={celebrationData.showStreakCelebration}
-          streakCount={celebrationData.streakCount}
-          weekDays={celebrationData.weekDays}
-          onContinue={dismissStreakCelebration}
-        />
-
-        <TrophyCelebration
-          show={celebrationData.showTrophyCelebration}
-          trophy={celebrationData.currentTrophy}
-          xpGained={celebrationData.xpGained}
-          onContinue={dismissTrophyCelebration}
-        />
+        {/* Celebration Components rendered globally via GlobalCelebrations */}
       </div>
     );
   }
@@ -919,28 +773,7 @@ const Session = () => {
         />
       </Portal>
 
-      {/* Celebration Components - Same order as other sections */}
-      <SessionSummary
-        show={celebrationData.showSessionSummary}
-        duration={celebrationData.sessionSummary?.duration || 0}
-        xpGained={celebrationData.sessionSummary?.xpGained || 0}
-        stage={celebrationData.sessionSummary?.stage || 'idea'}
-        onContinue={handleDismissSessionSummary}
-      />
-
-      <StreakCelebration
-        show={celebrationData.showStreakCelebration}
-        streakCount={celebrationData.streakCount}
-        weekDays={celebrationData.weekDays}
-        onContinue={dismissStreakCelebration}
-      />
-
-      <TrophyCelebration
-        show={celebrationData.showTrophyCelebration}
-        trophy={celebrationData.currentTrophy}
-        xpGained={celebrationData.xpGained}
-        onContinue={dismissTrophyCelebration}
-      />
+      {/* Celebration Components rendered globally via GlobalCelebrations */}
 
 
       {/* Streak Halo Effect */}
