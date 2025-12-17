@@ -117,8 +117,12 @@ export const AutoHideNav = () => {
     setPendingNavigation(null);
   };
 
-  // No mobile, sempre visível. No desktop, controlado por hover
-  const isVisible = isMobile || isDesktopVisible;
+  // Lógica de visibilidade:
+  // - Mobile: sempre visível (fixa)
+  // - Desktop fora de sessão: sempre visível (fixa)
+  // - Desktop em sessão ativa: auto-hide (controlado por hover)
+  const shouldAutoHide = !isMobile && isOnSessionPage && session.isActive;
+  const isVisible = !shouldAutoHide || isDesktopVisible;
 
   const showNav = () => {
     if (isMobile) return;
@@ -153,8 +157,8 @@ export const AutoHideNav = () => {
 
   return (
     <>
-      {/* Zona de detecção invisível - APENAS no desktop */}
-      {!isMobile && (
+      {/* Zona de detecção invisível - APENAS quando auto-hide está ativo */}
+      {shouldAutoHide && (
         <div 
           className="fixed left-0 right-0 z-40 pointer-events-auto"
           style={{ 
