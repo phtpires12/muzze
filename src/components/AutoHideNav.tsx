@@ -149,16 +149,16 @@ export const AutoHideNav = () => {
           <div className="flex items-center justify-around gap-2">
             {/* Left navigation items */}
             {navigation.slice(0, 2).map((item) => (
-              <div key={item.name} onClick={(e) => handleNavClick(e, item.href)}>
-                <NavLink
-                  to={item.href}
-                  className="flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all duration-300 text-muted-foreground hover:text-foreground hover:bg-accent/10"
-                  activeClassName="text-primary bg-primary/10"
-                >
-                  <item.icon className="w-5 h-5" />
-                  <span className="text-xs font-medium hidden sm:block">{item.name}</span>
-                </NavLink>
-              </div>
+              <NavLink
+                key={item.name}
+                to={item.href}
+                onClick={(e) => handleNavClick(e, item.href)}
+                className="flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all duration-300 text-muted-foreground hover:text-foreground hover:bg-accent/10"
+                activeClassName="text-primary bg-primary/10"
+              >
+                <item.icon className="w-5 h-5" />
+                <span className="text-xs font-medium hidden sm:block">{item.name}</span>
+              </NavLink>
             ))}
 
             {/* Center session button */}
@@ -175,16 +175,16 @@ export const AutoHideNav = () => {
 
             {/* Right navigation items */}
             {navigation.slice(2).map((item) => (
-              <div key={item.name} onClick={(e) => handleNavClick(e, item.href)}>
-                <NavLink
-                  to={item.href}
-                  className="flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all duration-300 text-muted-foreground hover:text-foreground hover:bg-accent/10"
-                  activeClassName="text-primary bg-primary/10"
-                >
-                  <item.icon className="w-5 h-5" />
-                  <span className="text-xs font-medium hidden sm:block">{item.name}</span>
-                </NavLink>
-              </div>
+              <NavLink
+                key={item.name}
+                to={item.href}
+                onClick={(e) => handleNavClick(e, item.href)}
+                className="flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all duration-300 text-muted-foreground hover:text-foreground hover:bg-accent/10"
+                activeClassName="text-primary bg-primary/10"
+              >
+                <item.icon className="w-5 h-5" />
+                <span className="text-xs font-medium hidden sm:block">{item.name}</span>
+              </NavLink>
             ))}
           </div>
         </div>
