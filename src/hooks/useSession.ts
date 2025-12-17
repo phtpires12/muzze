@@ -137,36 +137,24 @@ export const useSession = (options: UseSessionOptions = {}) => {
         }
       });
 
-      // Update streak (se atingiu 25+ minutos)
-      if (timer.elapsedSeconds >= 25 * 60) {
-        const streakResult = await updateStreak(user.id, totalMinutes);
-        
-        const summary = {
-          duration: timer.elapsedSeconds,
-          stage: timer.stage,
-          xpGained,
-          streakAchieved: streakResult.streakAchieved || false,
-          newStreak: streakResult.newStreak,
-          creativeMinutesToday: streakResult.creativeMinutesToday,
-          shouldShowCelebration: true,
-        };
+      // SEMPRE chamar updateStreak - a função verifica internamente se o dia foi cumprido
+      // baseado nos stage_times REAIS do banco, não no timer.elapsedSeconds (que pode ter sido resetado)
+      const streakResult = await updateStreak(user.id, totalMinutes);
+      
+      const summary = {
+        duration: timer.elapsedSeconds,
+        stage: timer.stage,
+        xpGained,
+        streakAchieved: streakResult.streakAchieved || false,
+        newStreak: streakResult.newStreak,
+        creativeMinutesToday: streakResult.creativeMinutesToday,
+        shouldShowCelebration: streakResult.streakAchieved || false,
+      };
 
-        // Reset timer global
-        resetTimer();
+      // Reset timer global
+      resetTimer();
 
-        return summary;
-      } else {
-        // Sessão muito curta, sem streak
-        resetTimer();
-
-        return {
-          duration: timer.elapsedSeconds,
-          stage: timer.stage,
-          xpGained,
-          streakAchieved: false,
-          shouldShowCelebration: false,
-        };
-      }
+      return summary;
     } catch (error: any) {
       toast({
         title: "Erro ao finalizar sessão",
