@@ -7,6 +7,17 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSession } from "@/hooks/useSession";
+import { useSoundEffects } from "@/hooks/useSoundEffects";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const navigation = [
   { name: "Home", href: "/", icon: Home },
@@ -18,41 +29,69 @@ const navigation = [
 export const AutoHideNav = () => {
   const isMobile = useIsMobile();
   const [isDesktopVisible, setIsDesktopVisible] = useState(false);
+  const [showEndConfirmation, setShowEndConfirmation] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
   const hideTimerRef = useRef<NodeJS.Timeout | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const { session, endSession, saveCurrentStageTime } = useSession();
+  const { playSound } = useSoundEffects(0.6);
 
   // Verificar se estamos numa página de sessão ativa
   const isOnSessionPage = ['/session', '/shot-list/record', '/shot-list/review'].some(
     path => location.pathname.startsWith(path)
   );
 
-  // Handler para interceptar navegação Home durante sessão ativa
-  const handleNavClick = async (e: React.MouseEvent, href: string) => {
-    // Se não é navegação para home OU não há sessão ativa OU não está na página de sessão, navegar normalmente
-    if (href !== "/" || !session.isActive || !isOnSessionPage) {
-      return; // NavLink navega normalmente
+  // Handler para interceptar navegação durante sessão ativa
+  const handleNavClick = (e: React.MouseEvent, href: string) => {
+    // Ajustes (/profile) sempre navega normalmente
+    if (href === "/profile") {
+      return;
     }
     
+    // Se não há sessão ativa OU não está na página de sessão, navegar normalmente
+    if (!session.isActive || !isOnSessionPage) {
+      return;
+    }
+    
+    // Interceptar navegação e mostrar popup de confirmação
     e.preventDefault();
     e.stopPropagation();
     
-    console.log('[AutoHideNav] Interceptando navegação Home - encerrando sessão');
+    console.log('[AutoHideNav] Interceptando navegação - mostrando popup de confirmação');
+    setPendingNavigation(href);
+    setShowEndConfirmation(true);
+  };
+
+  // Handler para confirmar encerramento
+  const handleConfirmEnd = async () => {
+    playSound('complete');
+    setShowEndConfirmation(false);
+    
+    console.log('[AutoHideNav] Confirmado - encerrando sessão');
     
     // Salvar tempo e encerrar sessão (isso dispara celebrações)
     await saveCurrentStageTime();
     await endSession();
     
-    // Navegar para home após encerrar
-    navigate('/');
+    // Navegar para destino original após encerrar
+    if (pendingNavigation) {
+      navigate(pendingNavigation);
+      setPendingNavigation(null);
+    }
+  };
+
+  // Handler para cancelar e continuar trabalhando
+  const handleCancelEnd = () => {
+    setShowEndConfirmation(false);
+    setPendingNavigation(null);
   };
 
   // No mobile, sempre visível. No desktop, controlado por hover
   const isVisible = isMobile || isDesktopVisible;
 
   const showNav = () => {
-    if (isMobile) return; // No mobile não precisa controlar
+    if (isMobile) return;
     if (hideTimerRef.current) {
       clearTimeout(hideTimerRef.current);
       hideTimerRef.current = null;
@@ -61,7 +100,7 @@ export const AutoHideNav = () => {
   };
 
   const scheduleHide = () => {
-    if (isMobile) return; // No mobile não esconde
+    if (isMobile) return;
     hideTimerRef.current = setTimeout(() => {
       setIsDesktopVisible(false);
     }, 300);
@@ -150,6 +189,25 @@ export const AutoHideNav = () => {
           </div>
         </div>
       </nav>
+
+      {/* Dialog de confirmação de encerramento */}
+      <AlertDialog open={showEndConfirmation} onOpenChange={setShowEndConfirmation}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Encerrar sessão?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Ao encerrar, seu tempo será salvo e você verá o resumo da sua sessão criativa.
+              Tem certeza que deseja finalizar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelEnd}>Continuar trabalhando</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmEnd}>
+              Sim, encerrar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };
