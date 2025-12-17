@@ -5,6 +5,7 @@ import { useAnalytics } from "@/hooks/useAnalytics";
 import { useSessionContext } from "@/contexts/SessionContext";
 import { useInProgressProjects } from "@/hooks/useInProgressProjects";
 import { useStreakValidator } from "@/hooks/useStreakValidator";
+import { useStreakAutoRecovery } from "@/hooks/useStreakAutoRecovery";
 import { supabase } from "@/integrations/supabase/client";
 import { getLevelByXP, TROPHIES } from "@/lib/gamification";
 import { useGamification } from "@/hooks/useGamification";
@@ -67,6 +68,7 @@ const Index = () => {
     freezeCost,
     maxFreezes,
   } = useStreakValidator();
+  const { recoverMissedStreaks, isRecovering: isRecoveringStreak } = useStreakAutoRecovery();
   const [streakData, setStreakData] = useState<any>(null);
   const [weeklySessionsCount, setWeeklySessionsCount] = useState(0);
   const [isWorkflowModalOpen, setIsWorkflowModalOpen] = useState(false);
@@ -132,6 +134,24 @@ const Index = () => {
     
     handleStreakRecovery();
   }, [streakValidation, streakValidationLoading, autoUseFreezesIfAvailable]);
+
+  // Auto-recovery: verificar e corrigir streaks retroativamente ao abrir o app
+  useEffect(() => {
+    const checkAndRecoverStreak = async () => {
+      if (!profile || profileLoading) return;
+      
+      const result = await recoverMissedStreaks();
+      if (result?.corrected && result.daysRecovered > 0) {
+        toast.success("Ofensiva atualizada! 🔥", {
+          description: `Encontramos ${result.daysRecovered} dia(s) de trabalho não contabilizado(s). Sua ofensiva agora é ${result.newStreak}!`,
+        });
+        // Refetch streak data to update UI
+        fetchStreakData();
+      }
+    };
+    
+    checkAndRecoverStreak();
+  }, [profile, profileLoading, recoverMissedStreaks]);
 
   useEffect(() => {
     if (profile && !profileLoading) {
