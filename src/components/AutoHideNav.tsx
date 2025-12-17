@@ -70,17 +70,34 @@ export const AutoHideNav = () => {
     
     console.log('[AutoHideNav] Confirmado - encerrando sessão');
     
-    // Salvar destino de navegação pendente para após celebrações
-    if (pendingNavigation) {
-      localStorage.setItem('pending_navigation_after_session', pendingNavigation);
-    }
+    // CRÍTICO: Capturar dados ANTES de encerrar (timer será resetado)
+    const capturedDuration = session.elapsedSeconds || 0;
+    const capturedStage = session.stage || 'idea';
     
-    // Salvar tempo e encerrar sessão
+    // Salvar tempo da etapa atual
     await saveCurrentStageTime();
-    await endSession();
     
-    // SEMPRE navegar para /session SEM parâmetros de URL
-    // Isso força re-mount do Session.tsx para exibir celebrações
+    // Encerrar sessão e capturar resultado
+    const result = await endSession();
+    
+    // Preparar dados de celebração para o Session.tsx
+    const celebrationPayload = {
+      destination: pendingNavigation,
+      sessionSummary: {
+        duration: result?.duration || capturedDuration,
+        xpGained: result?.xpGained || 0,
+        stage: capturedStage,
+      },
+      streakCount: result?.shouldShowCelebration && !result?.alreadyCounted 
+        ? (result?.newStreak || 0) 
+        : 0,
+      xpGained: result?.xpGained || 0,
+    };
+    
+    // Salvar dados necessários para celebração
+    localStorage.setItem('pending_celebration_data', JSON.stringify(celebrationPayload));
+    
+    // Navegar para /session sem parâmetros para exibir celebrações
     navigate('/session', { replace: true });
     
     setPendingNavigation(null);
