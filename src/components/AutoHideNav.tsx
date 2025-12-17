@@ -70,15 +70,21 @@ export const AutoHideNav = () => {
     
     console.log('[AutoHideNav] Confirmado - encerrando sessão');
     
-    // Salvar tempo e encerrar sessão (isso dispara celebrações)
+    // Salvar destino de navegação pendente para após celebrações
+    if (pendingNavigation) {
+      localStorage.setItem('pending_navigation_after_session', pendingNavigation);
+    }
+    
+    // Salvar tempo e encerrar sessão
     await saveCurrentStageTime();
     await endSession();
     
-    // Navegar para destino original após encerrar
-    if (pendingNavigation) {
-      navigate(pendingNavigation);
-      setPendingNavigation(null);
+    // Navegar para /session para exibir celebrações (Session.tsx gerencia o fluxo)
+    if (!location.pathname.startsWith('/session')) {
+      navigate('/session');
     }
+    
+    setPendingNavigation(null);
   };
 
   // Handler para cancelar e continuar trabalhando

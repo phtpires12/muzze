@@ -153,7 +153,25 @@ export const useStreakCelebration = () => {
         localStorage.setItem('unlocked_trophies', JSON.stringify(updatedTrophies));
       }
 
-      return newTrophies;
+      // ✅ Verificar se já mostramos esses troféus hoje para evitar repetição
+      const todayStr = new Date().toISOString().split('T')[0];
+      const shownTodayStr = localStorage.getItem('trophies_shown_today') || '{}';
+      const shownToday: Record<string, string> = JSON.parse(shownTodayStr);
+      
+      // Filtrar troféus que já foram mostrados hoje
+      const trophiesToShow = newTrophies.filter(t => {
+        const dateShown = shownToday[t.id];
+        return dateShown !== todayStr;
+      });
+      
+      // Marcar como mostrados hoje
+      if (trophiesToShow.length > 0) {
+        const updatedShown = { ...shownToday };
+        trophiesToShow.forEach(t => { updatedShown[t.id] = todayStr; });
+        localStorage.setItem('trophies_shown_today', JSON.stringify(updatedShown));
+      }
+
+      return trophiesToShow;
     } catch (error) {
       console.error('Error checking trophies:', error);
       return [];

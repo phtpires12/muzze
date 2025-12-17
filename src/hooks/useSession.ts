@@ -149,6 +149,7 @@ export const useSession = (options: UseSessionOptions = {}) => {
         newStreak: streakResult.newStreak,
         creativeMinutesToday: streakResult.creativeMinutesToday,
         shouldShowCelebration: streakResult.streakAchieved || false,
+        alreadyCounted: streakResult.alreadyCounted || false, // ← Para evitar celebrações repetidas
       };
 
       // Reset timer global
