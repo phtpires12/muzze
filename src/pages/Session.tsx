@@ -76,15 +76,34 @@ const Session = () => {
   // Destino de navegação pendente após celebrações (via NavBar)
   const [pendingNavigationAfterCelebration, setPendingNavigationAfterCelebration] = useState<string | null>(null);
   
-  // Verificar se há destino pendente ao montar
+  // Verificar se há dados de celebração pendentes ao montar (via NavBar)
   useEffect(() => {
-    const pending = localStorage.getItem('pending_navigation_after_session');
-    if (pending) {
-      setPendingNavigationAfterCelebration(pending);
-      localStorage.removeItem('pending_navigation_after_session');
-      // Se veio de navegação via NavBar, ativar flags de celebração
-      setIsShowingCelebration(true);
-      setHasEndedSession(true);
+    const pendingDataStr = localStorage.getItem('pending_celebration_data');
+    if (pendingDataStr) {
+      try {
+        const pendingData = JSON.parse(pendingDataStr);
+        localStorage.removeItem('pending_celebration_data');
+        
+        console.log('[Session] Dados de celebração pendentes encontrados:', pendingData);
+        
+        // Salvar destino para navegação final
+        if (pendingData.destination) {
+          setPendingNavigationAfterCelebration(pendingData.destination);
+        }
+        
+        // Ativar flags de celebração
+        setHasEndedSession(true);
+        setIsShowingCelebration(true);
+        
+        // CRÍTICO: Disparar celebração com os dados salvos
+        triggerFullCelebration(
+          pendingData.sessionSummary,
+          pendingData.streakCount,
+          pendingData.xpGained
+        );
+      } catch (error) {
+        console.error('[Session] Erro ao parsear dados de celebração:', error);
+      }
     }
   }, []);
   const isAppVisible = useAppVisibility();
