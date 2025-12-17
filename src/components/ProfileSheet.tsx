@@ -72,6 +72,19 @@ export const ProfileSheet = ({ onClose }: ProfileSheetProps) => {
     }
   };
 
+  const getWorkspaceDisplayName = (workspaceName: string, role: string, ownerName?: string) => {
+    // Se sou owner, mostrar o nome original do workspace
+    if (role === 'owner') {
+      return workspaceName;
+    }
+    // Se sou colaborador/admin, mostrar nome do owner + Workspace
+    if (ownerName) {
+      return `${ownerName} Workspace`;
+    }
+    // Fallback: mostrar nome original
+    return workspaceName;
+  };
+
   const handleSwitchWorkspace = async (workspaceId: string) => {
     await switchWorkspace(workspaceId);
     toast.success('Workspace alterado');
@@ -120,8 +133,9 @@ export const ProfileSheet = ({ onClose }: ProfileSheetProps) => {
       <div className="flex-1 py-4">
         <h4 className="text-sm font-medium text-muted-foreground mb-3 px-1">WORKSPACES</h4>
         <div className="space-y-2">
-          {allWorkspaces.map(({ workspace, role }) => {
+          {allWorkspaces.map(({ workspace, role, ownerName }) => {
             const isActive = activeWorkspace?.id === workspace.id;
+            const displayName = getWorkspaceDisplayName(workspace.name, role, ownerName);
             return (
               <button
                 key={workspace.id}
@@ -135,7 +149,7 @@ export const ProfileSheet = ({ onClose }: ProfileSheetProps) => {
                 <div className="flex items-center gap-3">
                   {isActive && <Check className="w-4 h-4 text-primary" />}
                   <span className={`font-medium ${isActive ? 'text-primary' : 'text-foreground'}`}>
-                    {workspace.name}
+                    {displayName}
                   </span>
                 </div>
                 <Badge variant="secondary" className="flex items-center gap-1">
