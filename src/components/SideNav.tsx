@@ -131,7 +131,7 @@ export const SideNav = () => {
           {/* Header with logo */}
           <div className={cn("flex items-center h-16 border-b border-border/50 px-3", effectiveCollapsed ? "justify-center" : "justify-between")}>
             {!effectiveCollapsed && <div className="flex items-center gap-2">
-                <img src={muzzeLogo} alt="Muzze" className="w-8 h-8 object-contain rounded-2xl shadow-sm" />
+                <img src={muzzeLogo} alt="Muzze" className="w-8 h-8 object-contain rounded-2xl shadow-sm border-0 border-none" />
                 <span className="font-bold text-lg bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
                   Muzze
                 </span>
