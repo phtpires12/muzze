@@ -200,6 +200,7 @@ export const useOnboarding = () => {
           daily_goal_minutes: state.data.daily_goal_minutes || 25,
           reminder_time: state.data.creation_time || "09:00:00",
           preferred_platform: state.data.preferred_platform,
+          username: state.data.username,
           first_login: false,
         })
         .eq("user_id", user.id);
@@ -210,7 +211,9 @@ export const useOnboarding = () => {
       localStorage.removeItem(STORAGE_KEY);
 
       toast({
-        title: "Bem-vindo à Muzze!",
+        title: state.data.username 
+          ? `Bem-vindo à Muzze, ${state.data.username}!` 
+          : "Bem-vindo à Muzze!",
         description: "Vamos começar sua jornada criativa.",
       });
 
