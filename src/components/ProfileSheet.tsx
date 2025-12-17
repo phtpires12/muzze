@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfile } from '@/hooks/useProfile';
 import { useWorkspaceContext } from '@/contexts/WorkspaceContext';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -116,7 +116,10 @@ export const ProfileSheet = ({ onClose }: ProfileSheetProps) => {
       {/* User Info Section */}
       <div className="flex flex-col items-center py-6">
         <Avatar className="h-20 w-20 mb-4">
-          <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-white text-2xl font-semibold">
+          {profile?.avatar_url ? (
+            <AvatarImage src={profile.avatar_url} alt={profile?.username || "Avatar"} />
+          ) : null}
+          <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-primary-foreground text-2xl font-semibold">
             {getUserInitials()}
           </AvatarFallback>
         </Avatar>

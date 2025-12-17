@@ -3,11 +3,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft } from "lucide-react";
+import { Dialog } from "@/components/ui/dialog";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { ArrowLeft, Camera } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
 import { useToast } from "@/hooks/use-toast";
+import { AvatarCropEditor } from "@/components/AvatarCropEditor";
 
 const EditProfile = () => {
   const navigate = useNavigate();
@@ -17,6 +20,8 @@ const EditProfile = () => {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [initializing, setInitializing] = useState(true);
+  const [showCropEditor, setShowCropEditor] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -31,6 +36,53 @@ const EditProfile = () => {
     };
     fetchUserData();
   }, [profile]);
+
+  const handleAvatarSave = async (blob: Blob) => {
+    setUploadingAvatar(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuário não autenticado");
+
+      const fileName = `${user.id}/avatar.png`;
+      
+      // Delete old avatar if exists
+      await supabase.storage.from("avatars").remove([fileName]);
+      
+      // Upload new avatar
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(fileName, blob, { 
+          contentType: "image/png",
+          upsert: true 
+        });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from("avatars")
+        .getPublicUrl(fileName);
+
+      // Update profile with avatar URL (add timestamp to bust cache)
+      await updateProfile({ avatar_url: `${publicUrl}?t=${Date.now()}` });
+
+      toast({
+        title: "Foto atualizada",
+        description: "Sua foto de perfil foi salva com sucesso."
+      });
+      
+      setShowCropEditor(false);
+    } catch (error: any) {
+      console.error("Error uploading avatar:", error);
+      toast({
+        title: "Erro ao salvar foto",
+        description: error.message || "Não foi possível salvar sua foto.",
+        variant: "destructive"
+      });
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -63,6 +115,13 @@ const EditProfile = () => {
     }
   };
 
+  const getUserInitials = () => {
+    if (profile?.username) {
+      return profile.username.slice(0, 2).toUpperCase();
+    }
+    return "U";
+  };
+
   return (
     <div className="min-h-screen bg-background pb-24">
       <div className="border-b border-border bg-card">
@@ -81,7 +140,34 @@ const EditProfile = () => {
           <CardHeader>
             <CardTitle>Informações Pessoais</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6">
+            {/* Avatar Section */}
+            <div className="flex flex-col items-center">
+              <div className="relative">
+                <Avatar className="h-24 w-24">
+                  {profile?.avatar_url ? (
+                    <AvatarImage src={profile.avatar_url} alt={profile?.username || "Avatar"} />
+                  ) : (
+                    <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-primary-foreground text-2xl font-semibold">
+                      {getUserInitials()}
+                    </AvatarFallback>
+                  )}
+                </Avatar>
+                <Button 
+                  size="icon" 
+                  variant="secondary"
+                  className="absolute bottom-0 right-0 rounded-full h-8 w-8"
+                  onClick={() => setShowCropEditor(true)}
+                  disabled={uploadingAvatar}
+                >
+                  <Camera className="w-4 h-4" />
+                </Button>
+              </div>
+              <p className="text-sm text-muted-foreground mt-2">
+                Toque para alterar a foto
+              </p>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="name">Nome</Label>
               <Input
@@ -107,7 +193,7 @@ const EditProfile = () => {
 
             <Button 
               onClick={handleSave} 
-              className="w-full mt-4"
+              className="w-full"
               disabled={loading || initializing || !name.trim()}
             >
               {loading ? "Salvando..." : "Salvar Alterações"}
@@ -115,6 +201,13 @@ const EditProfile = () => {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={showCropEditor} onOpenChange={setShowCropEditor}>
+        <AvatarCropEditor 
+          onSave={handleAvatarSave}
+          onCancel={() => setShowCropEditor(false)}
+        />
+      </Dialog>
     </div>
   );
 };
