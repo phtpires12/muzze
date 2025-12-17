@@ -654,6 +654,7 @@ const ShotListRecord = () => {
             progress={progress}
             todayMinutesFromDB={dailyProgress.actualMinutes}
             permissionEnabled={canUseTimer}
+            savedSecondsThisSession={session.savedSecondsThisSession}
           />
         )}
 
@@ -676,6 +677,7 @@ const ShotListRecord = () => {
             isPopup={true}
             todayMinutesFromDB={dailyProgress.actualMinutes}
             permissionEnabled={canUseTimer}
+            savedSecondsThisSession={session.savedSecondsThisSession}
           />
         </Portal>
 
