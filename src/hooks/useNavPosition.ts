@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext } from 'react';
+import { useState, useEffect, createContext, useContext, useMemo, useCallback } from 'react';
 import { useIsMobile } from './use-mobile';
 
 type NavPosition = 'bottom' | 'side';
@@ -6,7 +6,7 @@ type NavPosition = 'bottom' | 'side';
 interface NavPositionContextType {
   navPosition: NavPosition;
   setNavPosition: (position: NavPosition) => void;
-  effectivePosition: NavPosition; // Considers mobile override
+  effectivePosition: NavPosition;
   isSidebarCollapsed: boolean;
   setSidebarCollapsed: (collapsed: boolean) => void;
 }
@@ -16,10 +16,8 @@ const SIDEBAR_COLLAPSED_KEY = 'muzze_sidebar_collapsed';
 
 export const NavPositionContext = createContext<NavPositionContextType | null>(null);
 
-export const useNavPosition = (): NavPositionContextType => {
-  const context = useContext(NavPositionContext);
-  
-  // Fallback for use outside provider (e.g., in Settings before context is available)
+// Hook separado para fallback (evita chamadas de hooks condicionais)
+const useNavPositionFallback = (): NavPositionContextType => {
   const isMobile = useIsMobile();
   const [localPosition, setLocalPosition] = useState<NavPosition>(() => {
     if (typeof window === 'undefined') return 'bottom';
@@ -27,23 +25,30 @@ export const useNavPosition = (): NavPositionContextType => {
   });
   const [localCollapsed, setLocalCollapsed] = useState(false);
 
-  if (context) {
-    return context;
-  }
-
-  // Fallback behavior
-  const setNavPosition = (position: NavPosition) => {
+  const setNavPosition = useCallback((position: NavPosition) => {
     setLocalPosition(position);
     localStorage.setItem(NAV_POSITION_KEY, position);
-  };
+  }, []);
 
-  return {
+  const setSidebarCollapsed = useCallback((collapsed: boolean) => {
+    setLocalCollapsed(collapsed);
+  }, []);
+
+  return useMemo(() => ({
     navPosition: localPosition,
     setNavPosition,
     effectivePosition: isMobile ? 'bottom' : localPosition,
     isSidebarCollapsed: localCollapsed,
-    setSidebarCollapsed: setLocalCollapsed,
-  };
+    setSidebarCollapsed,
+  }), [localPosition, setNavPosition, isMobile, localCollapsed, setSidebarCollapsed]);
+};
+
+export const useNavPosition = (): NavPositionContextType => {
+  const context = useContext(NavPositionContext);
+  const fallback = useNavPositionFallback();
+  
+  // Se contexto existe, retornar ele; senão usar fallback
+  return context || fallback;
 };
 
 // Hook for the provider to use internally
@@ -65,24 +70,23 @@ export const useNavPositionState = () => {
     }
   }, []);
 
-  const setNavPosition = (position: NavPosition) => {
+  const setNavPosition = useCallback((position: NavPosition) => {
     setNavPositionState(position);
     localStorage.setItem(NAV_POSITION_KEY, position);
-  };
+  }, []);
 
-  const setSidebarCollapsed = (collapsed: boolean) => {
+  const setSidebarCollapsed = useCallback((collapsed: boolean) => {
     setSidebarCollapsedState(collapsed);
     localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(collapsed));
-  };
+  }, []);
 
-  // Mobile always uses bottom navigation
   const effectivePosition: NavPosition = isMobile ? 'bottom' : navPosition;
 
-  return {
+  return useMemo(() => ({
     navPosition,
     setNavPosition,
     effectivePosition,
     isSidebarCollapsed,
     setSidebarCollapsed,
-  };
+  }), [navPosition, setNavPosition, effectivePosition, isSidebarCollapsed, setSidebarCollapsed]);
 };
