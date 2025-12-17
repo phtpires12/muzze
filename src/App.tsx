@@ -6,6 +6,8 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { BottomNav } from "@/components/BottomNav";
 import { SessionContextProvider } from "@/contexts/SessionContext";
 import { WorkspaceContextProvider } from "@/contexts/WorkspaceContext";
+import { CelebrationContextProvider } from "@/contexts/CelebrationContext";
+import { GlobalCelebrations } from "@/components/GlobalCelebrations";
 import Onboarding from "./pages/NewOnboarding";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
@@ -111,49 +113,50 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 
 const App = () => {
-  // NOTE: Cleanup de sessões órfãs agora é feito atomicamente no SessionContext.loadTimerState()
-  // Isso garante que a validação acontece ANTES do estado ser carregado na memória
-
   return (
     <QueryClientProvider client={queryClient}>
       <SessionContextProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <WorkspaceContextProvider>
-              <LevelUpModal />
-              <TrophyUnlockedModal />
-              <Routes>
-                <Route path="/auth" element={<Auth />} />
-                <Route path="/reset-password" element={<ResetPassword />} />
-                <Route path="/onboarding" element={<Onboarding />} />
-                <Route path="/install" element={<Install />} />
-                <Route path="/" element={<ProtectedRoute><Layout><Index /></Layout></ProtectedRoute>} />
-                <Route path="/novidades" element={<ProtectedRoute><Layout><Novidades /></Layout></ProtectedRoute>} />
-                <Route path="/calendario" element={<ProtectedRoute><Layout><CalendarioEditorial /></Layout></ProtectedRoute>} />
-                <Route path="/session" element={<ProtectedRoute><Session /></ProtectedRoute>} />
-                <Route path="/shot-list/review" element={<ProtectedRoute><ShotListReview /></ProtectedRoute>} />
-                <Route path="/shot-list/record" element={<ProtectedRoute><ShotListRecord /></ProtectedRoute>} />
-                <Route path="/stats" element={<ProtectedRoute><Layout><Stats /></Layout></ProtectedRoute>} />
-                <Route path="/profile" element={<ProtectedRoute><Layout><Profile /></Layout></ProtectedRoute>} />
-                <Route path="/edit-profile" element={<ProtectedRoute><Layout><EditProfile /></Layout></ProtectedRoute>} />
-                <Route path="/my-progress" element={<ProtectedRoute><Layout><MyProgress /></Layout></ProtectedRoute>} />
-                <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
-                <Route path="/send-suggestions" element={<ProtectedRoute><Layout><SendSuggestions /></Layout></ProtectedRoute>} />
-                <Route path="/help" element={<ProtectedRoute><Layout><Help /></Layout></ProtectedRoute>} />
-                <Route path="/terms" element={<TermsOfUse />} />
-                <Route path="/privacy" element={<PrivacyPolicy />} />
-                <Route path="/levels" element={<ProtectedRoute><Levels /></ProtectedRoute>} />
-                <Route path="/ofensiva" element={<ProtectedRoute><Ofensiva /></ProtectedRoute>} />
-                <Route path="/dev-tools" element={<ProtectedRoute><Layout><DevTools /></Layout></ProtectedRoute>} />
-                <Route path="/guests" element={<ProtectedRoute><Layout><Guests /></Layout></ProtectedRoute>} />
-                <Route path="/invite" element={<AcceptInvite />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </WorkspaceContextProvider>
-          </BrowserRouter>
-        </TooltipProvider>
+        <CelebrationContextProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <WorkspaceContextProvider>
+                {/* Global Celebrations - renders overlays from anywhere */}
+                <GlobalCelebrations />
+                <LevelUpModal />
+                <TrophyUnlockedModal />
+                <Routes>
+                  <Route path="/auth" element={<Auth />} />
+                  <Route path="/reset-password" element={<ResetPassword />} />
+                  <Route path="/onboarding" element={<Onboarding />} />
+                  <Route path="/install" element={<Install />} />
+                  <Route path="/" element={<ProtectedRoute><Layout><Index /></Layout></ProtectedRoute>} />
+                  <Route path="/novidades" element={<ProtectedRoute><Layout><Novidades /></Layout></ProtectedRoute>} />
+                  <Route path="/calendario" element={<ProtectedRoute><Layout><CalendarioEditorial /></Layout></ProtectedRoute>} />
+                  <Route path="/session" element={<ProtectedRoute><Session /></ProtectedRoute>} />
+                  <Route path="/shot-list/review" element={<ProtectedRoute><ShotListReview /></ProtectedRoute>} />
+                  <Route path="/shot-list/record" element={<ProtectedRoute><ShotListRecord /></ProtectedRoute>} />
+                  <Route path="/stats" element={<ProtectedRoute><Layout><Stats /></Layout></ProtectedRoute>} />
+                  <Route path="/profile" element={<ProtectedRoute><Layout><Profile /></Layout></ProtectedRoute>} />
+                  <Route path="/edit-profile" element={<ProtectedRoute><Layout><EditProfile /></Layout></ProtectedRoute>} />
+                  <Route path="/my-progress" element={<ProtectedRoute><Layout><MyProgress /></Layout></ProtectedRoute>} />
+                  <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
+                  <Route path="/send-suggestions" element={<ProtectedRoute><Layout><SendSuggestions /></Layout></ProtectedRoute>} />
+                  <Route path="/help" element={<ProtectedRoute><Layout><Help /></Layout></ProtectedRoute>} />
+                  <Route path="/terms" element={<TermsOfUse />} />
+                  <Route path="/privacy" element={<PrivacyPolicy />} />
+                  <Route path="/levels" element={<ProtectedRoute><Levels /></ProtectedRoute>} />
+                  <Route path="/ofensiva" element={<ProtectedRoute><Ofensiva /></ProtectedRoute>} />
+                  <Route path="/dev-tools" element={<ProtectedRoute><Layout><DevTools /></Layout></ProtectedRoute>} />
+                  <Route path="/guests" element={<ProtectedRoute><Layout><Guests /></Layout></ProtectedRoute>} />
+                  <Route path="/invite" element={<AcceptInvite />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </WorkspaceContextProvider>
+            </BrowserRouter>
+          </TooltipProvider>
+        </CelebrationContextProvider>
       </SessionContextProvider>
     </QueryClientProvider>
   );

@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSession } from "@/hooks/useSession";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
+import { useCelebration } from "@/contexts/CelebrationContext";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,6 +37,7 @@ export const AutoHideNav = () => {
   const location = useLocation();
   const { session, endSession, saveCurrentStageTime } = useSession();
   const { playSound } = useSoundEffects(0.6);
+  const { triggerFullCelebration } = useCelebration();
 
   // Verificar se estamos numa página de sessão ativa
   const isOnSessionPage = ['/session', '/shot-list/record', '/shot-list/review'].some(
@@ -73,6 +75,7 @@ export const AutoHideNav = () => {
     // CRÍTICO: Capturar dados ANTES de encerrar (timer será resetado)
     const capturedDuration = session.elapsedSeconds || 0;
     const capturedStage = session.stage || 'idea';
+    const destination = pendingNavigation || '/';
     
     // Salvar tempo da etapa atual
     await saveCurrentStageTime();
@@ -80,25 +83,29 @@ export const AutoHideNav = () => {
     // Encerrar sessão e capturar resultado
     const result = await endSession();
     
-    // Preparar dados de celebração para o Session.tsx
-    const celebrationPayload = {
-      destination: pendingNavigation,
-      sessionSummary: {
-        duration: result?.duration || capturedDuration,
-        xpGained: result?.xpGained || 0,
-        stage: capturedStage,
-      },
-      streakCount: result?.shouldShowCelebration && !result?.alreadyCounted 
-        ? (result?.newStreak || 0) 
-        : 0,
+    // Preparar dados de celebração
+    const sessionSummary = {
+      duration: result?.duration || capturedDuration,
       xpGained: result?.xpGained || 0,
+      stage: capturedStage,
     };
     
-    // Salvar dados necessários para celebração
-    localStorage.setItem('pending_celebration_data', JSON.stringify(celebrationPayload));
+    const streakCount = result?.shouldShowCelebration && !result?.alreadyCounted 
+      ? (result?.newStreak || 0) 
+      : 0;
     
-    // Navegar para /session sem parâmetros para exibir celebrações
-    navigate('/session', { replace: true });
+    console.log('[AutoHideNav] Disparando celebração global, destino após:', destination);
+    
+    // Disparar celebração global - navegação acontece no callback após todas celebrações
+    await triggerFullCelebration(
+      sessionSummary,
+      streakCount,
+      result?.xpGained || 0,
+      () => {
+        console.log('[AutoHideNav] Callback de celebração - navegando para:', destination);
+        navigate(destination);
+      }
+    );
     
     setPendingNavigation(null);
   };
