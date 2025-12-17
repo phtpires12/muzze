@@ -60,6 +60,7 @@ interface DraggableSessionTimerProps {
   isPopup?: boolean; // When true, render as centered popup (no drag, no fixed position)
   todayMinutesFromDB?: number; // Minutos já acumulados hoje (do banco de dados)
   permissionEnabled?: boolean; // When false, timer is not rendered (permission denied)
+  savedSecondsThisSession?: number; // Segundos já salvos no banco NESTA sessão (evita contagem dupla)
 }
 
 export const DraggableSessionTimer = ({ 
@@ -78,6 +79,7 @@ export const DraggableSessionTimer = ({
   isPopup = false,
   todayMinutesFromDB = 0,
   permissionEnabled = true,
+  savedSecondsThisSession = 0,
 }: DraggableSessionTimerProps) => {
   const isMobile = useIsMobile();
   const [showEndConfirmation, setShowEndConfirmation] = useState(false);
@@ -211,9 +213,13 @@ export const DraggableSessionTimer = ({
   const displayedTarget = isStreakMode ? dailyGoalMinutes * 60 : 25 * 60;
   
   // Calcular tempo restante para a meta diária
+  // CORREÇÃO: Subtrair tempo já salvo desta sessão para evitar contagem dupla
+  // todayMinutesFromDB já inclui o tempo que foi salvo (auto-save), então precisamos
+  // considerar apenas o tempo ainda não salvo: elapsedSeconds - savedSecondsThisSession
   const goalSeconds = dailyGoalMinutes * 60;
   const alreadyDoneSeconds = todayMinutesFromDB * 60;
-  const totalWithCurrentSession = alreadyDoneSeconds + elapsedSeconds;
+  const unsavedElapsedSeconds = Math.max(0, elapsedSeconds - savedSecondsThisSession);
+  const totalWithCurrentSession = alreadyDoneSeconds + unsavedElapsedSeconds;
   const remainingSeconds = goalSeconds - totalWithCurrentSession;
   
   // Modo bônus: meta diária atingida (só ativa se NÃO estiver em streak mode)

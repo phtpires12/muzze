@@ -468,6 +468,7 @@ const Session = () => {
             progress={progress}
             todayMinutesFromDB={dailyProgress.actualMinutes}
             permissionEnabled={canUseTimer}
+            savedSecondsThisSession={session.savedSecondsThisSession}
           />
         )}
 
@@ -487,6 +488,7 @@ const Session = () => {
             isPopup={true}
             todayMinutesFromDB={dailyProgress.actualMinutes}
             permissionEnabled={canUseTimer}
+            savedSecondsThisSession={session.savedSecondsThisSession}
           />
         </Portal>
 
@@ -564,6 +566,7 @@ const Session = () => {
             progress={progress}
             todayMinutesFromDB={dailyProgress.actualMinutes}
             permissionEnabled={canUseTimer}
+            savedSecondsThisSession={session.savedSecondsThisSession}
           />
         )}
 
@@ -584,6 +587,7 @@ const Session = () => {
             isPopup={true}
             todayMinutesFromDB={dailyProgress.actualMinutes}
             permissionEnabled={canUseTimer}
+            savedSecondsThisSession={session.savedSecondsThisSession}
           />
         </Portal>
 
@@ -835,6 +839,7 @@ const Session = () => {
           progress={progress}
           todayMinutesFromDB={dailyProgress.actualMinutes}
           permissionEnabled={canUseTimer}
+          savedSecondsThisSession={session.savedSecondsThisSession}
         />
       )}
 
@@ -855,6 +860,7 @@ const Session = () => {
           todayMinutesFromDB={dailyProgress.actualMinutes}
           permissionEnabled={canUseTimer}
           isPopup={true}
+          savedSecondsThisSession={session.savedSecondsThisSession}
         />
       </Portal>
 

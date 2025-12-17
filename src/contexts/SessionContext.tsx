@@ -17,6 +17,7 @@ export interface TimerState {
   isStreakMode: boolean; // Modo ofensiva (após 25 min)
   dailyGoalMinutes: number; // Meta diária do usuário
   contentId: string | null; // ID do conteúdo sendo trabalhado
+  savedSecondsThisSession: number; // Segundos já salvos no banco NESTA sessão (evita contagem dupla)
 }
 
 // Backward compatibility - estrutura antiga
@@ -69,6 +70,7 @@ const defaultTimerState: TimerState = {
   isStreakMode: false,
   dailyGoalMinutes: 60,
   contentId: null,
+  savedSecondsThisSession: 0,
 };
 
 // Verificar se sessão é órfã baseado em lastActivityAt
@@ -211,12 +213,13 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
 
       console.log(`[SessionContext] ✅ Salvou ${safeDuration}s na etapa ${currentTimer.stage}`);
 
-      // Resetar contadores da etapa após salvar
+      // Resetar contadores da etapa e ATUALIZAR savedSecondsThisSession
       stageStartRef.current = nowDate;
       setTimer(prev => ({ 
         ...prev, 
         stageElapsedSeconds: 0,
         lastActivityAt: nowDate,
+        savedSecondsThisSession: prev.savedSecondsThisSession + safeDuration, // RASTREAR tempo já salvo
       }));
     } catch (error) {
       console.error('[SessionContext] Erro ao salvar stage_time:', error);
@@ -413,6 +416,7 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
         isStreakMode: false,
         dailyGoalMinutes: profile?.daily_goal_minutes || 60,
         contentId: null,
+        savedSecondsThisSession: 0, // Reset ao iniciar nova sessão
       });
 
       await supabase.from('analytics_events').insert({

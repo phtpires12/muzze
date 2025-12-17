@@ -539,6 +539,7 @@ const ShotListReview = () => {
             progress={progress}
             todayMinutesFromDB={dailyProgress.actualMinutes}
             permissionEnabled={canUseTimer}
+            savedSecondsThisSession={session.savedSecondsThisSession}
           />
         )}
 
@@ -561,6 +562,7 @@ const ShotListReview = () => {
             isPopup={true}
             todayMinutesFromDB={dailyProgress.actualMinutes}
             permissionEnabled={canUseTimer}
+            savedSecondsThisSession={session.savedSecondsThisSession}
           />
         </Portal>
 
