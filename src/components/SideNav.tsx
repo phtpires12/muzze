@@ -37,6 +37,7 @@ export const SideNav = () => {
   const { isSidebarCollapsed, setSidebarCollapsed } = useNavPosition();
   const [showEndConfirmation, setShowEndConfirmation] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
+  const [isHovering, setIsHovering] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { session, endSession, saveCurrentStageTime } = useSession();
@@ -47,6 +48,10 @@ export const SideNav = () => {
   const isOnSessionPage = ['/session', '/shot-list/record', '/shot-list/review'].some(
     path => location.pathname.startsWith(path)
   );
+
+  // Durante sessão ativa: auto-colapsa, mas permite expandir via hover
+  const isInActiveSession = session.isActive && isOnSessionPage;
+  const effectiveCollapsed = isInActiveSession ? !isHovering : isSidebarCollapsed;
 
   // Handler to intercept navigation during active session
   const handleNavClick = (e: React.MouseEvent, href: string) => {
@@ -126,7 +131,7 @@ export const SideNav = () => {
     navigate('/session');
   };
 
-  const sidebarWidth = isSidebarCollapsed ? 'w-16' : 'w-56';
+  const sidebarWidth = effectiveCollapsed ? 'w-16' : 'w-56';
 
   return (
     <>
@@ -137,14 +142,16 @@ export const SideNav = () => {
           sidebarWidth
         )}
         style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+        onMouseEnter={() => isInActiveSession && setIsHovering(true)}
+        onMouseLeave={() => isInActiveSession && setIsHovering(false)}
       >
         <div className="flex flex-col h-full">
           {/* Header with logo */}
           <div className={cn(
             "flex items-center h-16 border-b border-border/50 px-3",
-            isSidebarCollapsed ? "justify-center" : "justify-between"
+            effectiveCollapsed ? "justify-center" : "justify-between"
           )}>
-            {!isSidebarCollapsed && (
+            {!effectiveCollapsed && (
               <div className="flex items-center gap-2">
                 <img 
                   src={muzzeLogo} 
@@ -156,25 +163,28 @@ export const SideNav = () => {
                 </span>
               </div>
             )}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setSidebarCollapsed(!isSidebarCollapsed)}
-                  className="h-8 w-8 shrink-0"
-                >
-                  {isSidebarCollapsed ? (
-                    <PanelLeft className="w-4 h-4" />
-                  ) : (
-                    <PanelLeftClose className="w-4 h-4" />
-                  )}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="right">
-                {isSidebarCollapsed ? "Expandir" : "Recolher"}
-              </TooltipContent>
-            </Tooltip>
+            {/* Botão de colapsar só aparece fora de sessão */}
+            {!isInActiveSession && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setSidebarCollapsed(!isSidebarCollapsed)}
+                    className="h-8 w-8 shrink-0"
+                  >
+                    {isSidebarCollapsed ? (
+                      <PanelLeft className="w-4 h-4" />
+                    ) : (
+                      <PanelLeftClose className="w-4 h-4" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  {isSidebarCollapsed ? "Expandir" : "Recolher"}
+                </TooltipContent>
+              </Tooltip>
+            )}
           </div>
 
           {/* Navigation items */}
@@ -188,17 +198,17 @@ export const SideNav = () => {
                     className={cn(
                       "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200",
                       "text-muted-foreground hover:text-foreground hover:bg-accent/10",
-                      isSidebarCollapsed && "justify-center px-2"
+                      effectiveCollapsed && "justify-center px-2"
                     )}
                     activeClassName="text-primary bg-primary/10 hover:bg-primary/15"
                   >
                     <item.icon className="w-5 h-5 shrink-0" />
-                    {!isSidebarCollapsed && (
+                    {!effectiveCollapsed && (
                       <span className="text-sm font-medium">{item.name}</span>
                     )}
                   </NavLink>
                 </TooltipTrigger>
-                {isSidebarCollapsed && (
+                {effectiveCollapsed && (
                   <TooltipContent side="right">
                     {item.name}
                   </TooltipContent>
@@ -215,7 +225,7 @@ export const SideNav = () => {
                   onClick={handleNewSession}
                   className={cn(
                     "w-full bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-all duration-300",
-                    isSidebarCollapsed ? "h-10 w-10 rounded-full p-0" : "h-11 rounded-xl"
+                    effectiveCollapsed ? "h-10 w-10 rounded-full p-0" : "h-11 rounded-xl"
                   )}
                 >
                   <img 
@@ -223,15 +233,15 @@ export const SideNav = () => {
                     alt="Nova sessão" 
                     className={cn(
                       "object-contain",
-                      isSidebarCollapsed ? "w-6 h-6" : "w-5 h-5 mr-2"
+                      effectiveCollapsed ? "w-6 h-6" : "w-5 h-5 mr-2"
                     )}
                   />
-                  {!isSidebarCollapsed && (
+                  {!effectiveCollapsed && (
                     <span className="font-medium">Nova Sessão</span>
                   )}
                 </Button>
               </TooltipTrigger>
-              {isSidebarCollapsed && (
+              {effectiveCollapsed && (
                 <TooltipContent side="right">
                   Nova Sessão
                 </TooltipContent>
