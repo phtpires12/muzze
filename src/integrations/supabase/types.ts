@@ -97,6 +97,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_url: string | null
           created_at: string | null
           current_workflow: string | null
           daily_goal_minutes: number | null
@@ -116,6 +117,7 @@ export type Database = {
           xp_points: number | null
         }
         Insert: {
+          avatar_url?: string | null
           created_at?: string | null
           current_workflow?: string | null
           daily_goal_minutes?: number | null
@@ -135,6 +137,7 @@ export type Database = {
           xp_points?: number | null
         }
         Update: {
+          avatar_url?: string | null
           created_at?: string | null
           current_workflow?: string | null
           daily_goal_minutes?: number | null
