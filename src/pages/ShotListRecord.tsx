@@ -474,8 +474,10 @@ const ShotListRecord = () => {
   // Open/close portal based on app visibility
   useEffect(() => {
     if (!session.isActive) return;
+    
+    const autoPopupEnabled = localStorage.getItem('timer-auto-popup-enabled') !== 'false';
 
-    if (!isAppVisible && !session.isPaused) {
+    if (!isAppVisible && !session.isPaused && autoPopupEnabled) {
       openPortal();
     } else if (isAppVisible) {
       closePortal();
