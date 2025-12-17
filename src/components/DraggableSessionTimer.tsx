@@ -113,6 +113,41 @@ export const DraggableSessionTimer = ({
   const dragRef = useRef<HTMLDivElement>(null);
   const startPos = useRef({ x: 0, y: 0 });
 
+  // Pinch-to-resize state (mobile only)
+  const [scale, setScale] = useState(1);
+  const [isPinching, setIsPinching] = useState(false);
+  const initialPinchDistance = useRef<number | null>(null);
+  const initialScale = useRef<number>(1);
+  const MIN_SCALE = 0.6;
+  const MAX_SCALE = 1.2;
+
+  // Helper to calculate distance between two touch points
+  const getDistance = (touches: TouchList | React.TouchList) => {
+    if (touches.length < 2) return 0;
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  };
+
+  // Load saved scale from localStorage (mobile only)
+  useEffect(() => {
+    if (!isMobile) return;
+    const savedScale = localStorage.getItem('session-timer-scale');
+    if (savedScale) {
+      const parsed = parseFloat(savedScale);
+      if (!isNaN(parsed) && parsed >= MIN_SCALE && parsed <= MAX_SCALE) {
+        setScale(parsed);
+      }
+    }
+  }, [isMobile]);
+
+  // Save scale to localStorage when it changes
+  useEffect(() => {
+    if (isMobile && scale !== 1) {
+      localStorage.setItem('session-timer-scale', scale.toString());
+    }
+  }, [scale, isMobile]);
+
   // Detect iOS safe area on mount
   useEffect(() => {
     const computeSafeArea = () => {
@@ -202,29 +237,56 @@ export const DraggableSessionTimer = ({
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
-    setIsDragging(true);
-    const touch = e.touches[0];
-    startPos.current = {
-      x: touch.clientX - position.x,
-      y: touch.clientY - position.y
-    };
+    if (e.touches.length === 2) {
+      // Pinch gesture detected - NOT drag
+      e.preventDefault();
+      setIsPinching(true);
+      setIsDragging(false);
+      initialPinchDistance.current = getDistance(e.touches);
+      initialScale.current = scale;
+    } else if (e.touches.length === 1) {
+      // Normal drag (1 finger)
+      setIsDragging(true);
+      setIsPinching(false);
+      const touch = e.touches[0];
+      startPos.current = {
+        x: touch.clientX - position.x,
+        y: touch.clientY - position.y
+      };
+    }
   };
 
   useEffect(() => {
     const handleMove = (e: MouseEvent | TouchEvent) => {
+      // Handle pinch resize (2 fingers on touch)
+      if ('touches' in e && e.touches.length === 2 && isPinching) {
+        e.preventDefault();
+        const currentDistance = getDistance(e.touches);
+        if (initialPinchDistance.current && currentDistance > 0) {
+          const scaleChange = currentDistance / initialPinchDistance.current;
+          const newScale = initialScale.current * scaleChange;
+          setScale(Math.max(MIN_SCALE, Math.min(MAX_SCALE, newScale)));
+        }
+        return;
+      }
+
       if (!isDragging) return;
 
-      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-      const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+      const clientX = 'touches' in e ? e.touches[0]?.clientX : e.clientX;
+      const clientY = 'touches' in e ? e.touches[0]?.clientY : e.clientY;
+
+      if (clientX === undefined || clientY === undefined) return;
 
       const newX = clientX - startPos.current.x;
       const newY = clientY - startPos.current.y;
 
-      // Constrain to viewport bounds - responsive
-      const cardWidth = isMobile ? 280 : 340;
-      const cardHeight = isMobile ? 120 : 150;
-      const maxX = window.innerWidth - cardWidth - 16;
-      const maxY = window.innerHeight - cardHeight - 16;
+      // Constrain to viewport bounds - consider scale for mobile
+      const baseWidth = isMobile ? 280 : 340;
+      const baseHeight = isMobile ? 120 : 150;
+      const scaledWidth = isMobile ? baseWidth * scale : baseWidth;
+      const scaledHeight = isMobile ? baseHeight * scale : baseHeight;
+      const maxX = window.innerWidth - scaledWidth - 16;
+      const maxY = window.innerHeight - scaledHeight - 16;
 
       // Minimum Y respects iOS safe area (Dynamic Island) on mobile
       const minY = isMobile ? safeAreaTop + 8 : 0;
@@ -237,12 +299,14 @@ export const DraggableSessionTimer = ({
 
     const handleEnd = () => {
       setIsDragging(false);
+      setIsPinching(false);
+      initialPinchDistance.current = null;
     };
 
-    if (isDragging) {
+    if (isDragging || isPinching) {
       window.addEventListener('mousemove', handleMove);
       window.addEventListener('mouseup', handleEnd);
-      window.addEventListener('touchmove', handleMove);
+      window.addEventListener('touchmove', handleMove, { passive: false });
       window.addEventListener('touchend', handleEnd);
     }
 
@@ -252,7 +316,7 @@ export const DraggableSessionTimer = ({
       window.removeEventListener('touchmove', handleMove);
       window.removeEventListener('touchend', handleEnd);
     };
-  }, [isDragging]);
+  }, [isDragging, isPinching, scale, isMobile, safeAreaTop]);
 
   // Don't render when hidden (user is outside app) or permission denied
   // Moved here to respect Rules of Hooks
@@ -385,13 +449,22 @@ export const DraggableSessionTimer = ({
       ref={dragRef}
       className={cn(
         "fixed z-50 transition-shadow duration-200",
-        isDragging && "shadow-2xl ring-2 ring-primary/50"
+        isDragging && "shadow-2xl ring-2 ring-primary/50",
+        isPinching && "ring-2 ring-accent/50"
       )}
       style={{
         left: `${position.x}px`,
         top: `${position.y}px`,
+        transform: isMobile ? `scale(${scale})` : 'none',
+        transformOrigin: 'top left',
       }}
     >
+      {/* Scale indicator while pinching */}
+      {isPinching && isMobile && (
+        <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-black/70 text-white text-xs px-2 py-1 rounded z-10">
+          {Math.round(scale * 100)}%
+        </div>
+      )}
       <Card className={cn(
         "backdrop-blur-md border-border/20 shadow-xl rounded-2xl transition-all duration-1000",
         isStreakMode 
