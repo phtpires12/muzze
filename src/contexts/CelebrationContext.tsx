@@ -14,6 +14,7 @@ export interface SessionSummaryData {
   duration: number;
   xpGained: number;
   stage: string;
+  autoRedirectDestination?: string | null;
 }
 
 export interface CelebrationData {

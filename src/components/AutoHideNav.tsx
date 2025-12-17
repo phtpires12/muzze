@@ -88,6 +88,7 @@ export const AutoHideNav = () => {
       duration: result?.duration || capturedDuration,
       xpGained: result?.xpGained || 0,
       stage: capturedStage,
+      autoRedirectDestination: destination,
     };
     
     const streakCount = result?.shouldShowCelebration && !result?.alreadyCounted 
