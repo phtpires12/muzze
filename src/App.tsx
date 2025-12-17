@@ -3,7 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { BottomNav } from "@/components/BottomNav";
+import { AppNavigationProvider, AppLayout } from "@/components/AppNavigation";
 import { SessionContextProvider } from "@/contexts/SessionContext";
 import { WorkspaceContextProvider } from "@/contexts/WorkspaceContext";
 import { CelebrationContextProvider } from "@/contexts/CelebrationContext";
@@ -42,10 +42,7 @@ import { TrophyUnlockedModal } from "./components/TrophyUnlockedModal";
 const queryClient = new QueryClient();
 
 const Layout = ({ children }: { children: React.ReactNode }) => (
-  <div className="min-h-screen bg-background pb-20">
-    <main className="h-full overflow-auto">{children}</main>
-    <BottomNav />
-  </div>
+  <AppLayout>{children}</AppLayout>
 );
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -121,8 +118,8 @@ const App = () => {
             <Toaster />
             <Sonner />
             <BrowserRouter>
-              <WorkspaceContextProvider>
-                {/* Global Celebrations - renders overlays from anywhere */}
+              <AppNavigationProvider>
+                <WorkspaceContextProvider>
                 <GlobalCelebrations />
                 <LevelUpModal />
                 <TrophyUnlockedModal />
@@ -153,7 +150,8 @@ const App = () => {
                   <Route path="/invite" element={<AcceptInvite />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
-              </WorkspaceContextProvider>
+                </WorkspaceContextProvider>
+              </AppNavigationProvider>
             </BrowserRouter>
           </TooltipProvider>
         </CelebrationContextProvider>
