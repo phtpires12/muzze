@@ -73,6 +73,20 @@ const Session = () => {
   const [hasEndedSession, setHasEndedSession] = useState(false);
   const [showStreakHalo, setShowStreakHalo] = useState(false);
   const [streakCount, setStreakCount] = useState(0);
+  // Destino de navegação pendente após celebrações (via NavBar)
+  const [pendingNavigationAfterCelebration, setPendingNavigationAfterCelebration] = useState<string | null>(null);
+  
+  // Verificar se há destino pendente ao montar
+  useEffect(() => {
+    const pending = localStorage.getItem('pending_navigation_after_session');
+    if (pending) {
+      setPendingNavigationAfterCelebration(pending);
+      localStorage.removeItem('pending_navigation_after_session');
+      // Se veio de navegação via NavBar, ativar flags de celebração
+      setIsShowingCelebration(true);
+      setHasEndedSession(true);
+    }
+  }, []);
   const isAppVisible = useAppVisibility();
   const { progress: dailyProgress } = useDailyGoalProgress();
   
@@ -99,32 +113,38 @@ const Session = () => {
     resetCelebrations,
   } = useStreakCelebration();
 
+  // Destino final após celebrações (usa pendente se existir, senão home)
+  const getFinalDestination = () => pendingNavigationAfterCelebration || "/";
+
   // Wrap dismissal functions to handle navigation
   const handleDismissSessionSummary = () => {
     dismissSessionSummary();
-    // If no streak or trophies, navigate home and reset flag
+    // If no streak or trophies, navigate to final destination and reset flag
     if (celebrationData.streakCount === 0 && celebrationData.unlockedTrophies.length === 0) {
       setIsShowingCelebration(false);
-      navigate("/");
+      setPendingNavigationAfterCelebration(null);
+      navigate(getFinalDestination());
     }
   };
 
   const dismissStreakCelebration = () => {
     originalDismissStreakCelebration();
-    // If no trophies to show, navigate to home and reset flag
+    // If no trophies to show, navigate to final destination and reset flag
     if (celebrationData.unlockedTrophies.length === 0) {
       setIsShowingCelebration(false);
-      navigate("/");
+      setPendingNavigationAfterCelebration(null);
+      navigate(getFinalDestination());
     }
   };
 
   const dismissTrophyCelebration = () => {
     originalDismissTrophyCelebration();
-    // After showing all trophies, navigate to home and reset flag
+    // After showing all trophies, navigate to final destination and reset flag
     const remainingTrophies = celebrationData.unlockedTrophies.slice(1);
     if (remainingTrophies.length === 0) {
       setIsShowingCelebration(false);
-      navigate("/");
+      setPendingNavigationAfterCelebration(null);
+      navigate(getFinalDestination());
     }
   };
 
@@ -262,7 +282,10 @@ const Session = () => {
         stage: capturedStage,
       };
       
-      const streakCount = (result as any).newStreak || 0;
+      // ✅ Só mostrar celebração de streak se NÃO foi contado antes hoje
+      const alreadyCounted = (result as any).alreadyCounted || false;
+      const shouldShowStreak = (result as any).shouldShowCelebration && !alreadyCounted;
+      const streakCount = shouldShowStreak ? ((result as any).newStreak || 0) : 0;
       
       await triggerFullCelebration(sessionSummary, streakCount, result.xpGained || 0);
     } else {
