@@ -222,9 +222,9 @@ export const DraggableSessionTimer = ({
   const totalWithCurrentSession = alreadyDoneSeconds + unsavedElapsedSeconds;
   const remainingSeconds = goalSeconds - totalWithCurrentSession;
   
-  // Modo bônus: meta diária atingida E já passou pelo modo ofensiva (25+ min)
-  // Sequência correta: Padrão -> Ofensiva (25min) -> Bônus (meta batida + ofensiva ativo)
-  const isBonusMode = remainingSeconds <= 0 && isStreakMode;
+  // Modo bônus: só ativa 1m30s (90 segundos) APÓS bater a meta E já estar em ofensiva
+  // Sequência garantida: Padrão -> Ofensiva (25min) -> Bônus (meta + 90s em ofensiva)
+  const isBonusMode = remainingSeconds <= -90 && isStreakMode;
   
   // Gerar texto dinâmico baseado no progresso
   let goalText: string;
