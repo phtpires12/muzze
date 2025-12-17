@@ -11,7 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getLevelByXP, TROPHIES } from "@/lib/gamification";
 import { useGamification } from "@/hooks/useGamification";
 import { getWorkflow, getUserWorkflow } from "@/lib/workflows";
-import { BottomNav } from "@/components/BottomNav";
+
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -930,7 +930,7 @@ const Index = () => {
       {/* PWA Install Prompt */}
       <PWAInstallPrompt variant="popup" />
 
-      <BottomNav />
+      
     </div>
   );
 };
