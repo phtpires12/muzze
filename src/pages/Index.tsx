@@ -179,32 +179,30 @@ const Index = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // Buscar últimas 5 sessões agrupadas por content_item_id
+    // Buscar todas as sessões recentes
     const { data } = await supabase
       .from('stage_times')
-      .select('content_item_id, started_at, ended_at, duration_seconds')
+      .select('started_at, duration_seconds')
       .eq('user_id', user.id)
-      .not('content_item_id', 'is', null)
-      .order('started_at', { ascending: false })
-      .limit(20);
+      .not('duration_seconds', 'is', null)
+      .order('started_at', { ascending: false });
 
     if (data) {
-      // Agrupar por content_item_id e somar durações
+      // Agrupar por DATA (dia) ao invés de content_item_id
       const sessionMap = new Map();
       data.forEach(item => {
-        const key = item.content_item_id;
-        if (!sessionMap.has(key)) {
-          sessionMap.set(key, {
-            content_item_id: key,
-            started_at: item.started_at,
+        const date = new Date(item.started_at).toDateString();
+        if (!sessionMap.has(date)) {
+          sessionMap.set(date, {
+            date: item.started_at,
             total_duration: 0
           });
         }
-        sessionMap.get(key).total_duration += item.duration_seconds || 0;
+        sessionMap.get(date).total_duration += item.duration_seconds || 0;
       });
 
       const sessions = Array.from(sessionMap.values())
-        .sort((a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime())
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
         .slice(0, 5);
       
       setRecentSessions(sessions);
@@ -776,13 +774,13 @@ const Index = () => {
                     const minutes = Math.floor((session.total_duration % 3600) / 60);
                     return (
                       <div
-                        key={session.content_item_id || index}
+                        key={index}
                         className="flex items-center justify-between p-3 rounded-lg bg-card border border-border/20"
                       >
                         <div className="flex items-center gap-2">
                           <Clock className="w-4 h-4 text-muted-foreground" />
                           <span className="text-sm text-muted-foreground">
-                            {new Date(session.started_at).toLocaleDateString('pt-BR')}
+                            {new Date(session.date).toLocaleDateString('pt-BR')}
                           </span>
                         </div>
                         <span className="text-sm font-semibold text-foreground">
@@ -806,13 +804,22 @@ const Index = () => {
                 {[
                   { key: 'ideation', label: 'Ideação', icon: Lightbulb },
                   { key: 'script', label: 'Roteirização', icon: Film },
+                  { key: 'review', label: 'Revisão', icon: AlertCircle },
                   { key: 'record', label: 'Gravação', icon: Mic },
-                  { key: 'edit', label: 'Edição', icon: Scissors },
-                  { key: 'review', label: 'Revisão', icon: AlertCircle }
+                  { key: 'edit', label: 'Edição', icon: Scissors }
                 ].map(({ key, label, icon: Icon }) => {
                   const avgSeconds = averageTimeByStage[key] || 0;
                   const hours = Math.floor(avgSeconds / 3600);
                   const minutes = Math.floor((avgSeconds % 3600) / 60);
+                  const seconds = avgSeconds % 60;
+                  
+                  // Formatar tempo: mostra segundos se < 1min, minutos se >= 1min
+                  const formatTime = () => {
+                    if (avgSeconds === 0) return 'Sem dados';
+                    if (hours > 0) return `${hours}h ${minutes}min`;
+                    if (minutes > 0) return `${minutes}min`;
+                    return `${seconds}s`;
+                  };
                   
                   return (
                     <div
@@ -824,9 +831,7 @@ const Index = () => {
                         <span className="text-sm font-medium text-foreground">{label}</span>
                       </div>
                       <span className="text-sm font-semibold text-foreground">
-                        {avgSeconds > 0 
-                          ? `${hours > 0 ? `${hours}h ` : ''}${minutes}min`
-                          : 'Sem dados'}
+                        {formatTime()}
                       </span>
                     </div>
                   );
