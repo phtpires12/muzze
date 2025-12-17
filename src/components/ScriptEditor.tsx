@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RichTextEditor, htmlToText, textToHtml } from "@/components/ui/rich-text-editor";
 import { 
   Calendar as CalendarIcon,
   FileText,
@@ -73,19 +74,22 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
   const [showScheduleAlert, setShowScheduleAlert] = useState(false);
   const [scheduleDate, setScheduleDate] = useState<Date | undefined>(undefined);
 
-  // Refs for auto-resize textareas
+  // Refs for auto-resize textareas (kept for readonly Textareas)
   const ganchoRef = useRef<HTMLTextAreaElement>(null);
   const setupRef = useRef<HTMLTextAreaElement>(null);
   const desenvolvimentoRef = useRef<HTMLTextAreaElement>(null);
   const conclusaoRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto-resize function
+  // Auto-resize function (for readonly Textareas only)
   const autoResize = (element: HTMLTextAreaElement | null) => {
     if (element) {
       element.style.height = 'auto';
       element.style.height = element.scrollHeight + 'px';
     }
   };
+
+  // Convert content to plain text for copying
+  const getPlainText = (html: string) => htmlToText(html);
 
   useEffect(() => {
     if (scriptId) {
@@ -444,10 +448,10 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
 
   const getFullText = (contentObj: typeof content) => {
     return [
-      contentObj.gancho,
-      contentObj.setup,
-      contentObj.desenvolvimento,
-      contentObj.conclusao
+      htmlToText(contentObj.gancho),
+      htmlToText(contentObj.setup),
+      htmlToText(contentObj.desenvolvimento),
+      htmlToText(contentObj.conclusao)
     ].filter(Boolean).join('\n\n');
   };
 
@@ -946,7 +950,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => copyToClipboard(content.gancho, "Gancho")}
+                            onClick={() => copyToClipboard(getPlainText(content.gancho), "Gancho")}
                             className="h-8 w-8 hover:bg-accent"
                             title="Copiar texto editado"
                           >
@@ -961,11 +965,11 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                           />
                         </div>
                       </div>
-                      <Textarea
-                        value={content.gancho}
-                        onChange={(e) => setContent({...content, gancho: e.target.value})}
-                        onInput={(e) => autoResize(e.currentTarget)}
-                        className="min-h-[60px] text-sm md:text-base leading-relaxed overflow-hidden border-primary/40 bg-background focus-visible:ring-1 focus-visible:ring-primary"
+                      <RichTextEditor
+                        content={content.gancho}
+                        onChange={(html) => setContent({...content, gancho: html})}
+                        className="border-primary/40 bg-background"
+                        minHeight="60px"
                       />
                     </div>
 
@@ -978,7 +982,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => copyToClipboard(content.setup, "Setup")}
+                            onClick={() => copyToClipboard(getPlainText(content.setup), "Setup")}
                             className="h-8 w-8 hover:bg-accent"
                             title="Copiar texto editado"
                           >
@@ -993,11 +997,11 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                           />
                         </div>
                       </div>
-                      <Textarea
-                        value={content.setup}
-                        onChange={(e) => setContent({...content, setup: e.target.value})}
-                        onInput={(e) => autoResize(e.currentTarget)}
-                        className="min-h-[60px] text-sm md:text-base leading-relaxed overflow-hidden border-primary/40 bg-background focus-visible:ring-1 focus-visible:ring-primary"
+                      <RichTextEditor
+                        content={content.setup}
+                        onChange={(html) => setContent({...content, setup: html})}
+                        className="border-primary/40 bg-background"
+                        minHeight="60px"
                       />
                     </div>
 
@@ -1010,7 +1014,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => copyToClipboard(content.desenvolvimento, "Desenvolvimento")}
+                            onClick={() => copyToClipboard(getPlainText(content.desenvolvimento), "Desenvolvimento")}
                             className="h-8 w-8 hover:bg-accent"
                             title="Copiar texto editado"
                           >
@@ -1025,11 +1029,11 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                           />
                         </div>
                       </div>
-                      <Textarea
-                        value={content.desenvolvimento}
-                        onChange={(e) => setContent({...content, desenvolvimento: e.target.value})}
-                        onInput={(e) => autoResize(e.currentTarget)}
-                        className="min-h-[60px] text-sm md:text-base leading-relaxed overflow-hidden border-primary/40 bg-background focus-visible:ring-1 focus-visible:ring-primary"
+                      <RichTextEditor
+                        content={content.desenvolvimento}
+                        onChange={(html) => setContent({...content, desenvolvimento: html})}
+                        className="border-primary/40 bg-background"
+                        minHeight="60px"
                       />
                     </div>
 
@@ -1042,7 +1046,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => copyToClipboard(content.conclusao, "Conclusão")}
+                            onClick={() => copyToClipboard(getPlainText(content.conclusao), "Conclusão")}
                             className="h-8 w-8 hover:bg-accent"
                             title="Copiar texto editado"
                           >
@@ -1057,11 +1061,11 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                           />
                         </div>
                       </div>
-                      <Textarea
-                        value={content.conclusao}
-                        onChange={(e) => setContent({...content, conclusao: e.target.value})}
-                        onInput={(e) => autoResize(e.currentTarget)}
-                        className="min-h-[60px] text-sm md:text-base leading-relaxed overflow-hidden border-primary/40 bg-background focus-visible:ring-1 focus-visible:ring-primary"
+                      <RichTextEditor
+                        content={content.conclusao}
+                        onChange={(html) => setContent({...content, conclusao: html})}
+                        className="border-primary/40 bg-background"
+                        minHeight="60px"
                       />
                     </div>
                   </div>
@@ -1082,7 +1086,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => copyToClipboard(content.gancho, "Gancho")}
+                          onClick={() => copyToClipboard(getPlainText(content.gancho), "Gancho")}
                           className="h-8 w-8 hover:bg-accent"
                           title="Copiar texto"
                         >
@@ -1099,13 +1103,12 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                     )}
                   </div>
                 </div>
-                <Textarea
-                  ref={ganchoRef}
-                  value={content.gancho}
-                  onChange={(e) => setContent({...content, gancho: e.target.value})}
-                  onInput={(e) => autoResize(e.currentTarget)}
+                <RichTextEditor
+                  content={content.gancho}
+                  onChange={(html) => setContent({...content, gancho: html})}
                   placeholder="Escreva o gancho inicial..."
-                  className="min-h-[60px] text-sm md:text-base leading-relaxed overflow-hidden border-none focus-visible:ring-0 bg-transparent"
+                  className="border-none focus-within:ring-0 bg-transparent"
+                  minHeight="60px"
                 />
               </div>
 
@@ -1120,7 +1123,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => copyToClipboard(content.setup, "Setup")}
+                          onClick={() => copyToClipboard(getPlainText(content.setup), "Setup")}
                           className="h-8 w-8 hover:bg-accent"
                           title="Copiar texto"
                         >
@@ -1137,13 +1140,12 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                     )}
                   </div>
                 </div>
-                <Textarea
-                  ref={setupRef}
-                  value={content.setup}
-                  onChange={(e) => setContent({...content, setup: e.target.value})}
-                  onInput={(e) => autoResize(e.currentTarget)}
+                <RichTextEditor
+                  content={content.setup}
+                  onChange={(html) => setContent({...content, setup: html})}
                   placeholder="Forneça o contexto necessário..."
-                  className="min-h-[60px] text-sm md:text-base leading-relaxed overflow-hidden border-none focus-visible:ring-0 bg-transparent"
+                  className="border-none focus-within:ring-0 bg-transparent"
+                  minHeight="60px"
                 />
               </div>
 
@@ -1158,7 +1160,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => copyToClipboard(content.desenvolvimento, "Desenvolvimento")}
+                          onClick={() => copyToClipboard(getPlainText(content.desenvolvimento), "Desenvolvimento")}
                           className="h-8 w-8 hover:bg-accent"
                           title="Copiar texto"
                         >
@@ -1175,13 +1177,12 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                     )}
                   </div>
                 </div>
-                <Textarea
-                  ref={desenvolvimentoRef}
-                  value={content.desenvolvimento}
-                  onChange={(e) => setContent({...content, desenvolvimento: e.target.value})}
-                  onInput={(e) => autoResize(e.currentTarget)}
+                <RichTextEditor
+                  content={content.desenvolvimento}
+                  onChange={(html) => setContent({...content, desenvolvimento: html})}
                   placeholder="Desenvolva o conteúdo principal..."
-                  className="min-h-[60px] text-sm md:text-base leading-relaxed overflow-hidden border-none focus-visible:ring-0 bg-transparent"
+                  className="border-none focus-within:ring-0 bg-transparent"
+                  minHeight="60px"
                 />
               </div>
 
@@ -1196,7 +1197,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => copyToClipboard(content.conclusao, "Conclusão")}
+                          onClick={() => copyToClipboard(getPlainText(content.conclusao), "Conclusão")}
                           className="h-8 w-8 hover:bg-accent"
                           title="Copiar texto"
                         >
@@ -1213,13 +1214,12 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                     )}
                   </div>
                 </div>
-                <Textarea
-                  ref={conclusaoRef}
-                  value={content.conclusao}
-                  onChange={(e) => setContent({...content, conclusao: e.target.value})}
-                  onInput={(e) => autoResize(e.currentTarget)}
+                <RichTextEditor
+                  content={content.conclusao}
+                  onChange={(html) => setContent({...content, conclusao: html})}
                   placeholder="Conclua e feche o loop..."
-                  className="min-h-[60px] text-sm md:text-base leading-relaxed overflow-hidden border-none focus-visible:ring-0 bg-transparent"
+                  className="border-none focus-within:ring-0 bg-transparent"
+                  minHeight="60px"
                 />
               </div>
             </div>
