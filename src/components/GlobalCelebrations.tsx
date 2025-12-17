@@ -13,12 +13,13 @@ export const GlobalCelebrations = () => {
 
   return (
     <>
-      <SessionSummary
+      <SessionSummary 
         show={celebrationData.showSessionSummary}
         duration={celebrationData.sessionSummary?.duration || 0}
         xpGained={celebrationData.sessionSummary?.xpGained || 0}
         stage={celebrationData.sessionSummary?.stage || 'idea'}
         onContinue={dismissSessionSummary}
+        autoRedirectDestination={celebrationData.sessionSummary?.autoRedirectDestination}
       />
 
       <StreakCelebration

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Clock, Star, FileText } from 'lucide-react';
+import { Clock, Star, FileText, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Confetti } from '@/components/Confetti';
 
@@ -9,6 +9,7 @@ interface SessionSummaryProps {
   xpGained: number;
   stage: string;
   onContinue: () => void;
+  autoRedirectDestination?: string | null;
 }
 
 const STAGE_LABELS: Record<string, string> = {
@@ -32,14 +33,21 @@ const formatDuration = (seconds: number): string => {
   return `${hours}h ${remainingMinutes}min`;
 };
 
-const SessionSummary = ({ show, duration, xpGained, stage, onContinue }: SessionSummaryProps) => {
-  const [animatedXP, setAnimatedXP] = useState(0);
+const DESTINATION_LABELS: Record<string, string> = {
+  '/': 'Início',
+  '/calendario': 'Calendário',
+  '/stats': 'Estatísticas',
+};
 
+const SessionSummary = ({ show, duration, xpGained, stage, onContinue, autoRedirectDestination }: SessionSummaryProps) => {
+  const [animatedXP, setAnimatedXP] = useState(0);
+  const [countdown, setCountdown] = useState(5);
+
+  // Animate XP count
   useEffect(() => {
     if (show) {
       setAnimatedXP(0);
       
-      // Animate XP count
       const targetXP = xpGained;
       const steps = 20;
       const stepValue = targetXP / steps;
@@ -58,6 +66,28 @@ const SessionSummary = ({ show, duration, xpGained, stage, onContinue }: Session
       return () => clearInterval(interval);
     }
   }, [show, xpGained]);
+
+  // Auto-redirect countdown when destination is set
+  useEffect(() => {
+    if (!show || !autoRedirectDestination) {
+      setCountdown(5);
+      return;
+    }
+
+    setCountdown(5);
+    const timer = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          onContinue();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [show, autoRedirectDestination, onContinue]);
 
   if (!show) return null;
 
@@ -120,14 +150,36 @@ const SessionSummary = ({ show, duration, xpGained, stage, onContinue }: Session
           </div>
         </div>
 
-        {/* Continue Button */}
-        <Button
-          onClick={onContinue}
-          size="lg"
-          className="w-full mt-4 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
-        >
-          Continuar
-        </Button>
+        {/* Continue Button or Auto-redirect */}
+        {autoRedirectDestination ? (
+          <div className="w-full mt-4 text-center space-y-3">
+            <div className="flex items-center justify-center gap-2 text-muted-foreground">
+              <ArrowRight className="w-4 h-4" />
+              <span className="text-sm">
+                Redirecionando para {DESTINATION_LABELS[autoRedirectDestination] || 'próxima página'} em
+              </span>
+            </div>
+            <div className="text-4xl font-bold text-primary tabular-nums">
+              {countdown}s
+            </div>
+            <Button
+              onClick={onContinue}
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground hover:text-foreground"
+            >
+              Ir agora
+            </Button>
+          </div>
+        ) : (
+          <Button
+            onClick={onContinue}
+            size="lg"
+            className="w-full mt-4 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+          >
+            Continuar
+          </Button>
+        )}
       </div>
     </div>
   );

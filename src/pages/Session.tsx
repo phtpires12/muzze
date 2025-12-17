@@ -404,7 +404,7 @@ const Session = () => {
           )}
         </div>
 
-        {/* Floating Draggable Timer (in-app) - Hidden when user leaves app */}
+        {/* Floating Draggable Timer (in-app) - Hidden when user leaves app or during celebrations */}
         {!isOpen && (
           <DraggableSessionTimer
             stage={currentStage!.label}
@@ -421,6 +421,7 @@ const Session = () => {
             todayMinutesFromDB={dailyProgress.actualMinutes}
             permissionEnabled={canUseTimer}
             savedSecondsThisSession={session.savedSecondsThisSession}
+            hidden={isShowingAnyCelebration}
           />
         )}
 
@@ -480,7 +481,7 @@ const Session = () => {
         </div>
       )}
 
-        {/* Floating Draggable Timer (in-app) - Hidden when user leaves app */}
+        {/* Floating Draggable Timer (in-app) - Hidden when user leaves app or during celebrations */}
         {!isOpen && (
           <DraggableSessionTimer
             stage={currentStage.label}
@@ -497,6 +498,7 @@ const Session = () => {
             todayMinutesFromDB={dailyProgress.actualMinutes}
             permissionEnabled={canUseTimer}
             savedSecondsThisSession={session.savedSecondsThisSession}
+            hidden={isShowingAnyCelebration}
           />
         )}
 
@@ -732,7 +734,7 @@ const Session = () => {
         </Card>
       </div>
 
-      {/* Floating Draggable Timer for edit stage (same as other stages) */}
+      {/* Floating Draggable Timer for edit stage (same as other stages) - Hidden during celebrations */}
       {!isOpen && (
         <DraggableSessionTimer
           stage={currentStage.label}
@@ -749,6 +751,7 @@ const Session = () => {
           todayMinutesFromDB={dailyProgress.actualMinutes}
           permissionEnabled={canUseTimer}
           savedSecondsThisSession={session.savedSecondsThisSession}
+          hidden={isShowingAnyCelebration}
         />
       )}
 
