@@ -3,9 +3,10 @@ import muzzeLeafWhite from "@/assets/muzze-leaf-white.png";
 import { NavLink } from "./NavLink";
 import { Button } from "./ui/button";
 import { useState, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useSession } from "@/hooks/useSession";
 
 const navigation = [
   { name: "Home", href: "/", icon: Home },
@@ -19,6 +20,33 @@ export const AutoHideNav = () => {
   const [isDesktopVisible, setIsDesktopVisible] = useState(false);
   const hideTimerRef = useRef<NodeJS.Timeout | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
+  const { session, endSession, saveCurrentStageTime } = useSession();
+
+  // Verificar se estamos numa página de sessão ativa
+  const isOnSessionPage = ['/session', '/shot-list/record', '/shot-list/review'].some(
+    path => location.pathname.startsWith(path)
+  );
+
+  // Handler para interceptar navegação Home durante sessão ativa
+  const handleNavClick = async (e: React.MouseEvent, href: string) => {
+    // Se não é navegação para home OU não há sessão ativa OU não está na página de sessão, navegar normalmente
+    if (href !== "/" || !session.isActive || !isOnSessionPage) {
+      return; // NavLink navega normalmente
+    }
+    
+    e.preventDefault();
+    e.stopPropagation();
+    
+    console.log('[AutoHideNav] Interceptando navegação Home - encerrando sessão');
+    
+    // Salvar tempo e encerrar sessão (isso dispara celebrações)
+    await saveCurrentStageTime();
+    await endSession();
+    
+    // Navegar para home após encerrar
+    navigate('/');
+  };
 
   // No mobile, sempre visível. No desktop, controlado por hover
   const isVisible = isMobile || isDesktopVisible;
@@ -82,15 +110,16 @@ export const AutoHideNav = () => {
           <div className="flex items-center justify-around gap-2">
             {/* Left navigation items */}
             {navigation.slice(0, 2).map((item) => (
-              <NavLink
-                key={item.name}
-                to={item.href}
-                className="flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all duration-300 text-muted-foreground hover:text-foreground hover:bg-accent/10"
-                activeClassName="text-primary bg-primary/10"
-              >
-                <item.icon className="w-5 h-5" />
-                <span className="text-xs font-medium hidden sm:block">{item.name}</span>
-              </NavLink>
+              <div key={item.name} onClick={(e) => handleNavClick(e, item.href)}>
+                <NavLink
+                  to={item.href}
+                  className="flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all duration-300 text-muted-foreground hover:text-foreground hover:bg-accent/10"
+                  activeClassName="text-primary bg-primary/10"
+                >
+                  <item.icon className="w-5 h-5" />
+                  <span className="text-xs font-medium hidden sm:block">{item.name}</span>
+                </NavLink>
+              </div>
             ))}
 
             {/* Center session button */}
@@ -107,15 +136,16 @@ export const AutoHideNav = () => {
 
             {/* Right navigation items */}
             {navigation.slice(2).map((item) => (
-              <NavLink
-                key={item.name}
-                to={item.href}
-                className="flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all duration-300 text-muted-foreground hover:text-foreground hover:bg-accent/10"
-                activeClassName="text-primary bg-primary/10"
-              >
-                <item.icon className="w-5 h-5" />
-                <span className="text-xs font-medium hidden sm:block">{item.name}</span>
-              </NavLink>
+              <div key={item.name} onClick={(e) => handleNavClick(e, item.href)}>
+                <NavLink
+                  to={item.href}
+                  className="flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all duration-300 text-muted-foreground hover:text-foreground hover:bg-accent/10"
+                  activeClassName="text-primary bg-primary/10"
+                >
+                  <item.icon className="w-5 h-5" />
+                  <span className="text-xs font-medium hidden sm:block">{item.name}</span>
+                </NavLink>
+              </div>
             ))}
           </div>
         </div>
