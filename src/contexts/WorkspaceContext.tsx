@@ -5,6 +5,7 @@ import { Workspace, WorkspaceRole } from '@/types/workspace';
 interface WorkspaceInfo {
   workspace: Workspace;
   role: WorkspaceRole;
+  ownerName?: string;
 }
 
 interface WorkspaceContextType {
@@ -62,9 +63,28 @@ export const WorkspaceContextProvider = ({ children }: { children: ReactNode }) 
       if (memberships) {
         for (const membership of memberships) {
           if (membership.workspaces) {
+            const ws = membership.workspaces as unknown as Workspace;
+            
+            // Buscar nome do owner do workspace
+            let ownerName: string | undefined;
+            const { data: ownerProfile } = await supabase
+              .from('profiles')
+              .select('username')
+              .eq('user_id', ws.owner_id)
+              .maybeSingle();
+            
+            if (ownerProfile?.username) {
+              ownerName = ownerProfile.username;
+            } else {
+              // Fallback: buscar email do owner via auth (não é possível diretamente)
+              // Usar owner_id como fallback visual
+              ownerName = undefined;
+            }
+            
             workspacesList.push({
-              workspace: membership.workspaces as unknown as Workspace,
+              workspace: ws,
               role: membership.role as WorkspaceRole,
+              ownerName,
             });
           }
         }
