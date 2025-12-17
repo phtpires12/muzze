@@ -79,10 +79,9 @@ export const AutoHideNav = () => {
     await saveCurrentStageTime();
     await endSession();
     
-    // Navegar para /session para exibir celebrações (Session.tsx gerencia o fluxo)
-    if (!location.pathname.startsWith('/session')) {
-      navigate('/session');
-    }
+    // SEMPRE navegar para /session SEM parâmetros de URL
+    // Isso força re-mount do Session.tsx para exibir celebrações
+    navigate('/session', { replace: true });
     
     setPendingNavigation(null);
   };
