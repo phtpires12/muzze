@@ -52,18 +52,68 @@ export function useWindowPortal(options: UseWindowPortalOptions = {}) {
 
       windowRef.current = popup;
 
-      // Copy all styles to popup
-      const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'));
-      styles.forEach(styleElement => {
-        const clonedStyle = styleElement.cloneNode(true) as HTMLElement;
-        popup.document.head.appendChild(clonedStyle);
+      // Add immediate loading styles FIRST (before any content)
+      const loadingStyle = popup.document.createElement('style');
+      loadingStyle.textContent = `
+        :root {
+          --background: 0 0% 3.9%;
+          --foreground: 0 0% 98%;
+          --card: 0 0% 3.9%;
+          --card-foreground: 0 0% 98%;
+          --primary: 24 95% 53%;
+          --primary-foreground: 0 0% 98%;
+          --muted: 0 0% 14.9%;
+          --muted-foreground: 0 0% 63.9%;
+          --border: 0 0% 14.9%;
+        }
+        * { box-sizing: border-box; }
+        body {
+          background: hsl(0 0% 3.9%);
+          color: hsl(0 0% 98%);
+          margin: 0;
+          padding: 0;
+          overflow: hidden;
+          font-family: system-ui, -apple-system, sans-serif;
+        }
+        #portal-root {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          height: 100vh;
+          width: 100%;
+          background: hsl(0 0% 3.9%);
+        }
+      `;
+      popup.document.head.appendChild(loadingStyle);
+
+      // Copy inline <style> tags synchronously
+      const inlineStyles = document.querySelectorAll('style');
+      inlineStyles.forEach(style => {
+        popup.document.head.appendChild(style.cloneNode(true));
       });
 
-      // Set body styles
-      popup.document.body.style.margin = '0';
-      popup.document.body.style.padding = '0';
-      popup.document.body.style.overflow = 'hidden';
-      popup.document.body.style.backgroundColor = 'hsl(var(--background))';
+      // Extract CSS from loaded stylesheets and inject as inline styles
+      // This avoids async loading of external CSS files
+      Array.from(document.styleSheets).forEach(sheet => {
+        if (sheet.href) {
+          try {
+            const rules = Array.from(sheet.cssRules || [])
+              .map(rule => rule.cssText)
+              .join('\n');
+            if (rules) {
+              const inlineStyle = popup.document.createElement('style');
+              inlineStyle.textContent = rules;
+              popup.document.head.appendChild(inlineStyle);
+            }
+          } catch (e) {
+            // CORS blocked - fallback to link clone (will load async)
+            const link = popup.document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = sheet.href;
+            popup.document.head.appendChild(link);
+          }
+        }
+      });
 
       // Create container for portal
       const container = popup.document.createElement('div');
@@ -98,7 +148,10 @@ export function useWindowPortal(options: UseWindowPortalOptions = {}) {
         containerRef.current = null;
       };
 
-      setIsOpen(true);
+      // Wait for next frame to ensure styles are applied before rendering content
+      requestAnimationFrame(() => {
+        setIsOpen(true);
+      });
     }, 50);
   };
 
