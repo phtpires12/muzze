@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Loader2, CheckCircle, XCircle, Users } from "lucide-react";
 import { toast } from "sonner";
 import muzzeLogoWhite from "@/assets/muzze-logo-white.png";
+import { useWorkspaceContext } from "@/contexts/WorkspaceContext";
 
 interface InviteData {
   id: string;
@@ -24,6 +25,7 @@ export default function AcceptInvite() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const inviteId = searchParams.get("id");
+  const { refetch: refetchWorkspaces } = useWorkspaceContext();
 
   const [status, setStatus] = useState<"loading" | "valid" | "expired" | "accepted" | "error" | "wrong_email">("loading");
   const [invite, setInvite] = useState<InviteData | null>(null);
@@ -115,6 +117,9 @@ export default function AcceptInvite() {
 
       setStatus("accepted");
       toast.success("Convite aceito com sucesso!");
+
+      // Refresh workspace context to include the new workspace
+      await refetchWorkspaces();
 
       // Redirect after 2 seconds
       setTimeout(() => {
