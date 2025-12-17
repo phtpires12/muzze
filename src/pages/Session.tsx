@@ -316,6 +316,19 @@ const Session = () => {
   }, [isAppVisible, session.isPaused, session.isActive]);
 
 
+  // Detectar se estamos inicializando a partir de URL (evita flash do modal)
+  const isInitializingFromUrl = stageParam && !session.isActive && !hasEndedSession && !isShowingCelebration;
+
+  if (isInitializingFromUrl) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-accent/10 via-background to-primary/10">
+        <div className="text-center">
+          <p className="text-lg text-muted-foreground">Carregando sessão...</p>
+        </div>
+      </div>
+    );
+  }
+
   // Não mostrar tela de seleção se estiver exibindo celebração
   if (!session.isActive && !isShowingCelebration) {
     return (
