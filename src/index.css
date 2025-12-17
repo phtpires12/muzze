@@ -148,3 +148,138 @@ All colors MUST be HSL.
 .fixed-safe-bottom {
   bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);
 }
+
+/* ===== TipTap Rich Text Editor Styles ===== */
+.rich-text-editor .ProseMirror {
+  outline: none;
+  min-height: var(--editor-min-height, 80px);
+}
+
+.rich-text-editor .ProseMirror p {
+  margin: 0;
+}
+
+.rich-text-editor .ProseMirror p + p {
+  margin-top: 0.75em;
+}
+
+/* Placeholder styles */
+.rich-text-editor .ProseMirror.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: hsl(var(--muted-foreground));
+  pointer-events: none;
+  height: 0;
+}
+
+/* Bold */
+.rich-text-editor .ProseMirror strong {
+  font-weight: 700;
+}
+
+/* Italic */
+.rich-text-editor .ProseMirror em {
+  font-style: italic;
+}
+
+/* Underline */
+.rich-text-editor .ProseMirror u {
+  text-decoration: underline;
+}
+
+/* Strikethrough */
+.rich-text-editor .ProseMirror s {
+  text-decoration: line-through;
+}
+
+/* Code */
+.rich-text-editor .ProseMirror code {
+  background-color: hsl(var(--muted));
+  padding: 0.2em 0.4em;
+  border-radius: 0.25em;
+  font-size: 0.875em;
+  font-family: ui-monospace, monospace;
+}
+
+/* Bullet List */
+.rich-text-editor .ProseMirror ul {
+  list-style-type: disc;
+  padding-left: 1.5em;
+  margin: 0.5em 0;
+}
+
+.rich-text-editor .ProseMirror ul li {
+  margin: 0.25em 0;
+}
+
+/* Nested bullet lists */
+.rich-text-editor .ProseMirror ul ul {
+  list-style-type: circle;
+}
+
+.rich-text-editor .ProseMirror ul ul ul {
+  list-style-type: square;
+}
+
+/* Ordered List */
+.rich-text-editor .ProseMirror ol {
+  list-style-type: decimal;
+  padding-left: 1.5em;
+  margin: 0.5em 0;
+}
+
+.rich-text-editor .ProseMirror ol li {
+  margin: 0.25em 0;
+}
+
+/* Headings */
+.rich-text-editor .ProseMirror h1 {
+  font-size: 1.5em;
+  font-weight: 700;
+  margin: 0.5em 0 0.25em;
+}
+
+.rich-text-editor .ProseMirror h2 {
+  font-size: 1.25em;
+  font-weight: 600;
+  margin: 0.5em 0 0.25em;
+}
+
+.rich-text-editor .ProseMirror h3 {
+  font-size: 1.125em;
+  font-weight: 600;
+  margin: 0.5em 0 0.25em;
+}
+
+/* Blockquote */
+.rich-text-editor .ProseMirror blockquote {
+  border-left: 3px solid hsl(var(--primary));
+  padding-left: 1em;
+  margin: 0.5em 0;
+  color: hsl(var(--muted-foreground));
+  font-style: italic;
+}
+
+/* Horizontal rule */
+.rich-text-editor .ProseMirror hr {
+  border: none;
+  border-top: 1px solid hsl(var(--border));
+  margin: 1em 0;
+}
+
+/* Task list (if enabled) */
+.rich-text-editor .ProseMirror ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0;
+}
+
+.rich-text-editor .ProseMirror ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5em;
+}
+
+/* Selection highlight */
+.rich-text-editor .ProseMirror ::selection {
+  background-color: hsl(var(--primary) / 0.2);
+}
