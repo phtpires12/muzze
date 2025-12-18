@@ -20,6 +20,7 @@ import { useCelebration } from "@/contexts/CelebrationContext";
 import SessionSummary from "@/components/SessionSummary";
 import { StreakCelebration } from "@/components/StreakCelebration";
 import { TrophyCelebration } from "@/components/TrophyCelebration";
+import { ImageGalleryModal } from "@/components/shotlist/ImageGalleryModal";
 
 const ShotListReview = () => {
   const navigate = useNavigate();
@@ -33,6 +34,7 @@ const ShotListReview = () => {
   const [uploadingImages, setUploadingImages] = useState<Set<string>>(new Set());
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [lastSavedShots, setLastSavedShots] = useState<ShotItem[]>([]);
+  const [galleryOpenShotId, setGalleryOpenShotId] = useState<string | null>(null);
 
   // Unified Session System
   const {
@@ -582,6 +584,7 @@ const ShotListReview = () => {
             onDragEnd={handleDragEnd}
             showCheckbox={false}
             mode="review"
+            onImageClick={(shotId) => setGalleryOpenShotId(shotId)}
           />
         ) : (
           <div className="text-center py-12 text-muted-foreground">
@@ -615,6 +618,13 @@ const ShotListReview = () => {
         trophy={celebrationData.currentTrophy}
         xpGained={celebrationData.xpGained}
         onContinue={handleDismissTrophyCelebration}
+      />
+
+      {/* Image Gallery Modal */}
+      <ImageGalleryModal
+        shots={shots}
+        currentShotId={galleryOpenShotId}
+        onClose={() => setGalleryOpenShotId(null)}
       />
     </div>
   );
