@@ -54,6 +54,22 @@ export const SideNav = () => {
   // Check if we're on an active session page
   const isOnSessionPage = ['/session', '/shot-list/record', '/shot-list/review'].some(path => location.pathname.startsWith(path));
 
+  // Construir URL de retorno baseada no estágio atual da sessão
+  const getSessionReturnUrl = (): string => {
+    const stage = session.stage;
+    const contentId = session.contentId;
+    
+    if (stage === 'edit') {
+      return contentId ? `/shot-list/review?scriptId=${contentId}` : '/session?stage=edit';
+    }
+    if (stage === 'record') {
+      return contentId ? `/shot-list/record?scriptId=${contentId}` : '/session?stage=record';
+    }
+    
+    const stageParam = stage === 'idea' ? 'idea' : stage;
+    return contentId ? `/session?stage=${stageParam}&scriptId=${contentId}` : `/session?stage=${stageParam}`;
+  };
+
   // Durante sessão ativa: auto-colapsa, mas permite expandir via hover
   const isInActiveSession = session.isActive && isOnSessionPage;
   const effectiveCollapsed = isInActiveSession ? !isHovering : isSidebarCollapsed;
@@ -117,6 +133,13 @@ export const SideNav = () => {
   const handleCancelEnd = () => {
     setShowEndConfirmation(false);
     setPendingNavigation(null);
+    
+    // Se não está numa página de sessão, redirecionar de volta para a sessão
+    if (!isOnSessionPage && session.isActive) {
+      const returnUrl = getSessionReturnUrl();
+      console.log('[SideNav] Redirecionando de volta para sessão:', returnUrl);
+      navigate(returnUrl);
+    }
   };
   const handleNewSession = () => {
     localStorage.removeItem('muzze_session_state');
