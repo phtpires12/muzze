@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useSession, SessionStage } from "@/hooks/useSession";
 import { useSessionContext } from "@/contexts/SessionContext";
@@ -268,18 +268,46 @@ const Session = () => {
     height: 500,
   });
 
+  // Ref para estado atual do pause (evita race conditions com stale closures)
+  const isPausedRef = useRef(session.isPaused);
+  useEffect(() => {
+    isPausedRef.current = session.isPaused;
+  }, [session.isPaused]);
+
+  // Fechar popup quando timer é pausado
+  useEffect(() => {
+    if (session.isPaused && isOpen) {
+      closePortal();
+    }
+  }, [session.isPaused, isOpen, closePortal]);
+
   // Open/close portal based on app visibility
   useEffect(() => {
     if (!session.isActive) return;
     
     const autoPopupEnabled = localStorage.getItem('timer-auto-popup-enabled') !== 'false';
 
-    if (!isAppVisible && !session.isPaused && autoPopupEnabled) {
-      openPortal();
-    } else if (isAppVisible) {
+    // Fechar imediatamente quando usuário volta para o app
+    if (isAppVisible) {
       closePortal();
+      return;
     }
-  }, [isAppVisible, session.isPaused, session.isActive]);
+
+    // Se timer está pausado, NÃO abrir popup
+    if (session.isPaused) {
+      return;
+    }
+
+    // Delay para garantir que o estado está sincronizado antes de abrir
+    const timeoutId = setTimeout(() => {
+      // Double-check: verificar se ainda NÃO está pausado antes de abrir
+      if (!isPausedRef.current && autoPopupEnabled) {
+        openPortal();
+      }
+    }, 150); // 150ms de delay para evitar race condition
+
+    return () => clearTimeout(timeoutId);
+  }, [isAppVisible, session.isActive, session.isPaused, openPortal, closePortal]);
 
 
   // Se celebração está ativa, renderizar tela mínima para evitar flash
