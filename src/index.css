@@ -287,7 +287,7 @@ All colors MUST be HSL.
 /* ===== Drag Handle Styles (Notion-style) ===== */
 .drag-handle {
   position: fixed;
-  opacity: 0;
+  opacity: 1;
   transition: opacity 0.15s ease;
   cursor: grab;
   padding: 2px;
@@ -319,8 +319,9 @@ All colors MUST be HSL.
   cursor: grabbing;
 }
 
-.drag-handle.show {
-  opacity: 1;
+.drag-handle.hide {
+  opacity: 0;
+  pointer-events: none;
 }
 
 /* Selected node during drag */
