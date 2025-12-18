@@ -38,7 +38,8 @@ import {
 import { toast } from "sonner";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useWorkspaceContext } from "@/contexts/WorkspaceContext";
-import { StagePermissions, WorkspaceInvite } from "@/types/workspace";
+import { StagePermissions, WorkspaceInvite, CreativeStage } from "@/types/workspace";
+import { MemberPermissionsModal } from "@/components/workspace/MemberPermissionsModal";
 import { format, differenceInDays, differenceInHours } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -48,6 +49,8 @@ interface ActiveMember {
   email: string;
   role: "admin" | "collaborator";
   userId: string;
+  allowedTimerStages: CreativeStage[];
+  canEditStages: CreativeStage[];
 }
 
 const GuestsSkeleton = () => (
@@ -80,6 +83,7 @@ const Guests = () => {
     cancelInvite,
     resendInvite,
     inviteMember,
+    updateMemberPermissions,
     isLoading: workspaceLoading,
     workspace 
   } = useWorkspace();
@@ -90,6 +94,7 @@ const Guests = () => {
   const [inviteRole, setInviteRole] = useState<"admin" | "collaborator">("collaborator");
   const [isInviting, setIsInviting] = useState(false);
   const [resendingId, setResendingId] = useState<string | null>(null);
+  const [editingMember, setEditingMember] = useState<ActiveMember | null>(null);
   
   const isLoading = contextLoading || workspaceLoading;
   
@@ -108,10 +113,17 @@ const Guests = () => {
     email: m.email || `user_${m.user_id.slice(0, 8)}@...`,
     role: (m.role === "owner" ? "admin" : m.role) as "admin" | "collaborator",
     userId: m.user_id,
+    allowedTimerStages: (m.allowed_timer_stages || []) as CreativeStage[],
+    canEditStages: (m.can_edit_stages || []) as CreativeStage[],
   }));
 
   const handleRoleChange = async (memberId: string) => {
     toast.info("Funcionalidade em desenvolvimento");
+  };
+
+  const handleSavePermissions = async (permissions: StagePermissions) => {
+    if (!editingMember) return;
+    await updateMemberPermissions(editingMember.id, permissions);
   };
 
   const handleRemove = async () => {
@@ -266,8 +278,12 @@ const Guests = () => {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => handleRoleChange(member.id)}>
+                    <DropdownMenuItem onClick={() => setEditingMember(member)}>
                       <Shield className="h-4 w-4 mr-2" />
+                      Gerenciar Permissões
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleRoleChange(member.id)}>
+                      <Users className="h-4 w-4 mr-2" />
                       {member.role === "admin" ? "Tornar Colaborador" : "Tornar Admin"}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
@@ -504,6 +520,14 @@ const Guests = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Modal de Permissões */}
+      <MemberPermissionsModal
+        member={editingMember}
+        isOpen={!!editingMember}
+        onClose={() => setEditingMember(null)}
+        onSave={handleSavePermissions}
+      />
     </div>
   );
 };
