@@ -3,6 +3,7 @@ import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import Typography from '@tiptap/extension-typography';
 import Placeholder from '@tiptap/extension-placeholder';
+import { NotionListKeymap } from '@/lib/tiptap-extensions/notion-list-keymap';
 import { cn } from '@/lib/utils';
 import { useEffect } from 'react';
 
@@ -58,6 +59,7 @@ export const RichTextEditor = ({
         placeholder,
         emptyEditorClass: 'is-editor-empty',
       }),
+      NotionListKeymap,
     ],
     content: content || '',
     editable,
