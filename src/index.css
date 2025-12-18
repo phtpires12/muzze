@@ -285,6 +285,12 @@ All colors MUST be HSL.
 }
 
 /* ===== Drag Handle Styles (Notion-style) ===== */
+
+/* Garantir que o container do editor não bloqueie position: fixed */
+.rich-text-editor {
+  position: relative;
+}
+
 .drag-handle {
   position: fixed;
   opacity: 1;
@@ -298,6 +304,7 @@ All colors MUST be HSL.
   background: transparent;
   width: 20px;
   height: 20px;
+  z-index: 9999;
 }
 
 .drag-handle::before {
