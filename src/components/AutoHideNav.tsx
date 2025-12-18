@@ -51,8 +51,8 @@ export const AutoHideNav = () => {
       return;
     }
     
-    // Se não há sessão ativa OU não está na página de sessão, navegar normalmente
-    if (!session.isActive || !isOnSessionPage) {
+    // Se não há sessão ativa, navegar normalmente
+    if (!session.isActive) {
       return;
     }
     

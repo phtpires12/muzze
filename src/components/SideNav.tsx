@@ -65,8 +65,8 @@ export const SideNav = () => {
       return;
     }
 
-    // If no active session OR not on session page, navigate normally
-    if (!session.isActive || !isOnSessionPage) {
+    // If no active session, navigate normally
+    if (!session.isActive) {
       return;
     }
 
