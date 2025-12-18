@@ -47,6 +47,7 @@ interface SortableRowProps {
   showCheckbox?: boolean;
   mode?: 'review' | 'record';
   availableLocations?: string[];
+  onImageClick?: (shotId: string) => void;
 }
 
 const SortableRow = ({ 
@@ -58,7 +59,8 @@ const SortableRow = ({
   onSplitAtCursor,
   showCheckbox = false,
   mode = 'review',
-  availableLocations = []
+  availableLocations = [],
+  onImageClick
 }: SortableRowProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editableDivRef = useRef<HTMLDivElement>(null);
@@ -387,8 +389,8 @@ const SortableRow = ({
                   <img
                     src={url}
                     alt={`Referência ${index + 1}`}
-                    className="w-20 h-20 object-cover rounded border border-border cursor-pointer"
-                    onClick={() => window.open(url, '_blank')}
+                    className="w-20 h-20 object-cover rounded border border-border cursor-pointer hover:opacity-90 transition-opacity"
+                    onClick={() => onImageClick?.(shot.id)}
                   />
                   <Button
                     variant="ghost"
@@ -579,6 +581,7 @@ export const ShotListTable = ({
                   showCheckbox={showCheckbox}
                   mode={mode}
                   availableLocations={availableLocations}
+                  onImageClick={onImageClick}
                 />
               ))}
             </SortableContext>
