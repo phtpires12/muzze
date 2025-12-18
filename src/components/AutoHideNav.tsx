@@ -44,6 +44,22 @@ export const AutoHideNav = () => {
     path => location.pathname.startsWith(path)
   );
 
+  // Construir URL de retorno baseada no estágio atual da sessão
+  const getSessionReturnUrl = (): string => {
+    const stage = session.stage;
+    const contentId = session.contentId;
+    
+    if (stage === 'edit') {
+      return contentId ? `/shot-list/review?scriptId=${contentId}` : '/session?stage=edit';
+    }
+    if (stage === 'record') {
+      return contentId ? `/shot-list/record?scriptId=${contentId}` : '/session?stage=record';
+    }
+    
+    const stageParam = stage === 'idea' ? 'idea' : stage;
+    return contentId ? `/session?stage=${stageParam}&scriptId=${contentId}` : `/session?stage=${stageParam}`;
+  };
+
   // Handler para interceptar navegação durante sessão ativa
   const handleNavClick = (e: React.MouseEvent, href: string) => {
     // Ajustes (/profile) sempre navega normalmente
@@ -115,6 +131,13 @@ export const AutoHideNav = () => {
   const handleCancelEnd = () => {
     setShowEndConfirmation(false);
     setPendingNavigation(null);
+    
+    // Se não está numa página de sessão, redirecionar de volta para a sessão
+    if (!isOnSessionPage && session.isActive) {
+      const returnUrl = getSessionReturnUrl();
+      console.log('[AutoHideNav] Redirecionando de volta para sessão:', returnUrl);
+      navigate(returnUrl);
+    }
   };
 
   // Lógica de visibilidade:

@@ -296,7 +296,8 @@ export const useSession = (options: UseSessionOptions = {}) => {
       targetSeconds: timer.targetSeconds,
       isStreakMode: timer.isStreakMode,
       dailyGoalMinutes: timer.dailyGoalMinutes,
-      savedSecondsThisSession: timer.savedSecondsThisSession, // Rastrear tempo já salvo para evitar contagem dupla
+      savedSecondsThisSession: timer.savedSecondsThisSession,
+      contentId: timer.contentId, // ID do conteúdo associado à sessão
     },
     startSession,
     pauseSession,
