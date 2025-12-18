@@ -3,6 +3,8 @@ import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import Typography from '@tiptap/extension-typography';
 import Placeholder from '@tiptap/extension-placeholder';
+import GlobalDragHandle from 'tiptap-extension-global-drag-handle';
+import AutoJoiner from 'tiptap-extension-auto-joiner';
 import { NotionListKeymap } from '@/lib/tiptap-extensions/notion-list-keymap';
 import { cn } from '@/lib/utils';
 import { useEffect } from 'react';
@@ -39,6 +41,20 @@ export const RichTextEditor = ({
         heading: {
           levels: [1, 2, 3],
         },
+        // Dropcursor for visual feedback during drag
+        dropcursor: {
+          color: 'hsl(var(--primary))',
+          width: 2,
+        },
+      }),
+      // Global drag handle - Notion-style block dragging
+      GlobalDragHandle.configure({
+        dragHandleWidth: 24,
+        scrollTreshold: 100,
+      }),
+      // Auto-join lists when dragging to prevent broken lists
+      AutoJoiner.configure({
+        elementsToJoin: ['bulletList', 'orderedList'],
       }),
       Underline,
       Typography.configure({
