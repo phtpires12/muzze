@@ -908,6 +908,7 @@ const Index = () => {
           userXP={profile?.xp_points || 0}
           freezeCost={freezeCost}
           maxFreezes={maxFreezes}
+          wasRecentlyReset={streakValidation.wasRecentlyReset}
           onUseFreeze={useFreezesToRecover}
           onBuyFreezesAndRecover={buyFreezesAndRecover}
           onResetStreak={resetStreak}
