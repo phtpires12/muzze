@@ -23,6 +23,7 @@ export const POINTS = {
 export const XP_PER_MINUTE = 2;
 export const FREEZE_COST_MULTIPLIER = 2;
 export const MAX_STREAK_FREEZES = 5;
+export const MAX_STREAK_BONUS_DAYS = 365;
 
 export function calculateXPFromMinutes(minutes: number): number {
   return Math.floor(minutes * XP_PER_MINUTE);
@@ -31,6 +32,34 @@ export function calculateXPFromMinutes(minutes: number): number {
 export function calculateFreezeCost(minStreakMinutes: number = 20): number {
   const dailyXP = calculateXPFromMinutes(minStreakMinutes);
   return dailyXP * FREEZE_COST_MULTIPLIER;
+}
+
+// Calcula o multiplicador de bônus baseado nos dias de streak
+// Cada dia = +1% de bônus (máximo: 365% = 4.65x)
+export function getStreakBonusMultiplier(streakDays: number): number {
+  const cappedDays = Math.min(streakDays, MAX_STREAK_BONUS_DAYS);
+  return 1 + (cappedDays / 100);
+}
+
+// Calcula XP com bônus de streak aplicado
+export interface XPWithBonus {
+  baseXP: number;
+  bonusXP: number;
+  totalXP: number;
+  bonusPercent: number;
+}
+
+export function calculateXPWithStreakBonus(
+  minutes: number, 
+  streakDays: number
+): XPWithBonus {
+  const baseXP = Math.floor(minutes * XP_PER_MINUTE);
+  const bonusPercent = Math.min(streakDays, MAX_STREAK_BONUS_DAYS);
+  const multiplier = getStreakBonusMultiplier(streakDays);
+  const totalXP = Math.floor(baseXP * multiplier);
+  const bonusXP = totalXP - baseXP;
+  
+  return { baseXP, bonusXP, totalXP, bonusPercent };
 }
 
 export const LEVELS = [
