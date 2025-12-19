@@ -20,6 +20,7 @@ interface StreakRecoveryModalProps {
   userXP: number;
   freezeCost: number;
   maxFreezes: number;
+  wasRecentlyReset?: boolean;
   onUseFreeze: () => Promise<boolean>;
   onBuyFreezesAndRecover: () => Promise<boolean>;
   onResetStreak: () => Promise<boolean>;
@@ -37,6 +38,7 @@ export const StreakRecoveryModal = ({
   userXP,
   freezeCost,
   maxFreezes,
+  wasRecentlyReset = false,
   onUseFreeze,
   onBuyFreezesAndRecover,
   onResetStreak,
@@ -112,11 +114,15 @@ export const StreakRecoveryModal = ({
           <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center mb-4">
             <AlertTriangle className="w-8 h-8 text-white" />
           </div>
-          <DialogTitle className="text-xl">Sua ofensiva está em risco!</DialogTitle>
+          <DialogTitle className="text-xl">
+            {wasRecentlyReset ? 'Sua ofensiva foi perdida!' : 'Sua ofensiva está em risco!'}
+          </DialogTitle>
           <DialogDescription className="text-base">
             Você ficou <strong className="text-foreground">{lostDaysCount} dia{lostDaysCount > 1 ? 's' : ''}</strong> sem criar.
             {currentStreak > 0 && (
-              <> Sua ofensiva de <strong className="text-orange-500">{currentStreak} dias</strong> pode ser perdida.</>
+              wasRecentlyReset 
+                ? <> Sua ofensiva de <strong className="text-orange-500">{currentStreak} dias</strong> foi zerada.</>
+                : <> Sua ofensiva de <strong className="text-orange-500">{currentStreak} dias</strong> pode ser perdida.</>
             )}
           </DialogDescription>
         </DialogHeader>

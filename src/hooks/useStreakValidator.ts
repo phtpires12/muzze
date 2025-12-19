@@ -10,6 +10,8 @@ interface LostDaysResult {
   currentStreak: number;
   lastEventDate: string | null;
   canUseFreeze: boolean;
+  wasRecentlyReset: boolean; // True if cron already reset the streak
+  originalStreak: number; // The streak value before reset (for recovery)
 }
 
 export const useStreakValidator = () => {
@@ -50,6 +52,8 @@ export const useStreakValidator = () => {
           currentStreak: streak?.current_streak || 0,
           lastEventDate: null,
           canUseFreeze: false,
+          wasRecentlyReset: false,
+          originalStreak: 0,
         });
         setIsLoading(false);
         setHasChecked(true);
@@ -75,6 +79,8 @@ export const useStreakValidator = () => {
           currentStreak: streak.current_streak || 0,
           lastEventDate: null,
           canUseFreeze: false,
+          wasRecentlyReset: false,
+          originalStreak: 0,
         });
         setIsLoading(false);
         setHasChecked(true);
@@ -97,6 +103,8 @@ export const useStreakValidator = () => {
           currentStreak: streak.current_streak || 0,
           lastEventDate,
           canUseFreeze: false,
+          wasRecentlyReset: false,
+          originalStreak: streak.current_streak || 0,
         });
         setIsLoading(false);
         setHasChecked(true);
@@ -107,13 +115,26 @@ export const useStreakValidator = () => {
       const lostDaysCount = diffDays - 1;
       const canUseFreeze = availableFreezes >= lostDaysCount && lostDaysCount > 0;
 
+      // Detect if streak was already reset by cron job
+      // If current_streak is 0 but longest_streak > 0 and there are lost days,
+      // the cron already reset it but user hasn't seen the modal yet
+      const wasRecentlyReset = streak.current_streak === 0 && 
+                               streak.longest_streak > 0 && 
+                               lostDaysCount > 0;
+
+      // Use longest_streak as the "original" streak if it was reset
+      const originalStreak = wasRecentlyReset ? streak.longest_streak : (streak.current_streak || 0);
+
       setResult({
-        hasLostDays: lostDaysCount > 0 && streak.current_streak > 0,
+        // Show modal if: has lost days with active streak OR was recently reset by cron
+        hasLostDays: (lostDaysCount > 0 && streak.current_streak > 0) || wasRecentlyReset,
         lostDaysCount,
         availableFreezes,
-        currentStreak: streak.current_streak || 0,
+        currentStreak: originalStreak, // Show the streak they're about to lose (or lost)
         lastEventDate,
         canUseFreeze,
+        wasRecentlyReset,
+        originalStreak,
       });
       setIsLoading(false);
       setHasChecked(true);
@@ -170,10 +191,21 @@ export const useStreakValidator = () => {
       yesterday.setDate(yesterday.getDate() - 1);
       const yesterdayStr = yesterday.toISOString().split('T')[0];
 
-      await supabase
-        .from('streaks')
-        .update({ last_event_date: yesterdayStr })
-        .eq('user_id', user.id);
+      // If streak was reset by cron, restore it; otherwise just update last_event_date
+      if (result.wasRecentlyReset) {
+        await supabase
+          .from('streaks')
+          .update({ 
+            current_streak: result.originalStreak,
+            last_event_date: yesterdayStr 
+          })
+          .eq('user_id', user.id);
+      } else {
+        await supabase
+          .from('streaks')
+          .update({ last_event_date: yesterdayStr })
+          .eq('user_id', user.id);
+      }
 
       await refetchProfile();
       return true;
@@ -255,15 +287,25 @@ export const useStreakValidator = () => {
         .update({ streak_freezes: Math.max(0, finalFreezeCount) })
         .eq('user_id', user.id);
 
-      // 4. Update last_event_date to yesterday
+      // 4. Update last_event_date to yesterday (and restore streak if it was reset)
       const yesterday = new Date(userDate);
       yesterday.setDate(yesterday.getDate() - 1);
       const yesterdayStr = yesterday.toISOString().split('T')[0];
 
-      await supabase
-        .from('streaks')
-        .update({ last_event_date: yesterdayStr })
-        .eq('user_id', user.id);
+      if (result.wasRecentlyReset) {
+        await supabase
+          .from('streaks')
+          .update({ 
+            current_streak: result.originalStreak,
+            last_event_date: yesterdayStr 
+          })
+          .eq('user_id', user.id);
+      } else {
+        await supabase
+          .from('streaks')
+          .update({ last_event_date: yesterdayStr })
+          .eq('user_id', user.id);
+      }
 
       await refetchProfile();
       return true;
