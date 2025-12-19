@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useSessionContext, SessionStage } from "@/contexts/SessionContext";
-import { calculateXPFromMinutes, calculateLevelByXP, getLevelInfo } from "@/lib/gamification";
+import { calculateXPWithStreakBonus, calculateLevelByXP, getLevelInfo } from "@/lib/gamification";
 
 export type { SessionStage };
 
@@ -74,7 +74,7 @@ export const useSession = (options: UseSessionOptions = {}) => {
     });
   }, [changeTimerStage, toast]);
 
-  // endSession - finaliza e calcula XP/streak
+  // endSession - finaliza e calcula XP/streak com bônus progressivo
   const endSession = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -83,9 +83,18 @@ export const useSession = (options: UseSessionOptions = {}) => {
       // Salvar tempo da etapa atual (última antes de finalizar)
       await saveStageTime();
 
-      // Calcular XP baseado no tempo TOTAL da sessão
+      // Buscar streak atual ANTES de calcular XP (para aplicar bônus)
+      const { data: currentStreak } = await supabase
+        .from('streaks')
+        .select('current_streak')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      const streakDays = currentStreak?.current_streak || 0;
+
+      // Calcular XP com bônus de streak
       const totalMinutes = Math.floor(timer.elapsedSeconds / 60);
-      const xpGained = calculateXPFromMinutes(totalMinutes);
+      const { baseXP, bonusXP, totalXP, bonusPercent } = calculateXPWithStreakBonus(totalMinutes, streakDays);
 
       // Get user and update XP in database
       const { data: profile } = await supabase
@@ -95,7 +104,7 @@ export const useSession = (options: UseSessionOptions = {}) => {
         .single();
 
       const previousXP = profile?.xp_points || 0;
-      const newXP = previousXP + xpGained;
+      const newXP = previousXP + totalXP;
       const currentHighestLevel = profile?.highest_level || 1;
 
       // Calculate levels before and after XP update
@@ -133,7 +142,10 @@ export const useSession = (options: UseSessionOptions = {}) => {
         payload: { 
           duration_seconds: timer.elapsedSeconds,
           final_stage: timer.stage,
-          xpGained
+          baseXP,
+          bonusXP,
+          totalXP,
+          streakBonusPercent: bonusPercent
         }
       });
 
@@ -144,12 +156,15 @@ export const useSession = (options: UseSessionOptions = {}) => {
       const summary = {
         duration: timer.elapsedSeconds,
         stage: timer.stage,
-        xpGained,
+        xpGained: totalXP,
+        baseXP,
+        bonusXP,
+        streakBonusPercent: bonusPercent,
         streakAchieved: streakResult.streakAchieved || false,
         newStreak: streakResult.newStreak,
         creativeMinutesToday: streakResult.creativeMinutesToday,
         shouldShowCelebration: streakResult.streakAchieved || false,
-        alreadyCounted: streakResult.alreadyCounted || false, // ← Para evitar celebrações repetidas
+        alreadyCounted: streakResult.alreadyCounted || false,
       };
 
       // Reset timer global

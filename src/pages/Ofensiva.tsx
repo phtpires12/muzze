@@ -4,11 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { X, Share2, ChevronLeft, ChevronRight, Flame, Check, Snowflake, Gem, Info } from "lucide-react";
+import { X, Share2, ChevronLeft, ChevronRight, Flame, Check, Snowflake, Gem, Info, TrendingUp } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isFuture, isToday, getDaysInMonth, isSameMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
-import { calculateXPFromMinutes, calculateFreezeCost, MAX_STREAK_FREEZES } from "@/lib/gamification";
+import { calculateXPFromMinutes, calculateFreezeCost, MAX_STREAK_FREEZES, getStreakBonusMultiplier, MAX_STREAK_BONUS_DAYS } from "@/lib/gamification";
 import { useProfile } from "@/hooks/useProfile";
 import * as htmlToImage from 'html-to-image';
 import StreakShareCard from "@/components/StreakShareCard";
@@ -402,6 +402,46 @@ const Ofensiva = () => {
               <p className="text-xs text-muted-foreground">
                 Dedique pelo menos {profile?.min_streak_minutes || 20} minutos criando por dia para manter sua ofensiva.
               </p>
+            </div>
+          </div>
+        </Card>
+
+        {/* Card de Bônus de XP Progressivo */}
+        <Card className="p-4 bg-gradient-to-br from-yellow-500/10 via-orange-500/10 to-red-500/10 border border-orange-500/30 rounded-2xl">
+          <div className="flex items-start gap-3">
+            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-yellow-400 via-orange-500 to-red-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-orange-500/30">
+              <TrendingUp className="w-6 h-6 text-white" />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <p className="text-lg font-bold text-foreground">
+                  +{streakCount}% de XP
+                </p>
+                <Badge variant="outline" className="text-xs border-orange-500/50 text-orange-500">
+                  Bônus Ativo
+                </Badge>
+              </div>
+              <p className="text-sm text-muted-foreground mb-2">
+                Cada dia de ofensiva = +1% de bônus em todo XP ganho
+              </p>
+              {streakCount < MAX_STREAK_BONUS_DAYS && (
+                <div className="flex items-center gap-2 text-xs">
+                  <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 transition-all duration-500"
+                      style={{ width: `${(streakCount / MAX_STREAK_BONUS_DAYS) * 100}%` }}
+                    />
+                  </div>
+                  <span className="text-muted-foreground">
+                    {streakCount}/{MAX_STREAK_BONUS_DAYS}
+                  </span>
+                </div>
+              )}
+              {streakCount >= MAX_STREAK_BONUS_DAYS && (
+                <p className="text-xs font-medium text-orange-500">
+                  🎉 Bônus máximo atingido! Você é lendário!
+                </p>
+              )}
             </div>
           </div>
         </Card>

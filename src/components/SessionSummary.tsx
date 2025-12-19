@@ -7,6 +7,9 @@ interface SessionSummaryProps {
   show: boolean;
   duration: number;
   xpGained: number;
+  baseXP?: number;
+  bonusXP?: number;
+  streakBonusPercent?: number;
   stage: string;
   onContinue: () => void;
   autoRedirectDestination?: string | null;
@@ -39,33 +42,53 @@ const DESTINATION_LABELS: Record<string, string> = {
   '/stats': 'Estatísticas',
 };
 
-const SessionSummary = ({ show, duration, xpGained, stage, onContinue, autoRedirectDestination }: SessionSummaryProps) => {
+const SessionSummary = ({ 
+  show, 
+  duration, 
+  xpGained, 
+  baseXP, 
+  bonusXP, 
+  streakBonusPercent, 
+  stage, 
+  onContinue, 
+  autoRedirectDestination 
+}: SessionSummaryProps) => {
   const [animatedXP, setAnimatedXP] = useState(0);
+  const [animatedBonus, setAnimatedBonus] = useState(0);
   const [countdown, setCountdown] = useState(5);
+
+  const hasBonus = bonusXP && bonusXP > 0 && streakBonusPercent && streakBonusPercent > 0;
 
   // Animate XP count
   useEffect(() => {
     if (show) {
       setAnimatedXP(0);
+      setAnimatedBonus(0);
       
       const targetXP = xpGained;
+      const targetBonus = bonusXP || 0;
       const steps = 20;
       const stepValue = targetXP / steps;
+      const bonusStepValue = targetBonus / steps;
       let current = 0;
+      let currentBonus = 0;
       
       const interval = setInterval(() => {
         current += stepValue;
+        currentBonus += bonusStepValue;
         if (current >= targetXP) {
           setAnimatedXP(targetXP);
+          setAnimatedBonus(targetBonus);
           clearInterval(interval);
         } else {
           setAnimatedXP(Math.floor(current));
+          setAnimatedBonus(Math.floor(currentBonus));
         }
       }, 50);
       
       return () => clearInterval(interval);
     }
-  }, [show, xpGained]);
+  }, [show, xpGained, bonusXP]);
 
   // Auto-redirect countdown when destination is set
   useEffect(() => {
@@ -127,7 +150,7 @@ const SessionSummary = ({ show, duration, xpGained, stage, onContinue, autoRedir
             </div>
           </div>
 
-          {/* XP Card */}
+          {/* XP Card - Com breakdown de bônus */}
           <div className="flex items-center gap-4 p-4 rounded-xl bg-card border border-border">
             <div className="flex items-center justify-center w-12 h-12 rounded-full bg-yellow-500/20">
               <Star className="w-6 h-6 text-yellow-500" />
@@ -135,6 +158,14 @@ const SessionSummary = ({ show, duration, xpGained, stage, onContinue, autoRedir
             <div className="flex-1">
               <p className="text-sm text-muted-foreground">XP Ganho</p>
               <p className="text-xl font-bold text-foreground">+{animatedXP} XP</p>
+              {hasBonus && (
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-xs text-muted-foreground">Base: {baseXP}</span>
+                  <span className="text-xs font-medium text-orange-500">
+                    +{animatedBonus} bônus ({streakBonusPercent}% ofensiva)
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
