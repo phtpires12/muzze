@@ -779,7 +779,7 @@ const CalendarioEditorial = () => {
 
       {/* Popup for overdue content */}
       <PostConfirmationPopup
-        open={isPopupOpen}
+        open={isPopupOpen && !!currentPopupScript}
         onOpenChange={setIsPopupOpen}
         script={currentPopupScript}
         onMarkAsPosted={handlePopupMarkAsPosted}
