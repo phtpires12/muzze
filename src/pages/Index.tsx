@@ -925,7 +925,12 @@ const Index = () => {
         show={showProtectedCelebration}
         freezesUsed={protectedCelebrationData.freezesUsed}
         currentStreak={protectedCelebrationData.currentStreak}
-        onContinue={() => setShowProtectedCelebration(false)}
+        onContinue={() => {
+          setShowProtectedCelebration(false);
+          // Atualizar dados após proteção da ofensiva
+          refetch();
+          fetchStreakData();
+        }}
       />
 
       {/* PWA Install Prompt */}
