@@ -71,11 +71,18 @@ export function useOverdueContent() {
 
     // Find the first non-snoozed script to show popup
     const scriptToShow = (data || []).find(script => !isScriptSnoozed(script.id));
-    if (scriptToShow) {
-      setCurrentPopupScript(scriptToShow);
-      setIsPopupOpen(true);
-    }
+    setCurrentPopupScript(scriptToShow || null);
+    // Don't set isPopupOpen here - let the useEffect handle it
   }, []);
+
+  // Only open popup when there's actually a script to show
+  useEffect(() => {
+    if (currentPopupScript && !isPopupOpen) {
+      setIsPopupOpen(true);
+    } else if (!currentPopupScript && isPopupOpen) {
+      setIsPopupOpen(false);
+    }
+  }, [currentPopupScript]);
 
   const markAsPosted = async (scriptId: string) => {
     await supabase
