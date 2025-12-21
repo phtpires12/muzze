@@ -75,6 +75,11 @@ export const StreakRecoveryModal = ({
     setIsLoading(false);
 
     if (success) {
+      // Toast de sucesso imediato para feedback
+      toast.success('Ofensiva protegida! 🛡️', {
+        description: `Você comprou ${freezesToBuy} bloqueio(s) e salvou sua sequência de ${currentStreak} dias!`,
+      });
+      
       onOpenChange(false);
       // Total freezes used = freezesToBuy (purchased) + availableFreezes (existing)
       onProtectionSuccess?.(lostDaysCount, currentStreak);
