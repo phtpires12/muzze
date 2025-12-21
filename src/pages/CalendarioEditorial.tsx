@@ -19,6 +19,8 @@ import { DayContentModal } from "@/components/calendar/DayContentModal";
 import { MobileWeekAgendaView } from "@/components/calendar/MobileWeekAgendaView";
 import { PostConfirmationPopup } from "@/components/calendar/PostConfirmationPopup";
 import { useOverdueContent } from "@/hooks/useOverdueContent";
+import { useStuckContent } from "@/hooks/useStuckContent";
+import { StuckContentPopup } from "@/components/StuckContentPopup";
 import { PublishStatus } from "@/components/calendar/PublishStatusBadge";
 import { useWorkspaceContext } from "@/contexts/WorkspaceContext";
 
@@ -76,6 +78,14 @@ const CalendarioEditorial = () => {
     remindLater,
     refetch: refetchOverdue,
   } = useOverdueContent();
+
+  // Stuck content popup (content that hasn't been updated recently with approaching publish date)
+  const {
+    currentStuckScript,
+    isStuckPopupOpen,
+    setIsStuckPopupOpen,
+    pauseTemporarily,
+  } = useStuckContent();
 
   const handlePopupMarkAsPosted = async (scriptId: string) => {
     await markAsPosted(scriptId);
@@ -786,6 +796,14 @@ const CalendarioEditorial = () => {
         onReschedule={handlePopupReschedule}
         onRemindLater={handlePopupRemindLater}
         onDelete={handlePopupDelete}
+      />
+
+      {/* Popup for stuck content (approaching publish date but not updated recently) */}
+      <StuckContentPopup
+        open={isStuckPopupOpen && !!currentStuckScript}
+        onOpenChange={setIsStuckPopupOpen}
+        script={currentStuckScript}
+        onPauseTemporarily={pauseTemporarily}
       />
 
       {/* Modal de reagendamento para cards perdidos */}
