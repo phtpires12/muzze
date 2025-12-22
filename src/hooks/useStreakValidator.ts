@@ -147,26 +147,49 @@ export const useStreakValidator = () => {
 
   // Use freezes to recover streak
   const useFreezesToRecover = useCallback(async () => {
-    if (!result || !result.canUseFreeze) return false;
+    if (!result || !result.canUseFreeze) {
+      console.error('[useFreezesToRecover] Cannot use freeze:', { result });
+      return false;
+    }
+
+    // Validar lastEventDate antes de usar
+    if (!result.lastEventDate) {
+      console.error('[useFreezesToRecover] lastEventDate is null');
+      return false;
+    }
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return false;
 
-      const { data: userProfile } = await supabase
+      const { data: userProfile, error: profileError } = await supabase
         .from('profiles')
         .select('streak_freezes, timezone')
         .eq('user_id', user.id)
         .single();
 
-      if (!userProfile) return false;
+      if (profileError || !userProfile) {
+        console.error('[useFreezesToRecover] Failed to fetch profile:', profileError);
+        return false;
+      }
+
+      // Verificar novamente se tem freezes suficientes (dados frescos)
+      if ((userProfile.streak_freezes || 0) < result.lostDaysCount) {
+        console.error('[useFreezesToRecover] Insufficient freezes (fresh check)');
+        return false;
+      }
 
       const timezone = userProfile.timezone || 'America/Sao_Paulo';
       const now = new Date();
       const userDate = new Date(now.toLocaleString('en-US', { timeZone: timezone }));
 
-      // Calculate the dates that need freezes
-      const lastEventDate = new Date(result.lastEventDate + 'T12:00:00');
+      // Validar lastEventDate antes de criar Date
+      const lastEventDateStr = result.lastEventDate;
+      const lastEventDate = new Date(lastEventDateStr + 'T12:00:00');
+      if (isNaN(lastEventDate.getTime())) {
+        console.error('[useFreezesToRecover] Invalid lastEventDate:', lastEventDateStr);
+        return false;
+      }
       
       // Insert freeze usage for each lost day
       for (let i = 1; i <= result.lostDaysCount; i++) {
@@ -207,6 +230,14 @@ export const useStreakValidator = () => {
           .eq('user_id', user.id);
       }
 
+      // Limpar o resultado para evitar reprocessamento
+      setResult(prev => prev ? { 
+        ...prev, 
+        hasLostDays: false,
+        lostDaysCount: 0,
+        canUseFreeze: false 
+      } : null);
+
       await refetchProfile();
       return true;
     } catch (error) {
@@ -217,15 +248,30 @@ export const useStreakValidator = () => {
 
   // Buy freezes and use them to recover streak
   const buyFreezesAndRecover = useCallback(async () => {
-    if (!result || !profile) return false;
+    if (!result || !profile) {
+      console.error('[buyFreezesAndRecover] Missing result or profile');
+      return false;
+    }
+
+    // Validar lastEventDate antes de usar
+    if (!result.lastEventDate) {
+      console.error('[buyFreezesAndRecover] lastEventDate is null');
+      return false;
+    }
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return false;
+      if (!user) {
+        console.error('[buyFreezesAndRecover] No user');
+        return false;
+      }
 
       // Calculate how many freezes to buy
       const freezesToBuy = result.lostDaysCount - result.availableFreezes;
-      if (freezesToBuy <= 0) return false;
+      if (freezesToBuy <= 0) {
+        console.error('[buyFreezesAndRecover] No freezes to buy');
+        return false;
+      }
 
       // Check limit
       const newTotalFreezes = result.availableFreezes + freezesToBuy;
@@ -234,58 +280,91 @@ export const useStreakValidator = () => {
         return false;
       }
 
-      // Calculate cost and check XP
-      const totalCost = freezesToBuy * freezeCost;
-      const userXP = profile.xp_points || 0;
-      if (userXP < totalCost) {
-        console.error('[buyFreezesAndRecover] Insufficient XP');
-        return false;
-      }
-
-      // Get fresh profile data
-      const { data: userProfile } = await supabase
+      // SEMPRE buscar dados FRESCOS do banco antes de qualquer operação
+      const { data: freshProfile, error: profileError } = await supabase
         .from('profiles')
         .select('streak_freezes, timezone, xp_points')
         .eq('user_id', user.id)
         .single();
 
-      if (!userProfile) return false;
+      if (profileError || !freshProfile) {
+        console.error('[buyFreezesAndRecover] Failed to fetch fresh profile:', profileError);
+        return false;
+      }
 
-      const timezone = userProfile.timezone || 'America/Sao_Paulo';
+      // Validar com dados FRESCOS (não cache)
+      const totalCost = freezesToBuy * freezeCost;
+      const freshXP = freshProfile.xp_points || 0;
+      
+      if (freshXP < totalCost) {
+        console.error('[buyFreezesAndRecover] Insufficient XP (fresh check):', freshXP, '<', totalCost);
+        return false;
+      }
+
+      // Validar lastEventDate antes de criar Date
+      const lastEventDateStr = result.lastEventDate;
+      const lastEventDate = new Date(lastEventDateStr + 'T12:00:00');
+      if (isNaN(lastEventDate.getTime())) {
+        console.error('[buyFreezesAndRecover] Invalid lastEventDate:', lastEventDateStr);
+        return false;
+      }
+
+      const timezone = freshProfile.timezone || 'America/Sao_Paulo';
       const now = new Date();
       const userDate = new Date(now.toLocaleString('en-US', { timeZone: timezone }));
 
-      // 1. Buy freezes: Deduct XP and add freezes to profile
-      const currentFreezes = userProfile.streak_freezes || 0;
+      // TUDO VALIDADO - Agora executar operações
+      console.log('[buyFreezesAndRecover] Starting operations:', {
+        freezesToBuy,
+        totalCost,
+        freshXP,
+        lostDaysCount: result.lostDaysCount
+      });
+
+      // 1. Buy freezes: Deduct XP and add freezes to profile (operação atômica)
+      const currentFreezes = freshProfile.streak_freezes || 0;
       const newFreezesAfterBuy = currentFreezes + freezesToBuy;
       
-      await supabase
+      const { error: updateError } = await supabase
         .from('profiles')
         .update({
-          xp_points: (userProfile.xp_points || 0) - totalCost,
+          xp_points: freshXP - totalCost,
           streak_freezes: newFreezesAfterBuy
         })
         .eq('user_id', user.id);
 
+      if (updateError) {
+        console.error('[buyFreezesAndRecover] Failed to update profile:', updateError);
+        return false;
+      }
+
       // 2. Use all needed freezes to cover lost days
-      const lastEventDate = new Date(result.lastEventDate + 'T12:00:00');
-      
       for (let i = 1; i <= result.lostDaysCount; i++) {
         const freezeDate = new Date(lastEventDate);
         freezeDate.setDate(freezeDate.getDate() + i);
 
-        await supabase.from('streak_freeze_usage').insert({
+        const { error: freezeError } = await supabase.from('streak_freeze_usage').insert({
           user_id: user.id,
           used_at: freezeDate.toISOString(),
         });
+
+        if (freezeError) {
+          console.error('[buyFreezesAndRecover] Failed to insert freeze usage:', freezeError);
+          // Continuar mesmo com erro (melhor ter o XP debitado e streak salvo)
+        }
       }
 
       // 3. Deduct all used freezes from profile
       const finalFreezeCount = newFreezesAfterBuy - result.lostDaysCount;
-      await supabase
+      const { error: finalUpdateError } = await supabase
         .from('profiles')
         .update({ streak_freezes: Math.max(0, finalFreezeCount) })
         .eq('user_id', user.id);
+
+      if (finalUpdateError) {
+        console.error('[buyFreezesAndRecover] Failed to update final freeze count:', finalUpdateError);
+        // Continuar (XP já foi debitado, streak precisa ser atualizado)
+      }
 
       // 4. Update last_event_date to yesterday (and restore streak if it was reset)
       const yesterday = new Date(userDate);
@@ -293,21 +372,40 @@ export const useStreakValidator = () => {
       const yesterdayStr = yesterday.toISOString().split('T')[0];
 
       if (result.wasRecentlyReset) {
-        await supabase
+        const { error: streakError } = await supabase
           .from('streaks')
           .update({ 
             current_streak: result.originalStreak,
             last_event_date: yesterdayStr 
           })
           .eq('user_id', user.id);
+
+        if (streakError) {
+          console.error('[buyFreezesAndRecover] Failed to restore streak:', streakError);
+          return false;
+        }
       } else {
-        await supabase
+        const { error: streakError } = await supabase
           .from('streaks')
           .update({ last_event_date: yesterdayStr })
           .eq('user_id', user.id);
+
+        if (streakError) {
+          console.error('[buyFreezesAndRecover] Failed to update last_event_date:', streakError);
+          return false;
+        }
       }
 
+      // Limpar o resultado para evitar reprocessamento
+      setResult(prev => prev ? { 
+        ...prev, 
+        hasLostDays: false,
+        lostDaysCount: 0,
+        canUseFreeze: false 
+      } : null);
+
       await refetchProfile();
+      console.log('[buyFreezesAndRecover] Success!');
       return true;
     } catch (error) {
       console.error('[useStreakValidator] Error buying freezes and recovering:', error);
