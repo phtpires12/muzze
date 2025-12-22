@@ -75,13 +75,9 @@ export function useOverdueContent() {
     // Don't set isPopupOpen here - let the useEffect handle it
   }, []);
 
-  // Only open popup when there's actually a script to show
+  // Sync popup state with currentPopupScript - use functional updates to avoid stale closures
   useEffect(() => {
-    if (currentPopupScript && !isPopupOpen) {
-      setIsPopupOpen(true);
-    } else if (!currentPopupScript && isPopupOpen) {
-      setIsPopupOpen(false);
-    }
+    setIsPopupOpen(!!currentPopupScript);
   }, [currentPopupScript]);
 
   const markAsPosted = async (scriptId: string) => {
