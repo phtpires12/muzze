@@ -55,66 +55,92 @@ export const StreakRecoveryModal = ({
   const canBuyAndRecover = !canUseFreeze && freezesToBuy > 0 && canAfford && !wouldExceedLimit;
 
   const handleUseFreeze = async () => {
+    if (isLoading) return; // Prevenir múltiplos cliques
+    
     setIsLoading(true);
-    const success = await onUseFreeze();
-    setIsLoading(false);
+    try {
+      const success = await onUseFreeze();
 
-    if (success) {
-      onOpenChange(false);
-      onProtectionSuccess?.(lostDaysCount, currentStreak);
-    } else {
-      toast.error('Erro ao usar bloqueio', {
-        description: 'Tente novamente mais tarde.',
-      });
+      if (success) {
+        onOpenChange(false);
+        onProtectionSuccess?.(lostDaysCount, currentStreak);
+      } else {
+        toast.error('Erro ao usar bloqueio', {
+          description: 'Tente novamente mais tarde.',
+        });
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleBuyFreezesAndRecover = async () => {
+    if (isLoading) return; // Prevenir múltiplos cliques
+    
     setIsLoading(true);
-    const success = await onBuyFreezesAndRecover();
-    setIsLoading(false);
+    try {
+      const success = await onBuyFreezesAndRecover();
 
-    if (success) {
-      // Toast de sucesso imediato para feedback
-      toast.success('Ofensiva protegida! 🛡️', {
-        description: `Você comprou ${freezesToBuy} bloqueio(s) e salvou sua sequência de ${currentStreak} dias!`,
-      });
-      
-      onOpenChange(false);
-      // Total freezes used = freezesToBuy (purchased) + availableFreezes (existing)
-      onProtectionSuccess?.(lostDaysCount, currentStreak);
-    } else {
-      toast.error('Erro ao comprar bloqueios', {
-        description: 'Tente novamente mais tarde.',
-      });
+      if (success) {
+        toast.success('Ofensiva protegida! 🛡️', {
+          description: `Você comprou ${freezesToBuy} bloqueio(s) e salvou sua sequência de ${currentStreak} dias!`,
+        });
+        
+        onOpenChange(false);
+        onProtectionSuccess?.(lostDaysCount, currentStreak);
+      } else {
+        toast.error('Erro ao comprar bloqueios', {
+          description: 'Tente novamente mais tarde.',
+        });
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleResetStreak = async () => {
+    if (isLoading) return; // Prevenir múltiplos cliques
+    
     setIsLoading(true);
-    const success = await onResetStreak();
-    setIsLoading(false);
+    try {
+      const success = await onResetStreak();
 
-    if (success) {
-      toast.info('Ofensiva reiniciada', {
-        description: 'Não desista! Comece uma nova sequência hoje.',
-      });
-      onOpenChange(false);
-    } else {
-      toast.error('Erro ao reiniciar ofensiva', {
-        description: 'Tente novamente mais tarde.',
-      });
+      if (success) {
+        toast.info('Ofensiva reiniciada', {
+          description: 'Não desista! Comece uma nova sequência hoje.',
+        });
+        onOpenChange(false);
+      } else {
+        toast.error('Erro ao reiniciar ofensiva', {
+          description: 'Tente novamente mais tarde.',
+        });
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleDismiss = () => {
+    if (isLoading) return; // Prevenir dismiss durante loading
     onDismiss();
     onOpenChange(false);
   };
 
+  // Handler para controlar fechamento do modal
+  const handleOpenChange = (newOpen: boolean) => {
+    if (isLoading) return; // Prevenir fechar durante loading
+    onOpenChange(newOpen);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md mx-auto">
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="max-w-md mx-auto relative">
+        {/* Overlay de loading para bloquear interações */}
+        {isLoading && (
+          <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-50 rounded-lg">
+            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          </div>
+        )}
         <DialogHeader className="text-center">
           <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center mb-4">
             <AlertTriangle className="w-8 h-8 text-white" />
