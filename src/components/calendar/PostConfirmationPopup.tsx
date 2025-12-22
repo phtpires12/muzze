@@ -184,7 +184,7 @@ export function PostConfirmationPopup({
 
   if (deviceType === "mobile") {
     return (
-      <Drawer open={open} onOpenChange={onOpenChange}>
+      <Drawer open={open} onOpenChange={onOpenChange} shouldScaleBackground={false}>
         <DrawerContent className="relative">
           {deleteButton}
           <DrawerHeader>

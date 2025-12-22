@@ -160,14 +160,10 @@ export function useStuckContent() {
     setCurrentStuckScript(scriptToShow || null);
   }, []);
 
-  // Open popup when there's a script to show
+  // Sync popup state with currentStuckScript - use functional updates to avoid stale closures
   useEffect(() => {
-    if (currentStuckScript && !isStuckPopupOpen) {
-      setIsStuckPopupOpen(true);
-    } else if (!currentStuckScript && isStuckPopupOpen) {
-      setIsStuckPopupOpen(false);
-    }
-  }, [currentStuckScript, isStuckPopupOpen]);
+    setIsStuckPopupOpen(!!currentStuckScript);
+  }, [currentStuckScript]);
 
   // Handle "pause temporarily" action
   const pauseTemporarily = (script: StuckScript) => {

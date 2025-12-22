@@ -153,7 +153,7 @@ export function StuckContentPopup({
 
   if (deviceType === "mobile") {
     return (
-      <Drawer open={open} onOpenChange={onOpenChange}>
+      <Drawer open={open} onOpenChange={onOpenChange} shouldScaleBackground={false}>
         <DrawerContent>
           <DrawerHeader>
             <DrawerTitle className="text-center px-4">{title}</DrawerTitle>
