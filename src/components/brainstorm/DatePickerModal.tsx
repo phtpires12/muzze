@@ -34,7 +34,7 @@ export const DatePickerModal = ({ onDateSelect, triggerClassName }: DatePickerMo
   };
 
   return (
-    <Drawer open={open} onOpenChange={setOpen}>
+    <Drawer open={open} onOpenChange={setOpen} shouldScaleBackground={false}>
       <DrawerTrigger asChild>
         <Button
           variant="outline"

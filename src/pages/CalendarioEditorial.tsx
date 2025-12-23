@@ -185,6 +185,16 @@ const CalendarioEditorial = () => {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [location.key, activeWorkspace?.id]);
 
+  // Cleanup: fechar todos os popups ao sair da página
+  useEffect(() => {
+    return () => {
+      setIsPopupOpen(false);
+      setIsStuckPopupOpen(false);
+      setModalOpen(false);
+      setRescheduleModalOpen(false);
+    };
+  }, []);
+
   const getScriptStage = (script: Script): string => {
     // Prioridade 1: status explícito do banco
     if (script.status === "editing") return "edit";
@@ -777,34 +787,50 @@ const CalendarioEditorial = () => {
         ) : null}
       </div>
 
-      <DayContentModal
-        open={modalOpen}
-        onOpenChange={setModalOpen}
-        date={selectedDate}
-        scripts={selectedDate ? getScriptsForDate(selectedDate) : []}
-        onViewScript={handleViewScript}
-        onAddScript={handleAddScript}
-        onRefresh={fetchScripts}
-      />
+      {/* Priorização de popups: apenas um por vez para evitar overlays acumulados */}
+      {/* Prioridade: Overdue > Stuck > DayContent modal */}
+      {(() => {
+        const hasOverduePopup = isPopupOpen && !!currentPopupScript;
+        const hasStuckPopup = isStuckPopupOpen && !!currentStuckScript;
+        
+        // DayContent modal só aparece se não há popups prioritários
+        const shouldShowDayModal = modalOpen && !hasOverduePopup && !hasStuckPopup;
+        // Stuck popup só aparece se não há overdue popup
+        const shouldShowStuckPopup = hasStuckPopup && !hasOverduePopup;
+        
+        return (
+          <>
+            <DayContentModal
+              open={shouldShowDayModal}
+              onOpenChange={setModalOpen}
+              date={selectedDate}
+              scripts={selectedDate ? getScriptsForDate(selectedDate) : []}
+              onViewScript={handleViewScript}
+              onAddScript={handleAddScript}
+              onRefresh={fetchScripts}
+            />
 
-      {/* Popup for overdue content */}
-      <PostConfirmationPopup
-        open={isPopupOpen && !!currentPopupScript}
-        onOpenChange={setIsPopupOpen}
-        script={currentPopupScript}
-        onMarkAsPosted={handlePopupMarkAsPosted}
-        onReschedule={handlePopupReschedule}
-        onRemindLater={handlePopupRemindLater}
-        onDelete={handlePopupDelete}
-      />
+            {/* Popup for overdue content - maior prioridade */}
+            <PostConfirmationPopup
+              open={hasOverduePopup}
+              onOpenChange={setIsPopupOpen}
+              script={currentPopupScript}
+              onMarkAsPosted={handlePopupMarkAsPosted}
+              onReschedule={handlePopupReschedule}
+              onRemindLater={handlePopupRemindLater}
+              onDelete={handlePopupDelete}
+            />
 
-      {/* Popup for stuck content (approaching publish date but not updated recently) */}
-      <StuckContentPopup
-        open={isStuckPopupOpen && !!currentStuckScript}
-        onOpenChange={setIsStuckPopupOpen}
-        script={currentStuckScript}
-        onPauseTemporarily={pauseTemporarily}
-      />
+            {/* Popup for stuck content - só aparece se não há overdue */}
+            <StuckContentPopup
+              open={shouldShowStuckPopup}
+              onOpenChange={setIsStuckPopupOpen}
+              script={currentStuckScript}
+              onPauseTemporarily={pauseTemporarily}
+            />
+          </>
+        );
+      })()}
 
       {/* Modal de reagendamento para cards perdidos */}
       <RescheduleDateModal

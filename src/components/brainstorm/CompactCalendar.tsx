@@ -102,7 +102,7 @@ export const CompactCalendar = ({ scheduledIdeas, onDayClick }: CompactCalendarP
       </div>
 
       {isMobile ? (
-        <Drawer open={!!selectedDate} onOpenChange={() => setSelectedDate(null)}>
+        <Drawer open={!!selectedDate} onOpenChange={() => setSelectedDate(null)} shouldScaleBackground={false}>
           <DrawerContent>
             <DrawerHeader className="text-left">
               <DrawerTitle>
