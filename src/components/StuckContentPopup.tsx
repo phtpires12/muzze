@@ -35,7 +35,8 @@ export function StuckContentPopup({
   const deviceType = useDeviceType();
   const navigate = useNavigate();
 
-  if (!script) return null;
+  // Só abre o modal se houver um script válido
+  const isOpen = open && !!script;
 
   const getUrgencyStyles = () => {
     switch (script.urgencyLevel) {
@@ -153,31 +154,35 @@ export function StuckContentPopup({
 
   if (deviceType === "mobile") {
     return (
-      <Drawer open={open} onOpenChange={onOpenChange} shouldScaleBackground={false}>
-        <DrawerContent>
-          <DrawerHeader>
-            <DrawerTitle className="text-center px-4">{title}</DrawerTitle>
-            <DrawerDescription className="text-center">
-              {description}
-            </DrawerDescription>
-          </DrawerHeader>
-          <div className="px-4 pb-8">{content}</div>
-        </DrawerContent>
+      <Drawer open={isOpen} onOpenChange={onOpenChange} shouldScaleBackground={false}>
+        {script && (
+          <DrawerContent>
+            <DrawerHeader>
+              <DrawerTitle className="text-center px-4">{title}</DrawerTitle>
+              <DrawerDescription className="text-center">
+                {description}
+              </DrawerDescription>
+            </DrawerHeader>
+            <div className="px-4 pb-8">{content}</div>
+          </DrawerContent>
+        )}
       </Drawer>
     );
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="text-center px-4">{title}</DialogTitle>
-          <DialogDescription className="text-center">
-            {description}
-          </DialogDescription>
-        </DialogHeader>
-        {content}
-      </DialogContent>
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      {script && (
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center px-4">{title}</DialogTitle>
+            <DialogDescription className="text-center">
+              {description}
+            </DialogDescription>
+          </DialogHeader>
+          {content}
+        </DialogContent>
+      )}
     </Dialog>
   );
 }
