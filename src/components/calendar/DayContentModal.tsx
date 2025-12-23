@@ -400,7 +400,7 @@ export function DayContentModal({
   // Mobile: Use Drawer
   if (deviceType === "mobile") {
     return (
-      <Drawer open={open} onOpenChange={onOpenChange}>
+      <Drawer open={open} onOpenChange={onOpenChange} shouldScaleBackground={false}>
         <DrawerContent>
           <DrawerHeader>
             <DrawerTitle>Publicações Agendadas - {formattedDate}</DrawerTitle>
