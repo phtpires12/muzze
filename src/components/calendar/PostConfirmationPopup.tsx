@@ -42,11 +42,12 @@ export function PostConfirmationPopup({
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
-  if (!script) return null;
-
   // Detecta se o script foi auto-agendado (publish_date === created_at date)
-  const wasAutoScheduled = script.created_at && script.publish_date && 
+  const wasAutoScheduled = script?.created_at && script?.publish_date && 
     format(new Date(script.created_at), "yyyy-MM-dd") === script.publish_date;
+
+  // Só abre o modal se houver um script válido
+  const isOpen = open && !!script;
 
   const handleMarkAsPosted = () => {
     onMarkAsPosted(script.id);
@@ -184,29 +185,33 @@ export function PostConfirmationPopup({
 
   if (deviceType === "mobile") {
     return (
-      <Drawer open={open} onOpenChange={onOpenChange} shouldScaleBackground={false}>
-        <DrawerContent className="relative">
-          {deleteButton}
-          <DrawerHeader>
-            <DrawerTitle className="text-center px-8">{title}</DrawerTitle>
-            <DrawerDescription className="text-center">{description}</DrawerDescription>
-          </DrawerHeader>
-          <div className="px-4 pb-8">{content}</div>
-        </DrawerContent>
+      <Drawer open={isOpen} onOpenChange={onOpenChange} shouldScaleBackground={false}>
+        {script && (
+          <DrawerContent className="relative">
+            {deleteButton}
+            <DrawerHeader>
+              <DrawerTitle className="text-center px-8">{title}</DrawerTitle>
+              <DrawerDescription className="text-center">{description}</DrawerDescription>
+            </DrawerHeader>
+            <div className="px-4 pb-8">{content}</div>
+          </DrawerContent>
+        )}
       </Drawer>
     );
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md relative">
-        {deleteButton}
-        <DialogHeader>
-          <DialogTitle className="text-center px-8">{title}</DialogTitle>
-          <DialogDescription className="text-center">{description}</DialogDescription>
-        </DialogHeader>
-        {content}
-      </DialogContent>
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      {script && (
+        <DialogContent className="max-w-md relative">
+          {deleteButton}
+          <DialogHeader>
+            <DialogTitle className="text-center px-8">{title}</DialogTitle>
+            <DialogDescription className="text-center">{description}</DialogDescription>
+          </DialogHeader>
+          {content}
+        </DialogContent>
+      )}
     </Dialog>
   );
 }
