@@ -3,12 +3,26 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Check, CalendarDays, Clock, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from "@/components/ui/drawer";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { useDeviceType } from "@/hooks/useDeviceType";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 
 interface OverdueScript {
@@ -38,23 +52,20 @@ export function PostConfirmationPopup({
   onRemindLater,
   onDelete,
 }: PostConfirmationPopupProps) {
-  const deviceType = useDeviceType();
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
   // Só abre o modal se houver um script válido
   const isOpen = open && !!script;
 
-  // Early return se não há script - retorna Dialog/Drawer fechado para evitar overlay órfão
+  // Early return se não há script - retorna Dialog fechado para evitar overlay órfão
   if (!script) {
-    if (deviceType === "mobile") {
-      return <Drawer open={false} onOpenChange={onOpenChange} shouldScaleBackground={false} />;
-    }
     return <Dialog open={false} onOpenChange={onOpenChange} />;
   }
 
-  // Agora sabemos que script existe, podemos acessar suas propriedades
-  const wasAutoScheduled = script.created_at && script.publish_date && 
+  const wasAutoScheduled =
+    script.created_at &&
+    script.publish_date &&
     format(new Date(script.created_at), "yyyy-MM-dd") === script.publish_date;
 
   const handleMarkAsPosted = () => {
@@ -86,10 +97,9 @@ export function PostConfirmationPopup({
   const content = (
     <div className="space-y-4 py-2">
       <p className="text-center text-muted-foreground">
-        {wasAutoScheduled 
+        {wasAutoScheduled
           ? "Esse conteúdo foi salvo sem data de publicação."
-          : `Agendado para ${format(new Date(script.publish_date), "d 'de' MMMM", { locale: ptBR })}`
-        }
+          : `Agendado para ${format(new Date(script.publish_date), "d 'de' MMMM", { locale: ptBR })}`}
       </p>
 
       <div className="space-y-3">
@@ -125,7 +135,9 @@ export function PostConfirmationPopup({
                   )}
                 >
                   <CalendarDays className="mr-2 h-4 w-4" />
-                  {selectedDate ? format(selectedDate, "PPP", { locale: ptBR }) : "Escolha uma nova data"}
+                  {selectedDate
+                    ? format(selectedDate, "PPP", { locale: ptBR })
+                    : "Escolha uma nova data"}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="center">
@@ -139,7 +151,7 @@ export function PostConfirmationPopup({
                 />
               </PopoverContent>
             </Popover>
-            
+
             {selectedDate && (
               <Button onClick={handleReschedule} className="w-full">
                 Reagendar para {format(selectedDate, "d/MM", { locale: ptBR })}
@@ -160,10 +172,10 @@ export function PostConfirmationPopup({
     </div>
   );
 
-  const title = wasAutoScheduled 
+  const title = wasAutoScheduled
     ? `Você esqueceu de agendar "${script.title}"`
     : `Você conseguiu postar "${script.title}"?`;
-  const description = wasAutoScheduled 
+  const description = wasAutoScheduled
     ? "Agende uma data para este conteúdo ou exclua-o"
     : "Atualize o status do seu conteúdo";
 
@@ -178,12 +190,16 @@ export function PostConfirmationPopup({
         <AlertDialogHeader>
           <AlertDialogTitle>Excluir conteúdo?</AlertDialogTitle>
           <AlertDialogDescription>
-            Tem certeza que deseja excluir "{script.title}"? Esta ação não pode ser desfeita.
+            Tem certeza que deseja excluir "{script.title}"? Esta ação não pode ser
+            desfeita.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancelar</AlertDialogCancel>
-          <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+          <AlertDialogAction
+            onClick={handleDelete}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
             Excluir
           </AlertDialogAction>
         </AlertDialogFooter>
@@ -191,35 +207,19 @@ export function PostConfirmationPopup({
     </AlertDialog>
   );
 
-  if (deviceType === "mobile") {
-    return (
-      <Drawer open={isOpen} onOpenChange={onOpenChange} shouldScaleBackground={false}>
-        {script && (
-          <DrawerContent className="relative">
-            {deleteButton}
-            <DrawerHeader>
-              <DrawerTitle className="text-center px-8">{title}</DrawerTitle>
-              <DrawerDescription className="text-center">{description}</DrawerDescription>
-            </DrawerHeader>
-            <div className="px-4 pb-8">{content}</div>
-          </DrawerContent>
-        )}
-      </Drawer>
-    );
-  }
-
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      {script && (
-        <DialogContent className="max-w-md relative">
-          {deleteButton}
-          <DialogHeader>
-            <DialogTitle className="text-center px-8">{title}</DialogTitle>
-            <DialogDescription className="text-center">{description}</DialogDescription>
-          </DialogHeader>
-          {content}
-        </DialogContent>
-      )}
+      <DialogContent className="relative w-[calc(100%-2rem)] max-w-md max-h-[80vh] overflow-auto">
+        {deleteButton}
+        <DialogHeader>
+          <DialogTitle className="text-center px-8">{title}</DialogTitle>
+          <DialogDescription className="text-center">
+            {description}
+          </DialogDescription>
+        </DialogHeader>
+        {content}
+      </DialogContent>
     </Dialog>
   );
 }
+
