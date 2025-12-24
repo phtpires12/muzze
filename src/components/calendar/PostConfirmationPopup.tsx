@@ -42,12 +42,20 @@ export function PostConfirmationPopup({
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
-  // Detecta se o script foi auto-agendado (publish_date === created_at date)
-  const wasAutoScheduled = script?.created_at && script?.publish_date && 
-    format(new Date(script.created_at), "yyyy-MM-dd") === script.publish_date;
-
   // Só abre o modal se houver um script válido
   const isOpen = open && !!script;
+
+  // Early return se não há script - retorna Dialog/Drawer fechado para evitar overlay órfão
+  if (!script) {
+    if (deviceType === "mobile") {
+      return <Drawer open={false} onOpenChange={onOpenChange} shouldScaleBackground={false} />;
+    }
+    return <Dialog open={false} onOpenChange={onOpenChange} />;
+  }
+
+  // Agora sabemos que script existe, podemos acessar suas propriedades
+  const wasAutoScheduled = script.created_at && script.publish_date && 
+    format(new Date(script.created_at), "yyyy-MM-dd") === script.publish_date;
 
   const handleMarkAsPosted = () => {
     onMarkAsPosted(script.id);

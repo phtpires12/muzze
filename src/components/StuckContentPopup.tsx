@@ -38,6 +38,15 @@ export function StuckContentPopup({
   // Só abre o modal se houver um script válido
   const isOpen = open && !!script;
 
+  // Early return se não há script - retorna Dialog/Drawer fechado para evitar overlay órfão
+  if (!script) {
+    if (deviceType === "mobile") {
+      return <Drawer open={false} onOpenChange={onOpenChange} shouldScaleBackground={false} />;
+    }
+    return <Dialog open={false} onOpenChange={onOpenChange} />;
+  }
+
+  // Agora sabemos que script existe, podemos acessar suas propriedades
   const getUrgencyStyles = () => {
     switch (script.urgencyLevel) {
       case "critical":
