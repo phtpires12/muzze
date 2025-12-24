@@ -8,14 +8,6 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerDescription,
-} from "@/components/ui/drawer";
-import { useDeviceType } from "@/hooks/useDeviceType";
 import { StuckScript } from "@/hooks/useStuckContent";
 import { cn } from "@/lib/utils";
 
@@ -32,17 +24,13 @@ export function StuckContentPopup({
   script,
   onPauseTemporarily,
 }: StuckContentPopupProps) {
-  const deviceType = useDeviceType();
   const navigate = useNavigate();
 
   // Só abre o modal se houver um script válido
   const isOpen = open && !!script;
 
-  // Early return se não há script - retorna Dialog/Drawer fechado para evitar overlay órfão
+  // Early return se não há script - retorna Dialog fechado para evitar overlay órfão
   if (!script) {
-    if (deviceType === "mobile") {
-      return <Drawer open={false} onOpenChange={onOpenChange} shouldScaleBackground={false} />;
-    }
     return <Dialog open={false} onOpenChange={onOpenChange} />;
   }
 
@@ -126,7 +114,8 @@ export function StuckContentPopup({
       {/* Info */}
       <div className="text-center space-y-1">
         <p className="text-muted-foreground">
-          Está na etapa de <span className="font-medium text-foreground">{getStageLabel()}</span> há{" "}
+          Está na etapa de{" "}
+          <span className="font-medium text-foreground">{getStageLabel()}</span> há{" "}
           <span className="font-medium text-foreground">{script.daysSinceUpdate} dias</span>
         </p>
         <p className="text-sm text-muted-foreground flex items-center justify-center gap-1">
@@ -137,11 +126,7 @@ export function StuckContentPopup({
 
       {/* Actions */}
       <div className="space-y-3">
-        <Button
-          onClick={handleContinueWorking}
-          className="w-full"
-          size="lg"
-        >
+        <Button onClick={handleContinueWorking} className="w-full" size="lg">
           <Play className="w-4 h-4 mr-2" />
           Continuar trabalhando
         </Button>
@@ -161,37 +146,18 @@ export function StuckContentPopup({
   const title = `"${script.title}" está parado`;
   const description = "Precisa de ajuda para avançar nesse conteúdo?";
 
-  if (deviceType === "mobile") {
-    return (
-      <Drawer open={isOpen} onOpenChange={onOpenChange} shouldScaleBackground={false}>
-        {script && (
-          <DrawerContent>
-            <DrawerHeader>
-              <DrawerTitle className="text-center px-4">{title}</DrawerTitle>
-              <DrawerDescription className="text-center">
-                {description}
-              </DrawerDescription>
-            </DrawerHeader>
-            <div className="px-4 pb-8">{content}</div>
-          </DrawerContent>
-        )}
-      </Drawer>
-    );
-  }
-
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      {script && (
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-center px-4">{title}</DialogTitle>
-            <DialogDescription className="text-center">
-              {description}
-            </DialogDescription>
-          </DialogHeader>
-          {content}
-        </DialogContent>
-      )}
+      <DialogContent className="w-[calc(100%-2rem)] max-w-md max-h-[80vh] overflow-auto">
+        <DialogHeader>
+          <DialogTitle className="text-center px-4">{title}</DialogTitle>
+          <DialogDescription className="text-center">
+            {description}
+          </DialogDescription>
+        </DialogHeader>
+        {content}
+      </DialogContent>
     </Dialog>
   );
 }
+
