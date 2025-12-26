@@ -456,7 +456,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
   };
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-6 pb-24 md:pb-6">
+    <div className="min-h-screen bg-background p-4 md:p-6 pb-28 sm:pb-32 scroll-pb-28 sm:scroll-pb-32">
       <div className="max-w-4xl mx-auto w-full">
         {/* Header with action buttons */}
         <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3 mb-4">
