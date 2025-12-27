@@ -70,6 +70,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
   });
   const [showComparison, setShowComparison] = useState(false);
   const [hasLoadedOriginal, setHasLoadedOriginal] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
   const [viewMode, setViewMode] = useState<'sections' | 'full-text'>('sections');
   const [showScheduleAlert, setShowScheduleAlert] = useState(false);
   const [scheduleDate, setScheduleDate] = useState<Date | undefined>(undefined);
@@ -196,6 +197,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
         setContentType(data.content_type || "");
         setPublishDate(data.publish_date || "");
         setThumbnailUrl(data.thumbnail_url || null);
+        setIsLoaded(true);
       }
     } catch (error) {
       console.error('Error loading script:', error);
@@ -208,6 +210,12 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
   };
 
   const handleAutoSave = async () => {
+    // PROTEÇÃO: Não salvar se os dados ainda não foram carregados (evita sobrescrever com defaults)
+    if (!isLoaded && scriptId) {
+      console.log('[DEBUG - ScriptEditor] ⚠️ Auto-save bloqueado: dados ainda não carregados');
+      return;
+    }
+    
     console.log('[DEBUG - ScriptEditor] Auto-save iniciado', {
       scriptId,
       hasContent: !!(content.gancho || content.setup || content.desenvolvimento || content.conclusao),
