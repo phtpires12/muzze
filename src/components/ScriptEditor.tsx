@@ -772,7 +772,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
           {showComparison && isReviewMode ? (
             viewMode === 'full-text' ? (
               // Full text mode - continuous text view
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-8">
                 {/* Original Version - Full Text (Read-only) */}
                 <div className="space-y-4">
                   <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
@@ -836,7 +836,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
               </div>
             ) : (
               // Side-by-side comparison view by sections
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-8">
                 {/* Original Version (Read-only) */}
                 <div className="space-y-4">
                   <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
@@ -852,7 +852,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => copyToClipboard(originalContent.gancho, "Gancho (Original)")}
+                          onClick={() => copyToClipboard(htmlToText(originalContent.gancho), "Gancho (Original)")}
                           className="h-8 w-8 hover:bg-accent"
                           title="Copiar texto original"
                         >
@@ -860,7 +860,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                         </Button>
                       </div>
                       <Textarea
-                        value={originalContent.gancho}
+                        value={htmlToText(originalContent.gancho)}
                         readOnly
                         className="min-h-[100px] md:min-h-[120px] text-sm md:text-base leading-relaxed resize-none border-border/40 bg-muted/20 focus-visible:ring-0"
                       />
@@ -874,7 +874,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => copyToClipboard(originalContent.setup, "Setup (Original)")}
+                          onClick={() => copyToClipboard(htmlToText(originalContent.setup), "Setup (Original)")}
                           className="h-8 w-8 hover:bg-accent"
                           title="Copiar texto original"
                         >
@@ -882,7 +882,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                         </Button>
                       </div>
                       <Textarea
-                        value={originalContent.setup}
+                        value={htmlToText(originalContent.setup)}
                         readOnly
                         className="min-h-[100px] md:min-h-[120px] text-sm md:text-base leading-relaxed resize-none border-border/40 bg-muted/20 focus-visible:ring-0"
                       />
@@ -896,7 +896,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => copyToClipboard(originalContent.desenvolvimento, "Desenvolvimento (Original)")}
+                          onClick={() => copyToClipboard(htmlToText(originalContent.desenvolvimento), "Desenvolvimento (Original)")}
                           className="h-8 w-8 hover:bg-accent"
                           title="Copiar texto original"
                         >
@@ -904,7 +904,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                         </Button>
                       </div>
                       <Textarea
-                        value={originalContent.desenvolvimento}
+                        value={htmlToText(originalContent.desenvolvimento)}
                         readOnly
                         className="min-h-[100px] md:min-h-[120px] text-sm md:text-base leading-relaxed resize-none border-border/40 bg-muted/20 focus-visible:ring-0"
                       />
@@ -918,7 +918,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => copyToClipboard(originalContent.conclusao, "Conclusão (Original)")}
+                          onClick={() => copyToClipboard(htmlToText(originalContent.conclusao), "Conclusão (Original)")}
                           className="h-8 w-8 hover:bg-accent"
                           title="Copiar texto original"
                         >
@@ -926,7 +926,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                         </Button>
                       </div>
                       <Textarea
-                        value={originalContent.conclusao}
+                        value={htmlToText(originalContent.conclusao)}
                         readOnly
                         className="min-h-[100px] md:min-h-[120px] text-sm md:text-base leading-relaxed resize-none border-border/40 bg-muted/20 focus-visible:ring-0"
                       />
