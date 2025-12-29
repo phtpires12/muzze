@@ -1,5 +1,6 @@
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useNavigate } from "react-router-dom";
 import { Plus, ExternalLink, FileText, Check, CalendarDays, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -84,13 +85,12 @@ const getActionButtonLabel = (script: Script): string => {
 
 function IdeaCard({ 
   script, 
-  onViewScript,
   onRefresh,
 }: { 
   script: Script; 
-  onViewScript: (scriptId: string) => void;
   onRefresh?: () => void;
 }) {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [showReschedule, setShowReschedule] = useState(false);
   const [rescheduleDate, setRescheduleDate] = useState<Date | undefined>(undefined);
@@ -257,7 +257,7 @@ function IdeaCard({
         {isPosted ? (
           <>
             <Button 
-              onClick={() => onViewScript(script.id)}
+              onClick={() => navigate(`/content/view/${script.id}`)}
               variant="outline"
               className="w-full"
             >
@@ -327,7 +327,7 @@ function IdeaCard({
         ) : (
           <>
             <Button 
-              onClick={() => onViewScript(script.id)}
+              onClick={() => navigate(`/content/view/${script.id}`)}
               className="w-full bg-gradient-to-r from-primary to-accent hover:opacity-90 text-white"
             >
               {getActionButtonLabel(script)}
@@ -382,7 +382,6 @@ export function DayContentModal({
               <IdeaCard 
                 key={script.id} 
                 script={script} 
-                onViewScript={onViewScript}
                 onRefresh={onRefresh}
               />
             ))}

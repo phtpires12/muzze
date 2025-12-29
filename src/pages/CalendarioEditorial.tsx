@@ -232,26 +232,8 @@ const CalendarioEditorial = () => {
   };
 
   const handleViewScript = (scriptId: string) => {
-    const script = scripts.find(s => s.id === scriptId);
-    if (!script) return;
-    
-    // Prioridade 1: status explícito do banco
-    if (script.status === "editing") {
-      navigate(`/session?stage=edit&scriptId=${scriptId}`);
-    } else if (script.status === "review") {
-      navigate(`/session?stage=review&scriptId=${scriptId}`);
-    } else if (script.status === "recording") {
-      navigate(`/shot-list/record?scriptId=${scriptId}`);
-    } else if (script.status === "draft") {
-      navigate(`/session?stage=script&scriptId=${scriptId}`);
-    // Prioridade 2: inferências como fallback
-    } else if (script.shot_list && script.shot_list.length > 0) {
-      navigate(`/shot-list/record?scriptId=${scriptId}`);
-    } else if (script.content && script.content.length > 100) {
-      navigate(`/session?stage=script&scriptId=${scriptId}`);
-    } else {
-      navigate(`/session?stage=idea&scriptId=${scriptId}`);
-    }
+    // Navega para modo visualização (sem iniciar sessão automaticamente)
+    navigate(`/content/view/${scriptId}`);
   };
 
   const handleDragStart = (e: React.DragEvent, script: Script) => {
