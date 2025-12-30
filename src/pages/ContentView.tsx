@@ -20,6 +20,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { RichTextRenderer } from "@/components/ui/rich-text-renderer";
 
 interface Script {
   id: string;
@@ -312,28 +313,28 @@ export default function ContentView() {
                 {parsedContent.gancho && (
                   <div className="space-y-1">
                     <p className="text-xs font-semibold text-primary">Gancho</p>
-                    <p className="text-foreground text-sm whitespace-pre-wrap">{parsedContent.gancho}</p>
+                    <RichTextRenderer content={parsedContent.gancho} className="text-sm" />
                   </div>
                 )}
                 
                 {parsedContent.setup && (
                   <div className="space-y-1">
                     <p className="text-xs font-semibold text-primary">Setup</p>
-                    <p className="text-foreground text-sm whitespace-pre-wrap">{parsedContent.setup}</p>
+                    <RichTextRenderer content={parsedContent.setup} className="text-sm" />
                   </div>
                 )}
                 
                 {parsedContent.desenvolvimento && (
                   <div className="space-y-1">
                     <p className="text-xs font-semibold text-primary">Desenvolvimento</p>
-                    <p className="text-foreground text-sm whitespace-pre-wrap">{parsedContent.desenvolvimento}</p>
+                    <RichTextRenderer content={parsedContent.desenvolvimento} className="text-sm" />
                   </div>
                 )}
                 
                 {parsedContent.conclusao && (
                   <div className="space-y-1">
                     <p className="text-xs font-semibold text-primary">Conclusão</p>
-                    <p className="text-foreground text-sm whitespace-pre-wrap">{parsedContent.conclusao}</p>
+                    <RichTextRenderer content={parsedContent.conclusao} className="text-sm" />
                   </div>
                 )}
               </CardContent>
