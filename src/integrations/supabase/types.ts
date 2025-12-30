@@ -167,6 +167,7 @@ export type Database = {
           editing_progress: string[] | null
           editing_times: Json | null
           id: string
+          notes: string | null
           original_content: string | null
           publish_date: string | null
           publish_status: string | null
@@ -189,6 +190,7 @@ export type Database = {
           editing_progress?: string[] | null
           editing_times?: Json | null
           id?: string
+          notes?: string | null
           original_content?: string | null
           publish_date?: string | null
           publish_status?: string | null
@@ -211,6 +213,7 @@ export type Database = {
           editing_progress?: string[] | null
           editing_times?: Json | null
           id?: string
+          notes?: string | null
           original_content?: string | null
           publish_date?: string | null
           publish_status?: string | null
