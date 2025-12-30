@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RichTextEditor, htmlToText, textToHtml } from "@/components/ui/rich-text-editor";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { 
   Calendar as CalendarIcon,
   FileText,
@@ -16,7 +17,9 @@ import {
   ArrowLeft,
   Check,
   ArrowRight,
-  Copy
+  Copy,
+  StickyNote,
+  ChevronRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -74,6 +77,8 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
   const [viewMode, setViewMode] = useState<'sections' | 'full-text'>('sections');
   const [showScheduleAlert, setShowScheduleAlert] = useState(false);
   const [scheduleDate, setScheduleDate] = useState<Date | undefined>(undefined);
+  const [notes, setNotes] = useState("");
+  const [notesOpen, setNotesOpen] = useState(false);
 
   // Refs for auto-resize textareas (kept for readonly Textareas)
   const ganchoRef = useRef<HTMLTextAreaElement>(null);
@@ -116,7 +121,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
         clearTimeout(autoSaveTimer.current);
       }
     };
-  }, [title, content, references, contentType, publishDate, thumbnailUrl]);
+  }, [title, content, references, contentType, publishDate, thumbnailUrl, notes]);
 
   const loadScript = async () => {
     try {
@@ -197,6 +202,15 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
         setContentType(data.content_type || "");
         setPublishDate(data.publish_date || "");
         setThumbnailUrl(data.thumbnail_url || null);
+        
+        // Load notes - pre-fill with central_idea if notes is empty
+        const loadedNotes = data.notes;
+        if (!loadedNotes && data.central_idea) {
+          setNotes(data.central_idea);
+        } else {
+          setNotes(loadedNotes || "");
+        }
+        
         setIsLoaded(true);
       }
     } catch (error) {
@@ -243,6 +257,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
         publish_date: publishDate || null,
         thumbnail_url: thumbnailUrl,
         workspace_id: activeWorkspace?.id,
+        notes: notes,
       };
 
       // Atualizar status automaticamente baseado no modo atual
@@ -705,6 +720,29 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
             </div>
           )}
         </div>
+
+        {/* Notes - Collapsible */}
+        <Collapsible open={notesOpen} onOpenChange={setNotesOpen} className="mb-6">
+          <CollapsibleTrigger className="flex items-center gap-2 p-3 rounded-lg hover:bg-accent/10 transition-colors w-full text-left group">
+            <StickyNote className="w-4 h-4 text-muted-foreground" />
+            <span className="text-sm text-muted-foreground flex-1">Anotações</span>
+            <ChevronRight className={cn(
+              "w-4 h-4 text-muted-foreground transition-transform duration-200",
+              notesOpen && "rotate-90"
+            )} />
+          </CollapsibleTrigger>
+          <CollapsibleContent className="pt-2">
+            <Textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Pensamentos soltos, lembretes, instruções de thumbnail..."
+              className="min-h-[120px] text-sm resize-none border-border/40 bg-muted/20"
+            />
+            <p className="text-xs text-muted-foreground mt-2">
+              Este espaço é pré-preenchido com sua ideia central e pode ser usado para anotações livres.
+            </p>
+          </CollapsibleContent>
+        </Collapsible>
 
         {/* Content Editor */}
         <div className="space-y-4">
