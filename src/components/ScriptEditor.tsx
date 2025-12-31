@@ -532,8 +532,8 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
           />
         </div>
 
-        {/* Properties Grid */}
-        <div className="mb-6 md:mb-8 space-y-3">
+        {/* Properties Grid - z-0 to stay below editor */}
+        <div className="mb-6 md:mb-8 space-y-3 relative z-0">
           {/* Content Type */}
           <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3 p-3 rounded-lg hover:bg-accent/10 transition-colors group">
             <div className="flex items-center gap-2 md:min-w-[180px] text-sm text-muted-foreground">
@@ -746,8 +746,8 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
           </CollapsibleContent>
         </Collapsible>
 
-        {/* Content Editor */}
-        <div className="space-y-4">
+        {/* Content Editor - z-10 to stay above properties and isolate stacking */}
+        <div className="space-y-4 relative z-10 isolation-isolate">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
             <div className="border-l-4 border-primary/30 pl-4">
               <h3 className="text-base md:text-lg font-semibold text-foreground flex items-center gap-2">
@@ -845,6 +845,8 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                     <Textarea
                       value={getFullText(originalContent)}
                       readOnly
+                      onClick={(e) => e.stopPropagation()}
+                      onMouseDown={(e) => e.stopPropagation()}
                       className="min-h-[400px] text-sm md:text-base leading-relaxed resize-none border-border/40 bg-muted/20 focus-visible:ring-0"
                     />
                   </div>
@@ -874,6 +876,8 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                     <Textarea
                       value={getFullText(content)}
                       readOnly
+                      onClick={(e) => e.stopPropagation()}
+                      onMouseDown={(e) => e.stopPropagation()}
                       className="min-h-[400px] text-sm md:text-base leading-relaxed resize-none border-primary/40 bg-background focus-visible:ring-1 focus-visible:ring-primary"
                     />
                     <p className="text-xs text-muted-foreground mt-2">
@@ -910,6 +914,8 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                       <Textarea
                         value={htmlToText(originalContent.gancho)}
                         readOnly
+                        onClick={(e) => e.stopPropagation()}
+                        onMouseDown={(e) => e.stopPropagation()}
                         className="min-h-[100px] md:min-h-[120px] text-sm md:text-base leading-relaxed resize-none border-border/40 bg-muted/20 focus-visible:ring-0"
                       />
                     </div>
@@ -932,6 +938,8 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                       <Textarea
                         value={htmlToText(originalContent.setup)}
                         readOnly
+                        onClick={(e) => e.stopPropagation()}
+                        onMouseDown={(e) => e.stopPropagation()}
                         className="min-h-[100px] md:min-h-[120px] text-sm md:text-base leading-relaxed resize-none border-border/40 bg-muted/20 focus-visible:ring-0"
                       />
                     </div>
@@ -954,6 +962,8 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                       <Textarea
                         value={htmlToText(originalContent.desenvolvimento)}
                         readOnly
+                        onClick={(e) => e.stopPropagation()}
+                        onMouseDown={(e) => e.stopPropagation()}
                         className="min-h-[100px] md:min-h-[120px] text-sm md:text-base leading-relaxed resize-none border-border/40 bg-muted/20 focus-visible:ring-0"
                       />
                     </div>
@@ -976,6 +986,8 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                       <Textarea
                         value={htmlToText(originalContent.conclusao)}
                         readOnly
+                        onClick={(e) => e.stopPropagation()}
+                        onMouseDown={(e) => e.stopPropagation()}
                         className="min-h-[100px] md:min-h-[120px] text-sm md:text-base leading-relaxed resize-none border-border/40 bg-muted/20 focus-visible:ring-0"
                       />
                     </div>
