@@ -634,30 +634,30 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
               {references.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {references.map((ref, index) => (
-                    <div key={index} className="flex items-center gap-1 group/ref max-w-full">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 gap-2 pr-1 max-w-full"
-                        asChild
+                    <div key={index} className="flex items-center gap-1 group/ref">
+                      {/* Link clicável - separado do botão de remover */}
+                      <a 
+                        href={ref} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="inline-flex items-center gap-2 h-8 px-3 border border-input rounded-md text-xs hover:bg-accent/10 transition-colors max-w-[200px]"
                       >
-                        <a href={ref} target="_blank" rel="noopener noreferrer" className="truncate">
-                          <LinkIcon className="w-3 h-3 flex-shrink-0" />
-                          <span className="max-w-[150px] md:max-w-[200px] truncate text-xs">
-                            {ref}
-                          </span>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 ml-1 flex-shrink-0 opacity-0 group-hover/ref:opacity-100 transition-opacity"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              setReferences(references.filter((_, i) => i !== index));
-                            }}
-                          >
-                            <X className="w-3 h-3" />
-                          </Button>
-                        </a>
+                        <LinkIcon className="w-3 h-3 flex-shrink-0" />
+                        <span className="truncate">{ref}</span>
+                      </a>
+                      
+                      {/* Botão de remover - SEPARADO do link */}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 opacity-0 group-hover/ref:opacity-100 transition-opacity"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setReferences(references.filter((_, i) => i !== index));
+                        }}
+                      >
+                        <X className="w-3 h-3" />
                       </Button>
                     </div>
                   ))}
@@ -735,6 +735,8 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
             <Textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
               placeholder="Pensamentos soltos, lembretes, instruções de thumbnail..."
               className="min-h-[120px] text-sm resize-none border-border/40 bg-muted/20"
             />

@@ -133,6 +133,8 @@ export const RichTextEditor = ({
         !editable && "opacity-70 cursor-not-allowed",
         className
       )}
+      onClick={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
     >
       <EditorContent editor={editor} />
     </div>
