@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { sanitizeContentSections } from "@/lib/html-sanitizer";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useSessionContext } from "@/contexts/SessionContext";
@@ -142,13 +143,13 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
             ? JSON.parse(data.content)
             : data.content;
           
-          // Ensure all sections exist
-          loadedContent = {
+          // Ensure all sections exist and sanitize to remove residual empty links
+          loadedContent = sanitizeContentSections({
             gancho: loadedContent?.gancho || "",
             setup: loadedContent?.setup || "",
             desenvolvimento: loadedContent?.desenvolvimento || "",
             conclusao: loadedContent?.conclusao || ""
-          };
+          });
         } catch {
           loadedContent = { gancho: "", setup: "", desenvolvimento: "", conclusao: "" };
         }
@@ -169,13 +170,13 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
               originalLoadedContent = loadedContent;
             }
             
-            // Ensure all sections exist
-            originalLoadedContent = {
+            // Ensure all sections exist and sanitize
+            originalLoadedContent = sanitizeContentSections({
               gancho: originalLoadedContent?.gancho || "",
               setup: originalLoadedContent?.setup || "",
               desenvolvimento: originalLoadedContent?.desenvolvimento || "",
               conclusao: originalLoadedContent?.conclusao || ""
-            };
+            });
           } catch {
             originalLoadedContent = { gancho: "", setup: "", desenvolvimento: "", conclusao: "" };
           }
@@ -248,10 +249,13 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
         return;
       }
 
+      // Sanitize content before saving to remove empty/residual anchor tags
+      const sanitizedContent = sanitizeContentSections(content);
+      
       const scriptData: any = {
         user_id: user.id,
         title,
-        content: JSON.stringify(content),
+        content: JSON.stringify(sanitizedContent),
         reference_links: references.filter(ref => ref.trim() !== ""),
         content_type: contentType,
         publish_date: publishDate || null,
@@ -264,7 +268,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
       if (!isReviewMode) {
         // Se está na etapa de roteiro, garantir que status é 'draft'
         scriptData.status = 'draft';
-        scriptData.original_content = JSON.stringify(content);
+        scriptData.original_content = JSON.stringify(sanitizedContent);
       } else {
         // Se está na etapa de revisão, garantir que status é 'review'
         scriptData.status = 'review';
