@@ -300,10 +300,13 @@ const CalendarioEditorial = () => {
   };
 
   const handleAddScript = async (date: Date) => {
+    console.log('[CalendarioEditorial] handleAddScript called with date:', date);
     const publishDate = format(date, "yyyy-MM-dd");
     
     try {
       const { data: { user } } = await supabase.auth.getUser();
+      console.log('[CalendarioEditorial] user:', user?.id);
+      
       if (!user) {
         toast({
           title: "Erro",
@@ -312,6 +315,14 @@ const CalendarioEditorial = () => {
         });
         return;
       }
+      
+      console.log('[CalendarioEditorial] Creating idea with:', {
+        user_id: user.id,
+        title: "Nova Ideia",
+        status: "draft_idea",
+        publish_date: publishDate,
+        workspace_id: activeWorkspace?.id,
+      });
       
       const { data: newIdea, error } = await supabase
         .from("scripts")
@@ -325,14 +336,20 @@ const CalendarioEditorial = () => {
         .select("id")
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error('[CalendarioEditorial] Insert error:', error);
+        throw error;
+      }
+      
+      console.log('[CalendarioEditorial] Created idea:', newIdea);
+      console.log('[CalendarioEditorial] Navigating to:', `/session?stage=idea&scriptId=${newIdea.id}`);
       
       navigate(`/session?stage=idea&scriptId=${newIdea.id}`);
     } catch (error) {
-      console.error("Error creating idea:", error);
+      console.error("[CalendarioEditorial] Error creating idea:", error);
       toast({
         title: "Erro ao criar ideia",
-        description: "Não foi possível criar a ideia. Tente novamente.",
+        description: `Não foi possível criar a ideia: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
         variant: "destructive",
       });
     }
