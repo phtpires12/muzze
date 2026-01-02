@@ -299,9 +299,43 @@ const CalendarioEditorial = () => {
     setModalOpen(true);
   };
 
-  const handleAddScript = (date: Date) => {
+  const handleAddScript = async (date: Date) => {
     const publishDate = format(date, "yyyy-MM-dd");
-    navigate(`/session?stage=idea&publishDate=${publishDate}`);
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: "Erro",
+          description: "Você precisa estar logado para criar conteúdo.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      const { data: newIdea, error } = await supabase
+        .from("scripts")
+        .insert({
+          user_id: user.id,
+          title: "Nova Ideia",
+          status: "draft_idea",
+          publish_date: publishDate,
+          workspace_id: activeWorkspace?.id,
+        })
+        .select("id")
+        .single();
+      
+      if (error) throw error;
+      
+      navigate(`/session?stage=idea&scriptId=${newIdea.id}`);
+    } catch (error) {
+      console.error("Error creating idea:", error);
+      toast({
+        title: "Erro ao criar ideia",
+        description: "Não foi possível criar a ideia. Tente novamente.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleDeleteScript = async (e: React.MouseEvent, scriptId: string) => {
