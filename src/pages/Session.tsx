@@ -421,6 +421,7 @@ const Session = () => {
 
   // If stage is "idea", show either the specific idea detail or brainstorm workspace
   if (session.stage === "idea") {
+    console.log('[Session] Rendering idea stage, scriptId:', scriptId, 'scriptIdParam:', scriptIdParam);
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
         <div className="container mx-auto px-4 py-8">
