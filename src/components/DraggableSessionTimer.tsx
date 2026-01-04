@@ -244,9 +244,9 @@ export const DraggableSessionTimer = ({
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
+    e.preventDefault(); // Sempre prevenir scroll ao tocar no timer
     if (e.touches.length === 2) {
       // Pinch gesture detected - NOT drag
-      e.preventDefault();
       setIsPinching(true);
       setIsDragging(false);
       initialPinchDistance.current = getDistance(e.touches);
@@ -278,6 +278,11 @@ export const DraggableSessionTimer = ({
       }
 
       if (!isDragging) return;
+
+      // Prevenir scroll durante o arraste
+      if ('touches' in e) {
+        e.preventDefault();
+      }
 
       const clientX = 'touches' in e ? e.touches[0]?.clientX : e.clientX;
       const clientY = 'touches' in e ? e.touches[0]?.clientY : e.clientY;

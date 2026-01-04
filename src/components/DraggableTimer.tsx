@@ -94,6 +94,7 @@ export const DraggableTimer = ({
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
+    e.preventDefault(); // Prevenir scroll ao iniciar drag
     setIsDragging(true);
     const touch = e.touches[0];
     startPos.current = {
@@ -105,6 +106,11 @@ export const DraggableTimer = ({
   useEffect(() => {
     const handleMove = (e: MouseEvent | TouchEvent) => {
       if (!isDragging) return;
+
+      // Prevenir scroll durante o arraste
+      if ('touches' in e) {
+        e.preventDefault();
+      }
 
       const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
       const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
@@ -134,7 +140,7 @@ export const DraggableTimer = ({
     if (isDragging) {
       window.addEventListener('mousemove', handleMove);
       window.addEventListener('mouseup', handleEnd);
-      window.addEventListener('touchmove', handleMove);
+      window.addEventListener('touchmove', handleMove, { passive: false });
       window.addEventListener('touchend', handleEnd);
     }
 
