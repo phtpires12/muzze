@@ -123,8 +123,16 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
-  body {
+  html, body {
     @apply bg-background text-foreground;
+    touch-action: pan-x pan-y;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: text;
+  }
+
+  #root {
+    touch-action: pan-x pan-y;
   }
 }
 
