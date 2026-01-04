@@ -491,7 +491,10 @@ const ShotListRecord = () => {
   return (
     <div 
       className="min-h-screen bg-background p-4 md:p-6"
-      style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}
+      style={{ 
+        paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)',
+        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 6rem)'
+      }}
     >
       <div className="max-w-7xl mx-auto">
         {/* Mobile Header */}
