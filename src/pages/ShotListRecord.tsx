@@ -489,14 +489,19 @@ const ShotListRecord = () => {
   }, [isAppVisible, session.isPaused, session.isActive]);
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-6">
+    <div 
+      className="min-h-screen bg-background p-4 md:p-6"
+      style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}
+    >
       <div className="max-w-7xl mx-auto">
         {/* Mobile Header */}
         <div className="md:hidden mb-4 space-y-3">
+          {/* Linha 1: Navegação + Título + Status */}
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
               size="icon"
+              className="shrink-0"
               onClick={async () => {
                 if (!scriptId) {
                   console.error('scriptId não encontrado para atualizar status');
@@ -515,25 +520,22 @@ const ShotListRecord = () => {
             >
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <div className="flex-1">
-              <h1 className="text-lg font-bold text-foreground">Gravação</h1>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-lg font-bold text-foreground truncate">Gravação</h1>
               <p className="text-xs text-muted-foreground truncate">{scriptTitle}</p>
             </div>
-            
-            {/* Indicador de status + Botão de Edição */}
-            <div className="flex items-center gap-2">
-              <SaveStatusIndicator status={autoSaveStatus} />
-              <Button
-                onClick={handleAdvanceToEdit}
-                disabled={autoSaveStatus === 'saving'}
-                size="sm"
-                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 whitespace-nowrap"
-              >
-                <ArrowRight className="w-4 h-4 mr-1.5" />
-                Avançar para Edição
-              </Button>
-            </div>
+            <SaveStatusIndicator status={autoSaveStatus} />
           </div>
+
+          {/* Linha 2: Botão Avançar em largura total */}
+          <Button
+            onClick={handleAdvanceToEdit}
+            disabled={autoSaveStatus === 'saving'}
+            className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+          >
+            <ArrowRight className="w-4 h-4 mr-2" />
+            Avançar para Edição
+          </Button>
 
           {/* Mobile Progress Card - Compacto */}
           <div className="bg-card p-3 rounded-lg border border-border">
