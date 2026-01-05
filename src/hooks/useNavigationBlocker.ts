@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from "react";
+import { useEffect, useRef } from "react";
 import { useBlocker } from "react-router-dom";
 import { useSessionContext } from "@/contexts/SessionContext";
 
@@ -26,8 +26,13 @@ export const useNavigationBlocker = ({
 }: UseNavigationBlockerOptions) => {
   const { timer } = useSessionContext();
   
-  // Memoizar callback para evitar re-renders desnecessários
-  const memoizedCallback = useCallback(onNavigationBlocked, [onNavigationBlocked]);
+  // Usar ref para manter o callback estável e evitar re-renders
+  const callbackRef = useRef(onNavigationBlocked);
+  
+  // Atualizar ref quando callback mudar (sem causar re-render do blocker)
+  useEffect(() => {
+    callbackRef.current = onNavigationBlocked;
+  }, [onNavigationBlocked]);
   
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) => {
@@ -45,12 +50,12 @@ export const useNavigationBlocker = ({
     }
   );
   
-  // Quando bloqueado, executar o callback
+  // Quando bloqueado, executar o callback via ref (dependência estável)
   useEffect(() => {
     if (blocker.state === "blocked") {
-      memoizedCallback();
+      callbackRef.current();
     }
-  }, [blocker.state, memoizedCallback]);
+  }, [blocker.state]);
   
   return blocker;
 };

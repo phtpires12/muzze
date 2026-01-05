@@ -66,11 +66,14 @@ const ShotListReview = () => {
   // State para controlar se devemos prosseguir com navegação bloqueada
   const [shouldProceedWithBlocker, setShouldProceedWithBlocker] = useState(false);
 
+  // Memoizar callback para evitar recriações desnecessárias
+  const handleNavigationBlocked = useCallback(() => {
+    setShowEndConfirmation(true);
+  }, []);
+
   // Interceptar navegação via swipe/browser back quando há sessão ativa
   const blocker = useNavigationBlocker({
-    onNavigationBlocked: () => {
-      setShowEndConfirmation(true);
-    },
+    onNavigationBlocked: handleNavigationBlocked,
     shouldBlock: true,
   });
 
