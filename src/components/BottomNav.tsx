@@ -76,7 +76,7 @@ export const BottomNav = () => {
       continueProject(mostRecentProject);
     } else {
       trackEvent('nav_click', { action: 'quick_start_session' });
-      startSession('ideation');
+      startSession('idea');
       navigate('/session');
     }
   };
@@ -84,12 +84,15 @@ export const BottomNav = () => {
   const continueProject = (project: typeof mostRecentProject) => {
     if (!project) return;
 
-    setMuzzeSession({ contentId: project.id, stage: project.stage });
+    // Normalizar stage para o novo padrão
+    const normalizedStage = project.stage === "ideation" ? "idea" : project.stage;
+    setMuzzeSession({ contentId: project.id, stage: normalizedStage as any });
 
     switch (project.stage) {
       case "ideation":
-        startSession("ideation");
-        navigate(`/session?stage=ideation`);
+      case "idea":
+        startSession("idea");
+        navigate(`/session?stage=idea`);
         break;
       case "script":
       case "review":

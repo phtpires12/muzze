@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export type ProjectType = "idea" | "script" | "shotlist";
-export type SessionStage = "ideation" | "script" | "record" | "edit" | "review";
+export type SessionStage = "idea" | "ideation" | "script" | "record" | "edit" | "review";
 
 export interface InProgressProject {
   type: ProjectType;
@@ -73,13 +73,13 @@ export const useInProgressProjects = () => {
               return "script";
             }
             
-            // Prioridade 4: Se tem central_idea → ideação
+            // Prioridade 4: Se tem central_idea → ideação (usar "idea" como padrão)
             if (script.central_idea && script.central_idea.trim().length > 0) {
-              return "ideation";
+              return "idea";
             }
             
-            // Fallback: ideação
-            return "ideation";
+            // Fallback: ideação (usar "idea" como padrão)
+            return "idea";
           };
 
           const stage = detectStage();

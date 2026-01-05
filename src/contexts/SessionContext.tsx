@@ -60,7 +60,7 @@ const BACKGROUND_PAUSE_MS = 2 * 60 * 1000; // 2 minutos em background = pausar
 const defaultTimerState: TimerState = {
   isActive: false,
   isPaused: false,
-  stage: "ideation",
+  stage: "idea",
   elapsedSeconds: 0,
   stageElapsedSeconds: 0,
   startedAt: null,
@@ -385,6 +385,9 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
   // Iniciar timer
   const startTimer = useCallback(async (initialStage: SessionStage) => {
     try {
+      // NORMALIZAR: "ideation" é sinônimo de "idea"
+      const normalizedStage: SessionStage = initialStage === "ideation" ? "idea" : initialStage;
+      
       // LIMPAR QUALQUER ESTADO ÓRFÃO ANTES DE INICIAR NOVA SESSÃO
       localStorage.removeItem('muzze_global_timer');
       localStorage.removeItem('muzze_session_state');
@@ -406,7 +409,7 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
       setTimer({
         isActive: true,
         isPaused: false,
-        stage: initialStage,
+        stage: normalizedStage,
         elapsedSeconds: 0,
         stageElapsedSeconds: 0,
         startedAt: now,
@@ -422,10 +425,10 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
       await supabase.from('analytics_events').insert({
         user_id: user.id,
         event: 'session_started',
-        payload: { stage: initialStage }
+        payload: { stage: normalizedStage }
       });
 
-      console.log(`[SessionContext] ✅ Timer iniciado na etapa ${initialStage}`);
+      console.log(`[SessionContext] ✅ Timer iniciado na etapa ${normalizedStage}`);
     } catch (error: any) {
       console.error('[SessionContext] Erro ao iniciar timer:', error);
       toast({
