@@ -288,7 +288,7 @@ export default function ContentView() {
       </div>
 
       <ScrollArea className="h-[calc(100vh-80px)]">
-        <div className="container mx-auto px-4 py-6 pb-32 max-w-2xl">
+        <div className="container mx-auto px-4 py-6 pb-32 max-w-2xl overflow-x-hidden">
           {/* Thumbnail (YouTube) */}
           {script.thumbnail_url && (
             <div className="mb-6 rounded-xl overflow-hidden border border-border">
@@ -302,7 +302,7 @@ export default function ContentView() {
 
           {/* Main Card */}
           <Card className="mb-6" onClick={handleEditAttempt}>
-            <CardContent className="p-6 space-y-4 cursor-pointer">
+            <CardContent className="p-6 space-y-4 cursor-pointer break-words overflow-hidden">
               {/* Title */}
               <div className="flex items-start gap-3">
                 <div className={cn(
@@ -317,9 +317,9 @@ export default function ContentView() {
                     <FileText className="w-5 h-5 text-primary" />
                   )}
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <h1 className={cn(
-                    "text-xl font-bold",
+                    "text-xl font-bold break-words",
                     script.title?.trim() ? "text-foreground" : "text-muted-foreground"
                   )}>
                     {script.title?.trim() || "Sem título"}
@@ -404,17 +404,17 @@ export default function ContentView() {
 
               {/* Reference URL */}
               {script.reference_url && (
-                <div className="space-y-2 pt-2 border-t border-border">
+                <div className="space-y-2 pt-2 border-t border-border overflow-hidden">
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Referência</p>
                   <a 
                     href={script.reference_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-primary hover:underline flex items-center gap-2"
+                    className="text-primary hover:underline flex items-center gap-2 max-w-full"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <ExternalLink className="w-4 h-4 shrink-0" />
-                    <span className="truncate">{script.reference_url}</span>
+                    <span className="truncate block max-w-[calc(100%-2rem)]">{script.reference_url}</span>
                   </a>
                 </div>
               )}
@@ -424,7 +424,7 @@ export default function ContentView() {
           {/* Script Content (Read-only) */}
           {hasContent && (
             <Card className="mb-6" onClick={handleEditAttempt}>
-              <CardContent className="p-6 space-y-4 cursor-pointer">
+              <CardContent className="p-6 space-y-4 cursor-pointer break-words overflow-hidden">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Roteiro</p>
                 
                 {parsedContent.gancho && (
