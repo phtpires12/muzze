@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useNavigationBlocker } from "@/hooks/useNavigationBlocker";
 import { useSession, SessionStage } from "@/hooks/useSession";
@@ -98,11 +98,14 @@ const Session = () => {
   // State para controlar se devemos prosseguir com navegação bloqueada
   const [shouldProceedWithBlocker, setShouldProceedWithBlocker] = useState(false);
 
+  // Memoizar callback para evitar recriações desnecessárias
+  const handleNavigationBlocked = useCallback(() => {
+    setShowEndConfirmation(true);
+  }, []);
+
   // Interceptar navegação via swipe/browser back quando há sessão ativa
   const blocker = useNavigationBlocker({
-    onNavigationBlocked: () => {
-      setShowEndConfirmation(true);
-    },
+    onNavigationBlocked: handleNavigationBlocked,
     shouldBlock: true,
   });
 

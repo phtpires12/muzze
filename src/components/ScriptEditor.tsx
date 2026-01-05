@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
@@ -85,16 +85,19 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
   const [notesOpen, setNotesOpen] = useState(false);
   const [showEndSessionConfirmation, setShowEndSessionConfirmation] = useState(false);
 
+  // Memoizar callback para evitar recriações desnecessárias
+  const handleNavigationBlocked = useCallback(() => {
+    // Mostrar o mesmo modal de confirmação que o botão "Voltar" mostra
+    if (!publishDate && scriptId) {
+      setShowScheduleAlert(true);
+    } else {
+      setShowEndSessionConfirmation(true);
+    }
+  }, [publishDate, scriptId]);
+
   // Interceptar navegação via swipe/browser back quando há sessão ativa
   const blocker = useNavigationBlocker({
-    onNavigationBlocked: () => {
-      // Mostrar o mesmo modal de confirmação que o botão "Voltar" mostra
-      if (!publishDate && scriptId) {
-        setShowScheduleAlert(true);
-      } else {
-        setShowEndSessionConfirmation(true);
-      }
-    },
+    onNavigationBlocked: handleNavigationBlocked,
     shouldBlock: true,
   });
 
