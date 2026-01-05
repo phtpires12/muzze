@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigationBlocker } from "@/hooks/useNavigationBlocker";
 import { Button } from "@/components/ui/button";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ArrowLeft, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -58,6 +60,20 @@ const ShotListReview = () => {
   // Global celebration context (for hiding timer during celebrations)
   const { isShowingAnyCelebration } = useCelebration();
 
+  // State para modal de confirmação de encerramento
+  const [showEndConfirmation, setShowEndConfirmation] = useState(false);
+  
+  // State para controlar se devemos prosseguir com navegação bloqueada
+  const [shouldProceedWithBlocker, setShouldProceedWithBlocker] = useState(false);
+
+  // Interceptar navegação via swipe/browser back quando há sessão ativa
+  const blocker = useNavigationBlocker({
+    onNavigationBlocked: () => {
+      setShowEndConfirmation(true);
+    },
+    shouldBlock: true,
+  });
+
   // Celebration system (local, for legacy flow)
   const { 
     celebrationData, 
@@ -69,6 +85,10 @@ const ShotListReview = () => {
 
   // Wrapper para encerrar sessão com celebração
   const handleEndSession = async () => {
+    // Guardar se devemos prosseguir com navegação bloqueada após celebração
+    const blockerWasActive = blocker.state === "blocked";
+    setShouldProceedWithBlocker(blockerWasActive);
+    
     const result = await endSession();
     if (result) {
       const sessionSummary = {
@@ -77,7 +97,22 @@ const ShotListReview = () => {
         stage: 'review' as const,
       };
       const streakCount = (result as any).newStreak || 0;
+      
       await triggerFullCelebration(sessionSummary, streakCount, result.xpGained || 0);
+    }
+  };
+
+  // Handler para confirmar encerramento via modal
+  const handleConfirmEndSession = async () => {
+    setShowEndConfirmation(false);
+    await handleEndSession();
+  };
+
+  // Handler para cancelar encerramento
+  const handleCancelEndSession = () => {
+    setShowEndConfirmation(false);
+    if (blocker.state === "blocked") {
+      blocker.reset?.();
     }
   };
 
@@ -85,14 +120,24 @@ const ShotListReview = () => {
   const handleDismissSessionSummary = () => {
     dismissSessionSummary();
     if (celebrationData.streakCount === 0 && celebrationData.unlockedTrophies.length === 0) {
-      navigate("/");
+      if (shouldProceedWithBlocker) {
+        blocker.proceed?.();
+        setShouldProceedWithBlocker(false);
+      } else {
+        navigate("/");
+      }
     }
   };
 
   const handleDismissStreakCelebration = () => {
     originalDismissStreakCelebration();
     if (celebrationData.unlockedTrophies.length === 0) {
-      navigate("/");
+      if (shouldProceedWithBlocker) {
+        blocker.proceed?.();
+        setShouldProceedWithBlocker(false);
+      } else {
+        navigate("/");
+      }
     }
   };
 
@@ -100,7 +145,12 @@ const ShotListReview = () => {
     originalDismissTrophyCelebration();
     const remainingTrophies = celebrationData.unlockedTrophies.slice(1);
     if (remainingTrophies.length === 0) {
-      navigate("/");
+      if (shouldProceedWithBlocker) {
+        blocker.proceed?.();
+        setShouldProceedWithBlocker(false);
+      } else {
+        navigate("/");
+      }
     }
   };
 
@@ -629,6 +679,28 @@ const ShotListReview = () => {
         currentShotId={galleryOpenShotId}
         onClose={() => setGalleryOpenShotId(null)}
       />
+
+      {/* Alert Dialog para confirmar encerramento de sessão via swipe/back */}
+      <AlertDialog open={showEndConfirmation} onOpenChange={(open) => {
+        if (!open) handleCancelEndSession();
+        else setShowEndConfirmation(true);
+      }}>
+        <AlertDialogContent className="z-[150]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Encerrar sessão?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Ao encerrar, seu tempo será salvo e você verá o resumo da sua sessão criativa.
+              Tem certeza que deseja finalizar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelEndSession}>Continuar trabalhando</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmEndSession}>
+              Sim, encerrar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
