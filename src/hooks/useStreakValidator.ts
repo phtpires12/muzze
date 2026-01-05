@@ -427,6 +427,16 @@ export const useStreakValidator = () => {
         })
         .eq('user_id', user.id);
 
+      // Limpar o resultado para fechar o modal e evitar reprocessamento
+      setResult(prev => prev ? { 
+        ...prev, 
+        hasLostDays: false,
+        lostDaysCount: 0,
+        canUseFreeze: false,
+        currentStreak: 0,
+        originalStreak: 0,
+      } : null);
+
       return true;
     } catch (error) {
       console.error('[useStreakValidator] Error resetting streak:', error);
