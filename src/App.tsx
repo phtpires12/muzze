@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { createBrowserRouter, RouterProvider, Navigate, Outlet } from "react-router-dom";
 import { AppNavigationProvider, AppLayout } from "@/components/AppNavigation";
 import { SessionContextProvider } from "@/contexts/SessionContext";
 import { WorkspaceContextProvider } from "@/contexts/WorkspaceContext";
@@ -109,6 +109,52 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+// Root layout component that wraps all routes with providers that need router context
+const RootLayout = () => (
+  <AppNavigationProvider>
+    <WorkspaceContextProvider>
+      <GlobalCelebrations />
+      <LevelUpModal />
+      <TrophyUnlockedModal />
+      <Outlet />
+    </WorkspaceContextProvider>
+  </AppNavigationProvider>
+);
+
+// Create data router with all routes
+const router = createBrowserRouter([
+  {
+    element: <RootLayout />,
+    children: [
+      { path: "/auth", element: <Auth /> },
+      { path: "/reset-password", element: <ResetPassword /> },
+      { path: "/onboarding", element: <Onboarding /> },
+      { path: "/install", element: <Install /> },
+      { path: "/", element: <ProtectedRoute><Layout><Index /></Layout></ProtectedRoute> },
+      { path: "/novidades", element: <ProtectedRoute><Layout><Novidades /></Layout></ProtectedRoute> },
+      { path: "/calendario", element: <ProtectedRoute><Layout><CalendarioEditorial /></Layout></ProtectedRoute> },
+      { path: "/session", element: <ProtectedRoute><Session /></ProtectedRoute> },
+      { path: "/shot-list/review", element: <ProtectedRoute><ShotListReview /></ProtectedRoute> },
+      { path: "/shot-list/record", element: <ProtectedRoute><ShotListRecord /></ProtectedRoute> },
+      { path: "/stats", element: <ProtectedRoute><Layout><Stats /></Layout></ProtectedRoute> },
+      { path: "/profile", element: <ProtectedRoute><Layout><Profile /></Layout></ProtectedRoute> },
+      { path: "/edit-profile", element: <ProtectedRoute><Layout><EditProfile /></Layout></ProtectedRoute> },
+      { path: "/my-progress", element: <ProtectedRoute><Layout><MyProgress /></Layout></ProtectedRoute> },
+      { path: "/settings", element: <ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute> },
+      { path: "/send-suggestions", element: <ProtectedRoute><Layout><SendSuggestions /></Layout></ProtectedRoute> },
+      { path: "/help", element: <ProtectedRoute><Layout><Help /></Layout></ProtectedRoute> },
+      { path: "/terms", element: <TermsOfUse /> },
+      { path: "/privacy", element: <PrivacyPolicy /> },
+      { path: "/levels", element: <ProtectedRoute><Levels /></ProtectedRoute> },
+      { path: "/ofensiva", element: <ProtectedRoute><Ofensiva /></ProtectedRoute> },
+      { path: "/dev-tools", element: <ProtectedRoute><Layout><DevTools /></Layout></ProtectedRoute> },
+      { path: "/guests", element: <ProtectedRoute><Layout><Guests /></Layout></ProtectedRoute> },
+      { path: "/invite", element: <AcceptInvite /> },
+      { path: "/content/view/:scriptId", element: <ProtectedRoute><ContentView /></ProtectedRoute> },
+      { path: "*", element: <NotFound /> },
+    ],
+  },
+]);
 
 const App = () => {
   return (
@@ -118,43 +164,7 @@ const App = () => {
           <TooltipProvider>
             <Toaster />
             <Sonner />
-            <BrowserRouter>
-              <AppNavigationProvider>
-                <WorkspaceContextProvider>
-                <GlobalCelebrations />
-                <LevelUpModal />
-                <TrophyUnlockedModal />
-                <Routes>
-                  <Route path="/auth" element={<Auth />} />
-                  <Route path="/reset-password" element={<ResetPassword />} />
-                  <Route path="/onboarding" element={<Onboarding />} />
-                  <Route path="/install" element={<Install />} />
-                  <Route path="/" element={<ProtectedRoute><Layout><Index /></Layout></ProtectedRoute>} />
-                  <Route path="/novidades" element={<ProtectedRoute><Layout><Novidades /></Layout></ProtectedRoute>} />
-                  <Route path="/calendario" element={<ProtectedRoute><Layout><CalendarioEditorial /></Layout></ProtectedRoute>} />
-                  <Route path="/session" element={<ProtectedRoute><Session /></ProtectedRoute>} />
-                  <Route path="/shot-list/review" element={<ProtectedRoute><ShotListReview /></ProtectedRoute>} />
-                  <Route path="/shot-list/record" element={<ProtectedRoute><ShotListRecord /></ProtectedRoute>} />
-                  <Route path="/stats" element={<ProtectedRoute><Layout><Stats /></Layout></ProtectedRoute>} />
-                  <Route path="/profile" element={<ProtectedRoute><Layout><Profile /></Layout></ProtectedRoute>} />
-                  <Route path="/edit-profile" element={<ProtectedRoute><Layout><EditProfile /></Layout></ProtectedRoute>} />
-                  <Route path="/my-progress" element={<ProtectedRoute><Layout><MyProgress /></Layout></ProtectedRoute>} />
-                  <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
-                  <Route path="/send-suggestions" element={<ProtectedRoute><Layout><SendSuggestions /></Layout></ProtectedRoute>} />
-                  <Route path="/help" element={<ProtectedRoute><Layout><Help /></Layout></ProtectedRoute>} />
-                  <Route path="/terms" element={<TermsOfUse />} />
-                  <Route path="/privacy" element={<PrivacyPolicy />} />
-                  <Route path="/levels" element={<ProtectedRoute><Levels /></ProtectedRoute>} />
-                  <Route path="/ofensiva" element={<ProtectedRoute><Ofensiva /></ProtectedRoute>} />
-                  <Route path="/dev-tools" element={<ProtectedRoute><Layout><DevTools /></Layout></ProtectedRoute>} />
-                  <Route path="/guests" element={<ProtectedRoute><Layout><Guests /></Layout></ProtectedRoute>} />
-                  <Route path="/invite" element={<AcceptInvite />} />
-                  <Route path="/content/view/:scriptId" element={<ProtectedRoute><ContentView /></ProtectedRoute>} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-                </WorkspaceContextProvider>
-              </AppNavigationProvider>
-            </BrowserRouter>
+            <RouterProvider router={router} />
           </TooltipProvider>
         </CelebrationContextProvider>
       </SessionContextProvider>
