@@ -45,12 +45,15 @@ export const useSession = (options: UseSessionOptions = {}) => {
   }, [attachBeforeUnloadListener, timer.isActive, timer.stageElapsedSeconds, saveStageTime]);
 
   // Wrapper para startSession que usa o timer global
-  const startSession = useCallback(async (initialStage: SessionStage = "ideation") => {
-    await startTimer(initialStage);
+  const startSession = useCallback(async (initialStage: SessionStage = "idea") => {
+    // Normalizar: "ideation" é sinônimo de "idea"
+    const normalizedStage: SessionStage = initialStage === "ideation" ? "idea" : initialStage;
+    
+    await startTimer(normalizedStage);
     
     toast({
       title: "Sessão iniciada",
-      description: `Etapa: ${getStageLabel(initialStage)} • Meta: 25 minutos para streak`,
+      description: `Etapa: ${getStageLabel(normalizedStage)} • Meta: 25 minutos para streak`,
     });
   }, [startTimer, toast]);
 
