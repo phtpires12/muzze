@@ -114,7 +114,13 @@ const Index = () => {
   // Verificar se há dias perdidos na ofensiva e auto-usar freezes se possível
   useEffect(() => {
     const handleStreakRecovery = async () => {
-      if (streakValidationLoading || !streakValidation?.hasLostDays) return;
+      // Se não há dias perdidos, garantir que o modal está fechado
+      if (!streakValidation?.hasLostDays) {
+        setIsStreakRecoveryModalOpen(false);
+        return;
+      }
+      
+      if (streakValidationLoading) return;
       
       // Se pode usar freeze automaticamente
       if (streakValidation.canUseFreeze) {
@@ -897,7 +903,7 @@ const Index = () => {
       </Dialog>
 
       {/* Streak Recovery Modal */}
-      {streakValidation && (
+      {streakValidation && streakValidation.hasLostDays && (
         <StreakRecoveryModal
           open={isStreakRecoveryModalOpen}
           onOpenChange={setIsStreakRecoveryModalOpen}

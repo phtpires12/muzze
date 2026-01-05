@@ -133,7 +133,7 @@ export const StreakRecoveryModal = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={open && lostDaysCount > 0} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-md mx-auto relative">
         {/* Overlay de loading para bloquear interações */}
         {isLoading && (
