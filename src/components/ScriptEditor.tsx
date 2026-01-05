@@ -29,6 +29,7 @@ import { useNavigate } from "react-router-dom";
 import { useSessionContext } from "@/contexts/SessionContext";
 import { useSession } from "@/hooks/useSession";
 import { useWorkspaceContext } from "@/contexts/WorkspaceContext";
+import { useCelebration } from "@/contexts/CelebrationContext";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -43,9 +44,10 @@ interface ScriptEditorProps {
 export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: ScriptEditorProps) => {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { setMuzzeSession } = useSessionContext();
-  const { saveCurrentStageTime } = useSession();
+  const { timer, setMuzzeSession } = useSessionContext();
+  const { saveCurrentStageTime, endSession } = useSession();
   const { activeWorkspace } = useWorkspaceContext();
+  const { triggerFullCelebration } = useCelebration();
   const [title, setTitle] = useState("Novo Roteiro");
   const [content, setContent] = useState({
     gancho: "",
@@ -80,6 +82,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
   const [scheduleDate, setScheduleDate] = useState<Date | undefined>(undefined);
   const [notes, setNotes] = useState("");
   const [notesOpen, setNotesOpen] = useState(false);
+  const [showEndSessionConfirmation, setShowEndSessionConfirmation] = useState(false);
 
   // Refs for auto-resize textareas (kept for readonly Textareas)
   const ganchoRef = useRef<HTMLTextAreaElement>(null);
@@ -306,19 +309,57 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
   };
 
   const handleBackClick = () => {
-    // Se não tem publish_date e tem scriptId, mostra alerta
+    // Se não tem publish_date e tem scriptId, mostra alerta de agendamento
     if (!publishDate && scriptId) {
       setShowScheduleAlert(true);
       return;
     }
+    
+    // Se há sessão ativa, mostrar popup de confirmação de encerramento
+    if (timer.isActive) {
+      setShowEndSessionConfirmation(true);
+      return;
+    }
+    
     // Caso contrário, sai normalmente
     proceedWithBack();
   };
 
-  const proceedWithBack = async (shouldAutoSchedule = false) => {
-    // Salvar tempo da sessão antes de navegar
+  const handleConfirmEndSession = async () => {
+    setShowEndSessionConfirmation(false);
+    
+    // Capturar dados ANTES de encerrar
+    const capturedDuration = timer.elapsedSeconds || 0;
+    const capturedStage = timer.stage || 'script';
+    
+    // Salvar tempo da etapa atual
     await saveCurrentStageTime();
     
+    // Encerrar sessão
+    const result = await endSession();
+    
+    // Preparar dados de celebração
+    const sessionSummary = {
+      duration: result?.duration || capturedDuration,
+      xpGained: result?.xpGained || 0,
+      stage: capturedStage,
+      autoRedirectDestination: '/calendario',
+    };
+    
+    const streakCount = result?.shouldShowCelebration && !result?.alreadyCounted 
+      ? (result?.newStreak || 0) 
+      : 0;
+    
+    // Disparar celebração global
+    await triggerFullCelebration(
+      sessionSummary,
+      streakCount,
+      result?.xpGained || 0,
+      () => navigate('/calendario')
+    );
+  };
+
+  const proceedWithBack = async (shouldAutoSchedule = false) => {
     // Auto-agendar para hoje com status "perdido" se não tiver publish_date
     if (shouldAutoSchedule && !publishDate && scriptId) {
       const today = format(new Date(), "yyyy-MM-dd");
@@ -331,6 +372,14 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
         .eq('id', scriptId);
     }
     
+    // Se há sessão ativa, mostrar popup de confirmação de encerramento
+    if (timer.isActive) {
+      setShowEndSessionConfirmation(true);
+      return;
+    }
+    
+    // Salvar tempo da sessão antes de navegar (caso não haja sessão ativa)
+    await saveCurrentStageTime();
     navigate('/calendario');
   };
 
@@ -1347,6 +1396,25 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
               className="bg-primary hover:bg-primary/90"
             >
               Agendar e Sair
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Alert Dialog para confirmar encerramento de sessão ativa */}
+      <AlertDialog open={showEndSessionConfirmation} onOpenChange={setShowEndSessionConfirmation}>
+        <AlertDialogContent className="z-[150]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Encerrar sessão?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Ao encerrar, seu tempo será salvo e você verá o resumo da sua sessão criativa.
+              Tem certeza que deseja finalizar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Continuar trabalhando</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmEndSession}>
+              Sim, encerrar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
