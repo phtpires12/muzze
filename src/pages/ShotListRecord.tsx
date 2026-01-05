@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ShotListTable, ShotItem } from "@/components/shotlist/ShotListTable";
 import { ImageGalleryModal } from "@/components/shotlist/ImageGalleryModal";
+import { PhraseByPhraseMode } from "@/components/shotlist/PhraseByPhraseMode";
 import { DragEndEvent } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import { DraggableSessionTimer } from "@/components/DraggableSessionTimer";
@@ -26,6 +27,13 @@ import SessionSummary from "@/components/SessionSummary";
 import { StreakCelebration } from "@/components/StreakCelebration";
 import { TrophyCelebration } from "@/components/TrophyCelebration";
 
+interface ContentSections {
+  gancho?: string;
+  setup?: string;
+  desenvolvimento?: string;
+  conclusao?: string;
+}
+
 const ShotListRecord = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -34,6 +42,8 @@ const ShotListRecord = () => {
 
   const [shots, setShots] = useState<ShotItem[]>([]);
   const [scriptTitle, setScriptTitle] = useState("");
+  const [scriptContent, setScriptContent] = useState<ContentSections | null>(null);
+  const [isShotListEmpty, setIsShotListEmpty] = useState<boolean | null>(null);
   const [autoSaveStatus, setAutoSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
   const [saveTimeoutId, setSaveTimeoutId] = useState<NodeJS.Timeout | null>(null);
   const [uploadingImages, setUploadingImages] = useState<Set<string>>(new Set());
@@ -180,13 +190,33 @@ const ShotListRecord = () => {
     try {
       const { data, error } = await supabase
         .from('scripts')
-        .select('title, shot_list')
+        .select('title, shot_list, content')
         .eq('id', scriptId)
         .single();
 
       if (error) throw error;
 
       setScriptTitle(data.title);
+      
+      // Guardar conteúdo do roteiro para o Modo Frase-a-Frase
+      if (data.content) {
+        const contentData = typeof data.content === 'string' 
+          ? JSON.parse(data.content) 
+          : data.content;
+        setScriptContent(contentData);
+      }
+
+      // Verificar se shot list está preenchida
+      const hasFilledShotList = data.shot_list && 
+        Array.isArray(data.shot_list) && 
+        data.shot_list.length > 0 &&
+        data.shot_list.some((item: any) => {
+          const shotData = typeof item === 'string' ? JSON.parse(item) : item;
+          const scriptSegment = shotData.scriptSegment || shotData.script_segment || '';
+          return scriptSegment.trim() !== '';
+        });
+
+      setIsShotListEmpty(!hasFilledShotList);
 
       if (data.shot_list && Array.isArray(data.shot_list) && data.shot_list.length > 0) {
         const parsedShots: ShotItem[] = data.shot_list.map((item: any) => {
@@ -488,6 +518,86 @@ const ShotListRecord = () => {
     }
   }, [isAppVisible, session.isPaused, session.isActive]);
 
+  // Handler para voltar à revisão (usado no Modo Frase-a-Frase)
+  const handleBackToReview = async () => {
+    if (!scriptId) {
+      console.error('scriptId não encontrado para atualizar status');
+      return;
+    }
+    await saveCurrentStageTime();
+    const { error } = await supabase
+      .from('scripts')
+      .update({ status: 'review' })
+      .eq('id', scriptId);
+    if (error) {
+      console.error('Erro ao atualizar status para review:', error);
+    }
+    navigate(`/shot-list/review?scriptId=${scriptId}`);
+  };
+
+  // Loading state enquanto determina qual modo usar
+  if (isShotListEmpty === null) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-pulse text-muted-foreground">Carregando...</div>
+      </div>
+    );
+  }
+
+  // Modo Frase-a-Frase: quando a shot list está vazia
+  if (isShotListEmpty && scriptContent) {
+    return (
+      <>
+        <PhraseByPhraseMode
+          scriptId={scriptId!}
+          scriptTitle={scriptTitle}
+          scriptContent={scriptContent}
+          onAdvanceToEdit={handleAdvanceToEdit}
+          onBack={handleBackToReview}
+          session={{
+            isActive: session.isActive,
+            isPaused: session.isPaused,
+            elapsedSeconds: session.elapsedSeconds,
+            targetSeconds: session.targetSeconds,
+            isStreakMode: session.isStreakMode,
+            dailyGoalMinutes: session.dailyGoalMinutes,
+            savedSecondsThisSession: session.savedSecondsThisSession,
+          }}
+          onPauseSession={pauseSession}
+          onResumeSession={resumeSession}
+          onEndSession={handleEndSession}
+          dailyProgress={dailyProgress}
+          isShowingAnyCelebration={isShowingAnyCelebration}
+          canUseTimer={canUseTimer}
+        />
+        
+        {/* Celebration modals */}
+        <SessionSummary
+          show={celebrationData.showSessionSummary}
+          duration={celebrationData.sessionSummary?.duration || 0}
+          xpGained={celebrationData.sessionSummary?.xpGained || 0}
+          stage={celebrationData.sessionSummary?.stage || 'record'}
+          onContinue={handleDismissSessionSummary}
+        />
+
+        <StreakCelebration
+          show={celebrationData.showStreakCelebration}
+          streakCount={celebrationData.streakCount}
+          weekDays={celebrationData.weekDays}
+          onContinue={handleDismissStreakCelebration}
+        />
+
+        <TrophyCelebration
+          show={celebrationData.showTrophyCelebration}
+          trophy={celebrationData.currentTrophy}
+          xpGained={celebrationData.xpGained}
+          onContinue={handleDismissTrophyCelebration}
+        />
+      </>
+    );
+  }
+
+  // Modo Shot List (comportamento atual)
   return (
     <div 
       className="min-h-screen bg-background p-4 md:p-6"
