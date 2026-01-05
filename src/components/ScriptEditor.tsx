@@ -534,8 +534,11 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
   return (
     <div className="min-h-screen bg-background p-4 md:p-6 pb-28 sm:pb-32 scroll-pb-28 sm:scroll-pb-32">
       <div className="max-w-4xl mx-auto w-full">
-        {/* Header with action buttons */}
-        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3 mb-4">
+        {/* Header with action buttons - com safe-area para Dynamic Island */}
+        <div 
+          className="flex flex-col md:flex-row md:justify-between md:items-center gap-3 mb-4"
+          style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.5rem)' }}
+        >
           <Button 
             variant="ghost" 
             size="sm"
@@ -819,8 +822,11 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
             </Button>
           </div>
 
-          {/* Mobile: Fixed Bottom Button */}
-          <div className="md:hidden fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background via-background to-transparent z-40">
+          {/* Mobile: Fixed Bottom Button - acima da navbar do iPhone */}
+          <div 
+            className="md:hidden fixed left-0 right-0 p-4 bg-gradient-to-t from-background via-background to-transparent z-40"
+            style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 5rem)' }}
+          >
             <Button
               onClick={handleNextStage}
               className="w-full gap-2 bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-opacity shadow-lg"
