@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigationBlocker } from "@/hooks/useNavigationBlocker";
 import { useSession, SessionStage } from "@/hooks/useSession";
 import { useSessionContext } from "@/contexts/SessionContext";
 import { useDailyGoalProgress } from "@/hooks/useDailyGoalProgress";
@@ -8,6 +9,7 @@ import { useCelebration } from "@/contexts/CelebrationContext";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { 
   Play, 
   Pause, 
@@ -89,6 +91,68 @@ const Session = () => {
     triggerCelebration,
     isShowingAnyCelebration,
   } = useCelebration();
+
+  // State para modal de confirmação de encerramento
+  const [showEndConfirmation, setShowEndConfirmation] = useState(false);
+  
+  // State para controlar se devemos prosseguir com navegação bloqueada
+  const [shouldProceedWithBlocker, setShouldProceedWithBlocker] = useState(false);
+
+  // Interceptar navegação via swipe/browser back quando há sessão ativa
+  const blocker = useNavigationBlocker({
+    onNavigationBlocked: () => {
+      setShowEndConfirmation(true);
+    },
+    shouldBlock: true,
+  });
+
+  // Handler para confirmar encerramento via modal (swipe/back)
+  const handleConfirmEndSession = async () => {
+    setShowEndConfirmation(false);
+    
+    // Guardar se devemos prosseguir com navegação bloqueada após celebração
+    const blockerWasActive = blocker.state === "blocked";
+    setShouldProceedWithBlocker(blockerWasActive);
+    
+    // CRÍTICO: Capturar dados da sessão ANTES de qualquer reset
+    const capturedDuration = session.elapsedSeconds;
+    const capturedStage = session.stage || 'idea';
+    
+    // Ativar flag ANTES de encerrar para evitar reinício de sessão
+    setHasEndedSession(true);
+    
+    const result = await endSession();
+    if (result) {
+      const sessionSummary = {
+        duration: result.duration || capturedDuration || 0,
+        xpGained: result.xpGained || 0,
+        stage: capturedStage,
+      };
+      
+      const alreadyCounted = (result as any).alreadyCounted || false;
+      const shouldShowStreak = (result as any).shouldShowCelebration && !alreadyCounted;
+      const streakCountResult = shouldShowStreak ? ((result as any).newStreak || 0) : 0;
+      
+      // Disparar celebração global - navegação no callback
+      await triggerFullCelebration(sessionSummary, streakCountResult, result.xpGained || 0, () => {
+        if (blockerWasActive) {
+          blocker.proceed?.();
+        } else {
+          navigate('/');
+        }
+      });
+    } else {
+      setHasEndedSession(false);
+    }
+  };
+
+  // Handler para cancelar encerramento
+  const handleCancelEndSession = () => {
+    setShowEndConfirmation(false);
+    if (blocker.state === "blocked") {
+      blocker.reset?.();
+    }
+  };
 
   // Developer tools handlers
   const handleSimulateSession = async () => {
@@ -844,6 +908,28 @@ const Session = () => {
         onSimulateSession={handleSimulateSession}
         onSimulateTrophy={handleSimulateTrophy}
       />
+
+      {/* Alert Dialog para confirmar encerramento de sessão via swipe/back */}
+      <AlertDialog open={showEndConfirmation} onOpenChange={(open) => {
+        if (!open) handleCancelEndSession();
+        else setShowEndConfirmation(true);
+      }}>
+        <AlertDialogContent className="z-[150]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Encerrar sessão?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Ao encerrar, seu tempo será salvo e você verá o resumo da sua sessão criativa.
+              Tem certeza que deseja finalizar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelEndSession}>Continuar trabalhando</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmEndSession}>
+              Sim, encerrar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

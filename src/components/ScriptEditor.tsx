@@ -26,6 +26,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { sanitizeContentSections } from "@/lib/html-sanitizer";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { useNavigationBlocker } from "@/hooks/useNavigationBlocker";
 import { useSessionContext } from "@/contexts/SessionContext";
 import { useSession } from "@/hooks/useSession";
 import { useWorkspaceContext } from "@/contexts/WorkspaceContext";
@@ -83,6 +84,19 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
   const [notes, setNotes] = useState("");
   const [notesOpen, setNotesOpen] = useState(false);
   const [showEndSessionConfirmation, setShowEndSessionConfirmation] = useState(false);
+
+  // Interceptar navegação via swipe/browser back quando há sessão ativa
+  const blocker = useNavigationBlocker({
+    onNavigationBlocked: () => {
+      // Mostrar o mesmo modal de confirmação que o botão "Voltar" mostra
+      if (!publishDate && scriptId) {
+        setShowScheduleAlert(true);
+      } else {
+        setShowEndSessionConfirmation(true);
+      }
+    },
+    shouldBlock: true,
+  });
 
   // Refs for auto-resize textareas (kept for readonly Textareas)
   const ganchoRef = useRef<HTMLTextAreaElement>(null);
@@ -350,13 +364,30 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
       ? (result?.newStreak || 0) 
       : 0;
     
+    // Se havia uma navegação bloqueada (swipe), prosseguir com ela após celebração
+    const shouldProceedWithBlocker = blocker.state === "blocked";
+    
     // Disparar celebração global
     await triggerFullCelebration(
       sessionSummary,
       streakCount,
       result?.xpGained || 0,
-      () => navigate('/calendario')
+      () => {
+        if (shouldProceedWithBlocker) {
+          blocker.proceed?.();
+        } else {
+          navigate('/calendario');
+        }
+      }
     );
+  };
+
+  const handleCancelEndSession = () => {
+    setShowEndSessionConfirmation(false);
+    // Se havia uma navegação bloqueada, resetar o bloqueador
+    if (blocker.state === "blocked") {
+      blocker.reset?.();
+    }
   };
 
   const proceedWithBack = async (shouldAutoSchedule = false) => {
@@ -399,6 +430,14 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
     }
     setShowScheduleAlert(false);
     await proceedWithBack(false);
+  };
+
+  const handleCancelScheduleAlert = () => {
+    setShowScheduleAlert(false);
+    // Se havia uma navegação bloqueada, resetar o bloqueador
+    if (blocker.state === "blocked") {
+      blocker.reset?.();
+    }
   };
 
   const handleNextStage = async () => {
@@ -1347,7 +1386,10 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
       </div>
 
       {/* Alert Dialog para agendar antes de sair */}
-      <AlertDialog open={showScheduleAlert} onOpenChange={setShowScheduleAlert}>
+      <AlertDialog open={showScheduleAlert} onOpenChange={(open) => {
+        if (!open) handleCancelScheduleAlert();
+        else setShowScheduleAlert(true);
+      }}>
         <AlertDialogContent className="z-[150]">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
@@ -1408,7 +1450,10 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
       </AlertDialog>
 
       {/* Alert Dialog para confirmar encerramento de sessão ativa */}
-      <AlertDialog open={showEndSessionConfirmation} onOpenChange={setShowEndSessionConfirmation}>
+      <AlertDialog open={showEndSessionConfirmation} onOpenChange={(open) => {
+        if (!open) handleCancelEndSession();
+        else setShowEndSessionConfirmation(true);
+      }}>
         <AlertDialogContent className="z-[150]">
           <AlertDialogHeader>
             <AlertDialogTitle>Encerrar sessão?</AlertDialogTitle>
@@ -1418,7 +1463,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Continuar trabalhando</AlertDialogCancel>
+            <AlertDialogCancel onClick={handleCancelEndSession}>Continuar trabalhando</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmEndSession}>
               Sim, encerrar
             </AlertDialogAction>
