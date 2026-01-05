@@ -252,9 +252,15 @@ export const PhraseByPhraseMode = ({
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      {/* Header */}
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
-        <div className="flex items-center justify-between p-4">
+      {/* Header - com safe-area para Dynamic Island */}
+      <div 
+        className="sticky z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b"
+        style={{ top: 'env(safe-area-inset-top, 0px)' }}
+      >
+        <div 
+          className="flex items-center justify-between p-4"
+          style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.5rem)' }}
+        >
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <Button variant="ghost" size="icon" onClick={onBack} className="shrink-0">
               <ArrowLeft className="w-5 h-5" />

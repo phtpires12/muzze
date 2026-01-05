@@ -335,7 +335,10 @@ const Session = () => {
   // Não mostrar tela de seleção se estiver exibindo celebração
   if (!session.isActive && !isShowingAnyCelebration) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-accent/10 via-background to-primary/10 p-6">
+      <div 
+        className="min-h-screen bg-gradient-to-br from-accent/10 via-background to-primary/10 p-6"
+        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}
+      >
         <div className="max-w-2xl mx-auto">
           <Button
             variant="ghost"
@@ -594,7 +597,10 @@ const Session = () => {
       : `🔥 Bônus: +${formatTime(Math.abs(remainingSeconds))} além da meta`;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-accent/10 via-background to-primary/10 p-6">
+    <div 
+      className="min-h-screen bg-gradient-to-br from-accent/10 via-background to-primary/10 p-6"
+      style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}
+    >
       <div className="max-w-2xl mx-auto">
         <Card className={cn(
           "relative p-8 backdrop-blur-md border-border/20 shadow-lg rounded-[28px] transition-all duration-1000",
@@ -629,7 +635,7 @@ const Session = () => {
               // baseado em isShotListEmpty (teleprompter ou shot list tradicional)
               navigate(`/shot-list/record?scriptId=${scriptId}`);
             }}
-            className="absolute top-4 left-4 gap-2 text-muted-foreground hover:text-foreground hover:bg-red-500/10"
+            className="absolute top-2 left-4 gap-2 text-muted-foreground hover:text-foreground hover:bg-red-500/10"
           >
             <ChevronLeft className="w-4 h-4" />
             <Video className="w-4 h-4 text-red-500" />
