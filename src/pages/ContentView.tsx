@@ -17,10 +17,24 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { RichTextRenderer } from "@/components/ui/rich-text-renderer";
+import { PRODUCTION_COLUMNS } from "@/lib/kanban-columns";
 
 interface Script {
   id: string;
@@ -113,6 +127,8 @@ export default function ContentView() {
   const [script, setScript] = useState<Script | null>(null);
   const [loading, setLoading] = useState(true);
   const [showSessionModal, setShowSessionModal] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   useEffect(() => {
     const fetchScript = async () => {
@@ -160,6 +176,67 @@ export default function ContentView() {
 
   const handleEditAttempt = () => {
     setShowSessionModal(true);
+  };
+
+  const handleStageChange = async (newStatus: string) => {
+    if (!script || isUpdating) return;
+    setIsUpdating(true);
+    
+    try {
+      const { error } = await supabase
+        .from('scripts')
+        .update({ status: newStatus })
+        .eq('id', script.id);
+
+      if (error) throw error;
+      
+      setScript(prev => prev ? { ...prev, status: newStatus } : null);
+      toast({
+        title: "Etapa atualizada",
+        description: `Conteúdo movido para ${PRODUCTION_COLUMNS.find(c => c.status === newStatus)?.label}`,
+      });
+    } catch (error) {
+      console.error('Error updating stage:', error);
+      toast({
+        title: "Erro ao atualizar",
+        description: "Não foi possível alterar a etapa.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleDateChange = async (newDate: Date | undefined) => {
+    if (!script || !newDate || isUpdating) return;
+    setIsUpdating(true);
+    setShowDatePicker(false);
+    
+    try {
+      const formattedDate = format(newDate, 'yyyy-MM-dd');
+      
+      const { error } = await supabase
+        .from('scripts')
+        .update({ publish_date: formattedDate })
+        .eq('id', script.id);
+
+      if (error) throw error;
+      
+      setScript(prev => prev ? { ...prev, publish_date: formattedDate } : null);
+      toast({
+        title: "Data atualizada",
+        description: `Nova data: ${format(newDate, "d 'de' MMMM", { locale: ptBR })}`,
+      });
+    } catch (error) {
+      console.error('Error updating date:', error);
+      toast({
+        title: "Erro ao atualizar",
+        description: "Não foi possível alterar a data.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   if (loading) {
@@ -250,11 +327,34 @@ export default function ContentView() {
                 </div>
               </div>
 
-              {/* Badges */}
-              <div className="flex flex-wrap gap-2">
-                <Badge className={getStageBadgeClass(stage)}>
-                  {getStageLabel(stage)}
-                </Badge>
+              {/* Stage Selector + Badges */}
+              <div className="flex flex-wrap gap-2 items-center">
+                <Select 
+                  value={script.status || 'draft_idea'} 
+                  onValueChange={handleStageChange}
+                  disabled={isUpdating}
+                >
+                  <SelectTrigger 
+                    className={cn(
+                      "w-auto h-7 text-xs font-medium border-none gap-1 px-2",
+                      getStageBadgeClass(stage)
+                    )}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PRODUCTION_COLUMNS.map((col) => (
+                      <SelectItem key={col.id} value={col.status}>
+                        <div className="flex items-center gap-2">
+                          <div className={cn("w-2 h-2 rounded-full", col.color)} />
+                          {col.label}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
                 {script.content_type && (
                   <Badge variant="secondary">
                     {script.content_type}
@@ -267,15 +367,32 @@ export default function ContentView() {
                 )}
               </div>
 
-              {/* Date */}
-              {script.publish_date && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Calendar className="w-4 h-4" />
-                  <span>
-                    {format(new Date(script.publish_date + 'T12:00:00'), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}
-                  </span>
-                </div>
-              )}
+              {/* Date Picker */}
+              <Popover open={showDatePicker} onOpenChange={setShowDatePicker}>
+                <PopoverTrigger asChild>
+                  <button 
+                    className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors py-1 px-2 -ml-2 rounded-md hover:bg-accent"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Calendar className="w-4 h-4" />
+                    <span>
+                      {script.publish_date 
+                        ? format(new Date(script.publish_date + 'T12:00:00'), "d 'de' MMMM 'de' yyyy", { locale: ptBR })
+                        : "Adicionar data"
+                      }
+                    </span>
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start" onClick={(e) => e.stopPropagation()}>
+                  <CalendarPicker
+                    mode="single"
+                    selected={script.publish_date ? new Date(script.publish_date + 'T12:00:00') : undefined}
+                    onSelect={handleDateChange}
+                    locale={ptBR}
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
 
               {/* Central Idea */}
               {script.central_idea && (
