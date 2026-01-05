@@ -532,8 +532,17 @@ const ShotListRecord = () => {
     if (error) {
       console.error('Erro ao atualizar status para review:', error);
     }
-    navigate(`/shot-list/review?scriptId=${scriptId}`);
+    // Ir direto para a página de revisão do roteiro (onde o texto aparece)
+    navigate(`/session?stage=review&scriptId=${scriptId}`);
   };
+
+  // Salvar o modo de gravação usado (teleprompter ou shotlist) para navegação futura
+  useEffect(() => {
+    if (scriptId && isShotListEmpty !== null) {
+      const mode = isShotListEmpty ? 'teleprompter' : 'shotlist';
+      localStorage.setItem(`recording-mode-${scriptId}`, mode);
+    }
+  }, [scriptId, isShotListEmpty]);
 
   // Loading state enquanto determina qual modo usar
   if (isShotListEmpty === null) {

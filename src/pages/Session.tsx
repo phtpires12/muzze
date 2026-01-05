@@ -621,6 +621,12 @@ const Session = () => {
               if (error) {
                 console.error('Erro ao atualizar status para recording:', error);
               }
+              
+              // Verificar qual modo de gravação foi usado anteriormente
+              const recordingMode = localStorage.getItem(`recording-mode-${scriptId}`);
+              
+              // Navegar para shot-list/record - o componente decide qual modo renderizar
+              // baseado em isShotListEmpty (teleprompter ou shot list tradicional)
               navigate(`/shot-list/record?scriptId=${scriptId}`);
             }}
             className="absolute top-4 left-4 gap-2 text-muted-foreground hover:text-foreground hover:bg-red-500/10"
