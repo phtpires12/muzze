@@ -355,6 +355,33 @@ export type Database = {
         }
         Relationships: []
       }
+      user_trophies: {
+        Row: {
+          created_at: string
+          id: string
+          shown: boolean
+          trophy_id: string
+          unlocked_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          shown?: boolean
+          trophy_id: string
+          unlocked_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          shown?: boolean
+          trophy_id?: string
+          unlocked_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       workspace_invites: {
         Row: {
           allowed_timer_stages: string[]

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { TROPHIES, Trophy, getEffectiveLevel } from "@/lib/gamification";
+import { getEffectiveLevel } from "@/lib/gamification";
 
 export interface GamificationStats {
   totalXP: number;
@@ -107,40 +107,13 @@ export const useGamification = () => {
         0
       );
 
-      // Calculate unlocked trophies based on real data
-      const currentStats = {
-        totalXP: profile?.xp_points || 0,
-        totalPoints: profile?.xp_points || 0, // Keep in sync with totalXP
-        level: 1,
-        streak: streak?.current_streak || 0,
-        totalHours,
-        scriptsCreated: scriptsCount || 0,
-        ideasCreated: ideasCount || 0,
-        shotListsCreated: 0,
-        trophies: [],
-      };
+      // Buscar troféus do banco em vez de calcular dinamicamente
+      const { data: userTrophies } = await supabase
+        .from('user_trophies')
+        .select('trophy_id')
+        .eq('user_id', user.id);
 
-      // 🔍 DEBUG: Log dados brutos
-      console.log('🎯 Debug useGamification:', {
-        scriptsCount,
-        ideasCount,
-        totalHours,
-        currentStreak: streak?.current_streak,
-        xp_points: profile?.xp_points,
-        currentStats
-      });
-
-      const unlockedTrophies = TROPHIES
-        .filter(trophy => trophy.requirement(currentStats))
-        .map(t => t.id);
-
-      // 🔍 DEBUG: Log troféus
-      console.log('🏆 Troféus desbloqueados:', unlockedTrophies);
-      console.log('📊 TROPHIES completo:', TROPHIES.map(t => ({
-        id: t.id,
-        name: t.name,
-        unlocked: t.requirement(currentStats)
-      })));
+      const unlockedTrophies = (userTrophies || []).map(t => t.trophy_id);
 
       const xpPoints = profile?.xp_points || 0;
       const highestLevel = profile?.highest_level || 1;
@@ -158,8 +131,6 @@ export const useGamification = () => {
         trophies: unlockedTrophies,
         freezes: profile?.streak_freezes || 0,
       };
-      
-      console.log('💾 Salvando no estado (nível efetivo):', newStats);
       setStats(newStats);
     } catch (error) {
       console.error('Error fetching gamification stats:', error);
