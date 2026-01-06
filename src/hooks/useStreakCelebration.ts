@@ -107,6 +107,15 @@ export const useStreakCelebration = () => {
 
   const checkForNewTrophies = async (userId: string): Promise<Trophy[]> => {
     try {
+      // 1. Buscar troféus já desbloqueados do banco
+      const { data: userTrophies } = await supabase
+        .from('user_trophies')
+        .select('trophy_id, shown')
+        .eq('user_id', userId);
+
+      const unlockedTrophyIds = (userTrophies || []).map(t => t.trophy_id);
+
+      // 2. Buscar stats atuais
       const { data: profile } = await supabase
         .from('profiles')
         .select('xp_points')
@@ -131,9 +140,6 @@ export const useStreakCelebration = () => {
 
       const totalHours = stageTimes?.reduce((sum, s) => sum + (s.duration_seconds || 0), 0) / 3600 || 0;
 
-      const unlockedTrophiesStr = localStorage.getItem('unlocked_trophies') || '[]';
-      const unlockedTrophies: string[] = JSON.parse(unlockedTrophiesStr);
-
       const stats: UserStats = {
         totalPoints: profile?.xp_points || 0,
         totalXP: profile?.xp_points || 0,
@@ -143,32 +149,36 @@ export const useStreakCelebration = () => {
         scriptsCreated: scripts?.length || 0,
         shotListsCreated: 0,
         ideasCreated: 0,
-        trophies: unlockedTrophies,
+        trophies: unlockedTrophyIds, // Agora vem do banco!
       };
 
+      // 3. Verificar novos troféus
       const newTrophies = checkNewTrophies(stats);
 
+      // 4. Salvar novos troféus no banco
       if (newTrophies.length > 0) {
-        const updatedTrophies = [...unlockedTrophies, ...newTrophies.map(t => t.id)];
-        localStorage.setItem('unlocked_trophies', JSON.stringify(updatedTrophies));
+        await supabase.from('user_trophies').insert(
+          newTrophies.map(t => ({
+            user_id: userId,
+            trophy_id: t.id,
+            shown: false,
+          }))
+        );
       }
 
-      // ✅ Verificar se já mostramos esses troféus hoje para evitar repetição
-      const todayStr = new Date().toISOString().split('T')[0];
-      const shownTodayStr = localStorage.getItem('trophies_shown_today') || '{}';
-      const shownToday: Record<string, string> = JSON.parse(shownTodayStr);
-      
-      // Filtrar troféus que já foram mostrados hoje
+      // 5. Filtrar apenas troféus não mostrados ainda
       const trophiesToShow = newTrophies.filter(t => {
-        const dateShown = shownToday[t.id];
-        return dateShown !== todayStr;
+        const existing = userTrophies?.find(ut => ut.trophy_id === t.id);
+        return !existing?.shown;
       });
-      
-      // Marcar como mostrados hoje
+
+      // 6. Marcar como mostrados no banco
       if (trophiesToShow.length > 0) {
-        const updatedShown = { ...shownToday };
-        trophiesToShow.forEach(t => { updatedShown[t.id] = todayStr; });
-        localStorage.setItem('trophies_shown_today', JSON.stringify(updatedShown));
+        await supabase
+          .from('user_trophies')
+          .update({ shown: true })
+          .eq('user_id', userId)
+          .in('trophy_id', trophiesToShow.map(t => t.id));
       }
 
       return trophiesToShow;
