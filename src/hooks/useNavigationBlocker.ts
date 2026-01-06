@@ -4,6 +4,7 @@ import { useSessionContext } from "@/contexts/SessionContext";
 
 // Rotas seguras que fazem parte do workflow da sessão e não devem exigir confirmação
 const SAFE_SESSION_PATHS = [
+  '/session',        // Navegação entre etapas do workflow (ideia/roteiro/revisão/edição)
   '/shot-list',
   '/shot-list/record',
   '/shot-list/review',
