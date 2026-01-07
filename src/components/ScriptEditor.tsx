@@ -35,6 +35,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { ThumbnailUploader } from "@/components/ThumbnailUploader";
+import { generateShotListFromContent } from "@/lib/shotlist-generator";
 
 interface ScriptEditorProps {
   onClose?: () => void;
@@ -84,6 +85,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
   const [notes, setNotes] = useState("");
   const [notesOpen, setNotesOpen] = useState(false);
   const [showEndSessionConfirmation, setShowEndSessionConfirmation] = useState(false);
+  const [hasShotList, setHasShotList] = useState(false);
 
   // Memoizar callback para evitar recriações desnecessárias
   const handleNavigationBlocked = useCallback(() => {
@@ -231,6 +233,9 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
         } else {
           setNotes(loadedNotes || "");
         }
+        
+        // Check if shot_list exists
+        setHasShotList(data.shot_list && Array.isArray(data.shot_list) && data.shot_list.length > 0);
         
         setIsLoaded(true);
       }
@@ -794,7 +799,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
               <div className="w-full md:flex-1">
                 <Button
                   variant="outline"
-                  onClick={() => {
+                  onClick={async () => {
                     const params = new URLSearchParams(window.location.search);
                     const currentScriptId = scriptId || params.get('scriptId');
                     
@@ -807,12 +812,50 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                       return;
                     }
                     
-                    navigate(`/shot-list/review?scriptId=${currentScriptId}`);
+                    if (hasShotList) {
+                      // Already has shot list, just navigate
+                      navigate(`/shot-list/review?scriptId=${currentScriptId}`);
+                    } else {
+                      // Generate shot list from content
+                      const contentObj = typeof content === 'string' ? JSON.parse(content) : content;
+                      const shots = generateShotListFromContent(contentObj);
+                      
+                      if (shots.length === 0) {
+                        toast({
+                          title: "Aviso",
+                          description: "Nenhum parágrafo encontrado para criar a Shot List",
+                          variant: "destructive",
+                        });
+                        return;
+                      }
+                      
+                      // Save to database
+                      const { error } = await supabase
+                        .from('scripts')
+                        .update({ shot_list: shots as any })
+                        .eq('id', currentScriptId);
+                      
+                      if (error) {
+                        toast({
+                          title: "Erro",
+                          description: "Não foi possível criar a Shot List",
+                          variant: "destructive",
+                        });
+                        return;
+                      }
+                      
+                      toast({
+                        title: "Shot List criada!",
+                        description: `${shots.length} slots gerados a partir do roteiro`,
+                      });
+                      
+                      navigate(`/shot-list/review?scriptId=${currentScriptId}`);
+                    }
                   }}
                   className="gap-2 w-full md:w-auto"
                 >
                   <ListChecks className="w-4 h-4" />
-                  Abrir Shot List
+                  {hasShotList ? 'Abrir Shot List' : 'Criar Shot List'}
                 </Button>
               </div>
             </div>
