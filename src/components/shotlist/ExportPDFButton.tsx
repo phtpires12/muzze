@@ -184,23 +184,40 @@ export function ExportPDFButton({
         pdf.text(`${pageNum}/${totalPages}`, pageWidth - margin, pageHeight - 10, { align: 'right' });
       };
 
-      // Dynamic row height based on whether images are included
-      const baseRowHeight = mode === 'record' ? 18 : 16;
-      const imageRowHeight = 38; // Extra height for images
-      
-      // Calculate row height for each shot
-      const getRowHeight = (shot: ShotItem) => {
-        if (includeImages && shot.shotImageUrls && shot.shotImageUrls.length > 0) {
-          return imageRowHeight;
-        }
-        return baseRowHeight;
-      };
-
-      // Table header setup
+      // Table settings
       const tableTop = 35;
+      const lineHeight = 3.5; // Height per line of text in mm
+      const cellPadding = 4; // Vertical padding for cells
+      const imgSize = 22; // Thumbnail size in mm
+      
+      // Column widths - ordem: # | Trecho | Cena | Imagem | Locação | [Status]
       const colWidths = mode === 'record' 
-        ? { num: 10, text: 75, scene: 45, location: 35, status: 15 }
-        : { num: 10, text: 85, scene: 50, location: 35 };
+        ? { num: 8, text: 52, scene: 38, image: 28, location: 38, status: 16 }
+        : { num: 8, text: 58, scene: 42, image: 28, location: 44 };
+
+      // Calculate dynamic row height based on content
+      const getRowHeight = (shot: ShotItem): number => {
+        // Measure text lines for each column
+        pdf.setFontSize(8);
+        const textColWidth = colWidths.text - 4;
+        const sceneColWidth = colWidths.scene - 4;
+        const locationColWidth = colWidths.location - 4;
+        
+        const textLines = pdf.splitTextToSize(shot.scriptSegment || '', textColWidth);
+        const sceneLines = pdf.splitTextToSize(shot.scene || '-', sceneColWidth);
+        const locationLines = pdf.splitTextToSize(shot.location || '-', locationColWidth);
+        
+        // Max lines from text columns
+        const maxTextLines = Math.max(textLines.length, sceneLines.length, locationLines.length);
+        const textHeight = (maxTextLines * lineHeight) + cellPadding;
+        
+        // Image height if images are enabled
+        const hasImages = includeImages && shot.shotImageUrls && shot.shotImageUrls.length > 0;
+        const imageHeight = hasImages ? imgSize + 6 : 0;
+        
+        // Return max of text height, image height, or minimum
+        return Math.max(textHeight, imageHeight, 14);
+      };
 
       // Helper function to add table header
       const addTableHeader = (y: number) => {
@@ -214,10 +231,12 @@ export function ExportPDFButton({
         let xPos = margin + 2;
         pdf.text('#', xPos, y + 5.5);
         xPos += colWidths.num;
-        pdf.text('Fala / Texto', xPos, y + 5.5);
+        pdf.text('Trecho do Roteiro', xPos, y + 5.5);
         xPos += colWidths.text;
         pdf.text('Cena', xPos, y + 5.5);
         xPos += colWidths.scene;
+        pdf.text('Imagem', xPos, y + 5.5);
+        xPos += colWidths.image;
         pdf.text('Locação', xPos, y + 5.5);
         if (mode === 'record') {
           xPos += colWidths.location;
@@ -227,8 +246,8 @@ export function ExportPDFButton({
         return y + 10;
       };
 
-      // Calculate total pages (estimate)
-      const avgRowHeight = includeImages ? imageRowHeight : baseRowHeight;
+      // Calculate total pages (estimate based on average height)
+      const avgRowHeight = includeImages ? 30 : 18;
       const availableHeight = pageHeight - tableTop - 25;
       const estimatedRowsPerPage = Math.floor(availableHeight / avgRowHeight);
       let totalPages = Math.ceil(shots.length / estimatedRowsPerPage);
@@ -257,53 +276,87 @@ export function ExportPDFButton({
         // Alternate row background
         if (index % 2 === 1) {
           pdf.setFillColor(alternateRowColor[0], alternateRowColor[1], alternateRowColor[2]);
-          pdf.rect(margin, currentY, contentWidth, rowHeight - 2, 'F');
+          pdf.rect(margin, currentY, contentWidth, rowHeight, 'F');
         }
 
         // Row border
         pdf.setDrawColor(borderColor[0], borderColor[1], borderColor[2]);
         pdf.setLineWidth(0.1);
-        pdf.line(margin, currentY + rowHeight - 2, pageWidth - margin, currentY + rowHeight - 2);
+        pdf.line(margin, currentY + rowHeight, pageWidth - margin, currentY + rowHeight);
 
         // Row content
         pdf.setTextColor(textColor[0], textColor[1], textColor[2]);
         pdf.setFontSize(8);
         pdf.setFont('helvetica', 'normal');
 
+        const textStartY = currentY + 4; // Consistent top alignment
         let xPos = margin + 2;
         
-        // Number
+        // Column 1: Number
         pdf.setFont('helvetica', 'bold');
-        pdf.text(String(index + 1), xPos, currentY + 5);
+        pdf.text(String(index + 1), xPos, textStartY);
         pdf.setFont('helvetica', 'normal');
         xPos += colWidths.num;
 
-        // Script segment (truncate if too long)
-        const maxTextLength = mode === 'record' ? 90 : 100;
-        const text = shot.scriptSegment.length > maxTextLength 
-          ? shot.scriptSegment.substring(0, maxTextLength) + '...'
-          : shot.scriptSegment;
-        
-        // Word wrap for text column
-        const textLines = pdf.splitTextToSize(text, colWidths.text - 4);
-        pdf.text(textLines.slice(0, 2), xPos, currentY + 5);
+        // Column 2: Trecho do Roteiro (full text with word wrap)
+        const textLines = pdf.splitTextToSize(shot.scriptSegment || '', colWidths.text - 4);
+        textLines.forEach((line: string, i: number) => {
+          pdf.text(line, xPos, textStartY + (i * lineHeight));
+        });
         xPos += colWidths.text;
 
-        // Scene
-        const scene = (shot.scene || '-').substring(0, 30);
-        pdf.text(scene, xPos, currentY + 5);
+        // Column 3: Cena (full text with word wrap)
+        const sceneLines = pdf.splitTextToSize(shot.scene || '-', colWidths.scene - 4);
+        sceneLines.forEach((line: string, i: number) => {
+          pdf.text(line, xPos, textStartY + (i * lineHeight));
+        });
         xPos += colWidths.scene;
 
-        // Location
-        const location = (shot.location || '-').substring(0, 20);
-        pdf.text(location, xPos, currentY + 5);
+        // Column 4: Imagem de Referência
+        const imageColX = xPos;
+        if (includeImages && shot.shotImageUrls && shot.shotImageUrls.length > 0) {
+          const imgY = currentY + 2;
+          const firstImageUrl = shot.shotImageUrls[0];
+          const base64 = imageCache.get(firstImageUrl);
+          
+          if (base64) {
+            try {
+              pdf.addImage(base64, 'JPEG', imageColX, imgY, imgSize, imgSize);
+            } catch (e) {
+              // Placeholder if image fails
+              pdf.setDrawColor(borderColor[0], borderColor[1], borderColor[2]);
+              pdf.setFillColor(alternateRowColor[0], alternateRowColor[1], alternateRowColor[2]);
+              pdf.rect(imageColX, imgY, imgSize, imgSize, 'FD');
+            }
+          }
+          
+          // Indicator for additional images
+          if (shot.shotImageUrls.length > 1) {
+            pdf.setFontSize(7);
+            pdf.setTextColor(mutedColor[0], mutedColor[1], mutedColor[2]);
+            pdf.text(`+${shot.shotImageUrls.length - 1}`, imageColX + imgSize + 1, imgY + imgSize / 2);
+            pdf.setTextColor(textColor[0], textColor[1], textColor[2]);
+            pdf.setFontSize(8);
+          }
+        } else {
+          pdf.setTextColor(mutedColor[0], mutedColor[1], mutedColor[2]);
+          pdf.text('-', imageColX, textStartY);
+          pdf.setTextColor(textColor[0], textColor[1], textColor[2]);
+        }
+        xPos += colWidths.image;
 
-        // Status (only in record mode)
+        // Column 5: Locação (full text with word wrap)
+        const locationLines = pdf.splitTextToSize(shot.location || '-', colWidths.location - 4);
+        locationLines.forEach((line: string, i: number) => {
+          pdf.text(line, xPos, textStartY + (i * lineHeight));
+        });
+
+        // Column 6: Status (only in record mode)
         if (mode === 'record') {
           xPos += colWidths.location;
           // Draw checkbox
           const checkX = xPos + 3;
-          const checkY = currentY + 2;
+          const checkY = currentY + 3;
           pdf.setDrawColor(borderColor[0], borderColor[1], borderColor[2]);
           pdf.setLineWidth(0.3);
           pdf.rect(checkX, checkY, 4, 4);
@@ -315,38 +368,6 @@ export function ExportPDFButton({
             pdf.setTextColor(255, 255, 255);
             pdf.setFontSize(6);
             pdf.text('✓', checkX + 0.8, checkY + 3.2);
-          }
-        }
-
-        // Add images if enabled
-        if (includeImages && shot.shotImageUrls && shot.shotImageUrls.length > 0) {
-          const imgY = currentY + 12;
-          let imgX = margin + colWidths.num + 2;
-          const imgSize = 20;
-          const imgGap = 2;
-          
-          // Show up to 3 images
-          const imagesToShow = shot.shotImageUrls.slice(0, 3);
-          imagesToShow.forEach((imgUrl) => {
-            const base64 = imageCache.get(imgUrl);
-            if (base64) {
-              try {
-                pdf.addImage(base64, 'JPEG', imgX, imgY, imgSize, imgSize);
-              } catch (e) {
-                // If image fails, draw placeholder
-                pdf.setDrawColor(borderColor[0], borderColor[1], borderColor[2]);
-                pdf.setFillColor(alternateRowColor[0], alternateRowColor[1], alternateRowColor[2]);
-                pdf.rect(imgX, imgY, imgSize, imgSize, 'FD');
-              }
-              imgX += imgSize + imgGap;
-            }
-          });
-          
-          // Show count if more than 3 images
-          if (shot.shotImageUrls.length > 3) {
-            pdf.setTextColor(mutedColor[0], mutedColor[1], mutedColor[2]);
-            pdf.setFontSize(7);
-            pdf.text(`+${shot.shotImageUrls.length - 3}`, imgX, imgY + imgSize / 2);
           }
         }
 
