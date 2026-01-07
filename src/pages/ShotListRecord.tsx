@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useNavigationBlocker } from "@/hooks/useNavigationBlocker";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Plus, Filter, ArrowRight } from "lucide-react";
+import { ArrowLeft, Plus, Filter, ArrowRight, AlignLeft } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -173,6 +173,10 @@ const ShotListRecord = () => {
   // Filter states
   const [filterLocation, setFilterLocation] = useState<string>("all");
   const [showOnlyIncomplete, setShowOnlyIncomplete] = useState(false);
+  
+  // Toggle mode: permite alternar entre Shot List e Frase-a-Frase quando há conteúdo na shot list
+  const [forcePhraseByPhraseMode, setForcePhraseByPhraseMode] = useState(false);
+  const [hasShotListContent, setHasShotListContent] = useState(false);
 
   useEffect(() => {
     if (!scriptId || scriptId === 'null' || scriptId === 'undefined') {
@@ -269,6 +273,7 @@ const ShotListRecord = () => {
           return scriptSegment.trim() !== '';
         });
 
+      setHasShotListContent(hasFilledShotList);
       setIsShotListEmpty(!hasFilledShotList);
 
       if (data.shot_list && Array.isArray(data.shot_list) && data.shot_list.length > 0) {
@@ -606,8 +611,10 @@ const ShotListRecord = () => {
     );
   }
 
-  // Modo Frase-a-Frase: quando a shot list está vazia
-  if (isShotListEmpty && scriptContent) {
+  // Modo Frase-a-Frase: quando a shot list está vazia OU usuário forçou o modo
+  const showPhraseByPhraseMode = (isShotListEmpty && scriptContent) || (forcePhraseByPhraseMode && scriptContent);
+  
+  if (showPhraseByPhraseMode && scriptContent) {
     return (
       <>
         <PhraseByPhraseMode
@@ -631,6 +638,8 @@ const ShotListRecord = () => {
           dailyProgress={dailyProgress}
           isShowingAnyCelebration={isShowingAnyCelebration}
           canUseTimer={canUseTimer}
+          canSwitchToShotList={hasShotListContent}
+          onSwitchToShotList={() => setForcePhraseByPhraseMode(false)}
         />
         
         {/* Celebration modals */}
@@ -724,19 +733,20 @@ const ShotListRecord = () => {
             </p>
           </div>
 
-          {/* Mobile Filters Sheet */}
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="outline" size="sm" className="w-full">
-                <Filter className="w-4 h-4 mr-2" />
-                Filtros
-                {(filterLocation !== "all" || showOnlyIncomplete) && (
-                  <span className="ml-2 px-2 py-0.5 bg-primary text-primary-foreground rounded-full text-xs">
-                    {[filterLocation !== "all" && "Locação", showOnlyIncomplete && "Incompletos"].filter(Boolean).length}
-                  </span>
-                )}
-              </Button>
-            </SheetTrigger>
+          {/* Mobile: Botões de Filtros e Toggle de Modo */}
+          <div className="flex gap-2">
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="sm" className="flex-1">
+                  <Filter className="w-4 h-4 mr-2" />
+                  Filtros
+                  {(filterLocation !== "all" || showOnlyIncomplete) && (
+                    <span className="ml-2 px-2 py-0.5 bg-primary text-primary-foreground rounded-full text-xs">
+                      {[filterLocation !== "all" && "Locação", showOnlyIncomplete && "Incompletos"].filter(Boolean).length}
+                    </span>
+                  )}
+                </Button>
+              </SheetTrigger>
             <SheetContent side="bottom" className="h-[300px]">
               <SheetHeader>
                 <SheetTitle>Filtros</SheetTitle>
@@ -770,6 +780,20 @@ const ShotListRecord = () => {
               </div>
             </SheetContent>
           </Sheet>
+          
+          {/* Botão para alternar para Modo Frase-a-Frase */}
+          {hasShotListContent && scriptContent && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setForcePhraseByPhraseMode(true)}
+              className="gap-2"
+            >
+              <AlignLeft className="w-4 h-4" />
+              Teleprompter
+            </Button>
+          )}
+          </div>
         </div>
 
         {/* Desktop Header */}
@@ -803,9 +827,23 @@ const ShotListRecord = () => {
             </div>
           </div>
           
-          {/* Indicador de status + Botão de Edição */}
+          {/* Indicador de status + Toggle + Botão de Edição */}
           <div className="flex items-center gap-4">
             <SaveStatusIndicator status={autoSaveStatus} />
+            
+            {/* Botão para alternar para Modo Frase-a-Frase */}
+            {hasShotListContent && scriptContent && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setForcePhraseByPhraseMode(true)}
+                className="gap-2"
+              >
+                <AlignLeft className="w-4 h-4" />
+                Modo Teleprompter
+              </Button>
+            )}
+            
             <Button
               onClick={handleAdvanceToEdit}
               disabled={autoSaveStatus === 'saving'}

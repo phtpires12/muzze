@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ArrowRight, ChevronLeft, ChevronRight, Maximize2, Minimize2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, ChevronLeft, ChevronRight, Maximize2, Minimize2, LayoutGrid } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DraggableSessionTimer } from "@/components/DraggableSessionTimer";
 import { AutoHideNav } from "@/components/AutoHideNav";
@@ -34,6 +34,9 @@ interface PhraseByPhraseModeProps {
   dailyProgress: { actualMinutes: number };
   isShowingAnyCelebration: boolean;
   canUseTimer: boolean;
+  // Toggle mode props
+  canSwitchToShotList?: boolean;
+  onSwitchToShotList?: () => void;
 }
 
 /**
@@ -116,6 +119,8 @@ export const PhraseByPhraseMode = ({
   dailyProgress,
   isShowingAnyCelebration,
   canUseTimer,
+  canSwitchToShotList,
+  onSwitchToShotList,
 }: PhraseByPhraseModeProps) => {
   const [phrases, setPhrases] = useState<string[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -281,6 +286,19 @@ export const PhraseByPhraseMode = ({
             >
               {isCompactView ? <Maximize2 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
             </Button>
+
+            {/* Botão para alternar para Modo Shot List */}
+            {canSwitchToShotList && onSwitchToShotList && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onSwitchToShotList}
+                className="gap-2"
+              >
+                <LayoutGrid className="w-4 h-4" />
+                <span className="hidden sm:inline">Shot List</span>
+              </Button>
+            )}
 
             {/* Botão Avançar para Edição */}
             <Button
