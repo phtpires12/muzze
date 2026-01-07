@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useNavigationBlocker } from "@/hooks/useNavigationBlocker";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Plus } from "lucide-react";
+import { ArrowLeft, Plus, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ShotListTable, ShotItem } from "@/components/shotlist/ShotListTable";
@@ -23,6 +23,7 @@ import SessionSummary from "@/components/SessionSummary";
 import { StreakCelebration } from "@/components/StreakCelebration";
 import { TrophyCelebration } from "@/components/TrophyCelebration";
 import { ImageGalleryModal } from "@/components/shotlist/ImageGalleryModal";
+import { generateShotListFromContent, normalizeText } from "@/lib/shotlist-generator";
 
 const ShotListReview = () => {
   const navigate = useNavigate();
@@ -37,6 +38,15 @@ const ShotListReview = () => {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [lastSavedShots, setLastSavedShots] = useState<ShotItem[]>([]);
   const [galleryOpenShotId, setGalleryOpenShotId] = useState<string | null>(null);
+  
+  // Sync modal state
+  const [showSyncModal, setShowSyncModal] = useState(false);
+  const [syncChanges, setSyncChanges] = useState<{
+    toAdd: ShotItem[];
+    toRemove: ShotItem[];
+    toKeep: ShotItem[];
+    hasFilledData: boolean;
+  } | null>(null);
 
   // Unified Session System
   const {
@@ -476,6 +486,93 @@ const ShotListReview = () => {
     navigate(`/shot-list/record?scriptId=${scriptId}`);
   };
 
+  // Calculate sync changes between current shots and script content
+  const calculateSyncChanges = async () => {
+    if (!scriptId) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('scripts')
+        .select('content')
+        .eq('id', scriptId)
+        .single();
+      
+      if (error || !data?.content) {
+        toast({
+          title: "Erro",
+          description: "Não foi possível carregar o roteiro",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      const content = typeof data.content === 'string' ? JSON.parse(data.content) : data.content;
+      const proposedShots = generateShotListFromContent(content);
+      
+      // Create maps for comparison
+      const currentNormalized = new Map(
+        shots.map(s => [normalizeText(s.scriptSegment), s])
+      );
+      const proposedNormalized = new Set(
+        proposedShots.map(s => normalizeText(s.scriptSegment))
+      );
+      
+      // Identify changes
+      const toKeep = shots.filter(s => proposedNormalized.has(normalizeText(s.scriptSegment)));
+      const toRemove = shots.filter(s => !proposedNormalized.has(normalizeText(s.scriptSegment)));
+      const toAdd = proposedShots.filter(s => !currentNormalized.has(normalizeText(s.scriptSegment)));
+      
+      // Check if any removed slots have filled data
+      const hasFilledData = toRemove.some(s => 
+        s.scene || s.location || (s.shotImageUrls && s.shotImageUrls.length > 0)
+      );
+      
+      setSyncChanges({ toAdd, toRemove, toKeep, hasFilledData });
+      setShowSyncModal(true);
+    } catch (error) {
+      console.error('Error calculating sync changes:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível calcular as alterações",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Apply sync changes
+  const applySyncChanges = async () => {
+    if (!syncChanges || !scriptId) return;
+    
+    try {
+      const newShots = [...syncChanges.toKeep, ...syncChanges.toAdd];
+      
+      const { error } = await supabase
+        .from('scripts')
+        .update({ shot_list: newShots as any })
+        .eq('id', scriptId);
+      
+      if (error) throw error;
+      
+      setShots(newShots);
+      setLastSavedShots(newShots);
+      setHasUnsavedChanges(false);
+      setShowSyncModal(false);
+      setSyncChanges(null);
+      
+      toast({
+        title: "Sincronizado!",
+        description: `${syncChanges.toAdd.length} adicionados, ${syncChanges.toRemove.length} removidos`,
+      });
+    } catch (error) {
+      console.error('Error applying sync changes:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível sincronizar",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div 
       className="min-h-screen bg-background p-4 md:p-6 pb-24 md:pb-6"
@@ -502,6 +599,15 @@ const ShotListReview = () => {
             </div>
           </div>
           <div className="flex gap-2">
+            <Button
+              onClick={calculateSyncChanges}
+              size="sm"
+              variant="ghost"
+              className="px-2"
+              title="Sincronizar com Revisão"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </Button>
             <Button
               onClick={handleSave}
               disabled={isSaving || !hasUnsavedChanges}
@@ -562,8 +668,8 @@ const ShotListReview = () => {
           </div>
         </div>
 
-        {/* Desktop Add Shot Button */}
-        <div className="hidden md:block mb-4">
+        {/* Desktop Add Shot and Sync Buttons */}
+        <div className="hidden md:flex gap-2 mb-4">
           <Button
             onClick={addShot}
             variant="outline"
@@ -571,6 +677,14 @@ const ShotListReview = () => {
           >
             <Plus className="w-4 h-4" />
             Adicionar Take
+          </Button>
+          <Button
+            onClick={calculateSyncChanges}
+            variant="outline"
+            className="gap-2"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Sincronizar com Revisão
           </Button>
         </div>
 
@@ -700,6 +814,46 @@ const ShotListReview = () => {
             <AlertDialogCancel onClick={handleCancelEndSession}>Continuar trabalhando</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmEndSession}>
               Sim, encerrar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Sync Modal */}
+      <AlertDialog open={showSyncModal} onOpenChange={setShowSyncModal}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Sincronizar Shot List</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                {syncChanges && (
+                  <>
+                    {syncChanges.toAdd.length > 0 && (
+                      <p className="text-green-600">+ Adicionar {syncChanges.toAdd.length} novos slots</p>
+                    )}
+                    {syncChanges.toRemove.length > 0 && (
+                      <p className="text-red-600">- Remover {syncChanges.toRemove.length} slots</p>
+                    )}
+                    {syncChanges.toAdd.length === 0 && syncChanges.toRemove.length === 0 && (
+                      <p className="text-muted-foreground">Nenhuma alteração detectada.</p>
+                    )}
+                    {syncChanges.hasFilledData && (
+                      <p className="text-amber-600 font-medium mt-2">
+                        ⚠️ Alguns slots a serem removidos possuem cena, locação ou imagens preenchidas. Esses dados serão perdidos.
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={applySyncChanges}
+              disabled={syncChanges?.toAdd.length === 0 && syncChanges?.toRemove.length === 0}
+            >
+              Confirmar Sincronização
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
