@@ -1,11 +1,19 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { FileDown, Loader2 } from "lucide-react";
+import { FileDown, Loader2, Image } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { jsPDF } from "jspdf";
-import { toPng } from "html-to-image";
 import { ShotItem } from "./ShotListTable";
-import muzzeLogo from "@/assets/muzze-logo.png";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 
 interface ExportPDFButtonProps {
   shots: ShotItem[];
@@ -16,6 +24,22 @@ interface ExportPDFButtonProps {
   iconOnly?: boolean;
 }
 
+// Helper function to load image as base64
+const loadImageAsBase64 = async (url: string): Promise<string | null> => {
+  try {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+};
+
 export function ExportPDFButton({ 
   shots, 
   scriptTitle, 
@@ -25,9 +49,14 @@ export function ExportPDFButton({
   iconOnly = false 
 }: ExportPDFButtonProps) {
   const [isGenerating, setIsGenerating] = useState(false);
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [includeImages, setIncludeImages] = useState(false);
   const { toast } = useToast();
 
-  const generatePDF = async () => {
+  // Check if any shot has images
+  const hasImages = shots.some(s => s.shotImageUrls && s.shotImageUrls.length > 0);
+
+  const handleExportClick = () => {
     if (shots.length === 0) {
       toast({
         title: "Shot List vazia",
@@ -36,14 +65,38 @@ export function ExportPDFButton({
       });
       return;
     }
+    setShowExportDialog(true);
+  };
 
+  const generatePDF = async () => {
+    setShowExportDialog(false);
     setIsGenerating(true);
-    toast({
-      title: "Gerando PDF...",
-      description: "Aguarde enquanto preparamos o documento",
-    });
 
     try {
+      // Pre-load images if needed
+      const imageCache = new Map<string, string>();
+      
+      if (includeImages) {
+        const allImageUrls = shots.flatMap(s => s.shotImageUrls || []);
+        if (allImageUrls.length > 0) {
+          toast({
+            title: "Carregando imagens...",
+            description: `Processando ${allImageUrls.length} imagens`,
+          });
+          
+          const imagePromises = allImageUrls.map(async url => {
+            const base64 = await loadImageAsBase64(url);
+            if (base64) imageCache.set(url, base64);
+          });
+          await Promise.all(imagePromises);
+        }
+      }
+
+      toast({
+        title: "Gerando PDF...",
+        description: "Aguarde enquanto preparamos o documento",
+      });
+
       // Create PDF document (A4 size)
       const pdf = new jsPDF({
         orientation: 'portrait',
@@ -116,9 +169,20 @@ export function ExportPDFButton({
         pdf.text(`${pageNum}/${totalPages}`, pageWidth - margin, pageHeight - 10, { align: 'right' });
       };
 
+      // Dynamic row height based on whether images are included
+      const baseRowHeight = mode === 'record' ? 18 : 16;
+      const imageRowHeight = 38; // Extra height for images
+      
+      // Calculate row height for each shot
+      const getRowHeight = (shot: ShotItem) => {
+        if (includeImages && shot.shotImageUrls && shot.shotImageUrls.length > 0) {
+          return imageRowHeight;
+        }
+        return baseRowHeight;
+      };
+
       // Table header setup
       const tableTop = 35;
-      const rowHeight = mode === 'record' ? 18 : 16;
       const colWidths = mode === 'record' 
         ? { num: 10, text: 75, scene: 45, location: 35, status: 15 }
         : { num: 10, text: 85, scene: 50, location: 35 };
@@ -148,10 +212,11 @@ export function ExportPDFButton({
         return y + 10;
       };
 
-      // Calculate total pages needed
-      const availableHeight = pageHeight - tableTop - 25; // Header and footer space
-      const rowsPerPage = Math.floor(availableHeight / rowHeight);
-      const totalPages = Math.ceil(shots.length / rowsPerPage);
+      // Calculate total pages (estimate)
+      const avgRowHeight = includeImages ? imageRowHeight : baseRowHeight;
+      const availableHeight = pageHeight - tableTop - 25;
+      const estimatedRowsPerPage = Math.floor(availableHeight / avgRowHeight);
+      let totalPages = Math.ceil(shots.length / estimatedRowsPerPage);
 
       let currentPage = 1;
       let currentY = tableTop;
@@ -162,11 +227,14 @@ export function ExportPDFButton({
 
       // Render shots
       shots.forEach((shot, index) => {
+        const rowHeight = getRowHeight(shot);
+        
         // Check if need new page
         if (currentY + rowHeight > pageHeight - 20) {
           addFooter(currentPage, totalPages);
           pdf.addPage();
           currentPage++;
+          if (currentPage > totalPages) totalPages = currentPage;
           addHeader(currentPage, totalPages);
           currentY = addTableHeader(tableTop);
         }
@@ -235,6 +303,38 @@ export function ExportPDFButton({
           }
         }
 
+        // Add images if enabled
+        if (includeImages && shot.shotImageUrls && shot.shotImageUrls.length > 0) {
+          const imgY = currentY + 12;
+          let imgX = margin + colWidths.num + 2;
+          const imgSize = 20;
+          const imgGap = 2;
+          
+          // Show up to 3 images
+          const imagesToShow = shot.shotImageUrls.slice(0, 3);
+          imagesToShow.forEach((imgUrl) => {
+            const base64 = imageCache.get(imgUrl);
+            if (base64) {
+              try {
+                pdf.addImage(base64, 'JPEG', imgX, imgY, imgSize, imgSize);
+              } catch (e) {
+                // If image fails, draw placeholder
+                pdf.setDrawColor(borderColor[0], borderColor[1], borderColor[2]);
+                pdf.setFillColor(alternateRowColor[0], alternateRowColor[1], alternateRowColor[2]);
+                pdf.rect(imgX, imgY, imgSize, imgSize, 'FD');
+              }
+              imgX += imgSize + imgGap;
+            }
+          });
+          
+          // Show count if more than 3 images
+          if (shot.shotImageUrls.length > 3) {
+            pdf.setTextColor(mutedColor[0], mutedColor[1], mutedColor[2]);
+            pdf.setFontSize(7);
+            pdf.text(`+${shot.shotImageUrls.length - 3}`, imgX, imgY + imgSize / 2);
+          }
+        }
+
         currentY += rowHeight;
       });
 
@@ -284,29 +384,25 @@ export function ExportPDFButton({
     }
   };
 
-  if (iconOnly) {
-    return (
-      <Button
-        variant={variant}
-        size="icon"
-        onClick={generatePDF}
-        disabled={isGenerating}
-        title="Exportar PDF"
-      >
-        {isGenerating ? (
-          <Loader2 className="w-4 h-4 animate-spin" />
-        ) : (
-          <FileDown className="w-4 h-4" />
-        )}
-      </Button>
-    );
-  }
-
-  return (
+  const buttonContent = iconOnly ? (
+    <Button
+      variant={variant}
+      size="icon"
+      onClick={handleExportClick}
+      disabled={isGenerating}
+      title="Exportar PDF"
+    >
+      {isGenerating ? (
+        <Loader2 className="w-4 h-4 animate-spin" />
+      ) : (
+        <FileDown className="w-4 h-4" />
+      )}
+    </Button>
+  ) : (
     <Button
       variant={variant}
       size={size}
-      onClick={generatePDF}
+      onClick={handleExportClick}
       disabled={isGenerating}
       className="gap-2"
     >
@@ -322,5 +418,65 @@ export function ExportPDFButton({
         </>
       )}
     </Button>
+  );
+
+  return (
+    <>
+      {buttonContent}
+
+      <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Exportar Shot List</DialogTitle>
+            <DialogDescription>
+              Configure as opções de exportação do PDF
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {hasImages && (
+              <div className="flex items-start space-x-3">
+                <Checkbox
+                  id="includeImages"
+                  checked={includeImages}
+                  onCheckedChange={(checked) => setIncludeImages(checked === true)}
+                />
+                <div className="space-y-1">
+                  <Label 
+                    htmlFor="includeImages" 
+                    className="text-sm font-medium cursor-pointer flex items-center gap-2"
+                  >
+                    <Image className="w-4 h-4" />
+                    Incluir imagens de referência
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Aumenta o tamanho do arquivo e o tempo de geração
+                  </p>
+                </div>
+              </div>
+            )}
+            
+            {!hasImages && (
+              <p className="text-sm text-muted-foreground">
+                Nenhuma imagem de referência encontrada nos takes.
+              </p>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setShowExportDialog(false)}
+            >
+              Cancelar
+            </Button>
+            <Button onClick={generatePDF} className="gap-2">
+              <FileDown className="w-4 h-4" />
+              Exportar PDF
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
