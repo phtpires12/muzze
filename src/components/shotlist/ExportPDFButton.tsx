@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { FileDown, Loader2, Image } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import muzzeLogoGradient from "@/assets/muzze-leaf-gradient.png";
 
 interface ExportPDFButtonProps {
   shots: ShotItem[];
@@ -51,7 +52,20 @@ export function ExportPDFButton({
   const [isGenerating, setIsGenerating] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [includeImages, setIncludeImages] = useState(false);
+  const [logoBase64, setLogoBase64] = useState<string | null>(null);
   const { toast } = useToast();
+
+  // Pre-load logo as base64
+  useEffect(() => {
+    fetch(muzzeLogoGradient)
+      .then(res => res.blob())
+      .then(blob => {
+        const reader = new FileReader();
+        reader.onloadend = () => setLogoBase64(reader.result as string);
+        reader.readAsDataURL(blob);
+      })
+      .catch(() => console.warn('Failed to load Muzze logo'));
+  }, []);
 
   // Check if any shot has images
   const hasImages = shots.some(s => s.shotImageUrls && s.shotImageUrls.length > 0);
@@ -118,20 +132,21 @@ export function ExportPDFButton({
 
       // Helper function to add header
       const addHeader = (pageNum: number, totalPages: number) => {
-        // Logo placeholder (will use text for now)
-        pdf.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-        pdf.circle(margin + 6, 15, 6, 'F');
-        pdf.setTextColor(255, 255, 255);
-        pdf.setFontSize(8);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('M', margin + 4.5, 17);
+        // Muzze Logo
+        if (logoBase64) {
+          try {
+            pdf.addImage(logoBase64, 'PNG', margin, 8, 14, 14);
+          } catch (e) {
+            console.warn('Failed to add logo to PDF');
+          }
+        }
 
         // Title
         pdf.setTextColor(textColor[0], textColor[1], textColor[2]);
         pdf.setFontSize(14);
         pdf.setFont('helvetica', 'bold');
         const title = scriptTitle.length > 40 ? scriptTitle.substring(0, 40) + '...' : scriptTitle;
-        pdf.text(title, margin + 18, 17);
+        pdf.text(title, margin + 17, 17);
 
         // Mode badge
         const modeText = mode === 'review' ? 'Revisão' : 'Gravação';
