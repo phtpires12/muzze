@@ -349,3 +349,10 @@ All colors MUST be HSL.
 .rich-text-editor .ProseMirror .ProseMirror-dropcursor {
   border-color: hsl(var(--primary)) !important;
 }
+
+/* Word breaking for long strings without spaces */
+.rich-text-editor .ProseMirror {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}

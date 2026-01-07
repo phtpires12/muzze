@@ -15,6 +15,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import muzzeLogoGradient from "@/assets/muzze-leaf-gradient.png";
+import { htmlToText } from "@/components/ui/rich-text-editor";
 
 interface ExportPDFButtonProps {
   shots: ShotItem[];
@@ -203,7 +204,7 @@ export function ExportPDFButton({
         const sceneColWidth = colWidths.scene - 4;
         const locationColWidth = colWidths.location - 4;
         
-        const textLines = pdf.splitTextToSize(shot.scriptSegment || '', textColWidth);
+        const textLines = pdf.splitTextToSize(htmlToText(shot.scriptSegment) || '', textColWidth);
         const sceneLines = pdf.splitTextToSize(shot.scene || '-', sceneColWidth);
         const locationLines = pdf.splitTextToSize(shot.location || '-', locationColWidth);
         
@@ -298,8 +299,8 @@ export function ExportPDFButton({
         pdf.setFont('helvetica', 'normal');
         xPos += colWidths.num;
 
-        // Column 2: Trecho do Roteiro (full text with word wrap)
-        const textLines = pdf.splitTextToSize(shot.scriptSegment || '', colWidths.text - 4);
+        // Column 2: Trecho do Roteiro (full text with word wrap, convert HTML to plain text)
+        const textLines = pdf.splitTextToSize(htmlToText(shot.scriptSegment) || '', colWidths.text - 4);
         textLines.forEach((line: string, i: number) => {
           pdf.text(line, xPos, textStartY + (i * lineHeight));
         });
