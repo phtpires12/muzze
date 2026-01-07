@@ -209,7 +209,7 @@ export function PostConfirmationPopup({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100vw-2rem)] sm:w-[calc(100vw-3rem)] max-w-md max-h-[80vh] overflow-auto p-4 sm:p-6 rounded-xl">
+      <DialogContent className="w-[calc(100vw-2rem)] sm:w-[calc(100vw-3rem)] max-w-md max-h-[80vh] overflow-auto p-4 sm:p-6 rounded-xl">
         {deleteButton}
         <DialogHeader>
           <DialogTitle className="text-center px-8">{title}</DialogTitle>
