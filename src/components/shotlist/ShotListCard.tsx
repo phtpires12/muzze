@@ -10,6 +10,8 @@ import { CSS } from '@dnd-kit/utilities';
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { sanitizeHtmlContent } from "@/lib/html-sanitizer";
 
 export interface ShotItem {
   id: string;
@@ -46,11 +48,8 @@ export const ShotListCard = ({
   availableLocations = [],
   onImageClick
 }: ShotListCardProps) => {
-  const [localText, setLocalText] = useState(shot.scriptSegment);
-  const [history, setHistory] = useState<string[]>([shot.scriptSegment]);
-  const [historyIndex, setHistoryIndex] = useState(0);
-  const contentRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const sceneRef = useRef<HTMLTextAreaElement>(null);
 
   const {
     attributes,
@@ -66,83 +65,24 @@ export const ShotListCard = ({
     transition,
   };
 
+  // Auto-resize scene textarea
   useEffect(() => {
-    setLocalText(shot.scriptSegment);
-    setHistory([shot.scriptSegment]);
-    setHistoryIndex(0);
-    
-    // Forçar atualização do DOM do contentEditable
-    if (contentRef.current) {
-      contentRef.current.textContent = shot.scriptSegment;
+    if (sceneRef.current) {
+      sceneRef.current.style.height = 'auto';
+      sceneRef.current.style.height = sceneRef.current.scrollHeight + 'px';
     }
-  }, [shot.scriptSegment]);
+  }, [shot.scene]);
 
-  const updateHistory = (newText: string) => {
-    const newHistory = history.slice(0, historyIndex + 1);
-    newHistory.push(newText);
-    setHistory(newHistory);
-    setHistoryIndex(newHistory.length - 1);
+  const handleScriptSegmentChange = (html: string) => {
+    const sanitized = sanitizeHtmlContent(html);
+    onUpdate(shot.id, 'scriptSegment', sanitized);
   };
 
-  const handleUndo = () => {
-    if (historyIndex > 0) {
-      const newIndex = historyIndex - 1;
-      setHistoryIndex(newIndex);
-      const newText = history[newIndex];
-      setLocalText(newText);
-      if (contentRef.current) {
-        contentRef.current.textContent = newText;
-      }
-      onUpdate(shot.id, 'scriptSegment', newText);
-    }
-  };
-
-  const handleRedo = () => {
-    if (historyIndex < history.length - 1) {
-      const newIndex = historyIndex + 1;
-      setHistoryIndex(newIndex);
-      const newText = history[newIndex];
-      setLocalText(newText);
-      if (contentRef.current) {
-        contentRef.current.textContent = newText;
-      }
-      onUpdate(shot.id, 'scriptSegment', newText);
-    }
-  };
-
-  const handleInput = (e: React.FormEvent<HTMLDivElement>) => {
-    const newText = e.currentTarget.textContent || '';
-    setLocalText(newText);
-    updateHistory(newText);
-    onUpdate(shot.id, 'scriptSegment', newText);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      const selection = window.getSelection();
-      const cursorPosition = selection?.anchorOffset || 0;
-      
-      let textBeforeCursor = '';
-      const range = selection?.getRangeAt(0);
-      if (range) {
-        const preCaretRange = range.cloneRange();
-        preCaretRange.selectNodeContents(contentRef.current!);
-        preCaretRange.setEnd(range.endContainer, range.endOffset);
-        textBeforeCursor = preCaretRange.toString();
-      }
-      
-      onSplitAtCursor(shot.id, textBeforeCursor.length);
-    }
-
-    if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
-      e.preventDefault();
-      if (e.shiftKey) {
-        handleRedo();
-      } else {
-        handleUndo();
-      }
-    }
+  const handleSceneChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    onUpdate(shot.id, 'scene', e.target.value);
+    // Auto-resize
+    e.target.style.height = 'auto';
+    e.target.style.height = e.target.scrollHeight + 'px';
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -263,35 +203,33 @@ export const ShotListCard = ({
         </div>
 
         {/* Trecho do Roteiro */}
-        <div className="space-y-2">
+        <div className="space-y-2 w-full max-w-full min-w-0">
           <label className="text-sm font-medium text-foreground">
             📝 Trecho do Roteiro
           </label>
-          <div
-            ref={contentRef}
-            contentEditable
-            onInput={handleInput}
-            onKeyDown={handleKeyDown}
-            suppressContentEditableWarning
-            className="min-h-[120px] max-h-[200px] overflow-y-auto overflow-x-hidden text-sm p-3 rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 whitespace-pre-wrap break-words"
-          >
-            {localText}
-          </div>
+          <RichTextEditor
+            content={shot.scriptSegment}
+            onChange={handleScriptSegmentChange}
+            placeholder="Trecho do roteiro..."
+            className="w-full max-w-full min-w-0 [&_.ProseMirror]:break-words [&_.ProseMirror]:overflow-wrap-anywhere"
+            minHeight="120px"
+          />
           <span className="text-xs text-muted-foreground">
-            Pressione Enter para dividir
+            Use Ctrl+Enter para quebrar linha
           </span>
         </div>
 
         {/* Cena (Técnica) */}
-        <div className="space-y-2">
+        <div className="space-y-2 w-full max-w-full min-w-0">
           <label className="text-sm font-medium text-foreground">
             🎬 Cena (Técnica de Câmera)
           </label>
           <Textarea
+            ref={sceneRef}
             value={shot.scene}
-            onChange={(e) => onUpdate(shot.id, 'scene', e.target.value)}
+            onChange={handleSceneChange}
             placeholder="Descreva movimento/técnica de câmera (ex: Tracking, Dolly zoom)"
-            className="text-sm min-h-[100px] max-h-[120px] overflow-y-auto resize-none break-words"
+            className="text-sm min-h-[100px] resize-none break-words w-full max-w-full"
           />
         </div>
 

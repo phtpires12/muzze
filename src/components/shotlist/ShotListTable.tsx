@@ -9,6 +9,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { ShotListCard } from "./ShotListCard";
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { sanitizeHtmlContent } from "@/lib/html-sanitizer";
 import {
   DndContext,
   closestCenter,
@@ -63,11 +65,7 @@ const SortableRow = ({
   onImageClick
 }: SortableRowProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const editableDivRef = useRef<HTMLDivElement>(null);
-  const [localText, setLocalText] = useState(shot.scriptSegment);
-  const cursorPositionRef = useRef<number | null>(null);
-  const [history, setHistory] = useState<string[]>([shot.scriptSegment]);
-  const [historyIndex, setHistoryIndex] = useState(0);
+  const sceneRef = useRef<HTMLTextAreaElement>(null);
   const {
     attributes,
     listeners,
@@ -77,55 +75,13 @@ const SortableRow = ({
     isDragging,
   } = useSortable({ id: shot.id });
 
-  // Sincronizar mudanças externas (incluindo splits)
+  // Auto-resize scene textarea
   useEffect(() => {
-    if (shot.scriptSegment !== localText) {
-      // Verificar se é uma operação de split (texto novo é substring do antigo)
-      const isReduction = shot.scriptSegment.length < localText.length && 
-                          localText.startsWith(shot.scriptSegment);
-      
-      // Se for redução (split) OU elemento não está focado, atualizar
-      if (isReduction || document.activeElement !== editableDivRef.current) {
-        setLocalText(shot.scriptSegment);
-        setHistory([shot.scriptSegment]);
-        setHistoryIndex(0);
-        
-        // Forçar atualização do DOM
-        if (editableDivRef.current) {
-          editableDivRef.current.textContent = shot.scriptSegment;
-        }
-      }
+    if (sceneRef.current) {
+      sceneRef.current.style.height = 'auto';
+      sceneRef.current.style.height = sceneRef.current.scrollHeight + 'px';
     }
-  }, [shot.scriptSegment, localText]);
-
-  // Restaurar posição do cursor
-  useEffect(() => {
-    if (cursorPositionRef.current !== null && editableDivRef.current) {
-      const element = editableDivRef.current;
-      const textNode = element.firstChild;
-      
-      if (textNode && textNode.nodeType === Node.TEXT_NODE) {
-        const selection = window.getSelection();
-        const range = document.createRange();
-        
-        const targetPosition = Math.min(
-          cursorPositionRef.current,
-          textNode.textContent?.length || 0
-        );
-        
-        try {
-          range.setStart(textNode, targetPosition);
-          range.setEnd(textNode, targetPosition);
-          selection?.removeAllRanges();
-          selection?.addRange(range);
-        } catch (error) {
-          console.error('Erro ao restaurar cursor:', error);
-        }
-      }
-      
-      cursorPositionRef.current = null;
-    }
-  }, [localText]);
+  }, [shot.scene]);
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -197,112 +153,16 @@ const SortableRow = ({
     }
   };
 
-  const handleInput = (e: React.FormEvent<HTMLDivElement>) => {
-    const newText = e.currentTarget.textContent || '';
-    
-    // Salvar posição do cursor
-    const selection = window.getSelection();
-    if (selection && selection.rangeCount > 0 && editableDivRef.current) {
-      const range = selection.getRangeAt(0);
-      const preCaretRange = range.cloneRange();
-      preCaretRange.selectNodeContents(editableDivRef.current);
-      preCaretRange.setEnd(range.endContainer, range.endOffset);
-      cursorPositionRef.current = preCaretRange.toString().length;
-    }
-    
-    // Adicionar ao histórico (limitar a 50 itens)
-    setHistory(prev => {
-      const newHistory = [...prev.slice(0, historyIndex + 1), newText];
-      return newHistory.slice(-50);
-    });
-    setHistoryIndex(prev => Math.min(prev + 1, 49));
-    
-    setLocalText(newText);
-    onUpdate(shot.id, 'scriptSegment', newText);
+  const handleScriptSegmentChange = (html: string) => {
+    const sanitized = sanitizeHtmlContent(html);
+    onUpdate(shot.id, 'scriptSegment', sanitized);
   };
 
-  const handleUndo = () => {
-    if (historyIndex > 0) {
-      const newIndex = historyIndex - 1;
-      const previousText = history[newIndex];
-      setHistoryIndex(newIndex);
-      setLocalText(previousText);
-      onUpdate(shot.id, 'scriptSegment', previousText);
-      
-      // Mover cursor para o final
-      setTimeout(() => {
-        if (editableDivRef.current) {
-          const textNode = editableDivRef.current.firstChild;
-          if (textNode && textNode.nodeType === Node.TEXT_NODE) {
-            const selection = window.getSelection();
-            const range = document.createRange();
-            const length = textNode.textContent?.length || 0;
-            range.setStart(textNode, length);
-            range.setEnd(textNode, length);
-            selection?.removeAllRanges();
-            selection?.addRange(range);
-          }
-        }
-      }, 0);
-    }
-  };
-
-  const handleRedo = () => {
-    if (historyIndex < history.length - 1) {
-      const newIndex = historyIndex + 1;
-      const nextText = history[newIndex];
-      setHistoryIndex(newIndex);
-      setLocalText(nextText);
-      onUpdate(shot.id, 'scriptSegment', nextText);
-      
-      // Mover cursor para o final
-      setTimeout(() => {
-        if (editableDivRef.current) {
-          const textNode = editableDivRef.current.firstChild;
-          if (textNode && textNode.nodeType === Node.TEXT_NODE) {
-            const selection = window.getSelection();
-            const range = document.createRange();
-            const length = textNode.textContent?.length || 0;
-            range.setStart(textNode, length);
-            range.setEnd(textNode, length);
-            selection?.removeAllRanges();
-            selection?.addRange(range);
-          }
-        }
-      }, 0);
-    }
-  };
-
-  const handleEditorKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    // Ctrl+Z / Cmd+Z para desfazer
-    if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
-      e.preventDefault();
-      handleUndo();
-      return;
-    }
-    
-    // Ctrl+Shift+Z / Cmd+Shift+Z ou Ctrl+Y para refazer
-    if (((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'z') || (e.ctrlKey && e.key === 'y')) {
-      e.preventDefault();
-      handleRedo();
-      return;
-    }
-    
-    // Enter para dividir
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      
-      const selection = window.getSelection();
-      if (!selection || !editableDivRef.current) return;
-      
-      const range = selection.getRangeAt(0);
-      const preCaretRange = range.cloneRange();
-      preCaretRange.selectNodeContents(editableDivRef.current);
-      preCaretRange.setEnd(range.endContainer, range.endOffset);
-      const cursorPosition = preCaretRange.toString().length;
-      
-      onSplitAtCursor(shot.id, cursorPosition);
-    }
+  const handleSceneChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    onUpdate(shot.id, 'scene', e.target.value);
+    // Auto-resize
+    e.target.style.height = 'auto';
+    e.target.style.height = e.target.scrollHeight + 'px';
   };
 
   return (
@@ -333,37 +193,30 @@ const SortableRow = ({
           <span className="text-xs text-muted-foreground font-mono">#{index + 1}</span>
         </div>
       </td>
-      <td className="p-4 w-80">
-        <div className="flex flex-col gap-2">
+      <td className="p-4 w-80 min-w-0 align-top">
+        <div className="flex flex-col gap-2 w-full max-w-full min-w-0">
           {shot.sectionName && (
             <span className="text-xs font-semibold text-primary uppercase tracking-wide">
               {shot.sectionName}
             </span>
           )}
-              <div
-                ref={editableDivRef}
-                contentEditable
-                onInput={handleInput}
-                onKeyDown={handleEditorKeyDown}
-                onBlur={() => {
-                  if (localText !== shot.scriptSegment) {
-                    onUpdate(shot.id, 'scriptSegment', localText);
-                  }
-                }}
-                suppressContentEditableWarning
-                className="min-h-[80px] max-h-[160px] overflow-y-auto overflow-x-hidden text-sm p-3 rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 whitespace-pre-wrap break-words"
-              >
-                {localText}
-              </div>
-          <span className="text-xs text-muted-foreground">Pressione Enter para dividir</span>
+          <RichTextEditor
+            content={shot.scriptSegment}
+            onChange={handleScriptSegmentChange}
+            placeholder="Trecho do roteiro..."
+            className="w-full max-w-full min-w-0 [&_.ProseMirror]:break-words [&_.ProseMirror]:overflow-wrap-anywhere"
+            minHeight="80px"
+          />
+          <span className="text-xs text-muted-foreground">Use Ctrl+Enter para quebrar linha</span>
         </div>
       </td>
-      <td className="p-4 w-64">
+      <td className="p-4 w-64 min-w-0 align-top">
         <Textarea
+          ref={sceneRef}
           value={shot.scene}
-          onChange={(e) => onUpdate(shot.id, 'scene', e.target.value)}
+          onChange={handleSceneChange}
           placeholder="Descreva movimento/técnica de câmera (ex: Tracking, Dolly zoom)"
-          className="text-sm min-h-[80px] max-h-[120px] overflow-y-auto resize-none break-words"
+          className="text-sm min-h-[80px] resize-none break-words w-full max-w-full"
         />
       </td>
       <td className="p-4 w-48 relative">
@@ -551,8 +404,8 @@ export const ShotListTable = ({
       collisionDetection={closestCenter}
       onDragEnd={onDragEnd}
     >
-      <div className="overflow-x-auto rounded-lg border border-border">
-        <table className="w-full border-collapse">
+      <div className="rounded-lg border border-border overflow-hidden">
+        <table className="w-full border-collapse table-fixed">
           <thead className="bg-muted/50 sticky top-0 z-10">
             <tr>
               {showCheckbox && <th className="p-4 text-left text-sm font-semibold text-foreground w-16">✓</th>}
