@@ -3,7 +3,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useNavigationBlocker } from "@/hooks/useNavigationBlocker";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Plus, Filter, ArrowRight, AlignLeft } from "lucide-react";
+import { ArrowLeft, Plus, Filter, ArrowRight, AlignLeft, FileDown } from "lucide-react";
+import { ExportPDFButton } from "@/components/shotlist/ExportPDFButton";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -708,6 +709,14 @@ const ShotListRecord = () => {
               <h1 className="text-lg font-bold text-foreground truncate">Gravação</h1>
               <p className="text-xs text-muted-foreground truncate">{scriptTitle}</p>
             </div>
+            <ExportPDFButton
+              shots={shots}
+              scriptTitle={scriptTitle}
+              mode="record"
+              size="icon"
+              variant="ghost"
+              iconOnly
+            />
             <SaveStatusIndicator status={autoSaveStatus} />
           </div>
 
@@ -830,6 +839,14 @@ const ShotListRecord = () => {
           {/* Indicador de status + Toggle + Botão de Edição */}
           <div className="flex items-center gap-4">
             <SaveStatusIndicator status={autoSaveStatus} />
+            
+            <ExportPDFButton
+              shots={shots}
+              scriptTitle={scriptTitle}
+              mode="record"
+              variant="outline"
+              size="sm"
+            />
             
             {/* Botão para alternar para Modo Frase-a-Frase */}
             {hasShotListContent && scriptContent && (
