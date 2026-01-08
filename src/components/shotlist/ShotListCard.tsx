@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { GripVertical, X, Upload, Image as ImageIcon } from "lucide-react";
@@ -49,7 +49,7 @@ export const ShotListCard = ({
   onImageClick
 }: ShotListCardProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const sceneRef = useRef<HTMLTextAreaElement>(null);
+  
 
   const {
     attributes,
@@ -65,24 +65,15 @@ export const ShotListCard = ({
     transition,
   };
 
-  // Auto-resize scene textarea
-  useEffect(() => {
-    if (sceneRef.current) {
-      sceneRef.current.style.height = 'auto';
-      sceneRef.current.style.height = sceneRef.current.scrollHeight + 'px';
-    }
-  }, [shot.scene]);
 
   const handleScriptSegmentChange = (html: string) => {
     const sanitized = sanitizeHtmlContent(html);
     onUpdate(shot.id, 'scriptSegment', sanitized);
   };
 
-  const handleSceneChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    onUpdate(shot.id, 'scene', e.target.value);
-    // Auto-resize
-    e.target.style.height = 'auto';
-    e.target.style.height = e.target.scrollHeight + 'px';
+  const handleSceneChange = (html: string) => {
+    const sanitized = sanitizeHtmlContent(html);
+    onUpdate(shot.id, 'scene', sanitized);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -224,12 +215,12 @@ export const ShotListCard = ({
           <label className="text-sm font-medium text-foreground">
             🎬 Cena (Técnica de Câmera)
           </label>
-          <Textarea
-            ref={sceneRef}
-            value={shot.scene}
+          <RichTextEditor
+            content={shot.scene}
             onChange={handleSceneChange}
             placeholder="Descreva movimento/técnica de câmera (ex: Tracking, Dolly zoom)"
-            className="text-sm min-h-[100px] resize-none break-words w-full max-w-full"
+            className="w-full max-w-full min-w-0 [&_.ProseMirror]:break-words"
+            minHeight="100px"
           />
         </div>
 

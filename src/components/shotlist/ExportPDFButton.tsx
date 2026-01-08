@@ -205,7 +205,7 @@ export function ExportPDFButton({
         const locationColWidth = colWidths.location - 4;
         
         const textLines = pdf.splitTextToSize(htmlToText(shot.scriptSegment) || '', textColWidth);
-        const sceneLines = pdf.splitTextToSize(shot.scene || '-', sceneColWidth);
+        const sceneLines = pdf.splitTextToSize(htmlToText(shot.scene) || '-', sceneColWidth);
         const locationLines = pdf.splitTextToSize(shot.location || '-', locationColWidth);
         
         // Max lines from text columns
@@ -307,7 +307,7 @@ export function ExportPDFButton({
         xPos += colWidths.text;
 
         // Column 3: Cena (full text with word wrap)
-        const sceneLines = pdf.splitTextToSize(shot.scene || '-', colWidths.scene - 4);
+        const sceneLines = pdf.splitTextToSize(htmlToText(shot.scene) || '-', colWidths.scene - 4);
         sceneLines.forEach((line: string, i: number) => {
           pdf.text(line, xPos, textStartY + (i * lineHeight));
         });
