@@ -428,6 +428,7 @@ export const ShotListTable = ({
                   showCheckbox={showCheckbox}
                   mode={mode}
                   availableLocations={availableLocations}
+                  resolvedUrls={resolvedUrls}
                   onImageClick={onImageClick}
                 />
               ))}
