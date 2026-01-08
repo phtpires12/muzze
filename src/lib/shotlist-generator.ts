@@ -4,7 +4,8 @@ export interface ShotItem {
   id: string;
   scriptSegment: string;
   scene: string;
-  shotImageUrls: string[];
+  shotImagePaths: string[];      // Paths no Storage (fonte da verdade)
+  shotImageUrls?: string[];      // DEPRECADO: mantido para compatibilidade
   location: string;
   sectionName?: string;
   isCompleted?: boolean;
@@ -61,7 +62,7 @@ export function generateShotListFromContent(content: ContentSections): ShotItem[
         sectionName: name,
         scene: '',
         location: '',
-        shotImageUrls: [],
+        shotImagePaths: [],
         isCompleted: false,
       });
     });
