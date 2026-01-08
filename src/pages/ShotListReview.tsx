@@ -25,6 +25,7 @@ import { StreakCelebration } from "@/components/StreakCelebration";
 import { TrophyCelebration } from "@/components/TrophyCelebration";
 import { ImageGalleryModal } from "@/components/shotlist/ImageGalleryModal";
 import { generateShotListFromContent, normalizeText } from "@/lib/shotlist-generator";
+import { extractPathFromUrl, generateSignedUrlsBatch } from "@/lib/storage-helpers";
 
 const ShotListReview = () => {
   const navigate = useNavigate();
@@ -33,6 +34,7 @@ const ShotListReview = () => {
   const { toast } = useToast();
 
   const [shots, setShots] = useState<ShotItem[]>([]);
+  const [resolvedUrls, setResolvedUrls] = useState<Map<string, string>>(new Map());
   const [scriptTitle, setScriptTitle] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [uploadingImages, setUploadingImages] = useState<Set<string>>(new Set());
@@ -202,26 +204,47 @@ const ShotListReview = () => {
       setScriptTitle(data.title);
 
       if (data.shot_list && Array.isArray(data.shot_list) && data.shot_list.length > 0) {
+        let needsMigration = false;
+        
         const parsedShots: ShotItem[] = data.shot_list.map((item: any) => {
-          // Se o item for uma string JSON, fazer parse primeiro
           const shotData = typeof item === 'string' ? JSON.parse(item) : item;
+          
+          // Migrar shotImageUrls -> shotImagePaths se necessário
+          let paths: string[] = shotData.shotImagePaths || [];
+          
+          if (paths.length === 0 && shotData.shotImageUrls?.length > 0) {
+            // Extrair paths de URLs legadas
+            paths = shotData.shotImageUrls
+              .map((url: string) => extractPathFromUrl(url))
+              .filter((p: string | null): p is string => p !== null);
+            needsMigration = true;
+          }
           
           return {
             id: shotData.id || crypto.randomUUID(),
             scriptSegment: shotData.scriptSegment || shotData.script_segment || '',
             scene: shotData.scene || '',
-            shotImageUrls: shotData.shotImageUrls 
-              ? shotData.shotImageUrls 
-              : shotData.shotImageUrl || shotData.shot_image_url 
-                ? [shotData.shotImageUrl || shotData.shot_image_url]
-                : [],
+            shotImagePaths: paths,
             location: shotData.location || '',
             sectionName: shotData.sectionName || shotData.section_name || '',
             isCompleted: shotData.isCompleted || shotData.is_completed || false,
           };
         });
+        
         setShots(parsedShots);
-        setLastSavedShots(parsedShots); // Marcar como salvo após carregar
+        setLastSavedShots(parsedShots);
+        
+        // Se houve migração, salvar versão atualizada
+        if (needsMigration) {
+          await supabase
+            .from('scripts')
+            .update({ shot_list: parsedShots as any })
+            .eq('id', scriptId);
+          console.log('Migrated shot_list to use paths instead of URLs');
+        }
+        
+        // Resolver signed URLs para todos os paths
+        await resolveAllImageUrls(parsedShots);
       } else {
         setShots([]);
         setLastSavedShots([]);
@@ -234,6 +257,23 @@ const ShotListReview = () => {
         variant: "destructive",
       });
     }
+  };
+
+  // Função para resolver URLs em lote
+  const resolveAllImageUrls = async (shots: ShotItem[]) => {
+    const allPaths: string[] = [];
+    shots.forEach(shot => {
+      (shot.shotImagePaths || []).forEach(path => {
+        if (path && !allPaths.includes(path)) {
+          allPaths.push(path);
+        }
+      });
+    });
+    
+    if (allPaths.length === 0) return;
+    
+    const urlMap = await generateSignedUrlsBatch(allPaths, 86400); // 24h
+    setResolvedUrls(urlMap);
   };
 
   const handleSave = async () => {
@@ -322,7 +362,7 @@ const ShotListReview = () => {
       id: crypto.randomUUID(),
       scriptSegment: '',
       scene: '',
-      shotImageUrls: [],
+      shotImagePaths: [],
       location: '',
       sectionName: '',
       isCompleted: false,
@@ -344,7 +384,7 @@ const ShotListReview = () => {
         id: crypto.randomUUID(),
         scriptSegment: afterText,
         scene: shot.scene,
-        shotImageUrls: [],
+        shotImagePaths: [],
         location: shot.location,
         sectionName: shot.sectionName,
         isCompleted: false,
@@ -369,7 +409,7 @@ const ShotListReview = () => {
             ...s, 
             [field]: field === 'isCompleted' 
               ? value === 'true' 
-              : field === 'shotImageUrls' 
+              : field === 'shotImagePaths' 
                 ? JSON.parse(value)
                 : value 
           }
@@ -379,9 +419,9 @@ const ShotListReview = () => {
 
   const handleImageUpload = async (shotId: string, file: File) => {
     const shot = shots.find(s => s.id === shotId);
-    const currentUrls = shot?.shotImageUrls || [];
+    const currentPaths = shot?.shotImagePaths || [];
     
-    if (currentUrls.length >= 3) {
+    if (currentPaths.length >= 3) {
       toast({
         title: "Limite atingido",
         description: "Máximo de 3 imagens por take",
@@ -398,7 +438,8 @@ const ShotListReview = () => {
 
       const fileExt = file.name.split('.').pop();
       const fileName = `${crypto.randomUUID()}.${fileExt}`;
-      const filePath = `${user.id}/${fileName}`;
+      // Path padronizado: userId/scriptId/shotId/fileName
+      const filePath = `${user.id}/${scriptId}/${shotId}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('shot-references')
@@ -406,21 +447,22 @@ const ShotListReview = () => {
 
       if (uploadError) throw uploadError;
 
-      // P4 Security: Usar URLs assinadas ao invés de públicas
-      const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+      // Salvar apenas o PATH no banco (não a signed URL)
+      const newPaths = [...currentPaths, filePath];
+      updateShot(shotId, 'shotImagePaths', JSON.stringify(newPaths));
+
+      // Gerar signed URL apenas para preview local imediato
+      const { data: signedUrlData } = await supabase.storage
         .from('shot-references')
-        .createSignedUrl(filePath, 3600); // 1 hora de validade
+        .createSignedUrl(filePath, 86400); // 24 horas
 
-      if (signedUrlError || !signedUrlData) {
-        throw new Error('Failed to generate signed URL');
+      if (signedUrlData?.signedUrl) {
+        setResolvedUrls(prev => new Map(prev).set(filePath, signedUrlData.signedUrl));
       }
-
-      const newUrls = [...currentUrls, signedUrlData.signedUrl];
-      updateShot(shotId, 'shotImageUrls', JSON.stringify(newUrls));
 
       toast({
         title: "Imagem enviada!",
-        description: `${newUrls.length}/3 imagens adicionadas`,
+        description: `${newPaths.length}/3 imagens adicionadas`,
       });
     } catch (error) {
       console.error('Error uploading image:', error);
@@ -763,6 +805,7 @@ const ShotListReview = () => {
         {shots.length > 0 ? (
           <ShotListTable
             shots={shots}
+            resolvedUrls={resolvedUrls}
             onUpdate={updateShot}
             onRemove={removeShot}
             onImageUpload={handleImageUpload}

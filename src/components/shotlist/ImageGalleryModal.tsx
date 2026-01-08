@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 
 interface Shot {
   id: string;
-  shotImageUrls: string[];
+  shotImageUrls?: string[];  // URLs resolvidas para exibição
   scriptSegment: string;
   scene: string;
 }
@@ -15,12 +15,13 @@ interface ImageGalleryModalProps {
   shots: Shot[];
   currentShotId: string | null;
   onClose: () => void;
+  resolvedUrls?: Map<string, string>;  // Map de path -> URL resolvida
 }
 
-export const ImageGalleryModal = ({ shots, currentShotId, onClose }: ImageGalleryModalProps) => {
+export const ImageGalleryModal = ({ shots, currentShotId, onClose, resolvedUrls }: ImageGalleryModalProps) => {
   // Flatten all images from all shots into a single array with metadata
   const allImages = shots.flatMap(shot => 
-    (shot.shotImageUrls || []).map((url, imgIndex) => ({
+    (shot.shotImageUrls || []).filter(url => url && url.length > 0).map((url, imgIndex) => ({
       url,
       shotId: shot.id,
       shotData: shot,

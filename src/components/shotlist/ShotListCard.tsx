@@ -17,7 +17,8 @@ export interface ShotItem {
   id: string;
   scriptSegment: string;
   scene: string;
-  shotImageUrls: string[];
+  shotImagePaths: string[];      // Paths no Storage (fonte da verdade)
+  shotImageUrls?: string[];      // DEPRECADO: mantido para compatibilidade
   location: string;
   sectionName?: string;
   isCompleted?: boolean;
@@ -92,23 +93,18 @@ export const ShotListCard = ({
   };
 
   const handleRemoveImage = async (imageIndex: number) => {
-    const currentUrls = shot.shotImageUrls || [];
-    if (currentUrls[imageIndex]) {
+    const currentPaths = shot.shotImagePaths || [];
+    if (currentPaths[imageIndex]) {
       try {
-        const fileName = currentUrls[imageIndex].split('/').pop();
-        if (fileName) {
-          const { data: { user } } = await supabase.auth.getUser();
-          if (user) {
-            await supabase.storage
-              .from('shot-references')
-              .remove([`${user.id}/${fileName}`]);
-          }
-        }
+        const path = currentPaths[imageIndex];
+        await supabase.storage
+          .from('shot-references')
+          .remove([path]);
       } catch (error) {
         console.error('Error removing image:', error);
       }
-      const newUrls = currentUrls.filter((_, i) => i !== imageIndex);
-      onUpdate(shot.id, 'shotImageUrls', JSON.stringify(newUrls));
+      const newPaths = currentPaths.filter((_, i) => i !== imageIndex);
+      onUpdate(shot.id, 'shotImagePaths', JSON.stringify(newPaths));
     }
   };
 

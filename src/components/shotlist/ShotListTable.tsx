@@ -33,7 +33,8 @@ export interface ShotItem {
   id: string;
   scriptSegment: string;
   scene: string;
-  shotImageUrls: string[];
+  shotImagePaths: string[];      // Paths no Storage (fonte da verdade)
+  shotImageUrls?: string[];      // DEPRECADO: mantido para compatibilidade
   location: string;
   sectionName?: string;
   isCompleted?: boolean;
@@ -42,6 +43,7 @@ export interface ShotItem {
 interface SortableRowProps {
   shot: ShotItem;
   index: number;
+  resolvedUrls: Map<string, string>;
   onUpdate: (id: string, field: keyof ShotItem, value: string) => void;
   onRemove: (id: string) => void;
   onImageUpload: (id: string, file: File) => void;
@@ -55,6 +57,7 @@ interface SortableRowProps {
 const SortableRow = ({ 
   shot, 
   index, 
+  resolvedUrls,
   onUpdate, 
   onRemove, 
   onImageUpload, 
@@ -94,23 +97,18 @@ const SortableRow = ({
   };
 
   const handleRemoveImage = async (imageIndex: number) => {
-    const currentUrls = shot.shotImageUrls || [];
-    if (currentUrls[imageIndex]) {
+    const currentPaths = shot.shotImagePaths || [];
+    if (currentPaths[imageIndex]) {
       try {
-        const fileName = currentUrls[imageIndex].split('/').pop();
-        if (fileName) {
-          const { data: { user } } = await supabase.auth.getUser();
-          if (user) {
-            await supabase.storage
-              .from('shot-references')
-              .remove([`${user.id}/${fileName}`]);
-          }
-        }
+        const path = currentPaths[imageIndex];
+        await supabase.storage
+          .from('shot-references')
+          .remove([path]);
       } catch (error) {
         console.error('Error removing image:', error);
       }
-      const newUrls = currentUrls.filter((_, i) => i !== imageIndex);
-      onUpdate(shot.id, 'shotImageUrls', JSON.stringify(newUrls));
+      const newPaths = currentPaths.filter((_, i) => i !== imageIndex);
+      onUpdate(shot.id, 'shotImagePaths', JSON.stringify(newPaths));
     }
   };
 
@@ -226,36 +224,39 @@ const SortableRow = ({
             onChange={handleFileChange}
             className="hidden"
           />
-          {(shot.shotImageUrls && shot.shotImageUrls.length > 0) ? (
+          {(shot.shotImagePaths && shot.shotImagePaths.length > 0) ? (
             <div className="flex flex-wrap gap-2">
-              {shot.shotImageUrls.map((url, index) => (
-                <div key={index} className="relative group">
-                  <img
-                    src={url}
-                    alt={`Referência ${index + 1}`}
-                    className="w-20 h-20 object-cover rounded border border-border cursor-pointer hover:opacity-90 transition-opacity"
-                    onClick={() => onImageClick?.(shot.id)}
-                  />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleRemoveImage(index)}
-                    className="absolute -top-1 -right-1 h-5 w-5 bg-destructive text-destructive-foreground hover:bg-destructive/90 opacity-0 group-hover:opacity-100 transition-opacity rounded-full p-0"
-                  >
-                    <X className="w-3 h-3" />
-                  </Button>
-                  {index === shot.shotImageUrls.length - 1 && shot.shotImageUrls.length < 3 && (
+              {shot.shotImagePaths.map((path, index) => {
+                const resolvedUrl = (window as any).__resolvedUrls?.get(path);
+                return (
+                  <div key={index} className="relative group">
+                    <img
+                      src={resolvedUrl || path}
+                      alt={`Referência ${index + 1}`}
+                      className="w-20 h-20 object-cover rounded border border-border cursor-pointer hover:opacity-90 transition-opacity"
+                      onClick={() => onImageClick?.(shot.id)}
+                    />
                     <Button
-                      variant="default"
+                      variant="ghost"
                       size="icon"
-                      onClick={handleImageClick}
-                      className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full p-0 shadow-lg"
+                      onClick={() => handleRemoveImage(index)}
+                      className="absolute -top-1 -right-1 h-5 w-5 bg-destructive text-destructive-foreground hover:bg-destructive/90 opacity-0 group-hover:opacity-100 transition-opacity rounded-full p-0"
                     >
-                      <Upload className="w-3 h-3" />
+                      <X className="w-3 h-3" />
                     </Button>
-                  )}
-                </div>
-              ))}
+                    {index === shot.shotImagePaths.length - 1 && shot.shotImagePaths.length < 3 && (
+                      <Button
+                        variant="default"
+                        size="icon"
+                        onClick={handleImageClick}
+                        className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full p-0 shadow-lg"
+                      >
+                        <Upload className="w-3 h-3" />
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           ) : (
             <div
@@ -326,6 +327,7 @@ const SortableRow = ({
 
 interface ShotListTableProps {
   shots: ShotItem[];
+  resolvedUrls?: Map<string, string>;
   onUpdate: (id: string, field: keyof ShotItem, value: string) => void;
   onRemove: (id: string) => void;
   onImageUpload: (id: string, file: File) => void;
@@ -339,6 +341,7 @@ interface ShotListTableProps {
 
 export const ShotListTable = ({
   shots,
+  resolvedUrls = new Map(),
   onUpdate,
   onRemove,
   onImageUpload,
