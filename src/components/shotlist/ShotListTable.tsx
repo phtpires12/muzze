@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+
 import { GripVertical, X, Upload, Check } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
@@ -65,7 +65,7 @@ const SortableRow = ({
   onImageClick
 }: SortableRowProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const sceneRef = useRef<HTMLTextAreaElement>(null);
+  
   const {
     attributes,
     listeners,
@@ -75,13 +75,6 @@ const SortableRow = ({
     isDragging,
   } = useSortable({ id: shot.id });
 
-  // Auto-resize scene textarea
-  useEffect(() => {
-    if (sceneRef.current) {
-      sceneRef.current.style.height = 'auto';
-      sceneRef.current.style.height = sceneRef.current.scrollHeight + 'px';
-    }
-  }, [shot.scene]);
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -158,11 +151,9 @@ const SortableRow = ({
     onUpdate(shot.id, 'scriptSegment', sanitized);
   };
 
-  const handleSceneChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    onUpdate(shot.id, 'scene', e.target.value);
-    // Auto-resize
-    e.target.style.height = 'auto';
-    e.target.style.height = e.target.scrollHeight + 'px';
+  const handleSceneChange = (html: string) => {
+    const sanitized = sanitizeHtmlContent(html);
+    onUpdate(shot.id, 'scene', sanitized);
   };
 
   return (
@@ -211,12 +202,12 @@ const SortableRow = ({
         </div>
       </td>
       <td className="p-4 w-64 min-w-0 align-top">
-        <Textarea
-          ref={sceneRef}
-          value={shot.scene}
+        <RichTextEditor
+          content={shot.scene}
           onChange={handleSceneChange}
           placeholder="Descreva movimento/técnica de câmera (ex: Tracking, Dolly zoom)"
-          className="text-sm min-h-[80px] resize-none break-words w-full max-w-full"
+          className="w-full max-w-full min-w-0 [&_.ProseMirror]:break-words"
+          minHeight="80px"
         />
       </td>
       <td className="p-4 w-48 relative">
