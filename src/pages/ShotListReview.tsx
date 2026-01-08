@@ -852,6 +852,7 @@ const ShotListReview = () => {
       {/* Image Gallery Modal */}
       <ImageGalleryModal
         shots={shots}
+        resolvedUrls={resolvedUrls}
         currentShotId={galleryOpenShotId}
         onClose={() => setGalleryOpenShotId(null)}
       />

@@ -27,6 +27,7 @@ export interface ShotItem {
 interface ShotListCardProps {
   shot: ShotItem;
   index: number;
+  resolvedUrls: Map<string, string>;
   onUpdate: (id: string, field: keyof ShotItem, value: string) => void;
   onRemove: (id: string) => void;
   onImageUpload: (shotId: string, file: File) => void;
@@ -40,6 +41,7 @@ interface ShotListCardProps {
 export const ShotListCard = ({
   shot,
   index,
+  resolvedUrls,
   onUpdate,
   onRemove,
   onImageUpload,
@@ -85,8 +87,8 @@ export const ShotListCard = ({
   };
 
   const handleImageClick = () => {
-    const currentUrls = shot.shotImageUrls || [];
-    if (currentUrls.length >= 3) {
+    const currentPaths = shot.shotImagePaths || [];
+    if (currentPaths.length >= 3) {
       return;
     }
     fileInputRef.current?.click();
@@ -127,8 +129,8 @@ export const ShotListCard = ({
     e.stopPropagation();
     setIsDragOver(false);
 
-    const currentUrls = shot.shotImageUrls || [];
-    if (currentUrls.length >= 3) {
+    const currentPaths = shot.shotImagePaths || [];
+    if (currentPaths.length >= 3) {
       return;
     }
 
@@ -232,39 +234,49 @@ export const ShotListCard = ({
             accept="image/*"
             className="hidden"
           />
-          {(shot.shotImageUrls && shot.shotImageUrls.length > 0) ? (
+          {(shot.shotImagePaths && shot.shotImagePaths.length > 0) ? (
             <div className="grid grid-cols-2 gap-2">
-              {shot.shotImageUrls.map((url, index) => (
-                <div key={index} className="relative group">
-                  <img
-                    src={url}
-                    alt={`Referência ${index + 1}`}
-                    className={cn(
-                      "w-full aspect-square object-cover rounded-lg border border-input",
-                      onImageClick && "cursor-pointer hover:opacity-90 transition-opacity"
+              {shot.shotImagePaths.map((path, imgIndex) => {
+                const resolvedUrl = resolvedUrls.get(path);
+                
+                return (
+                  <div key={imgIndex} className="relative group">
+                    {resolvedUrl ? (
+                      <img
+                        src={resolvedUrl}
+                        alt={`Referência ${imgIndex + 1}`}
+                        className={cn(
+                          "w-full aspect-square object-cover rounded-lg border border-input",
+                          onImageClick && "cursor-pointer hover:opacity-90 transition-opacity"
+                        )}
+                        onClick={() => onImageClick?.(shot.id)}
+                      />
+                    ) : (
+                      <div className="w-full aspect-square rounded-lg border border-dashed border-muted-foreground/50 bg-muted flex items-center justify-center">
+                        <span className="text-xs text-muted-foreground">Carregando...</span>
+                      </div>
                     )}
-                    onClick={() => onImageClick?.(shot.id)}
-                  />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleRemoveImage(index)}
-                    className="absolute -top-1 -right-1 h-6 w-6 bg-destructive text-destructive-foreground hover:bg-destructive/90 opacity-0 group-hover:opacity-100 transition-opacity rounded-full p-0"
-                  >
-                    <X className="w-3 h-3" />
-                  </Button>
-                  {index === shot.shotImageUrls.length - 1 && shot.shotImageUrls.length < 3 && (
                     <Button
-                      variant="default"
+                      variant="ghost"
                       size="icon"
-                      onClick={handleImageClick}
-                      className="absolute -bottom-1 -right-1 h-8 w-8 rounded-full p-0 shadow-lg"
+                      onClick={() => handleRemoveImage(imgIndex)}
+                      className="absolute -top-1 -right-1 h-6 w-6 bg-destructive text-destructive-foreground hover:bg-destructive/90 opacity-0 group-hover:opacity-100 transition-opacity rounded-full p-0"
                     >
-                      <Upload className="w-4 h-4" />
+                      <X className="w-3 h-3" />
                     </Button>
-                  )}
-                </div>
-              ))}
+                    {imgIndex === shot.shotImagePaths.length - 1 && shot.shotImagePaths.length < 3 && (
+                      <Button
+                        variant="default"
+                        size="icon"
+                        onClick={handleImageClick}
+                        className="absolute -bottom-1 -right-1 h-8 w-8 rounded-full p-0 shadow-lg"
+                      >
+                        <Upload className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           ) : (
             <div
