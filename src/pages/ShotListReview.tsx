@@ -771,9 +771,8 @@ const ShotListReview = () => {
             onResume={resumeSession}
             onStop={handleEndSession}
             progress={progress}
-            todayMinutesFromDB={dailyProgress.actualMinutes}
+            dailyBaselineSeconds={session.dailyBaselineSeconds}
             permissionEnabled={canUseTimer}
-            savedSecondsThisSession={session.savedSecondsThisSession}
             hidden={isShowingAnyCelebration}
           />
         )}
@@ -795,9 +794,8 @@ const ShotListReview = () => {
             onStop={handleEndSession}
             progress={progress}
             isPopup={true}
-            todayMinutesFromDB={dailyProgress.actualMinutes}
+            dailyBaselineSeconds={session.dailyBaselineSeconds}
             permissionEnabled={canUseTimer}
-            savedSecondsThisSession={session.savedSecondsThisSession}
           />
         </Portal>
 

@@ -672,12 +672,11 @@ const ShotListRecord = () => {
             targetSeconds: session.targetSeconds,
             isStreakMode: session.isStreakMode,
             dailyGoalMinutes: session.dailyGoalMinutes,
-            savedSecondsThisSession: session.savedSecondsThisSession,
+            dailyBaselineSeconds: session.dailyBaselineSeconds,
           }}
           onPauseSession={pauseSession}
           onResumeSession={resumeSession}
           onEndSession={handleEndSession}
-          dailyProgress={dailyProgress}
           isShowingAnyCelebration={isShowingAnyCelebration}
           canUseTimer={canUseTimer}
           canSwitchToShotList={hasShotListContent}
@@ -929,9 +928,8 @@ const ShotListRecord = () => {
             onResume={resumeSession}
             onStop={handleEndSession}
             progress={progress}
-            todayMinutesFromDB={dailyProgress.actualMinutes}
+            dailyBaselineSeconds={session.dailyBaselineSeconds}
             permissionEnabled={canUseTimer}
-            savedSecondsThisSession={session.savedSecondsThisSession}
             hidden={isShowingAnyCelebration}
           />
         )}
@@ -953,9 +951,8 @@ const ShotListRecord = () => {
             onStop={handleEndSession}
             progress={progress}
             isPopup={true}
-            todayMinutesFromDB={dailyProgress.actualMinutes}
+            dailyBaselineSeconds={session.dailyBaselineSeconds}
             permissionEnabled={canUseTimer}
-            savedSecondsThisSession={session.savedSecondsThisSession}
           />
         </Portal>
 

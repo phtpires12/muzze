@@ -526,9 +526,8 @@ const Session = () => {
             onResume={resumeSession}
             onStop={handleEnd}
             progress={progress}
-            todayMinutesFromDB={dailyProgress.actualMinutes}
+            dailyBaselineSeconds={session.dailyBaselineSeconds}
             permissionEnabled={canUseTimer}
-            savedSecondsThisSession={session.savedSecondsThisSession}
             hidden={isShowingAnyCelebration}
           />
         )}
@@ -547,9 +546,8 @@ const Session = () => {
             onStop={handleEnd}
             progress={progress}
             isPopup={true}
-            todayMinutesFromDB={dailyProgress.actualMinutes}
+            dailyBaselineSeconds={session.dailyBaselineSeconds}
             permissionEnabled={canUseTimer}
-            savedSecondsThisSession={session.savedSecondsThisSession}
           />
         </Portal>
 
@@ -603,9 +601,8 @@ const Session = () => {
             onResume={resumeSession}
             onStop={handleEnd}
             progress={progress}
-            todayMinutesFromDB={dailyProgress.actualMinutes}
+            dailyBaselineSeconds={session.dailyBaselineSeconds}
             permissionEnabled={canUseTimer}
-            savedSecondsThisSession={session.savedSecondsThisSession}
             hidden={isShowingAnyCelebration}
           />
         )}
@@ -625,9 +622,8 @@ const Session = () => {
             onStop={handleEnd}
             progress={progress}
             isPopup={true}
-            todayMinutesFromDB={dailyProgress.actualMinutes}
+            dailyBaselineSeconds={session.dailyBaselineSeconds}
             permissionEnabled={canUseTimer}
-            savedSecondsThisSession={session.savedSecondsThisSession}
           />
         </Portal>
 
@@ -650,18 +646,17 @@ const Session = () => {
 
 
   // Calculate bonus mode for edit stage (same logic as DraggableSessionTimer)
+  // Usar dailyBaselineSeconds (snapshot do início da sessão) + elapsedSeconds para cálculo monotônico
   const goalSeconds = session.dailyGoalMinutes * 60;
-  const alreadyDoneSeconds = (dailyProgress.actualMinutes || 0) * 60;
-  const totalWithCurrentSession = alreadyDoneSeconds + session.elapsedSeconds;
-  const remainingSeconds = goalSeconds - totalWithCurrentSession;
-  const isBonusMode = remainingSeconds <= 0 && !session.isStreakMode;
+  const totalCreatedToday = session.dailyBaselineSeconds + session.elapsedSeconds;
+  const remainingSeconds = Math.max(0, goalSeconds - totalCreatedToday);
+  const bonusSeconds = Math.max(0, totalCreatedToday - goalSeconds);
+  const isBonusMode = bonusSeconds >= 90 && session.isStreakMode;
 
   // Dynamic goal text
-  const goalText = session.isStreakMode 
-    ? `🎯 Meta diária: ${formatTime(session.dailyGoalMinutes * 60)}`
-    : remainingSeconds > 0 
-      ? `Falta: ${formatTime(remainingSeconds)}`
-      : `🔥 Bônus: +${formatTime(Math.abs(remainingSeconds))} além da meta`;
+  const goalText = remainingSeconds > 0 
+    ? `Falta: ${formatTime(remainingSeconds)}`
+    : `🔥 Bônus: +${formatTime(bonusSeconds)} além da meta`;
 
   return (
     <div 
@@ -865,9 +860,8 @@ const Session = () => {
           onResume={resumeSession}
           onStop={handleEnd}
           progress={progress}
-          todayMinutesFromDB={dailyProgress.actualMinutes}
+          dailyBaselineSeconds={session.dailyBaselineSeconds}
           permissionEnabled={canUseTimer}
-          savedSecondsThisSession={session.savedSecondsThisSession}
           hidden={isShowingAnyCelebration}
         />
       )}
@@ -886,10 +880,9 @@ const Session = () => {
           onResume={resumeSession}
           onStop={handleEnd}
           progress={progress}
-          todayMinutesFromDB={dailyProgress.actualMinutes}
+          dailyBaselineSeconds={session.dailyBaselineSeconds}
           permissionEnabled={canUseTimer}
           isPopup={true}
-          savedSecondsThisSession={session.savedSecondsThisSession}
         />
       </Portal>
 

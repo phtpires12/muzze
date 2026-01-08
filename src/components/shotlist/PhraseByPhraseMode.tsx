@@ -26,12 +26,11 @@ interface PhraseByPhraseModeProps {
     targetSeconds: number;
     isStreakMode: boolean;
     dailyGoalMinutes: number;
-    savedSecondsThisSession: number;
+    dailyBaselineSeconds: number;
   };
   onPauseSession: () => void;
   onResumeSession: () => void;
   onEndSession: () => Promise<void>;
-  dailyProgress: { actualMinutes: number };
   isShowingAnyCelebration: boolean;
   canUseTimer: boolean;
   // Toggle mode props
@@ -116,7 +115,7 @@ export const PhraseByPhraseMode = ({
   onPauseSession,
   onResumeSession,
   onEndSession,
-  dailyProgress,
+  
   isShowingAnyCelebration,
   canUseTimer,
   canSwitchToShotList,
@@ -422,9 +421,8 @@ export const PhraseByPhraseMode = ({
           onResume={onResumeSession}
           onStop={onEndSession}
           progress={timerProgress}
-          todayMinutesFromDB={dailyProgress.actualMinutes}
+          dailyBaselineSeconds={session.dailyBaselineSeconds}
           permissionEnabled={canUseTimer}
-          savedSecondsThisSession={session.savedSecondsThisSession}
           hidden={isShowingAnyCelebration}
         />
       )}
