@@ -1003,6 +1003,7 @@ const ShotListRecord = () => {
         {filteredShots.length > 0 ? (
           <ShotListTable
             shots={filteredShots}
+            resolvedUrls={resolvedUrls}
             onUpdate={updateShot}
             onRemove={removeShot}
             onImageUpload={handleImageUpload}
@@ -1022,6 +1023,7 @@ const ShotListRecord = () => {
         {/* Image Gallery Modal */}
         <ImageGalleryModal
           shots={shots}
+          resolvedUrls={resolvedUrls}
           currentShotId={galleryOpenShotId}
           onClose={() => setGalleryOpenShotId(null)}
         />

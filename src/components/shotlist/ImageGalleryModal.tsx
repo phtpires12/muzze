@@ -6,28 +6,37 @@ import { cn } from "@/lib/utils";
 
 interface Shot {
   id: string;
-  shotImageUrls?: string[];  // URLs resolvidas para exibição
+  shotImagePaths?: string[];
+  shotImageUrls?: string[];  // DEPRECADO
   scriptSegment: string;
   scene: string;
 }
 
 interface ImageGalleryModalProps {
   shots: Shot[];
+  resolvedUrls: Map<string, string>;
   currentShotId: string | null;
   onClose: () => void;
-  resolvedUrls?: Map<string, string>;  // Map de path -> URL resolvida
 }
 
-export const ImageGalleryModal = ({ shots, currentShotId, onClose, resolvedUrls }: ImageGalleryModalProps) => {
+export const ImageGalleryModal = ({ shots, resolvedUrls, currentShotId, onClose }: ImageGalleryModalProps) => {
   // Flatten all images from all shots into a single array with metadata
-  const allImages = shots.flatMap(shot => 
-    (shot.shotImageUrls || []).filter(url => url && url.length > 0).map((url, imgIndex) => ({
-      url,
-      shotId: shot.id,
-      shotData: shot,
-      imageIndex: imgIndex,
-    }))
-  );
+  const allImages = shots.flatMap(shot => {
+    const paths = shot.shotImagePaths || [];
+    return paths
+      .map((path, imgIndex) => {
+        const url = resolvedUrls.get(path);
+        if (!url) return null;
+        return {
+          url,
+          shotId: shot.id,
+          shotData: shot,
+          imageIndex: imgIndex,
+          totalImages: paths.length,
+        };
+      })
+      .filter((img): img is NonNullable<typeof img> => img !== null);
+  });
   
   const currentShotImages = allImages.filter(img => img.shotId === currentShotId);
   const startIndex = currentShotImages.length > 0 
@@ -86,7 +95,7 @@ export const ImageGalleryModal = ({ shots, currentShotId, onClose, resolvedUrls 
         <div className="absolute top-0 left-0 right-0 z-50 flex items-center justify-between p-4 bg-gradient-to-b from-black/80 to-transparent">
           <div className="text-white">
             <p className="text-sm font-medium">
-              Shot #{originalShotIndex + 1} • Imagem {currentImage.imageIndex + 1} de {currentShot.shotImageUrls.length} • {activeIndex + 1}/{allImages.length} total
+              Shot #{originalShotIndex + 1} • Imagem {currentImage.imageIndex + 1} de {currentImage.totalImages} • {activeIndex + 1}/{allImages.length} total
             </p>
             <p className="text-xs text-white/70 mt-1 max-w-md truncate">
               {currentShot.scene || currentShot.scriptSegment}

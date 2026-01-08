@@ -375,6 +375,7 @@ export const ShotListTable = ({
                 key={shot.id}
                 shot={shot}
                 index={index}
+                resolvedUrls={resolvedUrls}
                 onUpdate={onUpdate}
                 onRemove={onRemove}
                 onImageUpload={onImageUpload}
