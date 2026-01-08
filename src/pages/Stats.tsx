@@ -2,6 +2,7 @@ import { Award, Target, Zap } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
 import { Card } from "@/components/ui/card";
 import { useStatsPage } from "@/hooks/useStatsPage";
+import { useLiveDailyProgress } from "@/hooks/useLiveDailyProgress";
 import { TROPHIES } from "@/lib/gamification";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
@@ -43,6 +44,9 @@ const Stats = () => {
     gamificationStats,
     loading,
   } = useStatsPage();
+  
+  // Hook para progresso live durante sessão ativa
+  const liveGoal = useLiveDailyProgress(dailyGoal.actualMinutes, dailyGoal.goalMinutes);
   
   const maxHours = Math.max(...weeklyData.map((d) => d.hours), 0.1);
   
@@ -129,12 +133,12 @@ const Stats = () => {
   }
 
   const getDailyGoalDescription = () => {
-    if (dailyGoal.isAbove) {
-      return `+${dailyGoal.percentageProgress}% acima da meta`;
-    } else if (dailyGoal.actualMinutes === 0) {
+    if (liveGoal.isAbove) {
+      return `+${liveGoal.percentageProgress}% acima da meta`;
+    } else if (liveGoal.actualMinutes === 0) {
       return "Comece sua sessão hoje";
     } else {
-      return `${dailyGoal.percentageProgress}% da meta`;
+      return `${liveGoal.percentageProgress}% da meta`;
     }
   };
 
@@ -152,8 +156,13 @@ const Stats = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="p-6 transition-all duration-300 hover:shadow-lg">
           <div className="flex items-start justify-between mb-4">
-            <div>
+            <div className="flex items-center gap-2">
               <p className="text-sm font-medium text-muted-foreground">Meta Diária</p>
+              {liveGoal.isLive && (
+                <span className="text-xs bg-green-500/20 text-green-500 px-1.5 py-0.5 rounded-full animate-pulse">
+                  LIVE
+                </span>
+              )}
             </div>
             <div className="p-3 rounded-xl bg-primary/10">
               <Target className="w-6 h-6 text-primary" />
@@ -162,20 +171,20 @@ const Stats = () => {
           <div className="space-y-3">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">📅 Hoje</span>
-              <span className="font-bold">{dailyGoal.actualMinutes}m</span>
+              <span className="font-bold">{liveGoal.actualMinutes}m</span>
             </div>
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">🎯 Sua Meta</span>
-              <span className="font-bold">{dailyGoal.goalMinutes}m</span>
+              <span className="font-bold">{liveGoal.goalMinutes}m</span>
             </div>
-            <Progress value={dailyGoal.percentageProgress} className="h-2" />
+            <Progress value={liveGoal.percentageProgress} className="h-2" />
             <p className={cn(
               "text-sm text-center font-medium",
-              dailyGoal.isAbove ? "text-green-600" : "text-orange-600"
+              liveGoal.isAbove ? "text-green-600" : "text-orange-600"
             )}>
-              {dailyGoal.isAbove 
-                ? `✅ Meta atingida! +${dailyGoal.percentageProgress - 100}%`
-                : `🔻 Faltam ${dailyGoal.goalMinutes - dailyGoal.actualMinutes} minutos`
+              {liveGoal.isAbove 
+                ? `✅ Meta atingida! +${liveGoal.percentageProgress - 100}%`
+                : `🔻 Faltam ${liveGoal.goalMinutes - liveGoal.actualMinutes} minutos`
               }
             </p>
           </div>
