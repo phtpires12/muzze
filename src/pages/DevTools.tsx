@@ -385,7 +385,7 @@ const DevTools = () => {
             alert("Botão Finalizar clicado! Aqui seria ativada a celebração de ofensiva.");
           }}
           progress={timerSimulationMode === 'streak' ? 100 : 20}
-          todayMinutesFromDB={timerSimulationMode === 'streak' ? 20 : 0}
+          dailyBaselineSeconds={timerSimulationMode === 'streak' ? 20 * 60 : 0}
         />
       )}
 

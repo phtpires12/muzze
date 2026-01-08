@@ -58,9 +58,8 @@ interface DraggableSessionTimerProps {
   progress: number;
   hidden?: boolean;
   isPopup?: boolean; // When true, render as centered popup (no drag, no fixed position)
-  todayMinutesFromDB?: number; // Minutos já acumulados hoje (do banco de dados)
+  dailyBaselineSeconds?: number; // Segundos criados ANTES desta sessão (snapshot imutável)
   permissionEnabled?: boolean; // When false, timer is not rendered (permission denied)
-  savedSecondsThisSession?: number; // Segundos já salvos no banco NESTA sessão (evita contagem dupla)
 }
 
 export const DraggableSessionTimer = ({ 
@@ -77,9 +76,8 @@ export const DraggableSessionTimer = ({
   progress,
   hidden = false,
   isPopup = false,
-  todayMinutesFromDB = 0,
+  dailyBaselineSeconds = 0,
   permissionEnabled = true,
-  savedSecondsThisSession = 0,
 }: DraggableSessionTimerProps) => {
   const isMobile = useIsMobile();
   const [showEndConfirmation, setShowEndConfirmation] = useState(false);
@@ -212,26 +210,24 @@ export const DraggableSessionTimer = ({
   const Icon = isStreakMode ? ICON_MAP['Flame'] : (ICON_MAP[icon] || ICON_MAP['Lightbulb']);
   const displayedTarget = isStreakMode ? dailyGoalMinutes * 60 : 25 * 60;
   
-  // Calcular tempo restante para a meta diária
-  // CORREÇÃO: Subtrair tempo já salvo desta sessão para evitar contagem dupla
-  // todayMinutesFromDB já inclui o tempo que foi salvo (auto-save), então precisamos
-  // considerar apenas o tempo ainda não salvo: elapsedSeconds - savedSecondsThisSession
+  // CÁLCULO SIMPLIFICADO E MONOTÔNICO:
+  // dailyBaselineSeconds = snapshot imutável do início da sessão (não muda)
+  // elapsedSeconds = tempo decorrido nesta sessão (sempre crescente)
+  // Não usar mais todayMinutesFromDB nem savedSecondsThisSession para o cálculo visual
   const goalSeconds = dailyGoalMinutes * 60;
-  const alreadyDoneSeconds = todayMinutesFromDB * 60;
-  const unsavedElapsedSeconds = Math.max(0, elapsedSeconds - savedSecondsThisSession);
-  const totalWithCurrentSession = alreadyDoneSeconds + unsavedElapsedSeconds;
-  const remainingSeconds = goalSeconds - totalWithCurrentSession;
+  const totalCreatedToday = dailyBaselineSeconds + elapsedSeconds;
+  const remainingSeconds = Math.max(0, goalSeconds - totalCreatedToday);
+  const bonusSeconds = Math.max(0, totalCreatedToday - goalSeconds);
   
   // Modo bônus: só ativa 1m30s (90 segundos) APÓS bater a meta E já estar em ofensiva
   // Sequência garantida: Padrão -> Ofensiva (25min) -> Bônus (meta + 90s em ofensiva)
-  const isBonusMode = remainingSeconds <= -90 && isStreakMode;
+  const isBonusMode = bonusSeconds >= 90 && isStreakMode;
   
   // Gerar texto dinâmico baseado no progresso
   let goalText: string;
   if (remainingSeconds > 0) {
     goalText = `Falta: ${formatTime(remainingSeconds)}`;
   } else {
-    const bonusSeconds = Math.abs(remainingSeconds);
     goalText = `🔥 Bônus: +${formatTime(bonusSeconds)} além da meta`;
   }
 

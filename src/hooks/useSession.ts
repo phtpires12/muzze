@@ -315,6 +315,7 @@ export const useSession = (options: UseSessionOptions = {}) => {
       isStreakMode: timer.isStreakMode,
       dailyGoalMinutes: timer.dailyGoalMinutes,
       savedSecondsThisSession: timer.savedSecondsThisSession,
+      dailyBaselineSeconds: timer.dailyBaselineSeconds, // Snapshot do início da sessão
       contentId: timer.contentId, // ID do conteúdo associado à sessão
     },
     startSession,

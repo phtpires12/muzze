@@ -18,6 +18,7 @@ export interface TimerState {
   dailyGoalMinutes: number; // Meta diária do usuário
   contentId: string | null; // ID do conteúdo sendo trabalhado
   savedSecondsThisSession: number; // Segundos já salvos no banco NESTA sessão (evita contagem dupla)
+  dailyBaselineSeconds: number; // Snapshot dos segundos criados ANTES desta sessão (imutável durante sessão)
 }
 
 // Backward compatibility - estrutura antiga
@@ -71,6 +72,7 @@ const defaultTimerState: TimerState = {
   dailyGoalMinutes: 60,
   contentId: null,
   savedSecondsThisSession: 0,
+  dailyBaselineSeconds: 0, // Será populado ao iniciar sessão
 };
 
 // Verificar se sessão é órfã baseado em lastActivityAt
@@ -400,11 +402,34 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
       stageElapsedRef.current = 0;
       lastRealInteractionRef.current = Date.now();
 
+      // Buscar meta diária do perfil e timezone
       const { data: profile } = await supabase
         .from('profiles')
-        .select('daily_goal_minutes')
+        .select('daily_goal_minutes, timezone')
         .eq('user_id', user.id)
         .single();
+
+      const timezone = profile?.timezone || 'America/Sao_Paulo';
+
+      // Calcular dailyBaselineSeconds: quanto tempo JÁ foi criado hoje ANTES desta sessão
+      const userDate = new Date(now.toLocaleString('en-US', { timeZone: timezone }));
+      const startOfDay = new Date(userDate);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(userDate);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      const { data: todaySessions } = await supabase
+        .from('stage_times')
+        .select('duration_seconds')
+        .eq('user_id', user.id)
+        .gte('created_at', startOfDay.toISOString())
+        .lt('created_at', endOfDay.toISOString());
+
+      const dailyBaselineSeconds = (todaySessions || []).reduce(
+        (sum, s) => sum + (s.duration_seconds || 0), 0
+      );
+
+      console.log(`[SessionContext] dailyBaselineSeconds capturado: ${dailyBaselineSeconds}s (${Math.floor(dailyBaselineSeconds / 60)}min)`);
 
       setTimer({
         isActive: true,
@@ -419,13 +444,14 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
         isStreakMode: false,
         dailyGoalMinutes: profile?.daily_goal_minutes || 60,
         contentId: null,
-        savedSecondsThisSession: 0, // Reset ao iniciar nova sessão
+        savedSecondsThisSession: 0,
+        dailyBaselineSeconds, // Snapshot imutável durante esta sessão
       });
 
       await supabase.from('analytics_events').insert({
         user_id: user.id,
         event: 'session_started',
-        payload: { stage: normalizedStage }
+        payload: { stage: normalizedStage, dailyBaselineSeconds }
       });
 
       console.log(`[SessionContext] ✅ Timer iniciado na etapa ${normalizedStage}`);
