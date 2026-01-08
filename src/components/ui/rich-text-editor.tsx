@@ -1,7 +1,6 @@
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
-import Typography from '@tiptap/extension-typography';
 import Placeholder from '@tiptap/extension-placeholder';
 import GlobalDragHandle from 'tiptap-extension-global-drag-handle';
 import AutoJoiner from 'tiptap-extension-auto-joiner';
@@ -57,20 +56,6 @@ export const RichTextEditor = ({
         elementsToJoin: ['bulletList', 'orderedList'],
       }),
       Underline,
-      Typography.configure({
-        // Auto-replacements
-        // -> becomes →
-        // <- becomes ←
-        // -- becomes —
-        // ... becomes …
-        // (c) becomes ©
-        // (r) becomes ®
-        // (tm) becomes ™
-        // 1/2 becomes ½
-        // != becomes ≠
-        // >= becomes ≥
-        // <= becomes ≤
-      }),
       Placeholder.configure({
         placeholder,
         emptyEditorClass: 'is-editor-empty',
