@@ -118,6 +118,15 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
   const lastRealInteractionRef = useRef<number>(Date.now());
   const timerRef = useRef<TimerState>(timer);
   
+  // DEBUG: Contadores para rastrear criação de intervals
+  const intervalCreateCountRef = useRef<number>(0);
+  const autoSaveCreateCountRef = useRef<number>(0);
+  
+  // DEBUG: Rastrear valores anteriores para detectar saltos
+  const lastDebugRemainingRef = useRef<number | null>(null);
+  const lastDebugElapsedRef = useRef<number | null>(null);
+  const lastDebugBaselineRef = useRef<number | null>(null);
+  
   // Manter timerRef atualizado
   useEffect(() => {
     timerRef.current = timer;
@@ -203,8 +212,11 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
       }
 
       lastSaveTimeRef.current = now;
+      
+      // DEBUG: Log antes do save
+      console.log(`[AUTOSAVE] before save: elapsedSeconds=${currentTimer.elapsedSeconds}, stageElapsedSeconds=${currentStageElapsed}, dailyBaselineSeconds=${currentTimer.dailyBaselineSeconds}, savedSecondsThisSession=${currentTimer.savedSecondsThisSession}`);
 
-      await supabase.from('stage_times').insert({
+      const { error } = await supabase.from('stage_times').insert({
         user_id: user.id,
         stage: currentTimer.stage,
         started_at: currentStageStart.toISOString(),
@@ -212,17 +224,28 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
         duration_seconds: safeDuration,
         content_item_id: currentTimer.contentId || null,
       });
+      
+      // DEBUG: Log resultado do save
+      if (error) {
+        console.error(`[AUTOSAVE] Supabase error:`, error);
+      } else {
+        console.log(`[AUTOSAVE] ✅ Saved ${safeDuration}s to DB`);
+      }
 
       console.log(`[SessionContext] ✅ Salvou ${safeDuration}s na etapa ${currentTimer.stage}`);
 
       // Resetar contadores da etapa e ATUALIZAR savedSecondsThisSession
+      // IMPORTANTE: NÃO alteramos elapsedSeconds nem dailyBaselineSeconds aqui!
       stageStartRef.current = nowDate;
-      setTimer(prev => ({ 
-        ...prev, 
-        stageElapsedSeconds: 0,
-        lastActivityAt: nowDate,
-        savedSecondsThisSession: prev.savedSecondsThisSession + safeDuration, // RASTREAR tempo já salvo
-      }));
+      setTimer(prev => {
+        console.log(`[AUTOSAVE] after save setTimer: elapsedSeconds=${prev.elapsedSeconds} (unchanged), stageElapsedSeconds=0, savedSecondsThisSession=${prev.savedSecondsThisSession} + ${safeDuration}`);
+        return { 
+          ...prev, 
+          stageElapsedSeconds: 0,
+          lastActivityAt: nowDate,
+          savedSecondsThisSession: prev.savedSecondsThisSession + safeDuration, // RASTREAR tempo já salvo
+        };
+      });
     } catch (error) {
       console.error('[SessionContext] Erro ao salvar stage_time:', error);
     }
@@ -298,9 +321,20 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
   }, [timer.contentId]);
 
   // Timer tick - incrementa os dois contadores COM PROTEÇÕES
+  // FIX: Robusto interval handling para evitar duplicação
   useEffect(() => {
+    // SEMPRE limpar interval anterior ANTES de criar novo (fix leak)
+    if (intervalRef.current) {
+      console.log(`[TIMER] interval cleared (before recreate) id=${intervalRef.current}, count=${intervalCreateCountRef.current}`);
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    
     if (timer.isActive && !timer.isPaused) {
-      intervalRef.current = setInterval(() => {
+      intervalCreateCountRef.current += 1;
+      const currentCount = intervalCreateCountRef.current;
+      
+      const id = setInterval(() => {
         // VERIFICAR INATIVIDADE REAL (30 min sem interação = encerrar)
         const timeSinceLastInteraction = Date.now() - lastRealInteractionRef.current;
         if (timeSinceLastInteraction > INACTIVITY_TIMEOUT_MS) {
@@ -321,6 +355,40 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
         setTimer(prev => {
           const newElapsedSeconds = prev.elapsedSeconds + 1;
           let newStageElapsedSeconds = prev.stageElapsedSeconds + 1;
+          
+          // DEBUG: Log a cada 10s para monitorar valores
+          if (newElapsedSeconds % 10 === 0) {
+            const goalSeconds = prev.dailyGoalMinutes * 60;
+            const totalCreatedToday = prev.dailyBaselineSeconds + newElapsedSeconds;
+            const remainingSeconds = Math.max(0, goalSeconds - totalCreatedToday);
+            const bonusSeconds = Math.max(0, totalCreatedToday - goalSeconds);
+            const mode = remainingSeconds > 0 ? 'normal' : 'bonus';
+            
+            // Detectar salto: remaining aumentou?
+            if (lastDebugRemainingRef.current !== null && remainingSeconds > lastDebugRemainingRef.current) {
+              console.error(`[TIMER-JUMP-DETECTED] remaining subiu! ${lastDebugRemainingRef.current} -> ${remainingSeconds}`, {
+                prevElapsed: lastDebugElapsedRef.current,
+                newElapsed: newElapsedSeconds,
+                prevBaseline: lastDebugBaselineRef.current,
+                baseline: prev.dailyBaselineSeconds,
+                intervalCount: currentCount,
+              });
+            }
+            
+            // Detectar salto: elapsed diminuiu?
+            if (lastDebugElapsedRef.current !== null && newElapsedSeconds < lastDebugElapsedRef.current) {
+              console.error(`[TIMER-JUMP-DETECTED] elapsed caiu! ${lastDebugElapsedRef.current} -> ${newElapsedSeconds}`, {
+                baseline: prev.dailyBaselineSeconds,
+                intervalCount: currentCount,
+              });
+            }
+            
+            console.log(`[TIMER TICK] elapsed=${newElapsedSeconds}, baseline=${prev.dailyBaselineSeconds}, remaining=${remainingSeconds}, bonus=${bonusSeconds}, mode=${mode}, intervalCount=${currentCount}`);
+            
+            lastDebugRemainingRef.current = remainingSeconds;
+            lastDebugElapsedRef.current = newElapsedSeconds;
+            lastDebugBaselineRef.current = prev.dailyBaselineSeconds;
+          }
           
           // PROTEÇÃO: limitar stageElapsedSeconds
           if (newStageElapsedSeconds > MAX_STAGE_SECONDS) {
@@ -350,36 +418,49 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
           };
         });
       }, 1000);
-    } else {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
+      
+      intervalRef.current = id;
+      console.log(`[TIMER] interval created id=${id}, count=${currentCount}, isActive=${timer.isActive}, isPaused=${timer.isPaused}`);
     }
 
+    // Cleanup: usar closure para capturar o ID correto
     return () => {
       if (intervalRef.current) {
+        console.log(`[TIMER] interval cleared (cleanup) id=${intervalRef.current}, count=${intervalCreateCountRef.current}`);
         clearInterval(intervalRef.current);
+        intervalRef.current = null;
       }
     };
   }, [timer.isActive, timer.isPaused, toast, saveStageTime]);
 
   // Auto-save incremental a cada 30 segundos
+  // FIX: Robusto interval handling para evitar duplicação
   useEffect(() => {
+    // SEMPRE limpar interval anterior ANTES de criar novo (fix leak)
+    if (autoSaveIntervalRef.current) {
+      console.log(`[AUTOSAVE] interval cleared (before recreate) id=${autoSaveIntervalRef.current}, count=${autoSaveCreateCountRef.current}`);
+      clearInterval(autoSaveIntervalRef.current);
+      autoSaveIntervalRef.current = null;
+    }
+    
     if (timer.isActive && !timer.isPaused) {
-      autoSaveIntervalRef.current = setInterval(() => {
+      autoSaveCreateCountRef.current += 1;
+      const currentCount = autoSaveCreateCountRef.current;
+      
+      const id = setInterval(() => {
+        console.log(`[AUTOSAVE] triggered, count=${currentCount}, elapsed=${timerRef.current.elapsedSeconds}, stageElapsed=${timerRef.current.stageElapsedSeconds}`);
         saveStageTime();
       }, 30000);
-    } else {
-      if (autoSaveIntervalRef.current) {
-        clearInterval(autoSaveIntervalRef.current);
-        autoSaveIntervalRef.current = null;
-      }
+      
+      autoSaveIntervalRef.current = id;
+      console.log(`[AUTOSAVE] interval created id=${id}, count=${currentCount}`);
     }
 
     return () => {
       if (autoSaveIntervalRef.current) {
+        console.log(`[AUTOSAVE] interval cleared (cleanup) id=${autoSaveIntervalRef.current}, count=${autoSaveCreateCountRef.current}`);
         clearInterval(autoSaveIntervalRef.current);
+        autoSaveIntervalRef.current = null;
       }
     };
   }, [timer.isActive, timer.isPaused, saveStageTime]);
