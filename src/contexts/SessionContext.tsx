@@ -127,6 +127,15 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
   const lastDebugElapsedRef = useRef<number | null>(null);
   const lastDebugBaselineRef = useRef<number | null>(null);
   
+  // FIX: REFS ESTÁVEIS para toast e saveStageTime - evita recriação de intervals
+  const toastRef = useRef(toast);
+  const saveStageTimeRef = useRef<() => Promise<void>>(() => Promise.resolve());
+  
+  // Manter refs atualizados (esse effect NÃO causa recriação de intervals)
+  useEffect(() => {
+    toastRef.current = toast;
+  }, [toast]);
+  
   // Manter timerRef atualizado
   useEffect(() => {
     timerRef.current = timer;
@@ -251,6 +260,11 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
     }
   }, []);
 
+  // FIX: Manter saveStageTimeRef atualizado
+  useEffect(() => {
+    saveStageTimeRef.current = saveStageTime;
+  }, [saveStageTime]);
+
   // Verificar frescor e inatividade quando o app fica visível/invisível
   useEffect(() => {
     const handleVisibilityChange = async () => {
@@ -321,7 +335,7 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
   }, [timer.contentId]);
 
   // Timer tick - incrementa os dois contadores COM PROTEÇÕES
-  // FIX: Robusto interval handling para evitar duplicação
+  // FIX: Dependências reduzidas para evitar recriação desnecessária de intervals
   useEffect(() => {
     // SEMPRE limpar interval anterior ANTES de criar novo (fix leak)
     if (intervalRef.current) {
@@ -340,12 +354,12 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
         if (timeSinceLastInteraction > INACTIVITY_TIMEOUT_MS) {
           console.log(`[SessionContext] Inatividade detectada (${Math.round(timeSinceLastInteraction / 60000)} min), encerrando sessão`);
           
-          // Salvar antes de encerrar
-          saveStageTime();
+          // Salvar antes de encerrar (usando ref estável)
+          saveStageTimeRef.current();
           
           setTimer(defaultTimerState);
           localStorage.removeItem('muzze_global_timer');
-          toast({
+          toastRef.current({
             title: "Sessão encerrada",
             description: "Inatividade detectada por mais de 30 minutos.",
           });
@@ -393,8 +407,8 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
           // PROTEÇÃO: limitar stageElapsedSeconds
           if (newStageElapsedSeconds > MAX_STAGE_SECONDS) {
             console.warn(`[SessionContext] stageElapsedSeconds atingiu máximo (${MAX_STAGE_SECONDS}), resetando...`);
-            // Forçar save e resetar
-            saveStageTime();
+            // Forçar save e resetar (usando ref estável)
+            saveStageTimeRef.current();
             newStageElapsedSeconds = 0;
           }
           
@@ -403,7 +417,7 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
           const isStreakMode = newElapsedSeconds >= streakThreshold;
           
           if (!wasStreakMode && isStreakMode) {
-            toast({
+            toastRef.current({
               title: "🔥 Modo Ofensiva Ativado!",
               description: "Continue criando para bater sua meta diária!",
             });
@@ -431,10 +445,10 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
         intervalRef.current = null;
       }
     };
-  }, [timer.isActive, timer.isPaused, toast, saveStageTime]);
+  }, [timer.isActive, timer.isPaused]); // FIX: Dependências reduzidas - toast e saveStageTime via refs
 
   // Auto-save incremental a cada 30 segundos
-  // FIX: Robusto interval handling para evitar duplicação
+  // FIX: Dependências reduzidas para evitar recriação desnecessária de intervals
   useEffect(() => {
     // SEMPRE limpar interval anterior ANTES de criar novo (fix leak)
     if (autoSaveIntervalRef.current) {
@@ -449,7 +463,7 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
       
       const id = setInterval(() => {
         console.log(`[AUTOSAVE] triggered, count=${currentCount}, elapsed=${timerRef.current.elapsedSeconds}, stageElapsed=${timerRef.current.stageElapsedSeconds}`);
-        saveStageTime();
+        saveStageTimeRef.current(); // FIX: Usar ref estável
       }, 30000);
       
       autoSaveIntervalRef.current = id;
@@ -463,7 +477,7 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
         autoSaveIntervalRef.current = null;
       }
     };
-  }, [timer.isActive, timer.isPaused, saveStageTime]);
+  }, [timer.isActive, timer.isPaused]); // FIX: Dependências reduzidas - saveStageTime via ref
 
   // Iniciar timer
   const startTimer = useCallback(async (initialStage: SessionStage) => {
