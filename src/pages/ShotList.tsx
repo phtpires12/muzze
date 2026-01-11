@@ -14,20 +14,16 @@ import { useToast } from "@/hooks/use-toast";
 import {
   DndContext,
   closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
   DragEndEvent,
 } from '@dnd-kit/core';
 import {
   arrayMove,
   SortableContext,
-  sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { useLongPressSensors } from "@/hooks/useLongPressSensors";
 
 interface ShotItem {
   id: string;
@@ -265,13 +261,8 @@ const ShotList = () => {
   const [filterSection, setFilterSection] = useState<string>("all");
   const [showOnlyIncomplete, setShowOnlyIncomplete] = useState(false);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
-
+  // Sensor otimizado: long press no mobile, drag imediato no desktop
+  const sensors = useLongPressSensors();
   // Timer effect - Only in recording stage
   useEffect(() => {
     if (!isRecordingStage) return;

@@ -147,8 +147,9 @@ export const ShotListCard = ({
       ref={setNodeRef}
       style={style}
       className={cn(
-        "touch-none transition-shadow",
-        isDragging && "shadow-lg opacity-50",
+        "touch-none transition-all",
+        // Feedback visual de drag melhorado
+        isDragging && "shadow-xl opacity-90 scale-[1.02] ring-2 ring-primary/50",
         shot.isCompleted && "bg-green-50 dark:bg-green-950/20 border-green-500/50"
       )}
     >

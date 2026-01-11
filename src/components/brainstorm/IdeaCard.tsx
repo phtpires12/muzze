@@ -130,11 +130,17 @@ export const IdeaCard = ({
   };
 
   return (
-    <div ref={setNodeRef} style={style} className={cn("h-full", isDragging && "opacity-50")}>
+    <div ref={setNodeRef} style={style} className={cn(
+      "h-full transition-all",
+      // Feedback visual de drag: escala + sombra
+      isDragging && "opacity-90 scale-[1.03] shadow-xl"
+    )}>
       <Card className={cn(
         "h-full flex flex-col transition-all overflow-hidden",
         isComplete ? "border-primary/50 shadow-md" : "border-dashed border-muted-foreground/30",
-        compact && "min-h-[320px]"
+        compact && "min-h-[320px]",
+        // Ring no card quando dragging
+        isDragging && "ring-2 ring-primary/50"
       )}>
         {/* YouTube Thumbnail Header - when has thumbnail */}
         {hasYouTubeThumbnail && (
