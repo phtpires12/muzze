@@ -339,7 +339,7 @@ export function CalendarDay({
               {scripts.slice(0, 3).map((script, idx) => (
                 <div
                   key={script.id}
-                  className={`w-2 h-2 rounded-full ${getContentTypeColor(script.content_type)}`}
+                  className={`w-2 h-2 rounded-full ${getStageIndicatorColor(script)}`}
                   style={{ zIndex: 3 - idx }}
                 />
               ))}
