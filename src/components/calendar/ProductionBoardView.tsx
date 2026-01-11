@@ -31,6 +31,7 @@ interface Script {
   thumbnail_url?: string | null;
   reference_url?: string | null;
   editing_progress?: string[] | null;
+  publish_status?: string | null;
 }
 
 interface ProductionBoardViewProps {
@@ -47,14 +48,20 @@ export function ProductionBoardView({
   onUpdateStatus,
 }: ProductionBoardViewProps) {
   const { toast } = useToast();
-  // Filtrar scripts que não estão completos
-  const productionScripts = scripts.filter(s => s.status !== 'completed');
+  // Filtrar scripts que não estão completos E não foram postados
+  const productionScripts = scripts.filter(s => 
+    s.status !== 'completed' && 
+    s.publish_status !== 'postado'
+  );
   const [localScripts, setLocalScripts] = useState<Script[]>(productionScripts);
   const [activeId, setActiveId] = useState<string | null>(null);
 
   // Sincronizar localScripts quando scripts mudar externamente
   useEffect(() => {
-    setLocalScripts(scripts.filter(s => s.status !== 'completed'));
+    setLocalScripts(scripts.filter(s => 
+      s.status !== 'completed' && 
+      s.publish_status !== 'postado'
+    ));
   }, [scripts]);
 
   const sensors = useSensors(

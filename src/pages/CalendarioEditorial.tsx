@@ -38,6 +38,7 @@ interface Script {
   thumbnail_url?: string | null;
   publish_status?: PublishStatus | null;
   published_at?: string | null;
+  editing_progress?: string[] | null;
 }
 
 const CalendarioEditorial = () => {
