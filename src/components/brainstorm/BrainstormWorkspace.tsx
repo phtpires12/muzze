@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { DndContext, DragEndEvent, DragStartEvent, PointerSensor, KeyboardSensor, useSensor, useSensors, DragOverlay } from "@dnd-kit/core";
+import { DndContext, DragEndEvent, DragStartEvent, DragOverlay } from "@dnd-kit/core";
 import { SortableContext } from "@dnd-kit/sortable";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { useDeviceType } from "@/hooks/useDeviceType";
 import { useWorkspaceContext } from "@/contexts/WorkspaceContext";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useLongPressSensors, triggerHapticFeedback } from "@/hooks/useLongPressSensors";
 
 interface Idea {
   id: string;
@@ -39,14 +40,8 @@ export const BrainstormWorkspace = () => {
   const { activeWorkspace } = useWorkspaceContext();
   const isMobile = deviceType === "mobile";
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor)
-  );
+  // Sensor otimizado: long press no mobile, drag imediato no desktop
+  const sensors = useLongPressSensors();
 
   useEffect(() => {
     loadIdeas();
@@ -177,6 +172,8 @@ export const BrainstormWorkspace = () => {
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string);
+    // Feedback háptico no mobile
+    triggerHapticFeedback();
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {

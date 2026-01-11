@@ -14,20 +14,16 @@ import { sanitizeHtmlContent } from "@/lib/html-sanitizer";
 import {
   DndContext,
   closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
   DragEndEvent,
 } from '@dnd-kit/core';
 import {
   arrayMove,
   SortableContext,
-  sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { useLongPressSensors } from "@/hooks/useLongPressSensors";
 
 export interface ShotItem {
   id: string;
@@ -353,12 +349,8 @@ export const ShotListTable = ({
   onImageClick
 }: ShotListTableProps) => {
   const isMobile = useIsMobile();
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
+  // Sensor otimizado: long press no mobile, drag imediato no desktop
+  const sensors = useLongPressSensors();
 
   // Mobile: Renderizar cards verticais
   if (isMobile) {

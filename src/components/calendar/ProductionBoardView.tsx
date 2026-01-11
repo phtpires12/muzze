@@ -5,12 +5,7 @@ import {
   DragStartEvent,
   DragOverlay,
   closestCorners,
-  PointerSensor,
-  KeyboardSensor,
-  useSensor,
-  useSensors,
 } from "@dnd-kit/core";
-import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { 
@@ -21,6 +16,7 @@ import {
 } from "@/lib/kanban-columns";
 import { ProductionKanbanColumn } from "./ProductionKanbanColumn";
 import { ProductionKanbanCard } from "./ProductionKanbanCard";
+import { useLongPressSensors, triggerHapticFeedback } from "@/hooks/useLongPressSensors";
 
 interface Script {
   id: string;
@@ -64,16 +60,8 @@ export function ProductionBoardView({
     ));
   }, [scripts]);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
+  // Sensor otimizado: long press no mobile, drag imediato no desktop
+  const sensors = useLongPressSensors();
 
   const activeScript = activeId
     ? localScripts.find(s => s.id === activeId)
@@ -81,6 +69,8 @@ export function ProductionBoardView({
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string);
+    // Feedback háptico no mobile
+    triggerHapticFeedback();
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {

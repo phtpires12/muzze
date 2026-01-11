@@ -64,8 +64,9 @@ export function ProductionKanbanCard({
       {...listeners}
       className={cn(
         "relative bg-card border rounded-lg p-3 cursor-grab active:cursor-grabbing",
-        "hover:shadow-md transition-shadow group/card",
-        isDragging && "opacity-50 shadow-lg ring-2 ring-primary z-50"
+        "hover:shadow-md transition-all group/card",
+        // Estado de drag com feedback visual melhorado
+        isDragging && "opacity-90 scale-[1.03] shadow-xl ring-2 ring-primary/50 z-50"
       )}
       onClick={onClick}
     >
