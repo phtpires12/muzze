@@ -122,6 +122,10 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
   const intervalCreateCountRef = useRef<number>(0);
   const autoSaveCreateCountRef = useRef<number>(0);
   
+  // FIX: Version refs para invalidar intervals antigos (version guard pattern)
+  const tickVersionRef = useRef<number>(0);
+  const autoSaveVersionRef = useRef<number>(0);
+  
   // DEBUG: Rastrear valores anteriores para detectar saltos
   const lastDebugRemainingRef = useRef<number | null>(null);
   const lastDebugElapsedRef = useRef<number | null>(null);
@@ -335,13 +339,16 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
   }, [timer.contentId]);
 
   // Timer tick - incrementa os dois contadores COM PROTEÇÕES
-  // FIX: Dependências reduzidas para evitar recriação desnecessária de intervals
+  // FIX: Version guard pattern - nunca cria interval duplicado, invalida callbacks antigos
   useEffect(() => {
-    // SEMPRE limpar interval anterior ANTES de criar novo (fix leak)
+    // Incrementar versão - invalida qualquer interval anterior
+    tickVersionRef.current += 1;
+    const currentVersion = tickVersionRef.current;
+    
+    // Se já existe interval ativo, deixar cleanup lidar (não limpar no corpo)
     if (intervalRef.current) {
-      console.log(`[TIMER] interval cleared (before recreate) id=${intervalRef.current}, count=${intervalCreateCountRef.current}`);
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
+      console.log(`[TIMER] skipping creation - interval already exists, version=${currentVersion}`);
+      return;
     }
     
     if (timer.isActive && !timer.isPaused) {
@@ -349,6 +356,13 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
       const currentCount = intervalCreateCountRef.current;
       
       const id = setInterval(() => {
+        // VERSION GUARD: se versão mudou, este interval é obsoleto
+        if (tickVersionRef.current !== currentVersion) {
+          console.log(`[TIMER] interval obsolete (version mismatch: ${currentVersion} vs ${tickVersionRef.current}), clearing id=${id}`);
+          clearInterval(id);
+          return;
+        }
+        
         // VERIFICAR INATIVIDADE REAL (30 min sem interação = encerrar)
         const timeSinceLastInteraction = Date.now() - lastRealInteractionRef.current;
         if (timeSinceLastInteraction > INACTIVITY_TIMEOUT_MS) {
@@ -386,6 +400,7 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
                 prevBaseline: lastDebugBaselineRef.current,
                 baseline: prev.dailyBaselineSeconds,
                 intervalCount: currentCount,
+                version: currentVersion,
               });
             }
             
@@ -394,10 +409,11 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
               console.error(`[TIMER-JUMP-DETECTED] elapsed caiu! ${lastDebugElapsedRef.current} -> ${newElapsedSeconds}`, {
                 baseline: prev.dailyBaselineSeconds,
                 intervalCount: currentCount,
+                version: currentVersion,
               });
             }
             
-            console.log(`[TIMER TICK] elapsed=${newElapsedSeconds}, baseline=${prev.dailyBaselineSeconds}, remaining=${remainingSeconds}, bonus=${bonusSeconds}, mode=${mode}, intervalCount=${currentCount}`);
+            console.log(`[TIMER TICK] elapsed=${newElapsedSeconds}, baseline=${prev.dailyBaselineSeconds}, remaining=${remainingSeconds}, bonus=${bonusSeconds}, mode=${mode}, intervalCount=${currentCount}, version=${currentVersion}`);
             
             lastDebugRemainingRef.current = remainingSeconds;
             lastDebugElapsedRef.current = newElapsedSeconds;
@@ -434,27 +450,30 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
       }, 1000);
       
       intervalRef.current = id;
-      console.log(`[TIMER] interval created id=${id}, count=${currentCount}, isActive=${timer.isActive}, isPaused=${timer.isPaused}`);
+      console.log(`[TIMER] interval created id=${id}, count=${currentCount}, version=${currentVersion}`);
     }
 
-    // Cleanup: usar closure para capturar o ID correto
+    // Cleanup: ÚNICA lugar onde limpamos o interval
     return () => {
       if (intervalRef.current) {
-        console.log(`[TIMER] interval cleared (cleanup) id=${intervalRef.current}, count=${intervalCreateCountRef.current}`);
+        console.log(`[TIMER] interval cleared (cleanup) id=${intervalRef.current}, version=${currentVersion}`);
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
     };
-  }, [timer.isActive, timer.isPaused]); // FIX: Dependências reduzidas - toast e saveStageTime via refs
+  }, [timer.isActive, timer.isPaused]);
 
   // Auto-save incremental a cada 30 segundos
-  // FIX: Dependências reduzidas para evitar recriação desnecessária de intervals
+  // FIX: Version guard pattern - nunca cria interval duplicado
   useEffect(() => {
-    // SEMPRE limpar interval anterior ANTES de criar novo (fix leak)
+    // Incrementar versão - invalida qualquer interval anterior
+    autoSaveVersionRef.current += 1;
+    const currentVersion = autoSaveVersionRef.current;
+    
+    // Se já existe interval ativo, deixar cleanup lidar
     if (autoSaveIntervalRef.current) {
-      console.log(`[AUTOSAVE] interval cleared (before recreate) id=${autoSaveIntervalRef.current}, count=${autoSaveCreateCountRef.current}`);
-      clearInterval(autoSaveIntervalRef.current);
-      autoSaveIntervalRef.current = null;
+      console.log(`[AUTOSAVE] skipping creation - interval already exists, version=${currentVersion}`);
+      return;
     }
     
     if (timer.isActive && !timer.isPaused) {
@@ -462,22 +481,30 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
       const currentCount = autoSaveCreateCountRef.current;
       
       const id = setInterval(() => {
-        console.log(`[AUTOSAVE] triggered, count=${currentCount}, elapsed=${timerRef.current.elapsedSeconds}, stageElapsed=${timerRef.current.stageElapsedSeconds}`);
-        saveStageTimeRef.current(); // FIX: Usar ref estável
+        // VERSION GUARD: se versão mudou, este interval é obsoleto
+        if (autoSaveVersionRef.current !== currentVersion) {
+          console.log(`[AUTOSAVE] interval obsolete (version mismatch: ${currentVersion} vs ${autoSaveVersionRef.current}), clearing id=${id}`);
+          clearInterval(id);
+          return;
+        }
+        
+        console.log(`[AUTOSAVE] triggered, count=${currentCount}, version=${currentVersion}, elapsed=${timerRef.current.elapsedSeconds}, stageElapsed=${timerRef.current.stageElapsedSeconds}`);
+        saveStageTimeRef.current();
       }, 30000);
       
       autoSaveIntervalRef.current = id;
-      console.log(`[AUTOSAVE] interval created id=${id}, count=${currentCount}`);
+      console.log(`[AUTOSAVE] interval created id=${id}, count=${currentCount}, version=${currentVersion}`);
     }
 
+    // Cleanup: ÚNICA lugar onde limpamos o interval
     return () => {
       if (autoSaveIntervalRef.current) {
-        console.log(`[AUTOSAVE] interval cleared (cleanup) id=${autoSaveIntervalRef.current}, count=${autoSaveCreateCountRef.current}`);
+        console.log(`[AUTOSAVE] interval cleared (cleanup) id=${autoSaveIntervalRef.current}, version=${currentVersion}`);
         clearInterval(autoSaveIntervalRef.current);
         autoSaveIntervalRef.current = null;
       }
     };
-  }, [timer.isActive, timer.isPaused]); // FIX: Dependências reduzidas - saveStageTime via ref
+  }, [timer.isActive, timer.isPaused]);
 
   // Iniciar timer
   const startTimer = useCallback(async (initialStage: SessionStage) => {
