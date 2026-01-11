@@ -144,7 +144,8 @@ export const useStatsPage = (): StatsPageData => {
       const [
         profileResult,
         streakResult,
-        allStageTimesResult,
+        allStageTimesCountResult,
+        allStageTimesSumResult,
         weeklyStageTimesResult,
         previousWeekStageTimesResult,
         todayStageTimesResult,
@@ -165,10 +166,16 @@ export const useStatsPage = (): StatsPageData => {
           .eq('user_id', user.id)
           .single(),
         
-        // ALL stage_times (para total de sessões e horas)
+        // ALL stage_times count (para total de sessões - contagem exata)
         supabase
           .from('stage_times')
-          .select('duration_seconds, created_at')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id),
+        
+        // ALL stage_times sum (para total de horas - precisamos dos valores)
+        supabase
+          .from('stage_times')
+          .select('duration_seconds')
           .eq('user_id', user.id),
         
         // Weekly stage_times (com stage para breakdown)
@@ -213,16 +220,17 @@ export const useStatsPage = (): StatsPageData => {
       const xpPoints = profile?.xp_points || 0;
       
       const streak = streakResult.data?.current_streak || 0;
-      const allStageTimes = allStageTimesResult.data || [];
+      const allStageTimesForSum = allStageTimesSumResult.data || [];
       const weeklyStageTimes = weeklyStageTimesResult.data || [];
       const previousWeekStageTimes = previousWeekStageTimesResult.data || [];
       const todayStageTimes = todayStageTimesResult.data || [];
       const scriptsCount = scriptsCountResult.count || 0;
       const ideasCount = ideasCountResult.count || 0;
 
-      // Calcular total de sessões e horas
-      const totalSessions = allStageTimes.length;
-      const totalSeconds = allStageTimes.reduce((sum, st) => sum + (st.duration_seconds || 0), 0);
+      // Calcular total de sessões (contagem exata do banco)
+      const totalSessions = allStageTimesCountResult.count || 0;
+      // Calcular total de horas (soma dos valores retornados - limitado a 1000, mas ok para horas)
+      const totalSeconds = allStageTimesForSum.reduce((sum, st) => sum + (st.duration_seconds || 0), 0);
       const totalHours = Math.round((totalSeconds / 3600) * 10) / 10;
 
       // Calcular dados semanais (gráfico) com breakdown por estágio

@@ -213,10 +213,10 @@ const Stats = () => {
 
       {/* Linha 2: Gráfico + Resumo Semanal */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-6">Horas por Dia (Esta Semana)</h3>
+        <Card className="p-4 sm:p-6 overflow-hidden">
+          <h3 className="text-lg font-semibold mb-4 sm:mb-6">Horas por Dia (Esta Semana)</h3>
           <TooltipProvider>
-            <div className="flex items-end justify-between gap-4 h-64">
+            <div className="flex items-end justify-between gap-1 sm:gap-2 md:gap-4 h-48 md:h-64">
               {weeklyData.map((data) => {
                 const height = (data.hours / maxHours) * 100;
                 const hasStageData = data.stageBreakdown && Object.values(data.stageBreakdown).some(v => v > 0);
@@ -224,16 +224,16 @@ const Stats = () => {
                 return (
                   <Tooltip key={data.day}>
                     <TooltipTrigger asChild>
-                      <div className="flex-1 flex flex-col items-center gap-2 cursor-pointer">
-                        <div className="w-full flex items-end justify-center h-48">
+                      <div className="flex-1 flex flex-col items-center gap-1 sm:gap-2 cursor-pointer min-w-0">
+                        <div className="w-full flex items-end justify-center h-36 md:h-48">
                           <div
-                            className="w-full bg-gradient-to-t from-accent to-primary rounded-t-lg transition-all duration-500 hover:opacity-80 flex items-end justify-center pb-2"
-                            style={{ height: `${height}%`, minHeight: '30px' }}
+                            className="w-full bg-gradient-to-t from-accent to-primary rounded-t-lg transition-all duration-500 hover:opacity-80 flex items-end justify-center pb-1 sm:pb-2"
+                            style={{ height: `${height}%`, minHeight: '24px' }}
                           >
-                            <span className="text-xs font-bold text-white">{formatTimeDisplay(data.hours)}</span>
+                            <span className="text-[10px] sm:text-xs font-bold text-white truncate px-0.5">{formatTimeDisplay(data.hours)}</span>
                           </div>
                         </div>
-                        <span className="text-sm font-medium text-muted-foreground">{data.day}</span>
+                        <span className="text-xs sm:text-sm font-medium text-muted-foreground">{data.day}</span>
                       </div>
                     </TooltipTrigger>
                     <TooltipContent className="p-3 max-w-xs">
