@@ -801,7 +801,7 @@ const Session = () => {
                   <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
                     Etapas de Edição
                   </h3>
-                  <EditingChecklist onAllCompleted={handleEditingCompleted} />
+                  <EditingChecklist scriptId={scriptId} onAllCompleted={handleEditingCompleted} />
                   
                 </div>
               ) : (
