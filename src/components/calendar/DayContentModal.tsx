@@ -106,6 +106,7 @@ function IdeaCard({
         .update({
           publish_status: "postado",
           published_at: new Date().toISOString(),
+          status: "completed", // Garante que saia do workflow de produção
         })
         .eq("id", script.id);
 
