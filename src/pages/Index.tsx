@@ -7,6 +7,8 @@ import { useInProgressProjects } from "@/hooks/useInProgressProjects";
 import { useStreakValidator } from "@/hooks/useStreakValidator";
 import { useStreakAutoRecovery } from "@/hooks/useStreakAutoRecovery";
 import { useCelebration } from "@/contexts/CelebrationContext";
+import { useDailyGoalProgress } from "@/hooks/useDailyGoalProgress";
+import { useLiveDailyProgress } from "@/hooks/useLiveDailyProgress";
 import { supabase } from "@/integrations/supabase/client";
 import { getLevelByXP, TROPHIES } from "@/lib/gamification";
 import { useGamification } from "@/hooks/useGamification";
@@ -20,7 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { ProfileSheet } from "@/components/ProfileSheet";
-import { Flame, Clock, Trophy, Lightbulb, Zap, Film, Mic, Scissors, AlertCircle, Lock, Sparkles, TrendingUp } from "lucide-react"; // rebuilt
+import { Flame, Clock, Trophy, Lightbulb, Zap, Film, Mic, Scissors, AlertCircle, Lock, Sparkles, TrendingUp, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
@@ -72,6 +74,8 @@ const Index = () => {
     maxFreezes,
   } = useStreakValidator();
   const { recoverMissedStreaks, isRecovering: isRecoveringStreak } = useStreakAutoRecovery();
+  const { progress: dbProgress } = useDailyGoalProgress();
+  const liveProgress = useLiveDailyProgress(dbProgress.actualMinutes, dbProgress.goalMinutes);
   const [streakData, setStreakData] = useState<any>(null);
   const [weeklySessionsCount, setWeeklySessionsCount] = useState(0);
   const [isWorkflowModalOpen, setIsWorkflowModalOpen] = useState(false);
@@ -412,18 +416,48 @@ const Index = () => {
         className="px-6 pb-4"
         style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 2rem)' }}
       >
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between gap-3 mb-2">
+          {/* Ofensiva - lado esquerdo */}
           <button 
             onClick={() => navigate('/ofensiva')}
-            className="flex items-center gap-2 text-foreground hover:text-accent transition-colors active:scale-95"
+            className="flex items-center gap-2 text-foreground hover:text-accent transition-colors active:scale-95 shrink-0"
           >
             <Flame className="w-5 h-5 text-accent" />
             <span className="font-semibold">{streakData?.current_streak ?? 0} dias</span>
           </button>
           
+          {/* Barra de Progresso - centro */}
+          <button
+            onClick={() => navigate('/stats')}
+            className="flex-1 max-w-[160px] flex items-center gap-2 group active:scale-95 transition-transform"
+          >
+            <div className="flex-1 relative">
+              <Progress 
+                value={Math.min(liveProgress.percentageProgress, 100)} 
+                className={cn(
+                  "h-2 bg-secondary/50",
+                  liveProgress.isAbove && "[&>div]:bg-green-500"
+                )}
+              />
+            </div>
+            <span className={cn(
+              "text-xs font-medium shrink-0 transition-colors",
+              liveProgress.isAbove 
+                ? "text-green-500" 
+                : "text-muted-foreground group-hover:text-foreground"
+            )}>
+              {liveProgress.isAbove ? (
+                <Check className="w-4 h-4" />
+              ) : (
+                `${liveProgress.actualMinutes}/${liveProgress.goalMinutes}m`
+              )}
+            </span>
+          </button>
+          
+          {/* Avatar - lado direito */}
           <Sheet open={isProfileSheetOpen} onOpenChange={setIsProfileSheetOpen}>
             <SheetTrigger asChild>
-              <button className="focus:outline-none focus:ring-2 focus:ring-primary rounded-full transition-all hover:ring-2 hover:ring-primary/50">
+              <button className="focus:outline-none focus:ring-2 focus:ring-primary rounded-full transition-all hover:ring-2 hover:ring-primary/50 shrink-0">
                 <Avatar className="h-9 w-9 cursor-pointer">
                   {profile?.avatar_url ? (
                     <AvatarImage src={profile.avatar_url} alt={profile?.username || "Avatar"} />
