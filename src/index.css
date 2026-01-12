@@ -356,3 +356,90 @@ All colors MUST be HSL.
   overflow-wrap: anywhere;
   hyphens: auto;
 }
+
+/* ========== Master Script Editor Styles ========== */
+
+/* Section headers - fixed and non-editable */
+.master-script-editor .section-header {
+  font-weight: 600;
+  font-size: 0.875rem;
+  letter-spacing: 0.05em;
+  color: hsl(var(--muted-foreground));
+  padding: 1rem 0 0.5rem 0;
+  margin-top: 1.5rem;
+  border-bottom: 1px solid hsl(var(--border) / 0.3);
+  user-select: none;
+  cursor: default;
+  pointer-events: none;
+}
+
+.master-script-editor .section-header:first-child {
+  margin-top: 0;
+  padding-top: 0;
+}
+
+/* Hide drag handle on section headers */
+.master-script-editor .ProseMirror [data-section] {
+  position: relative;
+}
+
+/* Ensure section headers don't get drag handles via CSS fallback */
+.master-script-editor .section-header ~ .drag-handle,
+.master-script-editor [data-section] + .drag-handle {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+/* Selection styling - prevent on headers */
+.master-script-editor .section-header::selection,
+.master-script-editor .section-header *::selection {
+  background: transparent;
+}
+
+/* Master editor paragraphs */
+.master-script-editor .ProseMirror p {
+  margin: 0;
+  padding: 0.25rem 0;
+}
+
+.master-script-editor .ProseMirror p + p {
+  margin-top: 0.25rem;
+}
+
+/* Master editor lists */
+.master-script-editor .ProseMirror ul,
+.master-script-editor .ProseMirror ol {
+  padding-left: 1.5em;
+  margin: 0.5em 0;
+}
+
+/* Selected node during drag in master editor */
+.master-script-editor .ProseMirror .ProseMirror-selectednode {
+  outline: 2px solid hsl(var(--primary));
+  border-radius: 4px;
+}
+
+/* Drop cursor in master editor */
+.master-script-editor .ProseMirror .ProseMirror-dropcursor {
+  border-color: hsl(var(--primary)) !important;
+}
+
+/* Placeholder in master editor */
+.master-script-editor .ProseMirror.is-editor-empty::before {
+  display: none;
+}
+
+.master-script-editor .ProseMirror p.is-editor-empty:first-child::before,
+.master-script-editor .ProseMirror > p.is-empty::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: hsl(var(--muted-foreground));
+  pointer-events: none;
+  height: 0;
+}
+
+/* Word breaking */
+.master-script-editor .ProseMirror {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}

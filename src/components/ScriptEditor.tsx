@@ -36,6 +36,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { ThumbnailUploader } from "@/components/ThumbnailUploader";
 import { generateShotListFromContent } from "@/lib/shotlist-generator";
+import { FEATURES } from "@/lib/feature-flags";
+import { MasterScriptEditor } from "@/components/MasterScriptEditor";
 
 interface ScriptEditorProps {
   onClose?: () => void;
@@ -1276,8 +1278,17 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                 </div>
               </div>
             )
+          ) : FEATURES.MASTER_EDITOR ? (
+            // Master Editor: Single unified editor with section headers
+            <MasterScriptEditor
+              content={content}
+              onChange={setContent}
+              isLoaded={isLoaded}
+              editable={!isReviewMode || viewMode === 'sections'}
+              className="min-h-[400px]"
+            />
           ) : (
-            // Single editor view (default for both script and review mode)
+            // Legacy: 4 separate editors (default when feature flag is off)
             <div className="space-y-4">
               <div>
                 <div className="flex items-center justify-between mb-2">
