@@ -126,12 +126,15 @@ export default function ContentView() {
   const navigate = useNavigate();
   const { toast } = useToast();
   
+  // ALL useState hooks FIRST - before any conditional returns
   const [script, setScript] = useState<Script | null>(null);
   const [loading, setLoading] = useState(true);
   const [showSessionModal, setShowSessionModal] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [resolvedUrls, setResolvedUrls] = useState<Map<string, string>>(new Map());
 
+  // Fetch script data
   useEffect(() => {
     const fetchScript = async () => {
       if (!scriptId) return;
@@ -159,6 +162,67 @@ export default function ContentView() {
 
     fetchScript();
   }, [scriptId, toast]);
+
+  // ALL useMemo hooks - before any conditional returns
+  // Stabilize shot_list dependency with JSON.stringify
+  const shotListKey = useMemo(() => JSON.stringify(script?.shot_list || []), [script?.shot_list]);
+
+  // Parse shot list items from JSON strings
+  const parsedShots = useMemo<ShotItem[]>(() => {
+    if (!script?.shot_list) return [];
+    return script.shot_list
+      .map(item => {
+        try { 
+          // Support both string (JSON) and already-parsed objects
+          return typeof item === 'string' ? JSON.parse(item) as ShotItem : item as unknown as ShotItem;
+        }
+        catch { return null; }
+      })
+      .filter((item): item is ShotItem => item !== null);
+  }, [shotListKey]);
+
+  // Extract all image paths from shots (support both shotImagePaths and legacy shotImageUrls)
+  const allImagePaths = useMemo(() => {
+    return parsedShots
+      .flatMap(shot => {
+        const paths = shot.shotImagePaths || [];
+        const urls = (shot as ShotItem & { shotImageUrls?: string[] }).shotImageUrls || [];
+        return [...paths, ...urls];
+      })
+      .filter(Boolean);
+  }, [parsedShots]);
+
+  // Create stable key for useEffect dependency
+  const imagePathsKey = useMemo(() => allImagePaths.join(','), [allImagePaths]);
+
+  // Generate signed URLs for preview images
+  useEffect(() => {
+    if (allImagePaths.length === 0) {
+      setResolvedUrls(new Map());
+      return;
+    }
+
+    const pathsToResolve = allImagePaths.slice(0, 6);
+    
+    // Separate pure paths from full URLs (legacy data)
+    const purePaths = pathsToResolve.filter(p => !p.startsWith('http'));
+    const existingUrls = pathsToResolve.filter(p => p.startsWith('http'));
+    
+    const results = new Map<string, string>();
+    
+    // Legacy URLs are already usable directly
+    existingUrls.forEach(url => results.set(url, url));
+    
+    // Generate signed URLs only for pure paths
+    if (purePaths.length > 0) {
+      generateSignedUrlsBatch(purePaths).then(signedUrls => {
+        signedUrls.forEach((url, path) => results.set(path, url));
+        setResolvedUrls(new Map(results));
+      });
+    } else {
+      setResolvedUrls(results);
+    }
+  }, [imagePathsKey]);
 
   const handleBack = () => {
     navigate('/calendario');
@@ -266,66 +330,6 @@ export default function ContentView() {
   const hasContent = Object.values(parsedContent).some(v => v && v.trim());
   const publishStatusLabel = getPublishStatusLabel(script.publish_status);
   const isPosted = script.publish_status === "postado";
-
-  // State for resolved signed URLs - must be before useMemo that depends on script
-  const [resolvedUrls, setResolvedUrls] = useState<Map<string, string>>(new Map());
-
-  // Stabilize shot_list dependency with JSON.stringify
-  const shotListKey = useMemo(() => JSON.stringify(script?.shot_list), [script?.shot_list]);
-
-  // Parse shot list items from JSON strings
-  const parsedShots = useMemo<ShotItem[]>(() => {
-    if (!script?.shot_list) return [];
-    return script.shot_list
-      .map(item => {
-        try { return JSON.parse(item) as ShotItem; }
-        catch { return null; }
-      })
-      .filter((item): item is ShotItem => item !== null);
-  }, [shotListKey]);
-
-  // Extract all image paths from shots (support both shotImagePaths and legacy shotImageUrls)
-  const allImagePaths = useMemo(() => {
-    return parsedShots
-      .flatMap(shot => {
-        const paths = shot.shotImagePaths || [];
-        const urls = (shot as ShotItem & { shotImageUrls?: string[] }).shotImageUrls || [];
-        return [...paths, ...urls];
-      })
-      .filter(Boolean);
-  }, [parsedShots]);
-
-  // Create stable key for useEffect dependency
-  const imagePathsKey = useMemo(() => allImagePaths.join(','), [allImagePaths]);
-
-  // Generate signed URLs for preview images
-  useEffect(() => {
-    if (allImagePaths.length === 0) {
-      setResolvedUrls(new Map());
-      return;
-    }
-
-    const pathsToResolve = allImagePaths.slice(0, 6);
-    
-    // Separate pure paths from full URLs (legacy data)
-    const purePaths = pathsToResolve.filter(p => !p.startsWith('http'));
-    const existingUrls = pathsToResolve.filter(p => p.startsWith('http'));
-    
-    const results = new Map<string, string>();
-    
-    // Legacy URLs are already usable directly
-    existingUrls.forEach(url => results.set(url, url));
-    
-    // Generate signed URLs only for pure paths
-    if (purePaths.length > 0) {
-      generateSignedUrlsBatch(purePaths).then(signedUrls => {
-        signedUrls.forEach((url, path) => results.set(path, url));
-        setResolvedUrls(new Map(results));
-      });
-    } else {
-      setResolvedUrls(results);
-    }
-  }, [imagePathsKey]);
 
   return (
     <div className="min-h-screen bg-background">
