@@ -267,6 +267,12 @@ export default function ContentView() {
   const publishStatusLabel = getPublishStatusLabel(script.publish_status);
   const isPosted = script.publish_status === "postado";
 
+  // State for resolved signed URLs - must be before useMemo that depends on script
+  const [resolvedUrls, setResolvedUrls] = useState<Map<string, string>>(new Map());
+
+  // Stabilize shot_list dependency with JSON.stringify
+  const shotListKey = useMemo(() => JSON.stringify(script?.shot_list), [script?.shot_list]);
+
   // Parse shot list items from JSON strings
   const parsedShots = useMemo<ShotItem[]>(() => {
     if (!script?.shot_list) return [];
@@ -276,26 +282,50 @@ export default function ContentView() {
         catch { return null; }
       })
       .filter((item): item is ShotItem => item !== null);
-  }, [script?.shot_list]);
+  }, [shotListKey]);
 
-  // Extract all image paths from shots
+  // Extract all image paths from shots (support both shotImagePaths and legacy shotImageUrls)
   const allImagePaths = useMemo(() => {
     return parsedShots
-      .flatMap(shot => shot.shotImagePaths || [])
+      .flatMap(shot => {
+        const paths = shot.shotImagePaths || [];
+        const urls = (shot as ShotItem & { shotImageUrls?: string[] }).shotImageUrls || [];
+        return [...paths, ...urls];
+      })
       .filter(Boolean);
   }, [parsedShots]);
 
-  // State for resolved signed URLs
-  const [resolvedUrls, setResolvedUrls] = useState<Map<string, string>>(new Map());
+  // Create stable key for useEffect dependency
+  const imagePathsKey = useMemo(() => allImagePaths.join(','), [allImagePaths]);
 
   // Generate signed URLs for preview images
   useEffect(() => {
-    if (allImagePaths.length > 0) {
-      generateSignedUrlsBatch(allImagePaths.slice(0, 6)).then(setResolvedUrls);
-    } else {
+    if (allImagePaths.length === 0) {
       setResolvedUrls(new Map());
+      return;
     }
-  }, [allImagePaths.join(',')]);
+
+    const pathsToResolve = allImagePaths.slice(0, 6);
+    
+    // Separate pure paths from full URLs (legacy data)
+    const purePaths = pathsToResolve.filter(p => !p.startsWith('http'));
+    const existingUrls = pathsToResolve.filter(p => p.startsWith('http'));
+    
+    const results = new Map<string, string>();
+    
+    // Legacy URLs are already usable directly
+    existingUrls.forEach(url => results.set(url, url));
+    
+    // Generate signed URLs only for pure paths
+    if (purePaths.length > 0) {
+      generateSignedUrlsBatch(purePaths).then(signedUrls => {
+        signedUrls.forEach((url, path) => results.set(path, url));
+        setResolvedUrls(new Map(results));
+      });
+    } else {
+      setResolvedUrls(results);
+    }
+  }, [imagePathsKey]);
 
   return (
     <div className="min-h-screen bg-background">
