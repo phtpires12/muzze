@@ -192,7 +192,7 @@ const SortableRow = ({
             className="w-full max-w-full min-w-0 [&_.ProseMirror]:break-words [&_.ProseMirror]:overflow-wrap-anywhere"
             minHeight="80px"
           />
-          <span className="text-xs text-muted-foreground">Use Ctrl+Enter para quebrar linha</span>
+          <span className="text-xs text-muted-foreground hidden md:inline">Use Shift+Enter para quebrar linha</span>
         </div>
       </td>
       <td className="p-4 w-64 min-w-0 align-top">

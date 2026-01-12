@@ -204,8 +204,8 @@ export const ShotListCard = ({
             className="w-full max-w-full min-w-0 [&_.ProseMirror]:break-words [&_.ProseMirror]:overflow-wrap-anywhere"
             minHeight="120px"
           />
-          <span className="text-xs text-muted-foreground">
-            Use Ctrl+Enter para quebrar linha
+          <span className="text-xs text-muted-foreground hidden md:inline">
+            Use Shift+Enter para quebrar linha
           </span>
         </div>
 
