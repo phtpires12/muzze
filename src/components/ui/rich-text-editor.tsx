@@ -1,4 +1,4 @@
-import { useEditor, EditorContent } from '@tiptap/react';
+import { useEditor, EditorContent, Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -6,7 +6,14 @@ import GlobalDragHandle from 'tiptap-extension-global-drag-handle';
 import AutoJoiner from 'tiptap-extension-auto-joiner';
 import { NotionListKeymap } from '@/lib/tiptap-extensions/notion-list-keymap';
 import { cn } from '@/lib/utils';
-import { useEffect } from 'react';
+import { useEffect, useImperativeHandle, forwardRef } from 'react';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { CornerDownLeft } from 'lucide-react';
+
+export interface RichTextEditorRef {
+  getEditor: () => Editor | null;
+  insertLineBreak: () => void;
+}
 
 interface RichTextEditorProps {
   content: string;
@@ -15,16 +22,19 @@ interface RichTextEditorProps {
   className?: string;
   editable?: boolean;
   minHeight?: string;
+  showMobileLineBreak?: boolean;
 }
 
-export const RichTextEditor = ({
+export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>(({
   content,
   onChange,
   placeholder = "Comece a escrever...",
   className,
   editable = true,
   minHeight = "80px",
-}: RichTextEditorProps) => {
+  showMobileLineBreak = true,
+}, ref) => {
+  const isMobile = useIsMobile();
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -106,6 +116,24 @@ export const RichTextEditor = ({
     }
   }, [editor, editable]);
 
+  // Expose editor methods via ref
+  useImperativeHandle(ref, () => ({
+    getEditor: () => editor,
+    insertLineBreak: () => {
+      if (editor) {
+        editor.commands.setHardBreak();
+        editor.commands.focus();
+      }
+    },
+  }), [editor]);
+
+  const handleMobileLineBreak = () => {
+    if (editor) {
+      editor.commands.setHardBreak();
+      editor.commands.focus();
+    }
+  };
+
   if (!editor) {
     return null;
   }
@@ -122,9 +150,22 @@ export const RichTextEditor = ({
       onMouseDown={(e) => e.stopPropagation()}
     >
       <EditorContent editor={editor} />
+      {/* Mobile line break button */}
+      {isMobile && showMobileLineBreak && editable && (
+        <button
+          type="button"
+          onClick={handleMobileLineBreak}
+          className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-md hover:bg-muted"
+        >
+          <CornerDownLeft className="w-3 h-3" />
+          <span>Nova linha</span>
+        </button>
+      )}
     </div>
   );
-};
+});
+
+RichTextEditor.displayName = 'RichTextEditor';
 
 // Helper to strip HTML tags for comparison
 function stripHtml(html: string): string {

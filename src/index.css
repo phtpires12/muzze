@@ -487,3 +487,28 @@ All colors MUST be HSL.
     margin-left: -4px;
   }
 }
+
+/* ========== Shotlist Rich Text Editor Mobile Fixes ========== */
+
+@media (max-width: 768px) {
+  /* Ensure text wraps properly in shotlist editors */
+  .rich-text-editor .ProseMirror {
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    max-width: 100%;
+    white-space: pre-wrap;
+  }
+  
+  .rich-text-editor .ProseMirror p,
+  .rich-text-editor .ProseMirror li {
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    max-width: 100%;
+  }
+  
+  /* Prevent horizontal overflow on mobile */
+  .rich-text-editor {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+}
