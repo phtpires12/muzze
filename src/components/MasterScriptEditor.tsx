@@ -8,6 +8,8 @@ import { SectionHeader } from '@/lib/tiptap-extensions/section-header';
 import { buildMasterDocument, splitFromEditor, ContentSections } from '@/lib/master-editor-utils';
 import { cn } from '@/lib/utils';
 import { useEffect, useRef, useCallback } from 'react';
+import { useLongPressDrag } from '@/hooks/useLongPressDrag';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface MasterScriptEditorProps {
   content: ContentSections;
@@ -26,6 +28,7 @@ interface MasterScriptEditorProps {
  * - Notion-like drag handles for reordering paragraphs
  * - Paragraphs can be dragged across sections
  * - Content is split back into 4 HTML strings on save
+ * - Mobile: Long-press on drag handle to activate drag with haptic feedback
  */
 export function MasterScriptEditor({
   content,
@@ -34,9 +37,19 @@ export function MasterScriptEditor({
   editable = true,
   className,
 }: MasterScriptEditorProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
   const hasInitialized = useRef(false);
   const isUserEditing = useRef(false);
   const lastEmittedContent = useRef<string>('');
+  
+  const isMobile = useIsMobile();
+  
+  // Enable long-press drag on mobile
+  useLongPressDrag(containerRef, {
+    delay: 350,
+    vibration: 15,
+    enabled: isMobile && editable,
+  });
   
   const editor = useEditor({
     extensions: [
@@ -163,6 +176,7 @@ export function MasterScriptEditor({
   
   return (
     <div
+      ref={containerRef}
       className={cn(
         "master-script-editor rounded-lg border border-input bg-background",
         "ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
