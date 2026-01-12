@@ -443,3 +443,47 @@ All colors MUST be HSL.
   word-break: break-word;
   overflow-wrap: anywhere;
 }
+
+/* ========== Mobile Long-Press Drag Styles ========== */
+
+@media (max-width: 768px) {
+  /* On mobile, drag handles start hidden and only show on long-press */
+  .master-script-editor .drag-handle {
+    opacity: 0;
+    touch-action: pan-y; /* Allow normal scroll */
+    transition: opacity 0.2s ease, transform 0.15s ease;
+  }
+  
+  /* Show handles when block is focused/selected */
+  .master-script-editor .ProseMirror > *:focus-within .drag-handle {
+    opacity: 0.5;
+  }
+  
+  /* Active state after long-press */
+  .master-script-editor .drag-handle.drag-active {
+    opacity: 1 !important;
+    touch-action: none; /* Disable scroll during drag */
+    background: hsl(var(--primary) / 0.2);
+    transform: scale(1.2);
+    border-radius: 6px;
+  }
+  
+  /* Visual feedback during long-press (before activation) */
+  .master-script-editor .drag-handle:active {
+    opacity: 0.7;
+    transition: opacity 0.3s ease 0.2s; /* Delayed feedback hint */
+  }
+  
+  /* Prevent text selection during drag on mobile */
+  .master-script-editor.is-dragging {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  
+  /* Improve touch target size on mobile */
+  .master-script-editor .drag-handle {
+    min-width: 32px;
+    min-height: 32px;
+    margin-left: -4px;
+  }
+}
