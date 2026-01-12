@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useProfile } from "@/hooks/useProfile";
 import { useAnalytics } from "@/hooks/useAnalytics";
@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getLevelByXP, TROPHIES } from "@/lib/gamification";
 import { useGamification } from "@/hooks/useGamification";
 import { getWorkflow, getUserWorkflow } from "@/lib/workflows";
+import { getRandomQuote } from "@/lib/inspirational-quotes";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -606,15 +607,7 @@ const Index = () => {
       </div>
 
       {/* Motivational Card */}
-      <div className="px-6 mt-8">
-        <Card className="p-6 bg-gradient-to-br from-accent to-primary text-white border-0 rounded-2xl shadow-lg">
-          <p className="text-center font-medium">
-            {(streakData?.current_streak ?? 0) > 0 
-              ? `Você está há ${streakData.current_streak} dias com a mente em movimento.`
-              : "Um dia de cada vez, uma obra por vez."}
-          </p>
-        </Card>
-      </div>
+      <MotivationalCard currentStreak={streakData?.current_streak ?? 0} />
 
       {/* Workflow Modal */}
       <Dialog open={isWorkflowModalOpen} onOpenChange={setIsWorkflowModalOpen}>
@@ -946,5 +939,31 @@ const Index = () => {
     </div>
   );
 };
+
+// Componente separado para o card motivacional com frases rotativas
+function MotivationalCard({ currentStreak }: { currentStreak: number }) {
+  const quote = useMemo(() => getRandomQuote(), []);
+  
+  return (
+    <div className="px-6 mt-8">
+      <Card className="p-6 bg-gradient-to-br from-accent to-primary text-white border-0 rounded-2xl shadow-lg">
+        {currentStreak > 0 ? (
+          <p className="text-center font-medium">
+            Você está há {currentStreak} dias com a mente em movimento.
+          </p>
+        ) : (
+          <div className="text-center">
+            <p className="font-medium text-lg leading-relaxed italic">
+              "{quote.text}"
+            </p>
+            <p className="text-sm mt-3 text-white/80">
+              — {quote.author}
+            </p>
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+}
 
 export default Index;
