@@ -1,8 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowLeft, FileText, ExternalLink, Calendar, Play, Eye, Image, Check } from "lucide-react";
+import { ArrowLeft, FileText, ExternalLink, Calendar, Play, Eye, Image, Check, ImageOff } from "lucide-react";
+import { ShotItem } from "@/lib/shotlist-generator";
+import { generateSignedUrlsBatch } from "@/lib/storage-helpers";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -265,6 +267,36 @@ export default function ContentView() {
   const publishStatusLabel = getPublishStatusLabel(script.publish_status);
   const isPosted = script.publish_status === "postado";
 
+  // Parse shot list items from JSON strings
+  const parsedShots = useMemo<ShotItem[]>(() => {
+    if (!script?.shot_list) return [];
+    return script.shot_list
+      .map(item => {
+        try { return JSON.parse(item) as ShotItem; }
+        catch { return null; }
+      })
+      .filter((item): item is ShotItem => item !== null);
+  }, [script?.shot_list]);
+
+  // Extract all image paths from shots
+  const allImagePaths = useMemo(() => {
+    return parsedShots
+      .flatMap(shot => shot.shotImagePaths || [])
+      .filter(Boolean);
+  }, [parsedShots]);
+
+  // State for resolved signed URLs
+  const [resolvedUrls, setResolvedUrls] = useState<Map<string, string>>(new Map());
+
+  // Generate signed URLs for preview images
+  useEffect(() => {
+    if (allImagePaths.length > 0) {
+      generateSignedUrlsBatch(allImagePaths.slice(0, 6)).then(setResolvedUrls);
+    } else {
+      setResolvedUrls(new Map());
+    }
+  }, [allImagePaths.join(',')]);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -459,30 +491,56 @@ export default function ContentView() {
           )}
 
           {/* Shot List Preview */}
-          {script.shot_list && script.shot_list.length > 0 && (
-            <Card className="mb-6" onClick={handleEditAttempt}>
-              <CardContent className="p-6 space-y-3 cursor-pointer">
-                <div className="flex items-center gap-2">
-                  <Image className="w-4 h-4 text-muted-foreground" />
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                    Shot List ({script.shot_list.length} cenas)
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {script.shot_list.slice(0, 5).map((shot, index) => (
-                    <Badge key={index} variant="outline" className="text-xs">
-                      {shot.length > 30 ? shot.substring(0, 30) + '...' : shot}
-                    </Badge>
-                  ))}
-                  {script.shot_list.length > 5 && (
-                    <Badge variant="secondary" className="text-xs">
-                      +{script.shot_list.length - 5} mais
-                    </Badge>
+          <Card className="mb-6" onClick={handleEditAttempt}>
+            <CardContent className="p-6 space-y-3 cursor-pointer">
+              {parsedShots.length > 0 ? (
+                <>
+                  <div className="flex items-center gap-2">
+                    <Image className="w-4 h-4 text-muted-foreground" />
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      Shot List ({parsedShots.length} cenas)
+                    </p>
+                  </div>
+                  
+                  {allImagePaths.length > 0 ? (
+                    <>
+                      <div className="grid grid-cols-3 gap-2">
+                        {allImagePaths.slice(0, 6).map((path, index) => (
+                          <div key={path} className="aspect-video bg-muted rounded-md overflow-hidden">
+                            {resolvedUrls.get(path) ? (
+                              <img 
+                                src={resolvedUrls.get(path)} 
+                                alt={`Referência ${index + 1}`}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <Image className="w-6 h-6 text-muted-foreground/50" />
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      {allImagePaths.length > 6 && (
+                        <Badge variant="secondary" className="text-xs">
+                          +{allImagePaths.length - 6} imagens
+                        </Badge>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      Nenhuma imagem de referência adicionada
+                    </p>
                   )}
+                </>
+              ) : (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <ImageOff className="w-4 h-4" />
+                  <span className="text-sm">Sem shotlist</span>
                 </div>
-              </CardContent>
-            </Card>
-          )}
+              )}
+            </CardContent>
+          </Card>
         </div>
       </ScrollArea>
 
