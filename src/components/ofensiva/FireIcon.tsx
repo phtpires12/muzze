@@ -24,11 +24,15 @@ const FireIcon = ({ minutes, goalMinutes, size = 'sm', isToday }: FireIconProps)
     );
   }
   
-  // Estado: Fogo completo (≥100%)
+  // Estado: Fogo completo (≥100%) - com glow intenso exclusivo
   if (percentage >= 100) {
     return (
       <span 
-        className={`${sizes[size]} select-none ${isToday ? 'drop-shadow-[0_0_6px_rgba(251,146,60,0.7)]' : 'drop-shadow-[0_0_4px_rgba(251,146,60,0.5)]'}`}
+        className={`${sizes[size]} select-none ${
+          isToday 
+            ? 'drop-shadow-[0_0_12px_rgba(251,146,60,0.9)]' 
+            : 'drop-shadow-[0_0_8px_rgba(251,146,60,0.8)]'
+        }`}
       >
         🔥
       </span>

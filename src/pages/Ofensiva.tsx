@@ -613,12 +613,16 @@ const Ofensiva = () => {
               }
 
               // Dia com/sem progresso - mostra FireIcon
+              const isComplete = minutes >= goalMinutes;
+              
               return (
                 <button
                   key={day.toString()}
                   onClick={handleDayClick}
                   className={`aspect-square flex flex-col items-center justify-center gap-0.5 rounded-lg transition-colors hover:bg-muted/30 ${
                     isDayToday ? 'ring-1 ring-orange-500/50' : ''
+                  } ${
+                    isComplete ? 'bg-orange-500/10' : ''
                   }`}
                 >
                   <FireIcon 
@@ -627,7 +631,7 @@ const Ofensiva = () => {
                     isToday={isDayToday}
                   />
                   <span className={`text-[10px] ${
-                    minutes >= goalMinutes 
+                    isComplete 
                       ? 'text-orange-400/80' 
                       : minutes > 0 
                         ? 'text-yellow-500/60' 
