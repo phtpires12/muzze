@@ -266,7 +266,37 @@ export interface LevelDefinition {
   rewards: string[];
 }
 
-// Curva de XP otimizada para progressão rápida no início (níveis 1-4)
+// ============================================
+// META DIÁRIA POR NÍVEL (Rampa de Hábito)
+// ============================================
+// Esta é a ÚNICA fonte de verdade para meta mínima diária baseada em nível.
+// Usada por: SessionContext, useSession, Ofensiva, check-streaks (cron), Stats.
+
+/**
+ * Retorna a meta diária mínima (em minutos) baseada no nível do usuário.
+ * Implementa a "rampa de hábito" inspirada no Duolingo:
+ * - Nível 1: 5 minutos (entrada fácil)
+ * - Nível 2: 10 minutos
+ * - Nível 3: 15 minutos
+ * - Nível 4+: 25 minutos (meta padrão do app)
+ * 
+ * @param level - Nível do usuário (1-7+). Valores <= 0 são tratados como nível 1.
+ * @returns Meta diária em minutos
+ */
+export function getDailyGoalMinutesForLevel(level: number): number {
+  // Guard: garantir que level é um número válido
+  const safeLevel = typeof level === 'number' && !isNaN(level) ? Math.floor(level) : 1;
+  
+  if (safeLevel <= 1) return 5;
+  if (safeLevel === 2) return 10;
+  if (safeLevel === 3) return 15;
+  return 25; // Nível 4+
+}
+
+// ============================================
+// CURVA DE XP (Progressão por Níveis)
+// ============================================
+// Curva otimizada para progressão rápida no início (níveis 1-4)
 // Isso cria a "rampa de hábito" inspirada no Duolingo
 // Nível 2: ~2 dias (50min), Nível 3: ~4 dias (150min), Nível 4: ~8 dias (350min)
 export const XP_LEVELS: LevelDefinition[] = [
