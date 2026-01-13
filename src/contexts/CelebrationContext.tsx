@@ -148,41 +148,48 @@ export const CelebrationContextProvider = ({ children }: { children: ReactNode }
 
       const unlockedTrophyIds = (userTrophies || []).map(t => t.trophy_id);
 
-      // 2. Buscar stats atuais
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('xp_points')
-        .eq('user_id', userId)
-        .single();
+      // 2. Buscar stats atuais - todas as queries em paralelo
+      const [profileRes, streakRes, scriptsRes, scriptsCompletedRes, ideasOrganizedRes, stageTimesRes] = await Promise.all([
+        supabase.from('profiles').select('xp_points').eq('user_id', userId).single(),
+        supabase.from('streaks').select('current_streak, longest_streak').eq('user_id', userId).single(),
+        supabase.from('scripts').select('id, status').eq('user_id', userId),
+        supabase.from('scripts').select('id', { count: 'exact', head: true }).eq('user_id', userId).in('status', ['completed', 'publicado']),
+        supabase.from('scripts').select('id', { count: 'exact', head: true }).eq('user_id', userId).neq('status', 'draft_idea'),
+        supabase.from('stage_times').select('duration_seconds, stage, had_pause, was_abandoned').eq('user_id', userId),
+      ]);
 
-      const { data: streak } = await supabase
-        .from('streaks')
-        .select('current_streak')
-        .eq('user_id', userId)
-        .single();
-
-      const { data: scripts } = await supabase
-        .from('scripts')
-        .select('id')
-        .eq('user_id', userId);
-
-      const { data: stageTimes } = await supabase
-        .from('stage_times')
-        .select('duration_seconds')
-        .eq('user_id', userId);
+      const profile = profileRes.data;
+      const streak = streakRes.data;
+      const scripts = scriptsRes.data;
+      const stageTimes = stageTimesRes.data;
 
       const totalHours = stageTimes?.reduce((sum, s) => sum + (s.duration_seconds || 0), 0) / 3600 || 0;
+      
+      // Calcular campos para novas conquistas
+      const sessionsOver25Min = (stageTimes || []).filter(st => (st.duration_seconds || 0) >= 1500).length;
+      const sessionsWithoutPause = (stageTimes || []).filter(st => (st.duration_seconds || 0) >= 1500 && st.had_pause === false).length;
+      const sessionsWithoutAbandon = (stageTimes || []).filter(st => (st.duration_seconds || 0) >= 1500 && st.was_abandoned === false).length;
+      const usedStages = [...new Set((stageTimes || []).map(st => st.stage).filter((s): s is string => !!s))];
+      const hadStreakReset = (streak?.longest_streak || 0) > (streak?.current_streak || 0) && (streak?.current_streak || 0) >= 1;
 
       const stats: UserStats = {
         totalPoints: profile?.xp_points || 0,
         totalXP: profile?.xp_points || 0,
         level: 1,
         streak: streak?.current_streak || 0,
+        longestStreak: streak?.longest_streak || 0,
         totalHours,
         scriptsCreated: scripts?.length || 0,
+        scriptsCompleted: scriptsCompletedRes.count || 0,
         shotListsCreated: 0,
-        ideasCreated: 0,
-        trophies: unlockedTrophyIds, // Agora vem do banco!
+        ideasCreated: scripts?.filter(s => s.status === 'draft_idea').length || 0,
+        ideasOrganized: ideasOrganizedRes.count || 0,
+        trophies: unlockedTrophyIds,
+        sessionsOver25Min,
+        sessionsWithoutPause,
+        sessionsWithoutAbandon,
+        usedStages,
+        hadStreakReset,
       };
 
       // 3. Verificar novos troféus

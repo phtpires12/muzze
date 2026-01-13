@@ -262,30 +262,36 @@ export type Database = {
           created_at: string | null
           duration_seconds: number | null
           ended_at: string | null
+          had_pause: boolean | null
           id: string
           stage: string | null
           started_at: string | null
           user_id: string
+          was_abandoned: boolean | null
         }
         Insert: {
           content_item_id?: string | null
           created_at?: string | null
           duration_seconds?: number | null
           ended_at?: string | null
+          had_pause?: boolean | null
           id?: string
           stage?: string | null
           started_at?: string | null
           user_id: string
+          was_abandoned?: boolean | null
         }
         Update: {
           content_item_id?: string | null
           created_at?: string | null
           duration_seconds?: number | null
           ended_at?: string | null
+          had_pause?: boolean | null
           id?: string
           stage?: string | null
           started_at?: string | null
           user_id?: string
+          was_abandoned?: boolean | null
         }
         Relationships: []
       }

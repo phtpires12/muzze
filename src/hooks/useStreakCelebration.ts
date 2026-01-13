@@ -124,7 +124,7 @@ export const useStreakCelebration = () => {
 
       const { data: streak } = await supabase
         .from('streaks')
-        .select('current_streak')
+        .select('current_streak, longest_streak')
         .eq('user_id', userId)
         .single();
 
@@ -145,11 +145,19 @@ export const useStreakCelebration = () => {
         totalXP: profile?.xp_points || 0,
         level: 1,
         streak: streak?.current_streak || 0,
+        longestStreak: streak?.longest_streak || 0,
         totalHours,
         scriptsCreated: scripts?.length || 0,
+        scriptsCompleted: 0,
         shotListsCreated: 0,
         ideasCreated: 0,
-        trophies: unlockedTrophyIds, // Agora vem do banco!
+        ideasOrganized: 0,
+        trophies: unlockedTrophyIds,
+        sessionsOver25Min: 0,
+        sessionsWithoutPause: 0,
+        sessionsWithoutAbandon: 0,
+        usedStages: [],
+        hadStreakReset: false,
       };
 
       // 3. Verificar novos troféus
