@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getEffectiveLevel, getDailyGoalMinutesForLevel } from "@/lib/gamification";
 
 interface DailyGoalProgress {
   goalMinutes: number;
@@ -26,14 +27,16 @@ export const useDailyGoalProgress = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Buscar meta diária do perfil
+      // Buscar dados do perfil para calcular meta dinâmica
       const { data: profile } = await supabase
         .from("profiles")
-        .select("daily_goal_minutes")
+        .select("xp_points, highest_level")
         .eq("user_id", user.id)
         .single();
 
-      const goalMinutes = profile?.daily_goal_minutes || 60;
+      // Meta dinâmica baseada no nível efetivo
+      const effectiveLevel = getEffectiveLevel(profile?.xp_points || 0, profile?.highest_level || 1);
+      const goalMinutes = getDailyGoalMinutesForLevel(effectiveLevel);
 
       // Calcular minutos de hoje
       const today = new Date();

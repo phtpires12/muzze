@@ -9,7 +9,7 @@ import { X, Share2, ChevronLeft, ChevronRight, Snowflake, Gem, Info, TrendingUp 
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isFuture, isToday, getDaysInMonth, isSameMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
-import { calculateFreezeCost, MAX_STREAK_FREEZES, MAX_STREAK_BONUS_DAYS } from "@/lib/gamification";
+import { calculateFreezeCost, MAX_STREAK_FREEZES, MAX_STREAK_BONUS_DAYS, getEffectiveLevel, getDailyGoalMinutesForLevel } from "@/lib/gamification";
 import { useProfile } from "@/hooks/useProfile";
 import * as htmlToImage from 'html-to-image';
 import StreakShareCard from "@/components/StreakShareCard";
@@ -314,7 +314,10 @@ const Ofensiva = () => {
                     currentMonth.getFullYear() < new Date().getFullYear();
 
   const daysInMonth = getDaysInMonth(currentMonth);
-  const goalMinutes = profile?.min_streak_minutes || 25;
+  
+  // Meta dinâmica baseada no nível efetivo do usuário
+  const effectiveLevel = getEffectiveLevel(profile?.xp_points || 0, profile?.highest_level || 1);
+  const goalMinutes = getDailyGoalMinutesForLevel(effectiveLevel);
   
   // Calcular dias completos baseado no dayProgressMap
   const daysCompleted = Array.from(dayProgressMap.values()).filter(p => p.minutes >= goalMinutes).length;
@@ -413,7 +416,7 @@ const Ofensiva = () => {
                 {getMotivationalMessage(streakCount)}
               </p>
               <p className="text-xs text-muted-foreground">
-                Dedique pelo menos {profile?.min_streak_minutes || 20} minutos criando por dia para manter sua ofensiva.
+                Dedique pelo menos {goalMinutes} minutos criando por dia para manter sua ofensiva.
               </p>
             </div>
           </div>

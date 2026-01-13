@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getEffectiveLevel, getDailyGoalMinutesForLevel } from "@/lib/gamification";
 
 interface StageBreakdown {
   ideation: number;
@@ -152,10 +153,10 @@ export const useStatsPage = (): StatsPageData => {
         scriptsCountResult,
         ideasCountResult,
       ] = await Promise.all([
-        // Profile (inclui xp_points e daily_goal_minutes)
+        // Profile (inclui xp_points, daily_goal_minutes, highest_level)
         supabase
           .from('profiles')
-          .select('xp_points, daily_goal_minutes')
+          .select('xp_points, daily_goal_minutes, highest_level')
           .eq('user_id', user.id)
           .single(),
         
@@ -216,8 +217,11 @@ export const useStatsPage = (): StatsPageData => {
 
       // Processar dados localmente
       const profile = profileResult.data;
-      const dailyGoalMinutes = profile?.daily_goal_minutes || 60;
       const xpPoints = profile?.xp_points || 0;
+      
+      // Meta dinâmica baseada no nível efetivo
+      const effectiveLevel = getEffectiveLevel(xpPoints, profile?.highest_level || 1);
+      const dailyGoalMinutes = getDailyGoalMinutesForLevel(effectiveLevel);
       
       const streak = streakResult.data?.current_streak || 0;
       const allStageTimesForSum = allStageTimesSumResult.data || [];
