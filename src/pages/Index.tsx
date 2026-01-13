@@ -72,8 +72,8 @@ const Index = () => {
     autoUseFreezesIfAvailable,
     freezeCost,
     maxFreezes,
-  } = useStreakValidator();
-  const { recoverMissedStreaks, isRecovering: isRecoveringStreak } = useStreakAutoRecovery();
+  } = useStreakValidator({ profile, refetchProfile: refetch });
+  const { recoverMissedStreaks, isRecovering: isRecoveringStreak } = useStreakAutoRecovery({ profile });
   const { progress: dbProgress } = useDailyGoalProgress();
   const liveProgress = useLiveDailyProgress(dbProgress.actualMinutes, dbProgress.goalMinutes);
   const [streakData, setStreakData] = useState<any>(null);
