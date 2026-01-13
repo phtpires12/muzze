@@ -1,17 +1,19 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { X, Share2, ChevronLeft, ChevronRight, Check, Snowflake, Gem, Info, TrendingUp } from "lucide-react";
+import { X, Share2, ChevronLeft, ChevronRight, Snowflake, Gem, Info, TrendingUp } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isFuture, isToday, getDaysInMonth, isSameMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
-import { calculateXPFromMinutes, calculateFreezeCost, MAX_STREAK_FREEZES, getStreakBonusMultiplier, MAX_STREAK_BONUS_DAYS } from "@/lib/gamification";
+import { calculateFreezeCost, MAX_STREAK_FREEZES, MAX_STREAK_BONUS_DAYS } from "@/lib/gamification";
 import { useProfile } from "@/hooks/useProfile";
 import * as htmlToImage from 'html-to-image';
 import StreakShareCard from "@/components/StreakShareCard";
+import FireIcon from "@/components/ofensiva/FireIcon";
+import DayDetailDrawer, { DayProgress } from "@/components/ofensiva/DayDetailDrawer";
 
 const Ofensiva = () => {
   const navigate = useNavigate();
@@ -20,11 +22,12 @@ const Ofensiva = () => {
   const [streakCount, setStreakCount] = useState(0);
   const [longestStreak, setLongestStreak] = useState(0);
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [daysWithProgress, setDaysWithProgress] = useState<Date[]>([]);
+  const [dayProgressMap, setDayProgressMap] = useState<Map<string, { minutes: number }>>(new Map());
   const [freezeDays, setFreezeDays] = useState<Date[]>([]);
   const [freezesUsedThisMonth, setFreezesUsedThisMonth] = useState(0);
   const [loading, setLoading] = useState(true);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [selectedDay, setSelectedDay] = useState<DayProgress | null>(null);
 
   useEffect(() => {
     fetchStreakData();
@@ -93,16 +96,13 @@ const Ofensiva = () => {
       dayMap.set(day, (dayMap.get(day) || 0) + minutes);
     });
 
-    const completedDays: Date[] = [];
+    // Converter dayMap para dayProgressMap
+    const progressMap = new Map<string, { minutes: number }>();
     dayMap.forEach((minutes, dayStr) => {
-      if (minutes >= minMinutes) {
-        // Criar data no timezone local para exibição correta no calendário
-        const [year, month, dayNum] = dayStr.split('-').map(Number);
-        completedDays.push(new Date(year, month - 1, dayNum));
-      }
+      progressMap.set(dayStr, { minutes });
     });
 
-    setDaysWithProgress(completedDays);
+    setDayProgressMap(progressMap);
   };
 
   const fetchFreezesUsedThisMonth = async () => {
@@ -304,7 +304,10 @@ const Ofensiva = () => {
                     currentMonth.getFullYear() < new Date().getFullYear();
 
   const daysInMonth = getDaysInMonth(currentMonth);
-  const daysCompleted = daysWithProgress.length;
+  const goalMinutes = profile?.min_streak_minutes || 25;
+  
+  // Calcular dias completos baseado no dayProgressMap
+  const daysCompleted = Array.from(dayProgressMap.values()).filter(p => p.minutes >= goalMinutes).length;
   const percentComplete = (daysCompleted / daysInMonth) * 100;
 
   const monthBadge = 
@@ -503,19 +506,19 @@ const Ofensiva = () => {
         </div>
 
         {/* Calendário Visual */}
-        <Card className="p-6 bg-card/50 border border-border/50 rounded-2xl">
+        <Card className="p-4 bg-card/30 border border-border/30 rounded-xl">
           {/* Header de navegação do mês */}
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-3">
             <Button
               variant="ghost"
               size="icon"
               onClick={handlePreviousMonth}
-              className="h-8 w-8 text-muted-foreground hover:text-foreground"
+              className="h-7 w-7 text-muted-foreground hover:text-foreground"
             >
-              <ChevronLeft className="h-5 w-5" />
+              <ChevronLeft className="h-4 w-4" />
             </Button>
             
-            <h3 className="text-lg font-semibold text-foreground capitalize">
+            <h3 className="text-sm font-medium text-foreground/80 capitalize">
               {format(currentMonth, 'MMMM yyyy', { locale: ptBR })}
             </h3>
             
@@ -524,101 +527,105 @@ const Ofensiva = () => {
               size="icon"
               onClick={handleNextMonth}
               disabled={isSameMonth(currentMonth, new Date())}
-              className="h-8 w-8 text-muted-foreground hover:text-foreground disabled:opacity-30"
+              className="h-7 w-7 text-muted-foreground hover:text-foreground disabled:opacity-30"
             >
-              <ChevronRight className="h-5 w-5" />
+              <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
 
-          {/* Separador */}
-          <div className="border-t border-border/50 mb-4" />
-
           {/* Cabeçalho dos dias da semana */}
-          <div className="grid grid-cols-7 gap-2 mb-4">
-            {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(day => (
-              <div key={day} className="text-center text-xs font-semibold text-muted-foreground">
+          <div className="grid grid-cols-7 gap-1 mb-2">
+            {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((day, i) => (
+              <div key={i} className="text-center text-[10px] font-medium text-muted-foreground/50">
                 {day}
               </div>
             ))}
           </div>
 
           {/* Grid do calendário */}
-          <div className="grid grid-cols-7 gap-2">
+          <div className="grid grid-cols-7 gap-1">
             {/* Dias vazios antes do primeiro dia do mês */}
             {emptyDays.map((_, index) => (
-              <div key={`empty-${index}`} />
+              <div key={`empty-${index}`} className="aspect-square" />
             ))}
 
             {/* Dias do mês */}
             {monthDays.map(day => {
+              const dayKey = format(day, 'yyyy-MM-dd');
               const dayNumber = format(day, 'd');
-              const hasProgress = daysWithProgress.some(d => isSameDay(d, day));
+              const progress = dayProgressMap.get(dayKey);
+              const minutes = progress?.minutes || 0;
               const freezeUsed = freezeDays.some(d => isSameDay(d, day));
               const isDayFuture = isFuture(day) && !isToday(day);
               const isDayToday = isToday(day);
+              
+              const status: DayProgress['status'] = 
+                freezeUsed ? 'freeze' :
+                minutes >= goalMinutes ? 'complete' :
+                minutes > 0 ? 'partial' : 'empty';
 
+              const handleDayClick = () => {
+                if (!isDayFuture) {
+                  setSelectedDay({
+                    date: day,
+                    minutes,
+                    status
+                  });
+                }
+              };
+
+              // Dia futuro - apenas número suave
               if (isDayFuture) {
                 return (
                   <div
                     key={day.toString()}
-                    className="aspect-square flex items-center justify-center text-sm text-muted-foreground/40"
+                    className="aspect-square flex flex-col items-center justify-center"
                   >
-                    {dayNumber}
+                    <span className="text-[10px] text-muted-foreground/30">{dayNumber}</span>
                   </div>
                 );
               }
 
-              if (freezeUsed && !hasProgress) {
+              // Freeze usado - floco de neve
+              if (freezeUsed) {
                 return (
-                  <div key={day.toString()} className="relative aspect-square flex items-center justify-center">
-                    <div className={`w-10 h-10 rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center ${isDayToday ? 'ring-2 ring-orange-500 ring-offset-2 ring-offset-background' : ''}`}>
-                      <Snowflake className="w-5 h-5 text-white" />
-                    </div>
-                    <div className="absolute -bottom-1 text-xs text-muted-foreground">
-                      {dayNumber}
-                    </div>
-                  </div>
-                );
-              }
-
-              // Hoje sem progresso - destaque especial
-              if (isDayToday && !hasProgress) {
-                return (
-                  <div
+                  <button
                     key={day.toString()}
-                    className="aspect-square flex items-center justify-center"
+                    onClick={handleDayClick}
+                    className={`aspect-square flex flex-col items-center justify-center gap-0.5 rounded-lg transition-colors hover:bg-muted/30 ${
+                      isDayToday ? 'ring-1 ring-cyan-500/50' : ''
+                    }`}
                   >
-                    <div className="relative w-10 h-10 rounded-full border-2 border-dashed border-orange-500 flex items-center justify-center animate-pulse">
-                      <span className="text-sm font-bold text-orange-500">{dayNumber}</span>
-                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full animate-ping" />
-                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full" />
-                    </div>
-                  </div>
+                    <span className="text-lg opacity-70">❄️</span>
+                    <span className="text-[10px] text-muted-foreground/50">{dayNumber}</span>
+                  </button>
                 );
               }
 
-              if (!hasProgress) {
-                return (
-                  <div
-                    key={day.toString()}
-                    className="aspect-square flex items-center justify-center text-sm text-muted-foreground/60"
-                  >
-                    {dayNumber}
-                  </div>
-                );
-              }
-
+              // Dia com/sem progresso - mostra FireIcon
               return (
-                <div
+                <button
                   key={day.toString()}
-                  className={`aspect-square flex items-center justify-center text-sm font-bold rounded-full ${
-                    isDayToday
-                      ? 'bg-gradient-to-br from-orange-500 to-orange-600 text-white shadow-lg shadow-orange-500/50 ring-2 ring-orange-300 ring-offset-2 ring-offset-background'
-                      : 'bg-gradient-to-br from-orange-400 to-orange-500 text-white shadow-md'
+                  onClick={handleDayClick}
+                  className={`aspect-square flex flex-col items-center justify-center gap-0.5 rounded-lg transition-colors hover:bg-muted/30 ${
+                    isDayToday ? 'ring-1 ring-orange-500/50' : ''
                   }`}
                 >
-                  {dayNumber}
-                </div>
+                  <FireIcon 
+                    minutes={minutes} 
+                    goalMinutes={goalMinutes} 
+                    isToday={isDayToday}
+                  />
+                  <span className={`text-[10px] ${
+                    minutes >= goalMinutes 
+                      ? 'text-orange-400/80' 
+                      : minutes > 0 
+                        ? 'text-yellow-500/60' 
+                        : 'text-muted-foreground/40'
+                  }`}>
+                    {dayNumber}
+                  </span>
+                </button>
               );
             })}
           </div>
@@ -709,6 +716,13 @@ const Ofensiva = () => {
           </div>
         </div>
       </div>
+
+      {/* Drawer de detalhes do dia */}
+      <DayDetailDrawer 
+        selectedDay={selectedDay}
+        onClose={() => setSelectedDay(null)}
+        goalMinutes={goalMinutes}
+      />
 
       {/* Card oculto para geração de imagem de compartilhamento */}
       <div className="fixed -left-[9999px]" aria-hidden="true">
