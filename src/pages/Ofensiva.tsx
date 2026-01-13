@@ -83,7 +83,9 @@ const Ofensiva = () => {
     const monthStart = startOfMonth(currentMonth);
     const monthEnd = endOfMonth(currentMonth);
 
-    const minMinutes = profile?.min_streak_minutes || 25; // Default para 25 minutos
+    // Meta dinâmica baseada no nível efetivo do usuário
+    const effectiveLevel = getEffectiveLevel(profile?.xp_points || 0, profile?.highest_level || 1);
+    const minMinutes = getDailyGoalMinutesForLevel(effectiveLevel);
 
     const { data: sessions } = await supabase
       .from('stage_times')
@@ -243,7 +245,9 @@ const Ofensiva = () => {
       return;
     }
 
-    const freezeCost = calculateFreezeCost(profile.min_streak_minutes || 20);
+    // Custo do freeze baseado na meta dinâmica do nível
+    const effectiveLevelForFreeze = getEffectiveLevel(profile.xp_points || 0, profile.highest_level || 1);
+    const freezeCost = calculateFreezeCost(getDailyGoalMinutesForLevel(effectiveLevelForFreeze));
     const userXP = profile.xp_points || 0;
 
     if (userXP < freezeCost) {
@@ -696,7 +700,7 @@ const Ofensiva = () => {
                   onClick={handleBuyFreeze}
                   disabled={
                     !profile || 
-                    (profile.xp_points || 0) < calculateFreezeCost(profile?.min_streak_minutes || 20) ||
+                    (profile.xp_points || 0) < calculateFreezeCost(goalMinutes) ||
                     (profile.streak_freezes || 0) >= MAX_STREAK_FREEZES
                   }
                   className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-bold"
@@ -704,7 +708,7 @@ const Ofensiva = () => {
                   <div className="flex items-center justify-center gap-2">
                     <span>COMPRAR POR</span>
                     <Gem className="w-4 h-4" />
-                    <span>{calculateFreezeCost(profile?.min_streak_minutes || 20)}</span>
+                    <span>{calculateFreezeCost(goalMinutes)}</span>
                   </div>
                 </Button>
 
@@ -714,9 +718,9 @@ const Ofensiva = () => {
                   </p>
                 )}
 
-                {profile && (profile.streak_freezes || 0) < MAX_STREAK_FREEZES && (profile.xp_points || 0) < calculateFreezeCost(profile.min_streak_minutes || 20) && (
+                {profile && (profile.streak_freezes || 0) < MAX_STREAK_FREEZES && (profile.xp_points || 0) < calculateFreezeCost(goalMinutes) && (
                   <p className="text-xs text-destructive mt-2 text-center">
-                    Você precisa de mais {calculateFreezeCost(profile.min_streak_minutes || 20) - (profile.xp_points || 0)} XP
+                    Você precisa de mais {calculateFreezeCost(goalMinutes) - (profile.xp_points || 0)} XP
                   </p>
                 )}
               </div>
