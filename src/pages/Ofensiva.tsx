@@ -87,18 +87,18 @@ const Ofensiva = () => {
 
     const { data: sessions } = await supabase
       .from('stage_times')
-      .select('started_at, duration_seconds')
+      .select('created_at, duration_seconds')
       .eq('user_id', user.id)
-      .gte('started_at', monthStart.toISOString())
-      .lte('started_at', monthEnd.toISOString());
+      .gte('created_at', monthStart.toISOString())
+      .lte('created_at', monthEnd.toISOString());
 
-    // Group sessions by day in user's timezone
+    // Group sessions by day in user's timezone (usando created_at para consistência com o resto do app)
     const dayMap = new Map<string, number>();
     sessions?.forEach(session => {
-      if (!session.started_at) return;
+      if (!session.created_at) return;
       
       // Converter para timezone do usuário
-      const sessionDate = new Date(session.started_at);
+      const sessionDate = new Date(session.created_at);
       const userSessionDate = new Date(sessionDate.toLocaleString('en-US', { timeZone: userTimezone }));
       const day = format(userSessionDate, 'yyyy-MM-dd');
       
