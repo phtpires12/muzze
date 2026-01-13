@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, ReactNode, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-
+import { getDailyGoalMinutesForLevel, getEffectiveLevel } from "@/lib/gamification";
 export type SessionStage = "idea" | "ideation" | "script" | "review" | "record" | "edit";
 
 export interface TimerState {
@@ -59,6 +59,9 @@ const MAX_STAGE_SECONDS = 1800; // 30 minutos máximo por save
 const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutos de inatividade = encerrar sessão
 const BACKGROUND_PAUSE_MS = 2 * 60 * 1000; // 2 minutos em background = pausar
 
+// Meta padrão (nível 4+) - será sobrescrita ao iniciar sessão com base no nível real
+const DEFAULT_STREAK_GOAL_MINUTES = 25;
+
 const defaultTimerState: TimerState = {
   isActive: false,
   isPaused: false,
@@ -68,7 +71,7 @@ const defaultTimerState: TimerState = {
   startedAt: null,
   lastActivityAt: null,
   sessionId: null,
-  targetSeconds: 25 * 60,
+  targetSeconds: DEFAULT_STREAK_GOAL_MINUTES * 60, // Será sobrescrito com meta por nível
   isStreakMode: false,
   dailyGoalMinutes: 60,
   contentId: null,
@@ -432,7 +435,8 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
             newStageElapsedSeconds = 0;
           }
           
-          const streakThreshold = 25 * 60;
+          // Usar targetSeconds que já foi calculado com base no nível do usuário
+          const streakThreshold = prev.targetSeconds;
           const wasStreakMode = prev.isStreakMode;
           const isStreakMode = newElapsedSeconds >= streakThreshold;
           
@@ -528,12 +532,17 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
       stageElapsedRef.current = 0;
       lastRealInteractionRef.current = Date.now();
 
-      // Buscar meta diária do perfil e timezone
+      // Buscar meta diária do perfil, timezone e nível para meta dinâmica
       const { data: profile } = await supabase
         .from('profiles')
-        .select('daily_goal_minutes, timezone')
+        .select('daily_goal_minutes, timezone, xp_points, highest_level')
         .eq('user_id', user.id)
         .single();
+
+      // Calcular meta de ofensiva baseada no nível do usuário
+      const effectiveLevel = getEffectiveLevel(profile?.xp_points || 0, profile?.highest_level || 1);
+      const streakGoalMinutes = getDailyGoalMinutesForLevel(effectiveLevel);
+      console.log(`[SessionContext] Nível efetivo: ${effectiveLevel}, Meta de ofensiva: ${streakGoalMinutes}min`);
 
       const timezone = profile?.timezone || 'America/Sao_Paulo';
 
@@ -566,7 +575,7 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
         startedAt: now,
         lastActivityAt: now,
         sessionId: crypto.randomUUID(),
-        targetSeconds: 25 * 60,
+        targetSeconds: streakGoalMinutes * 60, // Meta dinâmica baseada no nível
         isStreakMode: false,
         dailyGoalMinutes: profile?.daily_goal_minutes || 60,
         contentId: null,
