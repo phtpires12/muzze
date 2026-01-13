@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useAppVisibility } from "@/hooks/useAppVisibility";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
@@ -18,6 +19,7 @@ import DayDetailDrawer, { DayProgress } from "@/components/ofensiva/DayDetailDra
 const Ofensiva = () => {
   const navigate = useNavigate();
   const { profile, loading: profileLoading } = useProfile();
+  const isAppVisible = useAppVisibility();
   const cardRef = useRef<HTMLDivElement>(null);
   const [streakCount, setStreakCount] = useState(0);
   const [longestStreak, setLongestStreak] = useState(0);
@@ -40,6 +42,14 @@ const Ofensiva = () => {
       fetchFreezesUsedThisMonth();
     }
   }, [currentMonth, profile]);
+
+  // Refetch dados quando o app fica visível novamente (ex: após usar timer)
+  useEffect(() => {
+    if (isAppVisible && profile) {
+      fetchMonthProgress();
+      fetchStreakData();
+    }
+  }, [isAppVisible]);
 
   const fetchStreakData = async () => {
     const { data: { user } } = await supabase.auth.getUser();
