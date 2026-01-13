@@ -204,6 +204,7 @@ export default function Levels() {
               let progress = 0;
               let progressText = "";
               
+              // Conquistas existentes
               if (trophy.id === 'first_script') {
                 progress = Math.min(100, (stats.scriptsCreated / 1) * 100);
                 progressText = `${stats.scriptsCreated}/1 roteiro`;
@@ -231,6 +232,54 @@ export default function Levels() {
               } else if (trophy.id === 'hours_100') {
                 progress = Math.min(100, (stats.totalHours / 100) * 100);
                 progressText = `${Math.floor(stats.totalHours)}/100 horas`;
+              }
+              // 🧠 Conquistas de Processo
+              else if (trophy.id === 'first_real_session') {
+                progress = Math.min(100, (stats.sessionsOver25Min / 1) * 100);
+                progressText = `${stats.sessionsOver25Min}/1 sessão de 25min`;
+              } else if (trophy.id === 'focused_creator') {
+                progress = Math.min(100, (stats.sessionsWithoutPause / 1) * 100);
+                progressText = `${stats.sessionsWithoutPause}/1 sessão sem pausa`;
+              } else if (trophy.id === 'no_distractions') {
+                progress = Math.min(100, (stats.sessionsWithoutAbandon / 3) * 100);
+                progressText = `${stats.sessionsWithoutAbandon}/3 sessões completas`;
+              }
+              // 🔥 Conquistas de Constância
+              else if (trophy.id === 'honorable_return') {
+                progress = stats.hadStreakReset ? 100 : 0;
+                progressText = stats.hadStreakReset ? 'Você voltou!' : 'Continue após perder streak';
+              } else if (trophy.id === 'three_days') {
+                progress = Math.min(100, (stats.streak / 3) * 100);
+                progressText = `${stats.streak}/3 dias`;
+              } else if (trophy.id === 'five_days') {
+                progress = Math.min(100, (stats.streak / 5) * 100);
+                progressText = `${stats.streak}/5 dias`;
+              }
+              // ⏱️ Conquistas de Tempo
+              else if (trophy.id === 'hours_1') {
+                progress = Math.min(100, (stats.totalHours / 1) * 100);
+                progressText = `${Math.floor(stats.totalHours * 60)}/60 min`;
+              } else if (trophy.id === 'hours_5') {
+                progress = Math.min(100, (stats.totalHours / 5) * 100);
+                progressText = `${Math.floor(stats.totalHours)}/5 horas`;
+              }
+              // ✍️ Conquistas de Produção
+              else if (trophy.id === 'first_completed') {
+                progress = Math.min(100, (stats.scriptsCompleted / 1) * 100);
+                progressText = `${stats.scriptsCompleted}/1 projeto finalizado`;
+              } else if (trophy.id === 'creative_sequence') {
+                progress = Math.min(100, (stats.scriptsCompleted / 3) * 100);
+                progressText = `${stats.scriptsCompleted}/3 projetos finalizados`;
+              }
+              // 💡 Conquistas de Organização
+              else if (trophy.id === 'ideas_organized') {
+                progress = Math.min(100, (stats.ideasOrganized / 10) * 100);
+                progressText = `${stats.ideasOrganized}/10 ideias organizadas`;
+              } else if (trophy.id === 'full_flow') {
+                const requiredStages = ['idea', 'script', 'review', 'record', 'edit'];
+                const usedCount = requiredStages.filter(s => stats.usedStages.includes(s)).length;
+                progress = Math.min(100, (usedCount / 5) * 100);
+                progressText = `${usedCount}/5 etapas usadas`;
               }
 
               return (

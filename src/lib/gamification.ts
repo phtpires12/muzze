@@ -73,6 +73,7 @@ export const LEVELS = [
 ];
 
 export const TROPHIES: Trophy[] = [
+  // ============ CONQUISTAS EXISTENTES ============
   {
     id: "first_script",
     name: "Primeiro Roteiro",
@@ -143,6 +144,115 @@ export const TROPHIES: Trophy[] = [
     description: "Salvou 20 ideias",
     icon: "💡",
     requirement: (stats) => stats.ideasCreated >= 20,
+    points: 120,
+  },
+  
+  // ============ 🧠 CONQUISTAS DE PROCESSO ============
+  {
+    id: "first_real_session",
+    name: "Primeira Sessão Real",
+    description: "Criou por pelo menos 25 minutos em uma única sessão",
+    icon: "🎯",
+    requirement: (stats) => stats.sessionsOver25Min >= 1,
+    points: 75,
+  },
+  {
+    id: "focused_creator",
+    name: "Criador Focado",
+    description: "Criou por 25 minutos sem pausar a sessão",
+    icon: "🧘",
+    requirement: (stats) => stats.sessionsWithoutPause >= 1,
+    points: 120,
+  },
+  {
+    id: "no_distractions",
+    name: "Sem Distrações",
+    description: "Criou 3 sessões completas sem abandonar o app",
+    icon: "🛡️",
+    requirement: (stats) => stats.sessionsWithoutAbandon >= 3,
+    points: 150,
+  },
+  
+  // ============ 🔥 CONQUISTAS DE CONSTÂNCIA ============
+  {
+    id: "honorable_return",
+    name: "Retorno Honroso",
+    description: "Perdeu uma ofensiva e voltou no dia seguinte",
+    icon: "🔄",
+    requirement: (stats) => stats.hadStreakReset && stats.streak >= 1,
+    points: 80,
+  },
+  {
+    id: "three_days",
+    name: "Trinca",
+    description: "3 dias seguidos batendo a meta diária",
+    icon: "3️⃣",
+    requirement: (stats) => stats.streak >= 3,
+    points: 60,
+  },
+  {
+    id: "five_days",
+    name: "Incendiando",
+    description: "5 dias seguidos batendo a meta",
+    icon: "🔥",
+    requirement: (stats) => stats.streak >= 5,
+    points: 120,
+  },
+  
+  // ============ ⏱️ CONQUISTAS DE TEMPO ============
+  {
+    id: "hours_1",
+    name: "Uma Hora",
+    description: "Acumulou 1 hora criando",
+    icon: "⏱️",
+    requirement: (stats) => stats.totalHours >= 1,
+    points: 40,
+  },
+  {
+    id: "hours_5",
+    name: "Cinco Horas",
+    description: "Acumulou 5 horas criando",
+    icon: "⏰",
+    requirement: (stats) => stats.totalHours >= 5,
+    points: 80,
+  },
+  
+  // ============ ✍️ CONQUISTAS DE PRODUÇÃO ============
+  {
+    id: "first_completed",
+    name: "Primeiro Projeto Finalizado",
+    description: "Levou um conteúdo até a etapa final do processo",
+    icon: "🏆",
+    requirement: (stats) => stats.scriptsCompleted >= 1,
+    points: 100,
+  },
+  {
+    id: "creative_sequence",
+    name: "Sequência Criativa",
+    description: "Finalizou 3 conteúdos em sequência",
+    icon: "🎬",
+    requirement: (stats) => stats.scriptsCompleted >= 3,
+    points: 180,
+  },
+  
+  // ============ 💡 CONQUISTAS DE ORGANIZAÇÃO ============
+  {
+    id: "ideas_organized",
+    name: "Ideias em Ordem",
+    description: "Organizou 10 ideias em etapas",
+    icon: "📋",
+    requirement: (stats) => stats.ideasOrganized >= 10,
+    points: 60,
+  },
+  {
+    id: "full_flow",
+    name: "Fluxo Completo",
+    description: "Usou todas as etapas do fluxo pelo menos uma vez",
+    icon: "♾️",
+    requirement: (stats) => {
+      const requiredStages = ['idea', 'script', 'review', 'record', 'edit'];
+      return requiredStages.every(stage => stats.usedStages.includes(stage));
+    },
     points: 120,
   },
 ];
@@ -311,12 +421,21 @@ export interface UserStats {
   totalPoints: number;
   level: number;
   streak: number;
+  longestStreak: number;
   totalHours: number;
   scriptsCreated: number;
+  scriptsCompleted: number;
   shotListsCreated: number;
   ideasCreated: number;
+  ideasOrganized: number;
   trophies: string[];
   totalXP: number;
+  // Campos para conquistas de processo
+  sessionsOver25Min: number;
+  sessionsWithoutPause: number;
+  sessionsWithoutAbandon: number;
+  usedStages: string[];
+  hadStreakReset: boolean;
 }
 
 // DEPRECATED: These functions are kept for backwards compatibility only
@@ -329,12 +448,20 @@ export function getUserStats(): UserStats {
     totalPoints: 0,
     level: 1,
     streak: 0,
+    longestStreak: 0,
     totalHours: 0,
     scriptsCreated: 0,
+    scriptsCompleted: 0,
     shotListsCreated: 0,
     ideasCreated: 0,
+    ideasOrganized: 0,
     trophies: [],
     totalXP: 0,
+    sessionsOver25Min: 0,
+    sessionsWithoutPause: 0,
+    sessionsWithoutAbandon: 0,
+    usedStages: [],
+    hadStreakReset: false,
   };
 }
 

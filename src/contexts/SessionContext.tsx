@@ -19,6 +19,7 @@ export interface TimerState {
   contentId: string | null; // ID do conteúdo sendo trabalhado
   savedSecondsThisSession: number; // Segundos já salvos no banco NESTA sessão (evita contagem dupla)
   dailyBaselineSeconds: number; // Snapshot dos segundos criados ANTES desta sessão (imutável durante sessão)
+  hadPauseInSession: boolean; // Se o usuário pausou durante esta sessão
 }
 
 // Backward compatibility - estrutura antiga
@@ -73,6 +74,7 @@ const defaultTimerState: TimerState = {
   contentId: null,
   savedSecondsThisSession: 0,
   dailyBaselineSeconds: 0, // Será populado ao iniciar sessão
+  hadPauseInSession: false,
 };
 
 // Verificar se sessão é órfã baseado em lastActivityAt
@@ -236,6 +238,8 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
         ended_at: nowDate.toISOString(),
         duration_seconds: safeDuration,
         content_item_id: currentTimer.contentId || null,
+        had_pause: currentTimer.hadPauseInSession,
+        was_abandoned: false,
       });
       
       // DEBUG: Log resultado do save
@@ -568,6 +572,7 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
         contentId: null,
         savedSecondsThisSession: 0,
         dailyBaselineSeconds, // Snapshot imutável durante esta sessão
+        hadPauseInSession: false, // Nova sessão = sem pausa ainda
       });
 
       await supabase.from('analytics_events').insert({
@@ -591,7 +596,12 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
   const pauseTimer = useCallback(() => {
     const now = new Date();
     lastRealInteractionRef.current = Date.now();
-    setTimer(prev => ({ ...prev, isPaused: true, lastActivityAt: now }));
+    setTimer(prev => ({ 
+      ...prev, 
+      isPaused: true, 
+      lastActivityAt: now,
+      hadPauseInSession: true, // Marcar que houve pausa
+    }));
     toast({
       title: "Sessão pausada",
       description: "Continue quando estiver pronto",
@@ -642,6 +652,8 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
             ended_at: now.toISOString(),
             duration_seconds: safeDuration,
             content_item_id: currentTimer.contentId || null,
+            had_pause: currentTimer.hadPauseInSession,
+            was_abandoned: false,
           });
 
           console.log(`[SessionContext] ✅ Salvou ${safeDuration}s da etapa ${currentTimer.stage} antes de mudar`);
