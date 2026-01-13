@@ -1,5 +1,4 @@
 import { forwardRef } from 'react';
-import { Flame } from 'lucide-react';
 import muzzeLogo from '@/assets/muzze-logo-white.png';
 
 interface StreakShareCardProps {
@@ -30,24 +29,24 @@ const StreakShareCard = forwardRef<HTMLDivElement, StreakShareCardProps>(
           }}
         />
 
-        {/* Flame Icon */}
+        {/* Fire Emoji */}
         <div
           style={{
-            backgroundColor: 'rgba(255, 255, 255, 0.15)',
+            backgroundColor: 'rgba(39, 39, 42, 0.9)',
             borderRadius: '50%',
             padding: 60,
             marginBottom: 60,
+            boxShadow: '0 0 60px rgba(255, 154, 95, 0.4)',
           }}
         >
-          <Flame
+          <span
             style={{
-              width: 180,
-              height: 180,
-              color: '#FFFFFF',
+              fontSize: 180,
               filter: 'drop-shadow(0 0 30px rgba(255, 154, 95, 0.8))',
             }}
-            fill="#FFFFFF"
-          />
+          >
+            🔥
+          </span>
         </div>
 
         {/* Streak Number */}

@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { X, Share2, ChevronLeft, ChevronRight, Flame, Check, Snowflake, Gem, Info, TrendingUp } from "lucide-react";
+import { X, Share2, ChevronLeft, ChevronRight, Check, Snowflake, Gem, Info, TrendingUp } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isFuture, isToday, getDaysInMonth, isSameMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -365,25 +365,25 @@ const Ofensiva = () => {
           {/* Ícone de chama gigante animado */}
           <div className="relative w-32 h-32 mx-auto">
             {/* Halo pulsante */}
-            <div className="absolute inset-0 bg-gradient-to-br from-orange-500/20 via-orange-500/30 to-red-500/20 blur-2xl animate-pulse" />
+            <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/20 via-orange-500/30 to-red-500/20 blur-2xl animate-pulse" />
             
-            {/* Chama principal */}
-            <div className="relative z-10 w-full h-full rounded-full bg-gradient-to-br from-yellow-400 via-orange-500 to-red-600 flex items-center justify-center shadow-2xl shadow-orange-500/50">
-              <Flame className="w-16 h-16 text-white animate-bounce" />
+            {/* Emoji de fogo principal */}
+            <div className="relative z-10 w-full h-full rounded-full bg-zinc-800/90 flex items-center justify-center shadow-2xl shadow-orange-500/30">
+              <span className="text-7xl">🔥</span>
             </div>
             
             {/* Badge do número */}
-            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-background border-2 border-orange-500 rounded-full px-4 py-1 shadow-lg">
+            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-background border-2 border-yellow-500/50 rounded-full px-4 py-1 shadow-lg">
               <span className="text-sm font-bold text-foreground">{streakCount}</span>
             </div>
           </div>
 
           {/* Texto principal */}
           <div>
-            <h2 className="text-4xl font-bold text-transparent bg-gradient-to-r from-orange-500 via-orange-600 to-red-600 bg-clip-text mb-2">
+            <h2 className="text-4xl font-bold text-transparent bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 bg-clip-text mb-2">
               {streakCount}
             </h2>
-            <p className="text-lg font-semibold text-orange-500">
+            <p className="text-lg font-semibold text-transparent bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 bg-clip-text">
               {streakCount === 1 ? "dia de ofensiva!" : "dias de ofensiva!"}
             </p>
           </div>
@@ -392,8 +392,8 @@ const Ofensiva = () => {
         {/* Card de Motivação */}
         <Card className="p-4 bg-card/50 border border-border/50 rounded-2xl">
           <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center flex-shrink-0">
-              <Flame className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center flex-shrink-0">
+              <span className="text-xl">🔥</span>
             </div>
             <div className="flex-1">
               <p className="text-sm font-medium text-foreground mb-1">
@@ -449,8 +449,8 @@ const Ofensiva = () => {
         {/* Estatísticas do Mês */}
         <div className="grid grid-cols-2 gap-4">
           <Card className="p-4 bg-card/50 border border-border/50 rounded-2xl text-center">
-            <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center">
-              <Check className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-zinc-800 flex items-center justify-center">
+              <span className="text-xl">🔥</span>
             </div>
             <div className="text-2xl font-bold text-foreground">{daysCompleted}</div>
             <div className="text-xs text-muted-foreground">Dias de prática</div>
@@ -473,7 +473,7 @@ const Ofensiva = () => {
             <div className="flex items-center justify-between mb-2">
               {/* Previous milestone */}
               <div className="flex items-center gap-2">
-                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center">
+                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-yellow-400 via-orange-500 to-red-500 flex items-center justify-center">
                   <span className="text-white font-bold text-sm">{milestones.previous}</span>
                 </div>
               </div>
@@ -482,7 +482,7 @@ const Ofensiva = () => {
               <div className="flex-1 mx-4">
                 <div className="h-3 bg-muted rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-gradient-to-r from-orange-400 to-orange-600 transition-all duration-500"
+                    className="h-full bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 transition-all duration-500"
                     style={{ width: `${milestones.progress}%` }}
                   />
                 </div>
