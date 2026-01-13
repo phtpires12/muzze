@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { X, Share2, ChevronLeft, ChevronRight, Snowflake, Gem, Info, TrendingUp } from "lucide-react";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDaysInMonth, isSameMonth, subDays, addDays } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isFuture, isToday, getDaysInMonth, isSameMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { calculateFreezeCost, MAX_STREAK_FREEZES, MAX_STREAK_BONUS_DAYS } from "@/lib/gamification";
@@ -15,7 +15,6 @@ import * as htmlToImage from 'html-to-image';
 import StreakShareCard from "@/components/StreakShareCard";
 import FireIcon from "@/components/ofensiva/FireIcon";
 import DayDetailDrawer, { DayProgress } from "@/components/ofensiva/DayDetailDrawer";
-import { getDayKey, getTodayKey, isDayKeyFuture, isDayKeyToday } from "@/lib/timezone";
 
 const Ofensiva = () => {
   const navigate = useNavigate();
@@ -26,7 +25,7 @@ const Ofensiva = () => {
   const [longestStreak, setLongestStreak] = useState(0);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [dayProgressMap, setDayProgressMap] = useState<Map<string, { minutes: number }>>(new Map());
-  const [freezeDayKeys, setFreezeDayKeys] = useState<Set<string>>(new Set());
+  const [freezeDays, setFreezeDays] = useState<Date[]>([]);
   const [freezesUsedThisMonth, setFreezesUsedThisMonth] = useState(0);
   const [loading, setLoading] = useState(true);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
@@ -76,47 +75,41 @@ const Ofensiva = () => {
     // Usar timezone do usuário para calcular datas corretamente
     const userTimezone = profile?.timezone || 'America/Sao_Paulo';
     
+    // Criar datas no timezone do usuário
+    const now = new Date();
+    const userNow = new Date(now.toLocaleString('en-US', { timeZone: userTimezone }));
+    
     // Ajustar currentMonth para o timezone do usuário
     const monthStart = startOfMonth(currentMonth);
     const monthEnd = endOfMonth(currentMonth);
-    
-    // Adicionar margem de segurança para timezone (buscar 2 dias antes e depois)
-    // Isso garante que não perdemos sessões no limite do mês por diferença de UTC
-    const queryStart = subDays(monthStart, 2).toISOString();
-    const queryEnd = addDays(monthEnd, 2).toISOString();
+
+    const minMinutes = profile?.min_streak_minutes || 25; // Default para 25 minutos
 
     const { data: sessions } = await supabase
       .from('stage_times')
       .select('created_at, duration_seconds')
       .eq('user_id', user.id)
-      .gte('created_at', queryStart)
-      .lte('created_at', queryEnd);
+      .gte('created_at', monthStart.toISOString())
+      .lte('created_at', monthEnd.toISOString());
 
-    // Group sessions by day usando getDayKey para consistência de timezone
+    // Group sessions by day in user's timezone (usando created_at para consistência com o resto do app)
     const dayMap = new Map<string, number>();
-    
-    // Calcular as chaves de início e fim do mês no timezone do usuário
-    const monthStartKey = getDayKey(monthStart, userTimezone);
-    const monthEndKey = getDayKey(monthEnd, userTimezone);
-    
     sessions?.forEach(session => {
       if (!session.created_at) return;
       
-      // Usar getDayKey para obter a chave do dia no timezone do usuário
+      // Converter para timezone do usuário
       const sessionDate = new Date(session.created_at);
-      const dayKey = getDayKey(sessionDate, userTimezone);
+      const userSessionDate = new Date(sessionDate.toLocaleString('en-US', { timeZone: userTimezone }));
+      const day = format(userSessionDate, 'yyyy-MM-dd');
       
-      // Só incluir sessões que realmente pertencem a este mês
-      if (dayKey >= monthStartKey && dayKey <= monthEndKey) {
-        const minutes = (session.duration_seconds || 0) / 60;
-        dayMap.set(dayKey, (dayMap.get(dayKey) || 0) + minutes);
-      }
+      const minutes = (session.duration_seconds || 0) / 60;
+      dayMap.set(day, (dayMap.get(day) || 0) + minutes);
     });
 
     // Converter dayMap para dayProgressMap
     const progressMap = new Map<string, { minutes: number }>();
-    dayMap.forEach((minutes, dayKey) => {
-      progressMap.set(dayKey, { minutes });
+    dayMap.forEach((minutes, dayStr) => {
+      progressMap.set(dayStr, { minutes });
     });
 
     setDayProgressMap(progressMap);
@@ -129,37 +122,26 @@ const Ofensiva = () => {
     const userTimezone = profile?.timezone || 'America/Sao_Paulo';
     const monthStart = startOfMonth(currentMonth);
     const monthEnd = endOfMonth(currentMonth);
-    
-    // Adicionar margem de segurança para timezone
-    const queryStart = subDays(monthStart, 2).toISOString();
-    const queryEnd = addDays(monthEnd, 2).toISOString();
 
     const { data: freezeUsage } = await supabase
       .from('streak_freeze_usage')
       .select('used_at')
       .eq('user_id', user.id)
-      .gte('used_at', queryStart)
-      .lte('used_at', queryEnd);
+      .gte('used_at', monthStart.toISOString())
+      .lte('used_at', monthEnd.toISOString());
 
-    // Calcular as chaves de início e fim do mês no timezone do usuário
-    const monthStartKey = getDayKey(monthStart, userTimezone);
-    const monthEndKey = getDayKey(monthEnd, userTimezone);
+    setFreezesUsedThisMonth(freezeUsage?.length || 0);
 
-    // Converter freeze dates para DayKey e filtrar pelo mês atual
-    const freezeKeys = new Set<string>();
-    freezeUsage?.forEach(f => {
-      if (!f.used_at) return;
+    // Converter freeze dates para timezone do usuário
+    const freezeDates = freezeUsage?.map(f => {
+      if (!f.used_at) return new Date();
       const freezeDate = new Date(f.used_at);
-      const dayKey = getDayKey(freezeDate, userTimezone);
-      
-      // Só incluir freezes que realmente pertencem a este mês
-      if (dayKey >= monthStartKey && dayKey <= monthEndKey) {
-        freezeKeys.add(dayKey);
-      }
-    });
+      const userFreezeDate = new Date(freezeDate.toLocaleString('en-US', { timeZone: userTimezone }));
+      const [year, month, day] = format(userFreezeDate, 'yyyy-MM-dd').split('-').map(Number);
+      return new Date(year, month - 1, day);
+    }) || [];
     
-    setFreezesUsedThisMonth(freezeKeys.size);
-    setFreezeDayKeys(freezeKeys);
+    setFreezeDays(freezeDates);
   };
 
   const handlePreviousMonth = () => {
@@ -579,17 +561,13 @@ const Ofensiva = () => {
 
             {/* Dias do mês */}
             {monthDays.map(day => {
-              // Usar timezone do usuário para todas as comparações de dia
-              const userTimezone = profile?.timezone || 'America/Sao_Paulo';
-              const dayKey = getDayKey(day, userTimezone);
+              const dayKey = format(day, 'yyyy-MM-dd');
               const dayNumber = format(day, 'd');
               const progress = dayProgressMap.get(dayKey);
               const minutes = progress?.minutes || 0;
-              const freezeUsed = freezeDayKeys.has(dayKey);
-              
-              // Usar funções de timezone para comparações precisas
-              const isDayFutureFlag = isDayKeyFuture(dayKey, userTimezone);
-              const isDayTodayFlag = isDayKeyToday(dayKey, userTimezone);
+              const freezeUsed = freezeDays.some(d => isSameDay(d, day));
+              const isDayFuture = isFuture(day) && !isToday(day);
+              const isDayToday = isToday(day);
               
               const status: DayProgress['status'] = 
                 freezeUsed ? 'freeze' :
@@ -597,7 +575,7 @@ const Ofensiva = () => {
                 minutes > 0 ? 'partial' : 'empty';
 
               const handleDayClick = () => {
-                if (!isDayFutureFlag) {
+                if (!isDayFuture) {
                   setSelectedDay({
                     date: day,
                     minutes,
@@ -607,7 +585,7 @@ const Ofensiva = () => {
               };
 
               // Dia futuro - apenas número suave
-              if (isDayFutureFlag) {
+              if (isDayFuture) {
                 return (
                   <div
                     key={day.toString()}
@@ -625,7 +603,7 @@ const Ofensiva = () => {
                     key={day.toString()}
                     onClick={handleDayClick}
                     className={`aspect-square flex flex-col items-center justify-center gap-0.5 rounded-lg transition-colors hover:bg-muted/30 ${
-                      isDayTodayFlag ? 'ring-1 ring-cyan-500/50' : ''
+                      isDayToday ? 'ring-1 ring-cyan-500/50' : ''
                     }`}
                   >
                     <span className="text-lg opacity-70">❄️</span>
@@ -640,13 +618,13 @@ const Ofensiva = () => {
                   key={day.toString()}
                   onClick={handleDayClick}
                   className={`aspect-square flex flex-col items-center justify-center gap-0.5 rounded-lg transition-colors hover:bg-muted/30 ${
-                    isDayTodayFlag ? 'ring-1 ring-orange-500/50' : ''
+                    isDayToday ? 'ring-1 ring-orange-500/50' : ''
                   }`}
                 >
                   <FireIcon 
                     minutes={minutes} 
                     goalMinutes={goalMinutes} 
-                    isToday={isDayTodayFlag}
+                    isToday={isDayToday}
                   />
                   <span className={`text-[10px] ${
                     minutes >= goalMinutes 
