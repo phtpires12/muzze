@@ -600,7 +600,7 @@ const Index = () => {
                 <Trophy className="w-6 h-6 text-white" />
               </div>
               <div className="text-sm font-semibold text-foreground">
-                {stats?.trophies?.length ?? 0}/9
+                {stats?.trophies?.length ?? 0}/{TROPHIES.length}
               </div>
               <div className="text-xs text-muted-foreground">
                 Conquistas
