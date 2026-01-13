@@ -127,38 +127,15 @@ export const useGamification = () => {
         .eq('user_id', user.id)
         .neq('status', 'draft_idea');
 
-      // Get total hours from stage_times
-      const { data: stageTimes } = await supabase
-        .from('stage_times')
-        .select('duration_seconds, stage, had_pause, was_abandoned')
-        .eq('user_id', user.id);
+      // Get aggregated stage time stats using RPC (avoids 1000 row limit)
+      const { data: summaryArr } = await supabase.rpc('get_stage_time_summary');
+      const summary = summaryArr?.[0];
 
-      const totalHours = (stageTimes || []).reduce(
-        (sum, st) => sum + (st.duration_seconds || 0) / 3600,
-        0
-      );
-
-      // Get sessions over 25 min (1500 seconds)
-      const sessionsOver25Min = (stageTimes || []).filter(
-        st => (st.duration_seconds || 0) >= 1500
-      ).length;
-
-      // Get sessions without pause (duration >= 1500 and had_pause = false)
-      const sessionsWithoutPause = (stageTimes || []).filter(
-        st => (st.duration_seconds || 0) >= 1500 && st.had_pause === false
-      ).length;
-
-      // Get sessions without abandon (was_abandoned = false, duration >= 1500)
-      const sessionsWithoutAbandon = (stageTimes || []).filter(
-        st => (st.duration_seconds || 0) >= 1500 && st.was_abandoned === false
-      ).length;
-
-      // Get unique stages used
-      const usedStages = [...new Set(
-        (stageTimes || [])
-          .map(st => st.stage)
-          .filter((stage): stage is string => !!stage)
-      )];
+      const totalHours = (summary?.total_seconds ?? 0) / 3600;
+      const sessionsOver25Min = summary?.sessions_over_25 ?? 0;
+      const sessionsWithoutPause = summary?.sessions_without_pause ?? 0;
+      const sessionsWithoutAbandon = summary?.sessions_without_abandon ?? 0;
+      const usedStages = summary?.used_stages ?? [];
 
       // Determine if user had a streak reset (longest > current and current >= 1)
       const hadStreakReset = (streak?.longest_streak || 0) > (streak?.current_streak || 0) && (streak?.current_streak || 0) >= 1;

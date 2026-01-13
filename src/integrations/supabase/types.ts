@@ -539,6 +539,16 @@ export type Database = {
           workspace_owner_id: string
         }[]
       }
+      get_stage_time_summary: {
+        Args: never
+        Returns: {
+          sessions_over_25: number
+          sessions_without_abandon: number
+          sessions_without_pause: number
+          total_seconds: number
+          used_stages: string[]
+        }[]
+      }
       get_user_workspace: { Args: { _user_id: string }; Returns: string }
       get_weekly_leaderboard: {
         Args: never
