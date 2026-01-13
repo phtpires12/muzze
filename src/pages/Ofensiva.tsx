@@ -369,7 +369,7 @@ const Ofensiva = () => {
             
             {/* Emoji de fogo principal */}
             <div className="relative z-10 w-full h-full rounded-full bg-zinc-800/90 flex items-center justify-center shadow-2xl shadow-orange-500/30">
-              <span className="text-7xl">🔥</span>
+              <span className="text-7xl animate-pulse drop-shadow-[0_0_15px_rgba(251,146,60,0.5)]">🔥</span>
             </div>
             
             {/* Badge do número */}
