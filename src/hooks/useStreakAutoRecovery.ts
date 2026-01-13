@@ -1,6 +1,5 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useProfile } from '@/hooks/useProfile';
 
 interface RecoveryResult {
   corrected: boolean;
@@ -10,10 +9,13 @@ interface RecoveryResult {
   qualifyingDays: string[];
 }
 
-export const useStreakAutoRecovery = () => {
+interface UseStreakAutoRecoveryParams {
+  profile: any;
+}
+
+export const useStreakAutoRecovery = ({ profile }: UseStreakAutoRecoveryParams) => {
   const [isRecovering, setIsRecovering] = useState(false);
   const [hasChecked, setHasChecked] = useState(false);
-  const { profile } = useProfile();
 
   const recoverMissedStreaks = useCallback(async (): Promise<RecoveryResult | null> => {
     if (hasChecked) return null;

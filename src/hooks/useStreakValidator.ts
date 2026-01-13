@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useProfile } from './useProfile';
 import { calculateFreezeCost, MAX_STREAK_FREEZES, getEffectiveLevel, getDailyGoalMinutesForLevel } from '@/lib/gamification';
 
 interface LostDaysResult {
@@ -14,8 +13,12 @@ interface LostDaysResult {
   originalStreak: number; // The streak value before reset (for recovery)
 }
 
-export const useStreakValidator = () => {
-  const { profile, refetch: refetchProfile } = useProfile();
+interface UseStreakValidatorParams {
+  profile: any;
+  refetchProfile?: () => void;
+}
+
+export const useStreakValidator = ({ profile, refetchProfile }: UseStreakValidatorParams) => {
   const [result, setResult] = useState<LostDaysResult | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasChecked, setHasChecked] = useState(false);
@@ -250,7 +253,7 @@ export const useStreakValidator = () => {
         canUseFreeze: false 
       } : null);
 
-      await refetchProfile();
+      if (refetchProfile) await refetchProfile();
       return true;
     } catch (error) {
       console.error('[useStreakValidator] Error using freezes:', error);
@@ -416,7 +419,7 @@ export const useStreakValidator = () => {
         canUseFreeze: false 
       } : null);
 
-      await refetchProfile();
+      if (refetchProfile) await refetchProfile();
       console.log('[buyFreezesAndRecover] Success!');
       return true;
     } catch (error) {
