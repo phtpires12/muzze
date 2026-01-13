@@ -266,6 +266,9 @@ export interface LevelDefinition {
   rewards: string[];
 }
 
+// Curva de XP otimizada para progressão rápida no início (níveis 1-4)
+// Isso cria a "rampa de hábito" inspirada no Duolingo
+// Nível 2: ~2 dias (50min), Nível 3: ~4 dias (150min), Nível 4: ~8 dias (350min)
 export const XP_LEVELS: LevelDefinition[] = [
   { 
     level: 1, 
@@ -278,7 +281,7 @@ export const XP_LEVELS: LevelDefinition[] = [
   { 
     level: 2, 
     name: "Criador Focado", 
-    xpRequired: 1000, 
+    xpRequired: 100, // Era 1000 - agora ~50min de criação
     description: "Você está construindo sua constância.",
     color: "hsl(142 76% 36%)",
     rewards: ["Badge exclusivo"]
@@ -286,7 +289,7 @@ export const XP_LEVELS: LevelDefinition[] = [
   { 
     level: 3, 
     name: "Criador Consistente", 
-    xpRequired: 3000, 
+    xpRequired: 300, // Era 3000 - agora ~150min de criação
     description: "Você cria mesmo sem motivação.",
     color: "hsl(217 91% 60%)",
     rewards: ["3 dias de Muzze PRO grátis"]
@@ -294,7 +297,7 @@ export const XP_LEVELS: LevelDefinition[] = [
   { 
     level: 4, 
     name: "Artista", 
-    xpRequired: 7000, 
+    xpRequired: 700, // Era 7000 - agora ~350min de criação
     description: "Você transforma processo em hábito.",
     color: "hsl(262 83% 58%)",
     rewards: ["7 dias de Muzze PRO grátis"]
@@ -302,7 +305,7 @@ export const XP_LEVELS: LevelDefinition[] = [
   { 
     level: 5, 
     name: "Mestre da Criatividade", 
-    xpRequired: 15000, 
+    xpRequired: 1500, // Era 15000 - ajustado proporcionalmente
     description: "Você cria sem falhar. Um exemplo raro.",
     color: "hsl(33 100% 50%)",
     rewards: ["15 dias de Muzze PRO grátis"]
@@ -310,7 +313,7 @@ export const XP_LEVELS: LevelDefinition[] = [
   { 
     level: 6, 
     name: "Talento Natural", 
-    xpRequired: 30000, 
+    xpRequired: 3000, // Era 30000 - ajustado proporcionalmente
     description: "Criar é seu estado natural.",
     color: "hsl(0 84% 60%)",
     rewards: ["Acesso a material exclusivo"]
@@ -318,7 +321,7 @@ export const XP_LEVELS: LevelDefinition[] = [
   { 
     level: 7, 
     name: "Lenda Absoluta", 
-    xpRequired: 60000, 
+    xpRequired: 6000, // Era 60000 - ajustado proporcionalmente
     description: "Você inspira milhares.",
     color: "hsl(280 100% 70%)",
     rewards: ["Call exclusiva com o fundador", "Badge dourado", "Desconto vitalício progressivo"]
