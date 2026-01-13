@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Trophy, TROPHIES, checkNewTrophies, UserStats } from "@/lib/gamification";
+import { Trophy, TROPHIES, checkNewTrophies, UserStats, getEffectiveLevel, getDailyGoalMinutesForLevel } from "@/lib/gamification";
 import { startOfWeek, addDays, format, isSameDay, isAfter } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -50,6 +50,16 @@ export const useStreakCelebration = () => {
       const weekStart = startOfWeek(today, { weekStartsOn: 1 });
       const weekDays: WeekDay[] = [];
 
+      // Buscar perfil para calcular meta dinâmica baseada no nível
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('xp_points, highest_level')
+        .eq('user_id', userId)
+        .single();
+
+      const effectiveLevel = getEffectiveLevel(profile?.xp_points || 0, profile?.highest_level || 1);
+      const goalMinutes = getDailyGoalMinutesForLevel(effectiveLevel);
+
       for (let i = 0; i < 7; i++) {
         const currentDay = addDays(weekStart, i);
         const dayName = format(currentDay, 'EEE', { locale: ptBR });
@@ -91,10 +101,11 @@ export const useStreakCelebration = () => {
 
         const totalMinutes = sessions?.reduce((sum, s) => sum + (s.duration_seconds || 0), 0) / 60 || 0;
 
+        // Meta dinâmica baseada no nível efetivo
         weekDays.push({
           date: currentDay,
           dayName,
-          status: totalMinutes >= 25 ? 'completed' : 'missed'
+          status: totalMinutes >= goalMinutes ? 'completed' : 'missed'
         });
       }
 
