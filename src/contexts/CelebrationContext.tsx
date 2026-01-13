@@ -149,27 +149,25 @@ export const CelebrationContextProvider = ({ children }: { children: ReactNode }
       const unlockedTrophyIds = (userTrophies || []).map(t => t.trophy_id);
 
       // 2. Buscar stats atuais - todas as queries em paralelo
-      const [profileRes, streakRes, scriptsRes, scriptsCompletedRes, ideasOrganizedRes, stageTimesRes] = await Promise.all([
+      const [profileRes, streakRes, scriptsRes, scriptsCompletedRes, ideasOrganizedRes, summaryRes] = await Promise.all([
         supabase.from('profiles').select('xp_points').eq('user_id', userId).single(),
         supabase.from('streaks').select('current_streak, longest_streak').eq('user_id', userId).single(),
         supabase.from('scripts').select('id, status').eq('user_id', userId),
         supabase.from('scripts').select('id', { count: 'exact', head: true }).eq('user_id', userId).in('status', ['completed', 'publicado']),
         supabase.from('scripts').select('id', { count: 'exact', head: true }).eq('user_id', userId).neq('status', 'draft_idea'),
-        supabase.from('stage_times').select('duration_seconds, stage, had_pause, was_abandoned').eq('user_id', userId),
+        supabase.rpc('get_stage_time_summary'),
       ]);
 
       const profile = profileRes.data;
       const streak = streakRes.data;
       const scripts = scriptsRes.data;
-      const stageTimes = stageTimesRes.data;
+      const summary = summaryRes.data?.[0];
 
-      const totalHours = stageTimes?.reduce((sum, s) => sum + (s.duration_seconds || 0), 0) / 3600 || 0;
-      
-      // Calcular campos para novas conquistas
-      const sessionsOver25Min = (stageTimes || []).filter(st => (st.duration_seconds || 0) >= 1500).length;
-      const sessionsWithoutPause = (stageTimes || []).filter(st => (st.duration_seconds || 0) >= 1500 && st.had_pause === false).length;
-      const sessionsWithoutAbandon = (stageTimes || []).filter(st => (st.duration_seconds || 0) >= 1500 && st.was_abandoned === false).length;
-      const usedStages = [...new Set((stageTimes || []).map(st => st.stage).filter((s): s is string => !!s))];
+      const totalHours = (summary?.total_seconds ?? 0) / 3600;
+      const sessionsOver25Min = summary?.sessions_over_25 ?? 0;
+      const sessionsWithoutPause = summary?.sessions_without_pause ?? 0;
+      const sessionsWithoutAbandon = summary?.sessions_without_abandon ?? 0;
+      const usedStages = summary?.used_stages ?? [];
       const hadStreakReset = (streak?.longest_streak || 0) > (streak?.current_streak || 0) && (streak?.current_streak || 0) >= 1;
 
       const stats: UserStats = {
