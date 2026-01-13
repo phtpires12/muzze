@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useSessionContext, SessionStage } from "@/contexts/SessionContext";
-import { calculateXPWithStreakBonus, calculateLevelByXP, getLevelInfo } from "@/lib/gamification";
+import { calculateXPWithStreakBonus, calculateLevelByXP, getLevelInfo, getEffectiveLevel, getDailyGoalMinutesForLevel } from "@/lib/gamification";
 
 export type { SessionStage };
 
@@ -51,11 +51,13 @@ export const useSession = (options: UseSessionOptions = {}) => {
     
     await startTimer(normalizedStage);
     
+    // timer.targetSeconds já contém a meta correta baseada no nível
+    const goalMinutes = Math.floor(timer.targetSeconds / 60);
     toast({
       title: "Sessão iniciada",
-      description: `Etapa: ${getStageLabel(normalizedStage)} • Meta: 25 minutos para streak`,
+      description: `Etapa: ${getStageLabel(normalizedStage)} • Meta: ${goalMinutes} minutos para ofensiva`,
     });
-  }, [startTimer, toast]);
+  }, [startTimer, toast, timer.targetSeconds]);
 
   // Wrapper para pauseSession
   const pauseSession = useCallback(() => {
@@ -189,13 +191,18 @@ export const useSession = (options: UseSessionOptions = {}) => {
     try {
       const { data: profile } = await supabase
         .from('profiles')
-        .select('min_streak_minutes, daily_goal_minutes, timezone')
+        .select('min_streak_minutes, daily_goal_minutes, timezone, xp_points, highest_level')
         .eq('user_id', userId)
         .single();
 
       if (!profile) return { streakAchieved: false };
 
       const timezone = profile.timezone || 'America/Sao_Paulo';
+
+      // Calcular meta de ofensiva baseada no nível do usuário
+      const effectiveLevel = getEffectiveLevel(profile?.xp_points || 0, profile?.highest_level || 1);
+      const streakGoalMinutes = getDailyGoalMinutesForLevel(effectiveLevel);
+      console.log(`[updateStreak] Nível efetivo: ${effectiveLevel}, Meta de ofensiva: ${streakGoalMinutes}min`);
 
       // Get today's date in user's timezone
       const now = new Date();
@@ -220,8 +227,8 @@ export const useSession = (options: UseSessionOptions = {}) => {
         0
       );
 
-      // Check if day is fulfilled (25 min fixos para manter ofensiva)
-      const dayFulfilled = creativeMinutesToday >= 25;
+      // Check if day is fulfilled usando meta dinâmica por nível
+      const dayFulfilled = creativeMinutesToday >= streakGoalMinutes;
 
       if (!dayFulfilled) {
         return { streakAchieved: false, creativeMinutesToday };
