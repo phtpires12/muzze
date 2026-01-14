@@ -412,18 +412,27 @@ const Guests = () => {
           </p>
         )}
 
-        {/* Botão adicionar */}
-        {totalGuests < maxGuests && (
-          <Button 
-            variant="outline" 
-            className="w-full mt-4"
-            onClick={() => setShowInviteModal(true)}
-          >
-            <UserPlus className="w-4 h-4 mr-2" />
-            Convidar Pessoa
-          </Button>
-        )}
+        {/* Botão adicionar - always show, but use plan-aware handler */}
+        <Button 
+          variant="outline" 
+          className="w-full mt-4"
+          onClick={handleInviteClick}
+        >
+          <UserPlus className="w-4 h-4 mr-2" />
+          Convidar Pessoa
+          {!canInviteUsers && <span className="ml-2 text-xs text-muted-foreground">(Pro)</span>}
+        </Button>
       </div>
+
+      {/* Paywall */}
+      <Paywall
+        open={showPaywall}
+        onClose={() => setShowPaywall(false)}
+        action={paywallAction}
+        currentUsage={totalGuests}
+        limit={maxGuests}
+        context="guests_page"
+      />
 
       {/* Modal de convite */}
       <Dialog open={showInviteModal} onOpenChange={setShowInviteModal}>
