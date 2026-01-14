@@ -6,6 +6,7 @@ import { useSessionContext } from "@/contexts/SessionContext";
 import { useDailyGoalProgress } from "@/hooks/useDailyGoalProgress";
 import { useTimerPermission } from "@/hooks/useTimerPermission";
 import { useCelebration } from "@/contexts/CelebrationContext";
+import { useProfileWithLevel } from "@/hooks/useProfileWithLevel";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -70,7 +71,8 @@ const Session = () => {
   const [showStreakHalo, setShowStreakHalo] = useState(false);
   const [streakCount, setStreakCount] = useState(0);
   const isAppVisible = useAppVisibility();
-  const { progress: dailyProgress } = useDailyGoalProgress();
+  const { goalMinutes } = useProfileWithLevel();
+  const { progress: dailyProgress } = useDailyGoalProgress({ goalMinutes });
   
   // Map session stage to CreativeStage for permission check
   const stageMapping: Record<string, CreativeStage> = {

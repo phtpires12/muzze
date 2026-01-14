@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useProfileWithLevel } from "@/hooks/useProfileWithLevel";
 
 interface DailyGoalProgress {
   goalMinutes: number;
@@ -9,9 +8,11 @@ interface DailyGoalProgress {
   isAbove: boolean;
 }
 
-export const useDailyGoalProgress = () => {
-  const { goalMinutes } = useProfileWithLevel();
-  
+interface UseDailyGoalProgressParams {
+  goalMinutes: number;
+}
+
+export const useDailyGoalProgress = ({ goalMinutes }: UseDailyGoalProgressParams) => {
   const [progress, setProgress] = useState<DailyGoalProgress>({
     goalMinutes: 0,
     actualMinutes: 0,
