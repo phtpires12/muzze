@@ -86,7 +86,7 @@ const Index = () => {
     freezeCost,
   });
   const { recoverMissedStreaks, isRecovering: isRecoveringStreak } = useStreakAutoRecovery({ profile });
-  const { progress: dbProgress } = useDailyGoalProgress();
+  const { progress: dbProgress } = useDailyGoalProgress({ goalMinutes });
   const liveProgress = useLiveDailyProgress(dbProgress.actualMinutes, dbProgress.goalMinutes);
   const [streakData, setStreakData] = useState<any>(null);
   const [weeklySessionsCount, setWeeklySessionsCount] = useState(0);

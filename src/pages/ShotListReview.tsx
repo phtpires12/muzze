@@ -17,6 +17,7 @@ import { useDailyGoalProgress } from "@/hooks/useDailyGoalProgress";
 import { useAppVisibility } from "@/hooks/useAppVisibility";
 import { useWindowPortal } from "@/hooks/useWindowPortal";
 import { useTimerPermission } from "@/hooks/useTimerPermission";
+import { useProfileWithLevel } from "@/hooks/useProfileWithLevel";
 import { cn } from "@/lib/utils";
 import { useStreakCelebration } from "@/hooks/useStreakCelebration";
 import { useCelebration } from "@/contexts/CelebrationContext";
@@ -65,7 +66,8 @@ const ShotListReview = () => {
   });
   
   const isAppVisible = useAppVisibility();
-  const { progress: dailyProgress } = useDailyGoalProgress();
+  const { goalMinutes } = useProfileWithLevel();
+  const { progress: dailyProgress } = useDailyGoalProgress({ goalMinutes });
   
   // Timer permission check
   const { canUseTimer } = useTimerPermission(scriptId, 'review');
