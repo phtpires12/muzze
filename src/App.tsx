@@ -9,6 +9,7 @@ import { WorkspaceContextProvider } from "@/contexts/WorkspaceContext";
 import { CelebrationContextProvider } from "@/contexts/CelebrationContext";
 import { ProfileContextProvider } from "@/contexts/ProfileContext";
 import { GlobalCelebrations } from "@/components/GlobalCelebrations";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import Onboarding from "./pages/NewOnboarding";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
@@ -159,19 +160,21 @@ const router = createBrowserRouter([
 
 const App = () => {
   return (
-    <QueryClientProvider client={queryClient}>
-      <SessionContextProvider>
-        <ProfileContextProvider>
-          <CelebrationContextProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <RouterProvider router={router} />
-            </TooltipProvider>
-          </CelebrationContextProvider>
-        </ProfileContextProvider>
-      </SessionContextProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <SessionContextProvider>
+          <ProfileContextProvider>
+            <CelebrationContextProvider>
+              <TooltipProvider>
+                <Toaster />
+                <Sonner />
+                <RouterProvider router={router} />
+              </TooltipProvider>
+            </CelebrationContextProvider>
+          </ProfileContextProvider>
+        </SessionContextProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 };
 
