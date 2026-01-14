@@ -27,19 +27,22 @@ interface PlanUsage {
   ownedWorkspacesCount: number;
 }
 
+type PlanError = null | 'AUTH_MISSING' | 'PROFILE_NOT_FOUND' | 'PROFILE_FETCH_ERROR' | 'LIMITS_NOT_FOUND' | 'LIMITS_FETCH_ERROR';
+
 interface PlanCapabilities {
   planType: 'free' | 'pro' | 'studio';
   limits: PlanLimits;
   usage: PlanUsage;
   loading: boolean;
   isInternalTester: boolean;
+  planError: PlanError;
   
   // Funções de verificação
   canCreateScript: () => boolean;
   canScheduleToDate: (targetDateKey: string) => boolean;
   remainingWeeklySlots: () => number;
   
-  // Workspace capabilities (novo)
+  // Workspace capabilities
   canCreateWorkspace: () => boolean;
   canInviteGuest: (currentGuestCount: number) => boolean;
   totalWorkspacesLimit: () => number;
@@ -51,6 +54,9 @@ interface PlanCapabilities {
   
   // Refetch após ações
   refetchUsage: () => Promise<void>;
+  refetchProfile: () => Promise<void>;
+  refetchLimits: () => Promise<void>;
+  refetchAll: () => Promise<void>;
   
   // Admin: simular plano
   setSimulatedPlan: (plan: 'free' | 'pro' | 'studio' | null) => void;
@@ -67,11 +73,21 @@ const DEFAULT_LIMITS: PlanLimits = {
 
 const PlanContext = createContext<PlanCapabilities | undefined>(undefined);
 
+// Storage key for simulated plan
+const SIMULATED_PLAN_KEY = 'muzze_simulated_plan_type';
+
 export const PlanContextProvider = ({ children }: { children: ReactNode }) => {
   const { allWorkspaces, activeWorkspace } = useWorkspaceContext();
   
   const [profileData, setProfileData] = useState<ProfileWithPlanFields | null>(null);
-  const [simulatedPlan, setSimulatedPlan] = useState<'free' | 'pro' | 'studio' | null>(null);
+  const [simulatedPlan, setSimulatedPlanState] = useState<'free' | 'pro' | 'studio' | null>(() => {
+    // Initialize from localStorage
+    const stored = localStorage.getItem(SIMULATED_PLAN_KEY);
+    if (stored === 'free' || stored === 'pro' || stored === 'studio') {
+      return stored;
+    }
+    return null;
+  });
   const [limits, setLimits] = useState<PlanLimits>(DEFAULT_LIMITS);
   const [usage, setUsage] = useState<PlanUsage>({
     scriptsThisWeek: 0,
@@ -80,13 +96,35 @@ export const PlanContextProvider = ({ children }: { children: ReactNode }) => {
     ownedWorkspacesCount: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [planError, setPlanError] = useState<PlanError>(null);
+  const [authUserId, setAuthUserId] = useState<string | null>(null);
+
+  // Setter for simulated plan (persists to localStorage)
+  const setSimulatedPlan = useCallback((plan: 'free' | 'pro' | 'studio' | null) => {
+    setSimulatedPlanState(plan);
+    if (plan) {
+      localStorage.setItem(SIMULATED_PLAN_KEY, plan);
+    } else {
+      localStorage.removeItem(SIMULATED_PLAN_KEY);
+    }
+  }, []);
 
   // Fetch profile data directly with explicit field selection
   const fetchProfileData = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
     
-    // Query with explicit field selection and type casting
+    if (!user) {
+      setAuthUserId(null);
+      setProfileData(null);
+      setPlanError('AUTH_MISSING');
+      setLoading(false);
+      return;
+    }
+    
+    setAuthUserId(user.id);
+    setPlanError(null);
+    
+    // Query with explicit field selection
     const { data, error } = await supabase
       .from('profiles')
       .select('user_id, plan_type, is_internal_tester, extra_workspaces_packs, timezone')
@@ -95,29 +133,53 @@ export const PlanContextProvider = ({ children }: { children: ReactNode }) => {
     
     if (error) {
       console.error('[PlanContext] Error fetching profile:', error);
+      setPlanError('PROFILE_FETCH_ERROR');
+      setLoading(false);
       return;
     }
     
-    if (data) {
-      // DEBUG LOG - mostra exatamente o que vem do banco
-      console.log('[PlanContext] 🔍 Profile data from DB:', {
-        plan_type: (data as any).plan_type,
-        is_internal_tester: (data as any).is_internal_tester,
-        extra_workspaces_packs: (data as any).extra_workspaces_packs,
-        raw: data
-      });
-      
-      // Cast to our interface since types.ts might not have these fields yet
-      setProfileData(data as unknown as ProfileWithPlanFields);
+    if (!data) {
+      console.warn('[PlanContext] No profile row found for user:', user.id);
+      setPlanError('PROFILE_NOT_FOUND');
+      setLoading(false);
+      return;
     }
+    
+    // Cast to our interface since types.ts might not have these fields yet
+    const profileRow = data as unknown as ProfileWithPlanFields;
+    
+    console.log('[PlanContext] ✅ Profile loaded:', {
+      plan_type: profileRow.plan_type,
+      is_internal_tester: profileRow.is_internal_tester,
+      extra_workspaces_packs: profileRow.extra_workspaces_packs,
+    });
+    
+    setProfileData(profileRow);
   }, []);
   
+  // Listen to auth state changes
   useEffect(() => {
+    // Initial fetch
     fetchProfileData();
+    
+    // Subscribe to auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('[PlanContext] Auth state changed:', event);
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
+        fetchProfileData();
+      } else if (event === 'SIGNED_OUT') {
+        setAuthUserId(null);
+        setProfileData(null);
+        setPlanError('AUTH_MISSING');
+      }
+    });
+    
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [fetchProfileData]);
   
   // Determinar planType - prioridade: simulação (se tester) > plano real do banco
-  // is_internal_tester permite SIMULAR outros planos, mas NÃO substitui o plano real automaticamente
   const rawPlanType = (profileData?.plan_type || 'free') as 'free' | 'pro' | 'studio';
   const isInternalTester = profileData?.is_internal_tester === true;
   
@@ -125,14 +187,6 @@ export const PlanContextProvider = ({ children }: { children: ReactNode }) => {
   const planType = (simulatedPlan !== null && isInternalTester)
     ? simulatedPlan 
     : rawPlanType;
-  
-  // DEBUG LOG
-  console.log('[PlanContext] 📊 Plan resolution:', {
-    rawPlanType,
-    isInternalTester,
-    simulatedPlan,
-    effectivePlanType: planType
-  });
   
   const timezone = profileData?.timezone || 'America/Sao_Paulo';
   const extraWorkspacesPacks = profileData?.extra_workspaces_packs || 0;
@@ -147,24 +201,37 @@ export const PlanContextProvider = ({ children }: { children: ReactNode }) => {
         .single();
       
       if (error) {
-        console.error('Error fetching plan limits:', error);
+        console.error('[PlanContext] Error fetching plan limits:', error);
+        setPlanError('LIMITS_FETCH_ERROR');
         return;
       }
       
-      if (data) {
-        setLimits({
-          weeklyScripts: data.weekly_scripts,
-          cardsPerContent: data.cards_per_content,
-          canScheduleFuture: data.can_schedule_future,
-          canInviteUsers: data.can_invite_users,
-          maxGuests: data.max_guests,
-          maxWorkspaces: data.max_workspaces,
-        });
+      if (!data) {
+        console.warn('[PlanContext] No limits found for plan:', planType);
+        setPlanError('LIMITS_NOT_FOUND');
+        return;
+      }
+      
+      console.log('[PlanContext] ✅ Limits loaded for', planType, ':', data);
+      
+      setLimits({
+        weeklyScripts: data.weekly_scripts,
+        cardsPerContent: data.cards_per_content,
+        canScheduleFuture: data.can_schedule_future,
+        canInviteUsers: data.can_invite_users,
+        maxGuests: data.max_guests,
+        maxWorkspaces: data.max_workspaces,
+      });
+      
+      // Clear error if limits loaded successfully
+      if (planError === 'LIMITS_NOT_FOUND' || planError === 'LIMITS_FETCH_ERROR') {
+        setPlanError(null);
       }
     } catch (error) {
-      console.error('Error fetching plan limits:', error);
+      console.error('[PlanContext] Error fetching plan limits:', error);
+      setPlanError('LIMITS_FETCH_ERROR');
     }
-  }, [planType]);
+  }, [planType, planError]);
 
   // Fetch usage (scripts created this week + owned workspaces count)
   const fetchUsage = useCallback(async () => {
@@ -214,8 +281,10 @@ export const PlanContextProvider = ({ children }: { children: ReactNode }) => {
   }, [activeWorkspace?.id, timezone, allWorkspaces]);
 
   useEffect(() => {
-    fetchLimits();
-  }, [fetchLimits]);
+    if (profileData) {
+      fetchLimits();
+    }
+  }, [fetchLimits, profileData, planType]);
 
   useEffect(() => {
     fetchUsage();
@@ -284,12 +353,20 @@ export const PlanContextProvider = ({ children }: { children: ReactNode }) => {
     return null;
   }, [canCreateScript, canCreateWorkspace, limits.weeklyScripts, limits.canScheduleFuture, limits.canInviteUsers, timezone, totalWorkspacesLimit]);
 
+  // Refetch all data
+  const refetchAll = useCallback(async () => {
+    setLoading(true);
+    await fetchProfileData();
+    // fetchLimits and fetchUsage will be triggered by effects
+  }, [fetchProfileData]);
+
   const value: PlanCapabilities = {
     planType,
     limits,
     usage,
     loading,
     isInternalTester,
+    planError,
     canCreateScript,
     canScheduleToDate,
     remainingWeeklySlots,
@@ -300,6 +377,9 @@ export const PlanContextProvider = ({ children }: { children: ReactNode }) => {
     getExtraWorkspacesPacks,
     getBlockReason,
     refetchUsage: fetchUsage,
+    refetchProfile: fetchProfileData,
+    refetchLimits: fetchLimits,
+    refetchAll,
     setSimulatedPlan,
   };
 

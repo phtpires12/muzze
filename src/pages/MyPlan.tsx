@@ -6,6 +6,7 @@ import { ArrowLeft, Crown, Check, Sparkles, Building2, Users, Calendar, Infinity
 import { useNavigate } from "react-router-dom";
 import { usePlanCapabilities } from "@/contexts/PlanContext";
 import { cn } from "@/lib/utils";
+import { PlanDebugCard } from "@/components/dev/PlanDebugCard";
 
 const MyPlan = () => {
   const navigate = useNavigate();
