@@ -2,14 +2,26 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfile } from '@/hooks/useProfile';
 import { useWorkspaceContext } from '@/contexts/WorkspaceContext';
+import { usePlanCapabilitiesOptional } from '@/contexts/PlanContext';
+import { useWorkspace } from '@/hooks/useWorkspace';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Input } from '@/components/ui/input';
 import { SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { Check, LogOut, Pencil, Crown, Shield, User } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Check, LogOut, Pencil, Crown, Shield, User, Plus, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useState, useEffect } from 'react';
+import { Paywall } from '@/components/Paywall';
 
 interface ProfileSheetProps {
   onClose?: () => void;
@@ -19,7 +31,13 @@ export const ProfileSheet = ({ onClose }: ProfileSheetProps) => {
   const navigate = useNavigate();
   const { profile } = useProfile();
   const { activeWorkspace, activeRole, allWorkspaces, switchWorkspace } = useWorkspaceContext();
+  const planCapabilities = usePlanCapabilitiesOptional();
+  const { createWorkspace } = useWorkspace();
   const [email, setEmail] = useState<string>('');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newWorkspaceName, setNewWorkspaceName] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
 
   useEffect(() => {
     const fetchEmail = async () => {
@@ -44,8 +62,15 @@ export const ProfileSheet = ({ onClose }: ProfileSheetProps) => {
   };
 
   const getSubscriptionStatus = () => {
-    // TODO: Implement real subscription check
-    return { label: 'Ativo', variant: 'default' as const };
+    const planType = planCapabilities?.planType || 'free';
+    switch (planType) {
+      case 'studio':
+        return { label: 'Studio', variant: 'default' as const, color: 'text-violet-600' };
+      case 'pro':
+        return { label: 'Pro', variant: 'default' as const, color: 'text-amber-600' };
+      default:
+        return { label: 'Free', variant: 'secondary' as const, color: 'text-muted-foreground' };
+    }
   };
 
   const getRoleIcon = (role: string) => {
@@ -73,15 +98,12 @@ export const ProfileSheet = ({ onClose }: ProfileSheetProps) => {
   };
 
   const getWorkspaceDisplayName = (workspaceName: string, role: string, ownerName?: string) => {
-    // Se sou owner, mostrar o nome original do workspace
     if (role === 'owner') {
       return workspaceName;
     }
-    // Se sou colaborador/admin, mostrar nome do owner + Workspace
     if (ownerName) {
       return `${ownerName} Workspace`;
     }
-    // Fallback: mostrar nome original
     return workspaceName;
   };
 
@@ -89,7 +111,6 @@ export const ProfileSheet = ({ onClose }: ProfileSheetProps) => {
     await switchWorkspace(workspaceId);
     toast.success('Workspace alterado');
     onClose?.();
-    // Reload to refresh all data with new workspace context
     window.location.reload();
   };
 
@@ -104,7 +125,43 @@ export const ProfileSheet = ({ onClose }: ProfileSheetProps) => {
     navigate('/auth');
   };
 
+  const handleCreateWorkspaceClick = () => {
+    // Check if user can create workspace
+    if (planCapabilities && !planCapabilities.canCreateWorkspace()) {
+      setShowPaywall(true);
+      return;
+    }
+    setShowCreateModal(true);
+  };
+
+  const handleCreateWorkspace = async () => {
+    if (!newWorkspaceName.trim()) {
+      toast.error('Digite um nome para o workspace');
+      return;
+    }
+
+    setIsCreating(true);
+    const result = await createWorkspace(newWorkspaceName);
+    setIsCreating(false);
+
+    if (result.limitReached) {
+      setShowCreateModal(false);
+      setShowPaywall(true);
+      return;
+    }
+
+    if (result.success) {
+      setShowCreateModal(false);
+      setNewWorkspaceName('');
+      // Reload to refresh workspace list
+      window.location.reload();
+    }
+  };
+
   const subscriptionStatus = getSubscriptionStatus();
+  const canCreateWorkspace = planCapabilities?.planType === 'studio';
+  const ownedWorkspaces = allWorkspaces.filter(w => w.role === 'owner').length;
+  const workspaceLimit = planCapabilities?.totalWorkspacesLimit() || 1;
 
   return (
     <div className="flex flex-col h-full">
@@ -125,8 +182,8 @@ export const ProfileSheet = ({ onClose }: ProfileSheetProps) => {
         </Avatar>
         <h3 className="text-lg font-semibold text-foreground">{getDisplayName()}</h3>
         <p className="text-sm text-muted-foreground">{email}</p>
-        <Badge variant={subscriptionStatus.variant} className="mt-2">
-          ✓ Assinatura {subscriptionStatus.label.toLowerCase()}
+        <Badge variant={subscriptionStatus.variant} className={`mt-2 ${subscriptionStatus.color}`}>
+          ✓ Muzze {subscriptionStatus.label}
         </Badge>
       </div>
 
@@ -134,7 +191,14 @@ export const ProfileSheet = ({ onClose }: ProfileSheetProps) => {
 
       {/* Workspaces Section */}
       <div className="flex-1 py-4">
-        <h4 className="text-sm font-medium text-muted-foreground mb-3 px-1">WORKSPACES</h4>
+        <div className="flex items-center justify-between mb-3 px-1">
+          <h4 className="text-sm font-medium text-muted-foreground">WORKSPACES</h4>
+          {canCreateWorkspace && (
+            <span className="text-xs text-muted-foreground">
+              {ownedWorkspaces}/{workspaceLimit}
+            </span>
+          )}
+        </div>
         <div className="space-y-2">
           {allWorkspaces.map(({ workspace, role, ownerName }) => {
             const isActive = activeWorkspace?.id === workspace.id;
@@ -162,6 +226,17 @@ export const ProfileSheet = ({ onClose }: ProfileSheetProps) => {
               </button>
             );
           })}
+
+          {/* Create Workspace Button - Only for Studio users */}
+          {canCreateWorkspace && (
+            <button
+              onClick={handleCreateWorkspaceClick}
+              className="w-full flex items-center gap-3 p-3 rounded-lg border-2 border-dashed border-border/70 hover:border-primary/50 hover:bg-primary/5 transition-colors text-muted-foreground hover:text-primary"
+            >
+              <Plus className="w-4 h-4" />
+              <span className="font-medium">Criar Workspace</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -186,6 +261,50 @@ export const ProfileSheet = ({ onClose }: ProfileSheetProps) => {
           Sair
         </Button>
       </div>
+
+      {/* Create Workspace Modal */}
+      <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Building2 className="w-5 h-5" />
+              Criar Workspace
+            </DialogTitle>
+            <DialogDescription>
+              Crie um novo workspace para gerenciar outro projeto ou cliente.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <Input
+              placeholder="Nome do workspace"
+              value={newWorkspaceName}
+              onChange={(e) => setNewWorkspaceName(e.target.value)}
+              disabled={isCreating}
+              onKeyDown={(e) => e.key === 'Enter' && handleCreateWorkspace()}
+            />
+          </div>
+          
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setShowCreateModal(false)} disabled={isCreating}>
+              Cancelar
+            </Button>
+            <Button onClick={handleCreateWorkspace} disabled={isCreating || !newWorkspaceName.trim()}>
+              {isCreating ? "Criando..." : "Criar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Paywall */}
+      <Paywall
+        open={showPaywall}
+        onClose={() => setShowPaywall(false)}
+        action="create_workspace"
+        currentUsage={ownedWorkspaces}
+        limit={workspaceLimit}
+        context="profile_sheet"
+      />
     </div>
   );
 };
