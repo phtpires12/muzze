@@ -38,6 +38,8 @@ import {
 import { toast } from "sonner";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useWorkspaceContext } from "@/contexts/WorkspaceContext";
+import { usePlanCapabilitiesOptional } from "@/contexts/PlanContext";
+import { Paywall, PaywallAction } from "@/components/Paywall";
 import { StagePermissions, WorkspaceInvite, CreativeStage } from "@/types/workspace";
 import { MemberPermissionsModal } from "@/components/workspace/MemberPermissionsModal";
 import { format, differenceInDays, differenceInHours } from "date-fns";
@@ -76,6 +78,7 @@ const GuestsSkeleton = () => (
 const Guests = () => {
   const navigate = useNavigate();
   const { activeRole, isLoading: contextLoading } = useWorkspaceContext();
+  const planCapabilities = usePlanCapabilitiesOptional();
   const { 
     members, 
     invites, 
@@ -95,8 +98,34 @@ const Guests = () => {
   const [isInviting, setIsInviting] = useState(false);
   const [resendingId, setResendingId] = useState<string | null>(null);
   const [editingMember, setEditingMember] = useState<ActiveMember | null>(null);
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [paywallAction, setPaywallAction] = useState<PaywallAction>('invite_user');
   
   const isLoading = contextLoading || workspaceLoading;
+  
+  // Plan-based limits
+  const maxGuests = planCapabilities?.limits.maxGuests ?? workspace?.max_guests ?? 3;
+  const canInviteUsers = planCapabilities?.limits.canInviteUsers ?? true;
+  const totalGuests = members.length + invites.length;
+
+  // Handler for invite button click - check plan limits first
+  const handleInviteClick = () => {
+    // Check if plan allows inviting users
+    if (!canInviteUsers) {
+      setPaywallAction('invite_user');
+      setShowPaywall(true);
+      return;
+    }
+    
+    // Check guest limit
+    if (totalGuests >= maxGuests) {
+      setPaywallAction('invite_guest_limit');
+      setShowPaywall(true);
+      return;
+    }
+    
+    setShowInviteModal(true);
+  };
   
   // Verificar permissão (apenas owner/admin podem acessar)
   useEffect(() => {
@@ -209,8 +238,6 @@ const Guests = () => {
     };
   };
 
-  const maxGuests = workspace?.max_guests || 3;
-  const totalGuests = activeMembers.length + invites.length;
 
   if (isLoading) {
     return <GuestsSkeleton />;
@@ -410,18 +437,27 @@ const Guests = () => {
           </p>
         )}
 
-        {/* Botão adicionar */}
-        {totalGuests < maxGuests && (
-          <Button 
-            variant="outline" 
-            className="w-full mt-4"
-            onClick={() => setShowInviteModal(true)}
-          >
-            <UserPlus className="w-4 h-4 mr-2" />
-            Convidar Pessoa
-          </Button>
-        )}
+        {/* Botão adicionar - always show, but use plan-aware handler */}
+        <Button 
+          variant="outline" 
+          className="w-full mt-4"
+          onClick={handleInviteClick}
+        >
+          <UserPlus className="w-4 h-4 mr-2" />
+          Convidar Pessoa
+          {!canInviteUsers && <span className="ml-2 text-xs text-muted-foreground">(Pro)</span>}
+        </Button>
       </div>
+
+      {/* Paywall */}
+      <Paywall
+        open={showPaywall}
+        onClose={() => setShowPaywall(false)}
+        action={paywallAction}
+        currentUsage={totalGuests}
+        limit={maxGuests}
+        context="guests_page"
+      />
 
       {/* Modal de convite */}
       <Dialog open={showInviteModal} onOpenChange={setShowInviteModal}>
