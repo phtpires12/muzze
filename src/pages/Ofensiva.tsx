@@ -9,8 +9,8 @@ import { X, Share2, ChevronLeft, ChevronRight, Snowflake, Gem, Info, TrendingUp 
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isFuture, isToday, getDaysInMonth, isSameMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
-import { calculateFreezeCost, MAX_STREAK_FREEZES, MAX_STREAK_BONUS_DAYS, getEffectiveLevel, getDailyGoalMinutesForLevel } from "@/lib/gamification";
-import { useProfile } from "@/hooks/useProfile";
+import { MAX_STREAK_FREEZES, MAX_STREAK_BONUS_DAYS } from "@/lib/gamification";
+import { useProfileWithLevel } from "@/hooks/useProfileWithLevel";
 import * as htmlToImage from 'html-to-image';
 import StreakShareCard from "@/components/StreakShareCard";
 import FireIcon from "@/components/ofensiva/FireIcon";
@@ -18,7 +18,7 @@ import DayDetailDrawer, { DayProgress } from "@/components/ofensiva/DayDetailDra
 
 const Ofensiva = () => {
   const navigate = useNavigate();
-  const { profile, loading: profileLoading } = useProfile();
+  const { profile, loading: profileLoading, effectiveLevel, goalMinutes, freezeCost } = useProfileWithLevel();
   const isAppVisible = useAppVisibility();
   const cardRef = useRef<HTMLDivElement>(null);
   const [streakCount, setStreakCount] = useState(0);
@@ -83,9 +83,8 @@ const Ofensiva = () => {
     const monthStart = startOfMonth(currentMonth);
     const monthEnd = endOfMonth(currentMonth);
 
-    // Meta dinâmica baseada no nível efetivo do usuário
-    const effectiveLevel = getEffectiveLevel(profile?.xp_points || 0, profile?.highest_level || 1);
-    const minMinutes = getDailyGoalMinutesForLevel(effectiveLevel);
+    // Meta dinâmica baseada no nível efetivo do usuário (agora vem do hook)
+    const minMinutes = goalMinutes;
 
     const { data: sessions } = await supabase
       .from('stage_times')
@@ -245,9 +244,7 @@ const Ofensiva = () => {
       return;
     }
 
-    // Custo do freeze baseado na meta dinâmica do nível
-    const effectiveLevelForFreeze = getEffectiveLevel(profile.xp_points || 0, profile.highest_level || 1);
-    const freezeCost = calculateFreezeCost(getDailyGoalMinutesForLevel(effectiveLevelForFreeze));
+    // Custo do freeze baseado na meta dinâmica do nível (agora vem do hook)
     const userXP = profile.xp_points || 0;
 
     if (userXP < freezeCost) {
@@ -319,9 +316,7 @@ const Ofensiva = () => {
 
   const daysInMonth = getDaysInMonth(currentMonth);
   
-  // Meta dinâmica baseada no nível efetivo do usuário
-  const effectiveLevel = getEffectiveLevel(profile?.xp_points || 0, profile?.highest_level || 1);
-  const goalMinutes = getDailyGoalMinutesForLevel(effectiveLevel);
+  // Meta dinâmica já vem do hook useProfileWithLevel
   
   // Calcular dias completos baseado no dayProgressMap
   const daysCompleted = Array.from(dayProgressMap.values()).filter(p => p.minutes >= goalMinutes).length;
@@ -700,7 +695,7 @@ const Ofensiva = () => {
                   onClick={handleBuyFreeze}
                   disabled={
                     !profile || 
-                    (profile.xp_points || 0) < calculateFreezeCost(goalMinutes) ||
+                    (profile.xp_points || 0) < freezeCost ||
                     (profile.streak_freezes || 0) >= MAX_STREAK_FREEZES
                   }
                   className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-bold"
@@ -708,7 +703,7 @@ const Ofensiva = () => {
                   <div className="flex items-center justify-center gap-2">
                     <span>COMPRAR POR</span>
                     <Gem className="w-4 h-4" />
-                    <span>{calculateFreezeCost(goalMinutes)}</span>
+                    <span>{freezeCost}</span>
                   </div>
                 </Button>
 
@@ -718,9 +713,9 @@ const Ofensiva = () => {
                   </p>
                 )}
 
-                {profile && (profile.streak_freezes || 0) < MAX_STREAK_FREEZES && (profile.xp_points || 0) < calculateFreezeCost(goalMinutes) && (
+                {profile && (profile.streak_freezes || 0) < MAX_STREAK_FREEZES && (profile.xp_points || 0) < freezeCost && (
                   <p className="text-xs text-destructive mt-2 text-center">
-                    Você precisa de mais {calculateFreezeCost(goalMinutes) - (profile.xp_points || 0)} XP
+                    Você precisa de mais {freezeCost - (profile.xp_points || 0)} XP
                   </p>
                 )}
               </div>
