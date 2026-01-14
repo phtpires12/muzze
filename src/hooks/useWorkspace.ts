@@ -367,20 +367,26 @@ export const useWorkspace = (): UseWorkspaceReturn => {
 
       const currentCount = ownedWorkspaces?.length || 0;
 
-      // Get user's plan limits
+      // Get user's plan limits from profile
       const { data: profile } = await supabase
         .from('profiles')
         .select('plan_type, extra_workspaces_packs, is_internal_tester')
         .eq('user_id', userData.user.id)
         .single();
 
-      const planType = profile?.is_internal_tester ? 'studio' : (profile?.plan_type || 'free');
-      const extraPacks = profile?.extra_workspaces_packs || 0;
+      // Use plan_type from DB directly - is_internal_tester is only for SIMULATING, not auto-upgrading
+      const rawPlanType = (profile as any)?.plan_type || 'free';
+      const extraPacks = (profile as any)?.extra_workspaces_packs || 0;
+      
+      // Check if user is simulating a plan
+      const simulatedPlan = localStorage.getItem('muzze_simulated_plan_type');
+      const isTester = (profile as any)?.is_internal_tester === true;
+      const effectivePlanType = (simulatedPlan && isTester) ? simulatedPlan : rawPlanType;
 
       const { data: planLimits } = await supabase
         .from('plan_limits')
         .select('max_workspaces')
-        .eq('plan_type', planType)
+        .eq('plan_type', effectivePlanType)
         .single();
 
       const baseLimit = planLimits?.max_workspaces || 1;

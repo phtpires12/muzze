@@ -101,10 +101,12 @@ const DevTools = () => {
       
       if (error) throw error;
       
-      toast({ title: "✅ Plano atualizado!", description: `Seu plano agora é ${newPlan.toUpperCase()}. Recarregue a página para ver o efeito completo.` });
+      toast({ title: "✅ Plano atualizado!", description: `Seu plano agora é ${newPlan.toUpperCase()}. Atualizando dados...` });
       
-      // Força reload da página para pegar o novo plano
-      setTimeout(() => window.location.reload(), 1000);
+      // Use refetchAll instead of page reload
+      await planCapabilities.refetchAll();
+      
+      toast({ title: "✅ Dados atualizados!", description: `Plano ${newPlan.toUpperCase()} aplicado com sucesso.` });
     } catch (err: any) {
       console.error('[DevTools] Error setting plan:', err);
       toast({ title: "Erro ao definir plano", description: err.message, variant: "destructive" });
