@@ -22,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { ProfileSheet } from "@/components/ProfileSheet";
+import { FreePlanBanner } from "@/components/FreePlanBanner";
 import { Flame, Clock, Trophy, Lightbulb, Zap, Film, Mic, Scissors, AlertCircle, Lock, Sparkles, TrendingUp, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
