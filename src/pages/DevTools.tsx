@@ -1,14 +1,11 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Flame, Trophy, Navigation, Trash2, RotateCcw, Wrench, Timer, Calendar, Search, Copy, Database, Check } from "lucide-react";
+import { ArrowLeft, Flame, Trophy, Navigation, Trash2, RotateCcw, Wrench, Timer, Calendar, Search, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useStreakCelebration } from "@/hooks/useStreakCelebration";
-import { usePlanCapabilities } from "@/contexts/PlanContext";
 import { StreakCelebration } from "@/components/StreakCelebration";
 import { TrophyCelebration } from "@/components/TrophyCelebration";
 import { TROPHIES } from "@/lib/gamification";
@@ -16,24 +13,13 @@ import { Badge } from "@/components/ui/badge";
 import { DraggableSessionTimer } from "@/components/DraggableSessionTimer";
 import { PostConfirmationPopup } from "@/components/calendar/PostConfirmationPopup";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { AdminPlanSwitcher } from "@/components/dev/AdminPlanSwitcher";
 
 const DevTools = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isDeveloper, isAdmin, isLoading } = useUserRole();
-  const planCapabilities = usePlanCapabilities();
   const { celebrationData, triggerCelebration, triggerTrophyDirectly, dismissStreakCelebration, dismissTrophyCelebration } = useStreakCelebration();
-  
-  // Plan Admin state
-  const [settingPlan, setSettingPlan] = useState(false);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setCurrentUserId(user?.id || null);
-    });
-  }, []);
   
   // Timer simulation state
   const [showTimerSimulation, setShowTimerSimulation] = useState(false);
@@ -83,36 +69,6 @@ const DevTools = () => {
   const handleCopyDebug = () => {
     navigator.clipboard.writeText(JSON.stringify(debugData, null, 2));
     toast({ title: "Debug copiado para clipboard!" });
-  };
-
-  // Admin: Set plan via RPC
-  const handleSetPlanType = async (newPlan: 'free' | 'pro' | 'studio') => {
-    if (!currentUserId) {
-      toast({ title: "Erro", description: "User ID não encontrado", variant: "destructive" });
-      return;
-    }
-    
-    setSettingPlan(true);
-    try {
-      const { error } = await supabase.rpc('admin_set_plan_type', {
-        target_user: currentUserId,
-        new_plan: newPlan
-      });
-      
-      if (error) throw error;
-      
-      toast({ title: "✅ Plano atualizado!", description: `Seu plano agora é ${newPlan.toUpperCase()}. Atualizando dados...` });
-      
-      // Use refetchAll instead of page reload
-      await planCapabilities.refetchAll();
-      
-      toast({ title: "✅ Dados atualizados!", description: `Plano ${newPlan.toUpperCase()} aplicado com sucesso.` });
-    } catch (err: any) {
-      console.error('[DevTools] Error setting plan:', err);
-      toast({ title: "Erro ao definir plano", description: err.message, variant: "destructive" });
-    } finally {
-      setSettingPlan(false);
-    }
   };
 
   const handleMockMarkAsPosted = async () => {
@@ -329,69 +285,8 @@ const DevTools = () => {
           </CardContent>
         </Card>
 
-        {/* Plan Admin Section */}
-        <Card className="mb-4 border-violet-500/30">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Database className="w-5 h-5 text-violet-500" />
-              Gerenciar Plano (DB)
-            </CardTitle>
-            <CardDescription>
-              Alterar o plan_type diretamente no banco de dados
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Current Plan Status */}
-            <div className="p-3 bg-muted rounded">
-              <p className="text-sm text-muted-foreground mb-1">Plano atual (do DB):</p>
-              <Badge variant="secondary" className="text-sm">
-                {planCapabilities.planType.toUpperCase()}
-              </Badge>
-              {planCapabilities.isInternalTester && (
-                <Badge variant="outline" className="ml-2 text-xs border-amber-500/50 text-amber-600">
-                  Internal Tester
-                </Badge>
-              )}
-            </div>
-            
-            {/* Set Plan Buttons */}
-            <div className="grid grid-cols-3 gap-2">
-              <Button
-                onClick={() => handleSetPlanType('free')}
-                disabled={settingPlan || planCapabilities.planType === 'free'}
-                variant={planCapabilities.planType === 'free' ? 'default' : 'outline'}
-                size="sm"
-              >
-                {planCapabilities.planType === 'free' && <Check className="w-3 h-3 mr-1" />}
-                Free
-              </Button>
-              <Button
-                onClick={() => handleSetPlanType('pro')}
-                disabled={settingPlan || planCapabilities.planType === 'pro'}
-                variant={planCapabilities.planType === 'pro' ? 'default' : 'outline'}
-                size="sm"
-                className={planCapabilities.planType === 'pro' ? 'bg-amber-500 hover:bg-amber-600' : ''}
-              >
-                {planCapabilities.planType === 'pro' && <Check className="w-3 h-3 mr-1" />}
-                Pro
-              </Button>
-              <Button
-                onClick={() => handleSetPlanType('studio')}
-                disabled={settingPlan || planCapabilities.planType === 'studio'}
-                variant={planCapabilities.planType === 'studio' ? 'default' : 'outline'}
-                size="sm"
-                className={planCapabilities.planType === 'studio' ? 'bg-violet-600 hover:bg-violet-700' : ''}
-              >
-                {planCapabilities.planType === 'studio' && <Check className="w-3 h-3 mr-1" />}
-                Studio
-              </Button>
-            </div>
-            
-            <p className="text-xs text-muted-foreground">
-              Isso altera o plan_type no banco via RPC segura. A página recarrega após a mudança.
-            </p>
-          </CardContent>
-        </Card>
+        {/* Plan Admin Section - Using new AdminPlanSwitcher component */}
+        <AdminPlanSwitcher />
 
         {/* Workspace Debug Section */}
         <Card className="mb-4">
