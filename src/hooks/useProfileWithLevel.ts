@@ -28,10 +28,13 @@ export const useProfileWithLevel = (): ProfileWithLevel => {
     [profile?.xp_points, profile?.highest_level]
   );
 
-  const goalMinutes = useMemo(() => 
-    getDailyGoalMinutesForLevel(effectiveLevel),
-    [effectiveLevel]
-  );
+  // Meta final = máximo entre meta do nível e override manual do usuário
+  // Isso permite que usuários configurem metas maiores que 25min se desejarem
+  const goalMinutes = useMemo(() => {
+    const levelGoal = getDailyGoalMinutesForLevel(effectiveLevel);
+    const userOverride = profile?.min_streak_minutes || 0;
+    return Math.max(levelGoal, userOverride);
+  }, [effectiveLevel, profile?.min_streak_minutes]);
 
   const freezeCost = useMemo(() => 
     calculateFreezeCost(goalMinutes),

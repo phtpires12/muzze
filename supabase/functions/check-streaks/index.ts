@@ -5,6 +5,42 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Rampa de hábito: meta diária mínima baseada no nível
+// Sincronizado com src/lib/gamification.ts getDailyGoalMinutesForLevel
+function getDailyGoalMinutesForLevel(level: number): number {
+  const safeLevel = typeof level === 'number' && !isNaN(level) ? Math.floor(level) : 1;
+  if (safeLevel <= 1) return 5;
+  if (safeLevel === 2) return 10;
+  if (safeLevel === 3) return 15;
+  return 25; // Nível 4+
+}
+
+// Calcula nível baseado em XP (sincronizado com gamification.ts)
+function calculateLevelByXP(xp: number): number {
+  const XP_LEVELS = [
+    { level: 1, xpRequired: 0 },
+    { level: 2, xpRequired: 100 },
+    { level: 3, xpRequired: 300 },
+    { level: 4, xpRequired: 700 },
+    { level: 5, xpRequired: 1500 },
+    { level: 6, xpRequired: 3000 },
+    { level: 7, xpRequired: 6000 },
+  ];
+  
+  for (let i = XP_LEVELS.length - 1; i >= 0; i--) {
+    if (xp >= XP_LEVELS[i].xpRequired) {
+      return XP_LEVELS[i].level;
+    }
+  }
+  return 1;
+}
+
+// Retorna o nível efetivo (não regressivo)
+function getEffectiveLevel(xp: number, highestLevel: number): number {
+  const calculatedLevel = calculateLevelByXP(xp);
+  return Math.max(highestLevel || 1, calculatedLevel);
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -30,10 +66,10 @@ Deno.serve(async (req) => {
 
     console.log('Starting daily streak check...');
 
-    // Get all user profiles
+    // Get all user profiles with XP and highest_level for level calculation
     const { data: profiles, error: profilesError } = await supabase
       .from('profiles')
-      .select('user_id, min_streak_minutes, streak_freezes, timezone');
+      .select('user_id, min_streak_minutes, streak_freezes, timezone, xp_points, highest_level');
 
     if (profilesError) {
       console.error('Error fetching profiles:', profilesError);
@@ -68,9 +104,14 @@ Deno.serve(async (req) => {
         }
 
         const totalMinutes = sessions?.reduce((sum, s) => sum + (s.duration_seconds || 0), 0) / 60 || 0;
-        const metMinutes = profile.min_streak_minutes || 20;
+        
+        // Calcula a meta baseada no nível do usuário
+        const effectiveLevel = getEffectiveLevel(profile.xp_points || 0, profile.highest_level || 1);
+        const levelGoal = getDailyGoalMinutesForLevel(effectiveLevel);
+        const userOverride = profile.min_streak_minutes || 0;
+        const metMinutes = Math.max(levelGoal, userOverride);
 
-        console.log(`User ${profile.user_id}: ${totalMinutes} minutes (goal: ${metMinutes})`);
+        console.log(`User ${profile.user_id}: ${totalMinutes} minutes (goal: ${metMinutes}, level: ${effectiveLevel})`);
 
         if (totalMinutes < metMinutes) {
           // Didn't meet goal - use freeze if available
