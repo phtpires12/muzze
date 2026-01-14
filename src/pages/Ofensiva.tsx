@@ -102,8 +102,14 @@ const Ofensiva = () => {
 
     // Agrupar sessions por dayKey na timezone do usuário usando started_at
     const dayMap = new Map<string, number>();
-    sessions?.forEach(session => {
-      if (!session.started_at) return;
+    
+    console.log(`[Ofensiva] Total sessões encontradas:`, sessions?.length);
+    
+    sessions?.forEach((session, idx) => {
+      if (!session.started_at) {
+        console.log(`[Ofensiva] Sessão ${idx} sem started_at:`, session);
+        return;
+      }
       
       // Usar getDayKey com started_at para consistência de timezone
       const sessionDate = new Date(session.started_at);
@@ -111,6 +117,16 @@ const Ofensiva = () => {
       
       const minutes = (session.duration_seconds || 0) / 60;
       dayMap.set(dayKey, (dayMap.get(dayKey) || 0) + minutes);
+      
+      // Log para debug das sessões do dia 12
+      if (dayKey === '2026-01-12') {
+        console.log(`[Ofensiva] Sessão dia 12:`, {
+          started_at: session.started_at,
+          duration_seconds: session.duration_seconds,
+          dayKey,
+          totalSoFar: dayMap.get(dayKey)
+        });
+      }
     });
 
     // Converter dayMap para dayProgressMap
@@ -120,6 +136,7 @@ const Ofensiva = () => {
     });
 
     console.log(`[Ofensiva] Progresso do mês:`, Object.fromEntries(progressMap));
+    console.log(`[Ofensiva] Dia 12 especificamente:`, progressMap.get('2026-01-12'));
     setDayProgressMap(progressMap);
   };
 
