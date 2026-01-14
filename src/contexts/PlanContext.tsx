@@ -10,16 +10,18 @@ interface PlanLimits {
   canScheduleFuture: boolean;
   canInviteUsers: boolean;
   maxGuests: number;
+  maxWorkspaces: number;
 }
 
 interface PlanUsage {
   scriptsThisWeek: number;
   weekStartDate: string;
   weekEndDate: string;
+  ownedWorkspacesCount: number;
 }
 
 interface PlanCapabilities {
-  planType: 'free' | 'pro' | 'team';
+  planType: 'free' | 'pro' | 'studio';
   limits: PlanLimits;
   usage: PlanUsage;
   loading: boolean;
@@ -29,8 +31,15 @@ interface PlanCapabilities {
   canScheduleToDate: (targetDateKey: string) => boolean;
   remainingWeeklySlots: () => number;
   
+  // Workspace capabilities (novo)
+  canCreateWorkspace: () => boolean;
+  canInviteGuest: (currentGuestCount: number) => boolean;
+  totalWorkspacesLimit: () => number;
+  remainingWorkspaceSlots: () => number;
+  getExtraWorkspacesPacks: () => number;
+  
   // Feedback contextual
-  getBlockReason: (action: 'create_script' | 'schedule_future') => string | null;
+  getBlockReason: (action: 'create_script' | 'schedule_future' | 'create_workspace' | 'invite_guest') => string | null;
   
   // Refetch após ações
   refetchUsage: () => Promise<void>;
@@ -42,12 +51,14 @@ const DEFAULT_LIMITS: PlanLimits = {
   canScheduleFuture: false,
   canInviteUsers: false,
   maxGuests: 0,
+  maxWorkspaces: 1,
 };
 
 const PlanContext = createContext<PlanCapabilities | undefined>(undefined);
 
 export const PlanContextProvider = ({ children }: { children: ReactNode }) => {
   const { profile } = useProfileContext();
+  const { allWorkspaces } = useWorkspaceContext();
   const { activeWorkspace } = useWorkspaceContext();
   
   const [limits, setLimits] = useState<PlanLimits>(DEFAULT_LIMITS);
@@ -55,11 +66,17 @@ export const PlanContextProvider = ({ children }: { children: ReactNode }) => {
     scriptsThisWeek: 0,
     weekStartDate: '',
     weekEndDate: '',
+    ownedWorkspacesCount: 0,
   });
   const [loading, setLoading] = useState(true);
   
-  const planType = (profile?.plan_type || 'free') as 'free' | 'pro' | 'team';
+  // Determinar planType com override para internal testers
+  const rawPlanType = profile?.plan_type || 'free';
+  const isInternalTester = profile?.is_internal_tester === true;
+  const planType = isInternalTester ? 'studio' : (rawPlanType as 'free' | 'pro' | 'studio');
+  
   const timezone = profile?.timezone || 'America/Sao_Paulo';
+  const extraWorkspacesPacks = profile?.extra_workspaces_packs || 0;
 
   // Fetch plan limits from database
   const fetchLimits = useCallback(async () => {
@@ -82,6 +99,7 @@ export const PlanContextProvider = ({ children }: { children: ReactNode }) => {
           canScheduleFuture: data.can_schedule_future,
           canInviteUsers: data.can_invite_users,
           maxGuests: data.max_guests,
+          maxWorkspaces: data.max_workspaces,
         });
       }
     } catch (error) {
@@ -89,7 +107,7 @@ export const PlanContextProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [planType]);
 
-  // Fetch usage (scripts created this week)
+  // Fetch usage (scripts created this week + owned workspaces count)
   const fetchUsage = useCallback(async () => {
     if (!activeWorkspace?.id) {
       setLoading(false);
@@ -107,7 +125,8 @@ export const PlanContextProvider = ({ children }: { children: ReactNode }) => {
       const weekEnd = getWeekEndKey(timezone);
       const { startUTC, endUTC } = getWeekBoundsUTC(timezone);
 
-      const { count, error } = await supabase
+      // Fetch scripts count this week
+      const { count: scriptCount, error: scriptError } = await supabase
         .from('scripts')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user.id)
@@ -115,23 +134,25 @@ export const PlanContextProvider = ({ children }: { children: ReactNode }) => {
         .gte('created_at', startUTC.toISOString())
         .lt('created_at', endUTC.toISOString());
 
-      if (error) {
-        console.error('Error fetching script count:', error);
-        setLoading(false);
-        return;
+      if (scriptError) {
+        console.error('Error fetching script count:', scriptError);
       }
 
+      // Count owned workspaces
+      const ownedCount = allWorkspaces?.filter(w => w.role === 'owner').length || 0;
+
       setUsage({
-        scriptsThisWeek: count || 0,
+        scriptsThisWeek: scriptCount || 0,
         weekStartDate: weekStart,
         weekEndDate: weekEnd,
+        ownedWorkspacesCount: ownedCount,
       });
     } catch (error) {
       console.error('Error fetching usage:', error);
     } finally {
       setLoading(false);
     }
-  }, [activeWorkspace?.id, timezone]);
+  }, [activeWorkspace?.id, timezone, allWorkspaces]);
 
   useEffect(() => {
     fetchLimits();
@@ -141,23 +162,45 @@ export const PlanContextProvider = ({ children }: { children: ReactNode }) => {
     fetchUsage();
   }, [fetchUsage]);
 
+  // Limite total de workspaces (base + extras)
+  const totalWorkspacesLimit = useCallback(() => {
+    return limits.maxWorkspaces + (extraWorkspacesPacks * 5);
+  }, [limits.maxWorkspaces, extraWorkspacesPacks]);
+
   // Funções de verificação
   const canCreateScript = useCallback(() => {
-    if (limits.weeklyScripts === -1) return true; // ilimitado
+    if (limits.weeklyScripts === -1 || limits.weeklyScripts >= 999999) return true; // ilimitado
     return usage.scriptsThisWeek < limits.weeklyScripts;
   }, [limits.weeklyScripts, usage.scriptsThisWeek]);
 
   const canScheduleToDate = useCallback((targetDateKey: string) => {
-    if (limits.canScheduleFuture) return true; // Pro/Team
+    if (limits.canScheduleFuture) return true; // Pro/Studio
     return isDateInCurrentWeek(targetDateKey, timezone);
   }, [limits.canScheduleFuture, timezone]);
 
   const remainingWeeklySlots = useCallback(() => {
-    if (limits.weeklyScripts === -1) return Infinity;
+    if (limits.weeklyScripts === -1 || limits.weeklyScripts >= 999999) return Infinity;
     return Math.max(0, limits.weeklyScripts - usage.scriptsThisWeek);
   }, [limits.weeklyScripts, usage.scriptsThisWeek]);
 
-  const getBlockReason = useCallback((action: 'create_script' | 'schedule_future') => {
+  const canCreateWorkspace = useCallback(() => {
+    return usage.ownedWorkspacesCount < totalWorkspacesLimit();
+  }, [usage.ownedWorkspacesCount, totalWorkspacesLimit]);
+
+  const canInviteGuest = useCallback((currentGuestCount: number) => {
+    if (!limits.canInviteUsers) return false;
+    return currentGuestCount < limits.maxGuests;
+  }, [limits.canInviteUsers, limits.maxGuests]);
+
+  const remainingWorkspaceSlots = useCallback(() => {
+    return Math.max(0, totalWorkspacesLimit() - usage.ownedWorkspacesCount);
+  }, [totalWorkspacesLimit, usage.ownedWorkspacesCount]);
+
+  const getExtraWorkspacesPacks = useCallback(() => {
+    return extraWorkspacesPacks;
+  }, [extraWorkspacesPacks]);
+
+  const getBlockReason = useCallback((action: 'create_script' | 'schedule_future' | 'create_workspace' | 'invite_guest') => {
     if (action === 'create_script') {
       if (canCreateScript()) return null;
       const daysLeft = daysUntilWeekReset(timezone);
@@ -168,9 +211,19 @@ export const PlanContextProvider = ({ children }: { children: ReactNode }) => {
       if (limits.canScheduleFuture) return null;
       return 'No plano Free, você só consegue planejar dentro da semana atual.';
     }
+
+    if (action === 'create_workspace') {
+      if (canCreateWorkspace()) return null;
+      return `Você atingiu o limite de ${totalWorkspacesLimit()} workspaces do seu plano.`;
+    }
+
+    if (action === 'invite_guest') {
+      if (limits.canInviteUsers) return null;
+      return 'Seu plano não permite convidar pessoas para o workspace.';
+    }
     
     return null;
-  }, [canCreateScript, limits.weeklyScripts, limits.canScheduleFuture, timezone]);
+  }, [canCreateScript, canCreateWorkspace, limits.weeklyScripts, limits.canScheduleFuture, limits.canInviteUsers, timezone, totalWorkspacesLimit]);
 
   const value: PlanCapabilities = {
     planType,
@@ -180,6 +233,11 @@ export const PlanContextProvider = ({ children }: { children: ReactNode }) => {
     canCreateScript,
     canScheduleToDate,
     remainingWeeklySlots,
+    canCreateWorkspace,
+    canInviteGuest,
+    totalWorkspacesLimit,
+    remainingWorkspaceSlots,
+    getExtraWorkspacesPacks,
     getBlockReason,
     refetchUsage: fetchUsage,
   };
