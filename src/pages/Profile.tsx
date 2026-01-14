@@ -28,6 +28,7 @@ const Profile = () => {
   const navigate = useNavigate();
   const { profile } = useProfile();
   const { isDeveloper, isAdmin } = useUserRole();
+  const planCapabilities = usePlanCapabilities();
   const { activeWorkspace, activeRole, isLoading: workspaceLoading, refetch } = useWorkspaceContext();
   const [userEmail, setUserEmail] = useState<string>("");
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -218,10 +219,41 @@ const Profile = () => {
             <div className="text-center mb-6">
               <h1 className="text-3xl font-bold mb-2">{displayName}</h1>
               <p className="text-muted-foreground mb-4">{userEmail}</p>
-              <Badge variant="secondary" className="bg-green-500/10 text-green-600 hover:bg-green-500/20">
-                <CheckCircle className="w-4 h-4 mr-1" />
-                Assinatura ativa
-              </Badge>
+              {(() => {
+                const getPlanBadge = () => {
+                  switch (planCapabilities.planType) {
+                    case 'studio':
+                      return {
+                        text: 'Muzze Studio',
+                        className: 'bg-gradient-to-r from-violet-500/20 to-purple-600/20 text-violet-600 hover:from-violet-500/30 hover:to-purple-600/30 cursor-pointer',
+                        Icon: Building2
+                      };
+                    case 'pro':
+                      return {
+                        text: 'Muzze Pro',
+                        className: 'bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-600 hover:from-amber-500/30 hover:to-orange-500/30 cursor-pointer',
+                        Icon: Crown
+                      };
+                    default:
+                      return {
+                        text: 'Muzze Free',
+                        className: 'bg-muted text-muted-foreground hover:bg-muted/80 cursor-pointer',
+                        Icon: Sparkles
+                      };
+                  }
+                };
+                const planBadge = getPlanBadge();
+                return (
+                  <Badge 
+                    variant="secondary" 
+                    className={planBadge.className}
+                    onClick={() => navigate('/my-plan')}
+                  >
+                    <planBadge.Icon className="w-4 h-4 mr-1" />
+                    {planBadge.text}
+                  </Badge>
+                );
+              })()}
             </div>
           </CardContent>
         </Card>
