@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Crown, Calendar, Sparkles, X } from "lucide-react";
+import { Crown, Calendar, Sparkles, X, Building2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { 
   Drawer,
@@ -22,7 +22,7 @@ import { useDeviceType } from "@/hooks/useDeviceType";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { cn } from "@/lib/utils";
 
-export type PaywallAction = 'create_script' | 'schedule_future' | 'invite_user';
+export type PaywallAction = 'create_script' | 'schedule_future' | 'invite_user' | 'create_workspace' | 'invite_guest_limit';
 
 interface PaywallProps {
   open: boolean;
@@ -60,6 +60,18 @@ const PAYWALL_CONTENT: Record<PaywallAction, {
     title: "Colaboração é Pro",
     description: () => "No plano Free, você não pode convidar colaboradores. Faça upgrade para trabalhar em equipe.",
     benefit: "Convide até 3 colaboradores",
+  },
+  create_workspace: {
+    icon: Building2,
+    title: "Limite de workspaces atingido",
+    description: (props) => `Você atingiu o limite de ${props.limit || 1} workspace${(props.limit || 1) > 1 ? 's' : ''} do seu plano. Faça upgrade para criar mais workspaces.`,
+    benefit: "Até 5 workspaces (Studio) + add-ons",
+  },
+  invite_guest_limit: {
+    icon: Users,
+    title: "Limite de convidados atingido",
+    description: (props) => `Você já tem ${props.currentUsage || 0} de ${props.limit || 0} convidados permitidos no seu plano.`,
+    benefit: "Mais convidados por workspace",
   },
 };
 
