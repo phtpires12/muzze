@@ -285,69 +285,8 @@ const DevTools = () => {
           </CardContent>
         </Card>
 
-        {/* Plan Admin Section */}
-        <Card className="mb-4 border-violet-500/30">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Database className="w-5 h-5 text-violet-500" />
-              Gerenciar Plano (DB)
-            </CardTitle>
-            <CardDescription>
-              Alterar o plan_type diretamente no banco de dados
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Current Plan Status */}
-            <div className="p-3 bg-muted rounded">
-              <p className="text-sm text-muted-foreground mb-1">Plano atual (do DB):</p>
-              <Badge variant="secondary" className="text-sm">
-                {planCapabilities.planType.toUpperCase()}
-              </Badge>
-              {planCapabilities.isInternalTester && (
-                <Badge variant="outline" className="ml-2 text-xs border-amber-500/50 text-amber-600">
-                  Internal Tester
-                </Badge>
-              )}
-            </div>
-            
-            {/* Set Plan Buttons */}
-            <div className="grid grid-cols-3 gap-2">
-              <Button
-                onClick={() => handleSetPlanType('free')}
-                disabled={settingPlan || planCapabilities.planType === 'free'}
-                variant={planCapabilities.planType === 'free' ? 'default' : 'outline'}
-                size="sm"
-              >
-                {planCapabilities.planType === 'free' && <Check className="w-3 h-3 mr-1" />}
-                Free
-              </Button>
-              <Button
-                onClick={() => handleSetPlanType('pro')}
-                disabled={settingPlan || planCapabilities.planType === 'pro'}
-                variant={planCapabilities.planType === 'pro' ? 'default' : 'outline'}
-                size="sm"
-                className={planCapabilities.planType === 'pro' ? 'bg-amber-500 hover:bg-amber-600' : ''}
-              >
-                {planCapabilities.planType === 'pro' && <Check className="w-3 h-3 mr-1" />}
-                Pro
-              </Button>
-              <Button
-                onClick={() => handleSetPlanType('studio')}
-                disabled={settingPlan || planCapabilities.planType === 'studio'}
-                variant={planCapabilities.planType === 'studio' ? 'default' : 'outline'}
-                size="sm"
-                className={planCapabilities.planType === 'studio' ? 'bg-violet-600 hover:bg-violet-700' : ''}
-              >
-                {planCapabilities.planType === 'studio' && <Check className="w-3 h-3 mr-1" />}
-                Studio
-              </Button>
-            </div>
-            
-            <p className="text-xs text-muted-foreground">
-              Isso altera o plan_type no banco via RPC segura. A página recarrega após a mudança.
-            </p>
-          </CardContent>
-        </Card>
+        {/* Plan Admin Section - Using new AdminPlanSwitcher component */}
+        <AdminPlanSwitcher />
 
         {/* Workspace Debug Section */}
         <Card className="mb-4">
