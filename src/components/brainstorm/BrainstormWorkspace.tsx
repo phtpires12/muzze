@@ -8,13 +8,17 @@ import { IdeaCard } from "./IdeaCard";
 import { CompactCalendar } from "./CompactCalendar";
 import { WeekCalendar } from "./WeekCalendar";
 import { IdeaCarousel } from "./IdeaCarousel";
+import { Paywall, PaywallAction } from "@/components/Paywall";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useDeviceType } from "@/hooks/useDeviceType";
 import { useWorkspaceContext } from "@/contexts/WorkspaceContext";
+import { usePlanCapabilitiesOptional } from "@/contexts/PlanContext";
+import { useAnalytics } from "@/hooks/useAnalytics";
+import { useProfileContext } from "@/contexts/ProfileContext";
+import { isDateInCurrentWeek, daysUntilWeekReset } from "@/lib/timezone-utils";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { useLongPressSensors, triggerHapticFeedback } from "@/hooks/useLongPressSensors";
 
 interface Idea {
   id: string;
@@ -27,7 +31,7 @@ interface Idea {
   publish_date?: string | null;
 }
 
-type ScheduledIdeaResult = { publish_date: string | null };
+import { useLongPressSensors, triggerHapticFeedback } from "@/hooks/useLongPressSensors";
 
 export const BrainstormWorkspace = () => {
   const [ideas, setIdeas] = useState<Idea[]>([]);
@@ -35,10 +39,17 @@ export const BrainstormWorkspace = () => {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedIdeas, setSelectedIdeas] = useState<Idea[]>([]);
+  const [paywallOpen, setPaywallOpen] = useState(false);
+  const [paywallAction, setPaywallAction] = useState<PaywallAction>('create_script');
+  
   const { toast } = useToast();
   const deviceType = useDeviceType();
   const { activeWorkspace } = useWorkspaceContext();
+  const { profile } = useProfileContext();
+  const planCapabilities = usePlanCapabilitiesOptional();
+  const { trackEvent } = useAnalytics();
   const isMobile = deviceType === "mobile";
+  const timezone = profile?.timezone || 'America/Sao_Paulo';
 
   // Sensor otimizado: long press no mobile, drag imediato no desktop
   const sensors = useLongPressSensors();
@@ -97,6 +108,21 @@ export const BrainstormWorkspace = () => {
   };
 
   const createNewIdea = async () => {
+    // Verificar limite do plano
+    if (planCapabilities && !planCapabilities.canCreateScript()) {
+      trackEvent('paywall_triggered', {
+        action: 'create_script',
+        plan: planCapabilities.planType,
+        usage: planCapabilities.usage.scriptsThisWeek,
+        limit: planCapabilities.limits.weeklyScripts,
+        context: 'brainstorm',
+      });
+      setPaywallAction('create_script');
+      setPaywallOpen(true);
+      return;
+    }
+
+    // Limite de 3 ideias simultâneas no workspace (UX, não plano)
     if (ideas.length >= 3) {
       toast({
         title: "Limite atingido",
@@ -131,6 +157,9 @@ export const BrainstormWorkspace = () => {
     }
 
     setIdeas([...ideas, data]);
+    
+    // Atualizar contagem do plano
+    planCapabilities?.refetchUsage();
   };
 
   const updateIdea = async (id: string, updates: { 
@@ -201,6 +230,19 @@ export const BrainstormWorkspace = () => {
   };
 
   const scheduleIdea = async (ideaId: string, targetDate: string) => {
+    // Verificar limite de agendamento futuro
+    if (planCapabilities && !planCapabilities.canScheduleToDate(targetDate)) {
+      trackEvent('paywall_triggered', {
+        action: 'schedule_future',
+        plan: planCapabilities.planType,
+        target_date: targetDate,
+        context: 'brainstorm',
+      });
+      setPaywallAction('schedule_future');
+      setPaywallOpen(true);
+      return;
+    }
+
     const idea = ideas.find(i => i.id === ideaId);
     
     if (!idea || !idea.content_type || !idea.central_idea || idea.central_idea.length < 20) {
@@ -348,6 +390,17 @@ export const BrainstormWorkspace = () => {
           </div>
         )}
       </DragOverlay>
+      
+      {/* Paywall */}
+      <Paywall
+        open={paywallOpen}
+        onClose={() => setPaywallOpen(false)}
+        action={paywallAction}
+        currentUsage={planCapabilities?.usage.scriptsThisWeek}
+        limit={planCapabilities?.limits.weeklyScripts}
+        daysUntilReset={daysUntilWeekReset(timezone)}
+        context="brainstorm"
+      />
     </DndContext>
   );
 };

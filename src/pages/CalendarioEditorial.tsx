@@ -11,6 +11,7 @@ import { YouTubeGalleryView } from "@/components/calendar/YouTubeGalleryView";
 import { ProductionBoardView } from "@/components/calendar/ProductionBoardView";
 import { PublicationBoardView } from "@/components/calendar/PublicationBoardView";
 import { RescheduleDateModal } from "@/components/calendar/RescheduleDateModal";
+import { Paywall, PaywallAction } from "@/components/Paywall";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useDeviceType } from "@/hooks/useDeviceType";
@@ -23,6 +24,10 @@ import { useStuckContent } from "@/hooks/useStuckContent";
 import { StuckContentPopup } from "@/components/StuckContentPopup";
 import { PublishStatus } from "@/components/calendar/PublishStatusBadge";
 import { useWorkspaceContext } from "@/contexts/WorkspaceContext";
+import { usePlanCapabilitiesOptional } from "@/contexts/PlanContext";
+import { useProfileContext } from "@/contexts/ProfileContext";
+import { useAnalytics } from "@/hooks/useAnalytics";
+import { daysUntilWeekReset } from "@/lib/timezone-utils";
 
 interface Script {
   id: string;
@@ -48,7 +53,11 @@ const CalendarioEditorial = () => {
   const { toast } = useToast();
   const deviceType = useDeviceType();
   const { activeWorkspace } = useWorkspaceContext();
+  const { profile } = useProfileContext();
+  const planCapabilities = usePlanCapabilitiesOptional();
+  const { trackEvent } = useAnalytics();
   const isIdeationMode = searchParams.get("mode") === "ideation";
+  const timezone = profile?.timezone || 'America/Sao_Paulo';
   
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<"month" | "week">("month");
@@ -64,6 +73,8 @@ const CalendarioEditorial = () => {
   const [filtersExpanded, setFiltersExpanded] = useState(false);
   const [rescheduleScriptId, setRescheduleScriptId] = useState<string | null>(null);
   const [rescheduleModalOpen, setRescheduleModalOpen] = useState(false);
+  const [paywallOpen, setPaywallOpen] = useState(false);
+  const [paywallAction, setPaywallAction] = useState<PaywallAction>('create_script');
   
   const isMobile = deviceType === 'mobile';
   const hasActiveFilters = contentTypeFilter !== "all" || stageFilter !== "all";
@@ -260,6 +271,20 @@ const CalendarioEditorial = () => {
 
     const newPublishDate = format(targetDate, "yyyy-MM-dd");
     
+    // Verificar limite de agendamento futuro
+    if (planCapabilities && !planCapabilities.canScheduleToDate(newPublishDate)) {
+      trackEvent('paywall_triggered', {
+        action: 'schedule_future',
+        plan: planCapabilities.planType,
+        target_date: newPublishDate,
+        context: 'calendario_drag',
+      });
+      setPaywallAction('schedule_future');
+      setPaywallOpen(true);
+      setDraggedScript(null);
+      return;
+    }
+    
     // Atualizar imediatamente a interface
     const updatedScripts = scripts.map(s => 
       s.id === draggedScript.id 
@@ -303,6 +328,33 @@ const CalendarioEditorial = () => {
   const handleAddScript = async (date: Date) => {
     console.log('[CalendarioEditorial] handleAddScript called with date:', date);
     const publishDate = format(date, "yyyy-MM-dd");
+    
+    // Verificar limite semanal de criação
+    if (planCapabilities && !planCapabilities.canCreateScript()) {
+      trackEvent('paywall_triggered', {
+        action: 'create_script',
+        plan: planCapabilities.planType,
+        usage: planCapabilities.usage.scriptsThisWeek,
+        limit: planCapabilities.limits.weeklyScripts,
+        context: 'calendario',
+      });
+      setPaywallAction('create_script');
+      setPaywallOpen(true);
+      return;
+    }
+    
+    // Verificar limite de agendamento futuro
+    if (planCapabilities && !planCapabilities.canScheduleToDate(publishDate)) {
+      trackEvent('paywall_triggered', {
+        action: 'schedule_future',
+        plan: planCapabilities.planType,
+        target_date: publishDate,
+        context: 'calendario',
+      });
+      setPaywallAction('schedule_future');
+      setPaywallOpen(true);
+      return;
+    }
     
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -873,6 +925,17 @@ const CalendarioEditorial = () => {
         onSelectDate={handleRescheduleConfirm}
         title="Reagendar conteúdo"
         description="Escolha uma nova data de publicação"
+      />
+      
+      {/* Paywall */}
+      <Paywall
+        open={paywallOpen}
+        onClose={() => setPaywallOpen(false)}
+        action={paywallAction}
+        currentUsage={planCapabilities?.usage.scriptsThisWeek}
+        limit={planCapabilities?.limits.weeklyScripts}
+        daysUntilReset={daysUntilWeekReset(timezone)}
+        context="calendario"
       />
     </div>
   );

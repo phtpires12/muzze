@@ -95,6 +95,36 @@ export type Database = {
         }
         Relationships: []
       }
+      plan_limits: {
+        Row: {
+          can_invite_users: boolean | null
+          can_schedule_future: boolean | null
+          cards_per_content: number
+          created_at: string | null
+          max_guests: number | null
+          plan_type: string
+          weekly_scripts: number
+        }
+        Insert: {
+          can_invite_users?: boolean | null
+          can_schedule_future?: boolean | null
+          cards_per_content: number
+          created_at?: string | null
+          max_guests?: number | null
+          plan_type: string
+          weekly_scripts: number
+        }
+        Update: {
+          can_invite_users?: boolean | null
+          can_schedule_future?: boolean | null
+          cards_per_content?: number
+          created_at?: string | null
+          max_guests?: number | null
+          plan_type?: string
+          weekly_scripts?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -106,6 +136,7 @@ export type Database = {
           min_streak_minutes: number | null
           notifications_enabled: boolean | null
           onboarding_data: Json | null
+          plan_type: string
           preferred_platform: string | null
           preferred_session_minutes: number | null
           reminder_time: string | null
@@ -126,6 +157,7 @@ export type Database = {
           min_streak_minutes?: number | null
           notifications_enabled?: boolean | null
           onboarding_data?: Json | null
+          plan_type?: string
           preferred_platform?: string | null
           preferred_session_minutes?: number | null
           reminder_time?: string | null
@@ -146,6 +178,7 @@ export type Database = {
           min_streak_minutes?: number | null
           notifications_enabled?: boolean | null
           onboarding_data?: Json | null
+          plan_type?: string
           preferred_platform?: string | null
           preferred_session_minutes?: number | null
           reminder_time?: string | null
