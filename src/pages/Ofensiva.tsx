@@ -576,11 +576,19 @@ const Ofensiva = () => {
 
             {/* Dias do mês */}
             {monthDays.map(day => {
-              const dayKey = format(day, 'yyyy-MM-dd');
+              // CORREÇÃO: Usar getDayKey com timezone do usuário para consistência
+              const userTimezone = profile?.timezone || 'America/Sao_Paulo';
+              const dayKey = getDayKey(day, userTimezone);
               const dayNumber = format(day, 'd');
               const progress = dayProgressMap.get(dayKey);
               const minutes = progress?.minutes || 0;
-              const freezeUsed = freezeDays.some(d => isSameDay(d, day));
+              
+              // CORREÇÃO: Comparar freezes por dayKey, não por isSameDay
+              const freezeUsed = freezeDays.some(freezeDate => {
+                const freezeDayKey = getDayKey(freezeDate, userTimezone);
+                return freezeDayKey === dayKey;
+              });
+              
               const isDayFuture = isFuture(day) && !isToday(day);
               const isDayToday = isToday(day);
               
