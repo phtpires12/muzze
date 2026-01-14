@@ -23,6 +23,7 @@ interface UseWorkspaceReturn {
   updateMemberPermissions: (memberId: string, permissions: StagePermissions) => Promise<boolean>;
   cancelInvite: (inviteId: string) => Promise<boolean>;
   resendInvite: (inviteId: string) => Promise<boolean>;
+  createWorkspace: (name: string) => Promise<{ success: boolean; limitReached?: boolean; workspaceId?: string }>;
   refetch: () => Promise<void>;
 }
 
