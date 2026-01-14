@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { MAX_STREAK_FREEZES } from '@/lib/gamification';
+import { getTodayKey, getYesterdayKey, diffDays } from '@/lib/timezone-utils';
 
 interface LostDaysResult {
   hasLostDays: boolean;
@@ -74,13 +75,12 @@ export const useStreakValidator = ({
       const timezone = userProfile.timezone || 'America/Sao_Paulo';
       const availableFreezes = userProfile.streak_freezes || 0;
 
-      // Get today's date in user's timezone
-      const now = new Date();
-      const userDate = new Date(now.toLocaleString('en-US', { timeZone: timezone }));
-      const today = userDate.toISOString().split('T')[0];
-
+      // Usar utilitários centrais de timezone
+      const todayKey = getTodayKey(timezone);
       const lastEventDate = streak.last_event_date;
       
+      console.log(`[useStreakValidator] timezone: ${timezone}, todayKey: ${todayKey}, lastEventDate: ${lastEventDate}`);
+
       // If no last event, no days lost (fresh user)
       if (!lastEventDate) {
         setResult({
@@ -98,15 +98,13 @@ export const useStreakValidator = ({
         return;
       }
 
-      // Calculate days between last event and today
-      const lastDate = new Date(lastEventDate + 'T12:00:00');
-      const todayDate = new Date(today + 'T12:00:00');
-      
-      const diffTime = todayDate.getTime() - lastDate.getTime();
-      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      // Calculate days between last event and today usando utilitários de timezone
+      const daysDiff = diffDays(lastEventDate, todayKey);
+
+      console.log(`[useStreakValidator] daysDiff: ${daysDiff} (lastEventDate: ${lastEventDate}, todayKey: ${todayKey})`);
 
       // If last event was today or yesterday, no lost days
-      if (diffDays <= 1) {
+      if (daysDiff <= 1) {
         setResult({
           hasLostDays: false,
           lostDaysCount: 0,
@@ -123,7 +121,7 @@ export const useStreakValidator = ({
       }
 
       // Lost days = days between last event and yesterday (not counting today)
-      const lostDaysCount = diffDays - 1;
+      const lostDaysCount = daysDiff - 1;
       const canUseFreeze = availableFreezes >= lostDaysCount && lostDaysCount > 0;
 
       // Detect if streak was already reset by cron job
@@ -191,25 +189,28 @@ export const useStreakValidator = ({
       }
 
       const timezone = userProfile.timezone || 'America/Sao_Paulo';
-      const now = new Date();
-      const userDate = new Date(now.toLocaleString('en-US', { timeZone: timezone }));
 
-      // Validar lastEventDate antes de criar Date
+      // Validar lastEventDate antes de usar
       const lastEventDateStr = result.lastEventDate;
-      const lastEventDate = new Date(lastEventDateStr + 'T12:00:00');
-      if (isNaN(lastEventDate.getTime())) {
-        console.error('[useFreezesToRecover] Invalid lastEventDate:', lastEventDateStr);
+      if (!lastEventDateStr) {
+        console.error('[useFreezesToRecover] lastEventDate is null after re-check');
         return false;
       }
       
-      // Insert freeze usage for each lost day
+      // Insert freeze usage for each lost day usando dayKeys
+      const [ly, lm, ld] = lastEventDateStr.split('-').map(Number);
+      const lastEventDate = new Date(ly, lm - 1, ld, 12, 0, 0);
+      
       for (let i = 1; i <= result.lostDaysCount; i++) {
         const freezeDate = new Date(lastEventDate);
         freezeDate.setDate(freezeDate.getDate() + i);
-
+        
+        // Gravar como meia-noite UTC do dia em questão na timezone do usuário
+        const freezeDayKey = `${freezeDate.getFullYear()}-${String(freezeDate.getMonth() + 1).padStart(2, '0')}-${String(freezeDate.getDate()).padStart(2, '0')}`;
+        
         await supabase.from('streak_freeze_usage').insert({
           user_id: user.id,
-          used_at: freezeDate.toISOString(),
+          used_at: new Date(`${freezeDayKey}T12:00:00Z`).toISOString(),
         });
       }
 
@@ -220,10 +221,8 @@ export const useStreakValidator = ({
         .update({ streak_freezes: Math.max(0, newFreezeCount) })
         .eq('user_id', user.id);
 
-      // Update last_event_date to yesterday (so next session counts as continuation)
-      const yesterday = new Date(userDate);
-      yesterday.setDate(yesterday.getDate() - 1);
-      const yesterdayStr = yesterday.toISOString().split('T')[0];
+      // Update last_event_date to yesterday (usando timezone utils)
+      const yesterdayKey = getYesterdayKey(timezone);
 
       // If streak was reset by cron, restore it; otherwise just update last_event_date
       if (result.wasRecentlyReset) {
@@ -231,13 +230,13 @@ export const useStreakValidator = ({
           .from('streaks')
           .update({ 
             current_streak: result.originalStreak,
-            last_event_date: yesterdayStr 
+            last_event_date: yesterdayKey 
           })
           .eq('user_id', user.id);
       } else {
         await supabase
           .from('streaks')
-          .update({ last_event_date: yesterdayStr })
+          .update({ last_event_date: yesterdayKey })
           .eq('user_id', user.id);
       }
 
