@@ -272,6 +272,7 @@ export const PlanContextProvider = ({ children }: { children: ReactNode }) => {
     limits,
     usage,
     loading,
+    isInternalTester,
     canCreateScript,
     canScheduleToDate,
     remainingWeeklySlots,
@@ -282,6 +283,7 @@ export const PlanContextProvider = ({ children }: { children: ReactNode }) => {
     getExtraWorkspacesPacks,
     getBlockReason,
     refetchUsage: fetchUsage,
+    setSimulatedPlan,
   };
 
   return (

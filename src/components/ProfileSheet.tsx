@@ -228,8 +228,8 @@ export const ProfileSheet = ({ onClose }: ProfileSheetProps) => {
             );
           })}
 
-          {/* Create Workspace Button - Only for Studio users */}
-          {canCreateWorkspace && (
+          {/* Create Workspace Button - Pro and Studio users */}
+          {canSeeCreateWorkspace && (
             <button
               onClick={handleCreateWorkspaceClick}
               className="w-full flex items-center gap-3 p-3 rounded-lg border-2 border-dashed border-border/70 hover:border-primary/50 hover:bg-primary/5 transition-colors text-muted-foreground hover:text-primary"
