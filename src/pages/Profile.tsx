@@ -28,6 +28,7 @@ const Profile = () => {
   const navigate = useNavigate();
   const { profile } = useProfile();
   const { isDeveloper, isAdmin } = useUserRole();
+  const planCapabilities = usePlanCapabilities();
   const { activeWorkspace, activeRole, isLoading: workspaceLoading, refetch } = useWorkspaceContext();
   const [userEmail, setUserEmail] = useState<string>("");
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
