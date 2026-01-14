@@ -38,6 +38,8 @@ import {
 import { toast } from "sonner";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useWorkspaceContext } from "@/contexts/WorkspaceContext";
+import { usePlanCapabilitiesOptional } from "@/contexts/PlanContext";
+import { Paywall, PaywallAction } from "@/components/Paywall";
 import { StagePermissions, WorkspaceInvite, CreativeStage } from "@/types/workspace";
 import { MemberPermissionsModal } from "@/components/workspace/MemberPermissionsModal";
 import { format, differenceInDays, differenceInHours } from "date-fns";
