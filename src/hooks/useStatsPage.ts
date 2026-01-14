@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface StageBreakdown {
@@ -44,7 +44,7 @@ interface GamificationStats {
   trophies: string[];
 }
 
-interface StatsPageData {
+interface StatsPageState {
   weeklyData: WeeklyData[];
   totalSessions: number;
   totalHours: number;
@@ -60,13 +60,17 @@ interface StatsPageData {
   loading: boolean;
 }
 
+interface StatsPageData extends StatsPageState {
+  refetch: () => Promise<void>;
+}
+
 interface UseStatsPageParams {
   effectiveLevel: number;
   goalMinutes: number;
 }
 
 export const useStatsPage = ({ effectiveLevel, goalMinutes }: UseStatsPageParams): StatsPageData => {
-  const [data, setData] = useState<StatsPageData>({
+  const [data, setData] = useState<StatsPageState>({
     weeklyData: [],
     totalSessions: 0,
     totalHours: 0,
@@ -99,11 +103,8 @@ export const useStatsPage = ({ effectiveLevel, goalMinutes }: UseStatsPageParams
     loading: true,
   });
 
-  useEffect(() => {
-    fetchAllData();
-  }, []);
-
-  const fetchAllData = async () => {
+  const fetchAllData = useCallback(async () => {
+    setData(prev => ({ ...prev, loading: true }));
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -338,7 +339,11 @@ export const useStatsPage = ({ effectiveLevel, goalMinutes }: UseStatsPageParams
       console.error('Error fetching stats:', error);
       setData(prev => ({ ...prev, loading: false }));
     }
-  };
+  }, [goalMinutes, effectiveLevel]);
 
-  return data;
+  useEffect(() => {
+    fetchAllData();
+  }, [fetchAllData]);
+
+  return { ...data, refetch: fetchAllData };
 };
