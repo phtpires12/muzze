@@ -78,6 +78,7 @@ const GuestsSkeleton = () => (
 const Guests = () => {
   const navigate = useNavigate();
   const { activeRole, isLoading: contextLoading } = useWorkspaceContext();
+  const planCapabilities = usePlanCapabilitiesOptional();
   const { 
     members, 
     invites, 
@@ -97,8 +98,34 @@ const Guests = () => {
   const [isInviting, setIsInviting] = useState(false);
   const [resendingId, setResendingId] = useState<string | null>(null);
   const [editingMember, setEditingMember] = useState<ActiveMember | null>(null);
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [paywallAction, setPaywallAction] = useState<PaywallAction>('invite_user');
   
   const isLoading = contextLoading || workspaceLoading;
+  
+  // Plan-based limits
+  const maxGuests = planCapabilities?.limits.maxGuests ?? workspace?.max_guests ?? 3;
+  const canInviteUsers = planCapabilities?.limits.canInviteUsers ?? true;
+  const totalGuests = members.length + invites.length;
+
+  // Handler for invite button click - check plan limits first
+  const handleInviteClick = () => {
+    // Check if plan allows inviting users
+    if (!canInviteUsers) {
+      setPaywallAction('invite_user');
+      setShowPaywall(true);
+      return;
+    }
+    
+    // Check guest limit
+    if (totalGuests >= maxGuests) {
+      setPaywallAction('invite_guest_limit');
+      setShowPaywall(true);
+      return;
+    }
+    
+    setShowInviteModal(true);
+  };
   
   // Verificar permissão (apenas owner/admin podem acessar)
   useEffect(() => {
