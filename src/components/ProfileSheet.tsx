@@ -62,14 +62,21 @@ export const ProfileSheet = ({ onClose }: ProfileSheetProps) => {
   };
 
   const getSubscriptionStatus = () => {
-    const planType = planCapabilities?.planType || 'free';
+    // IMPORTANT: No fallback here - if planCapabilities is null/loading, we handle it in render
+    if (!planCapabilities || planCapabilities.isLoading) {
+      return { label: null, variant: 'secondary' as const, color: 'text-muted-foreground', isLoading: true };
+    }
+    if (planCapabilities.planError) {
+      return { label: 'Erro', variant: 'destructive' as const, color: 'text-destructive', isLoading: false };
+    }
+    const planType = planCapabilities.planType;
     switch (planType) {
       case 'studio':
-        return { label: 'Studio', variant: 'default' as const, color: 'text-violet-600' };
+        return { label: 'Studio', variant: 'default' as const, color: 'text-violet-600', isLoading: false };
       case 'pro':
-        return { label: 'Pro', variant: 'default' as const, color: 'text-amber-600' };
+        return { label: 'Pro', variant: 'default' as const, color: 'text-amber-600', isLoading: false };
       default:
-        return { label: 'Free', variant: 'secondary' as const, color: 'text-muted-foreground' };
+        return { label: 'Free', variant: 'secondary' as const, color: 'text-muted-foreground', isLoading: false };
     }
   };
 

@@ -1,14 +1,11 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Flame, Trophy, Navigation, Trash2, RotateCcw, Wrench, Timer, Calendar, Search, Copy, Database, Check } from "lucide-react";
+import { ArrowLeft, Flame, Trophy, Navigation, Trash2, RotateCcw, Wrench, Timer, Calendar, Search, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useStreakCelebration } from "@/hooks/useStreakCelebration";
-import { usePlanCapabilities } from "@/contexts/PlanContext";
 import { StreakCelebration } from "@/components/StreakCelebration";
 import { TrophyCelebration } from "@/components/TrophyCelebration";
 import { TROPHIES } from "@/lib/gamification";
@@ -16,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { DraggableSessionTimer } from "@/components/DraggableSessionTimer";
 import { PostConfirmationPopup } from "@/components/calendar/PostConfirmationPopup";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { AdminPlanSwitcher } from "@/components/dev/AdminPlanSwitcher";
 
 const DevTools = () => {
   const navigate = useNavigate();
