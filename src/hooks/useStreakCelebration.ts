@@ -94,12 +94,13 @@ export const useStreakCelebration = () => {
           continue;
         }
 
+        // CORREÇÃO: Usar started_at em vez de created_at para determinar "qual dia" a sessão pertence
         const { data: sessions } = await supabase
           .from('stage_times')
-          .select('duration_seconds')
+          .select('duration_seconds, started_at')
           .eq('user_id', userId)
-          .gte('created_at', startUTC.toISOString())
-          .lte('created_at', endUTC.toISOString());
+          .gte('started_at', startUTC.toISOString())
+          .lte('started_at', endUTC.toISOString());
 
         const totalMinutes = sessions?.reduce((sum, s) => sum + (s.duration_seconds || 0), 0) / 60 || 0;
 

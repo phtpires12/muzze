@@ -92,20 +92,21 @@ const Ofensiva = () => {
       monthEndUTC: monthEndUTC.toISOString(),
     });
 
+    // CORREÇÃO: Usar started_at em vez de created_at para determinar "qual dia" a sessão pertence
     const { data: sessions } = await supabase
       .from('stage_times')
-      .select('created_at, duration_seconds')
+      .select('started_at, duration_seconds')
       .eq('user_id', user.id)
-      .gte('created_at', monthStartUTC.toISOString())
-      .lte('created_at', monthEndUTC.toISOString());
+      .gte('started_at', monthStartUTC.toISOString())
+      .lte('started_at', monthEndUTC.toISOString());
 
-    // Agrupar sessions por dayKey na timezone do usuário
+    // Agrupar sessions por dayKey na timezone do usuário usando started_at
     const dayMap = new Map<string, number>();
     sessions?.forEach(session => {
-      if (!session.created_at) return;
+      if (!session.started_at) return;
       
-      // Usar getDayKey para consistência de timezone
-      const sessionDate = new Date(session.created_at);
+      // Usar getDayKey com started_at para consistência de timezone
+      const sessionDate = new Date(session.started_at);
       const dayKey = getDayKey(sessionDate, userTimezone);
       
       const minutes = (session.duration_seconds || 0) / 60;
