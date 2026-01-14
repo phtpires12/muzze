@@ -238,8 +238,6 @@ const Guests = () => {
     };
   };
 
-  const maxGuests = workspace?.max_guests || 3;
-  const totalGuests = activeMembers.length + invites.length;
 
   if (isLoading) {
     return <GuestsSkeleton />;
