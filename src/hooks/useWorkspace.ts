@@ -344,6 +344,79 @@ export const useWorkspace = (): UseWorkspaceReturn => {
     }
   };
 
+  // Create a new workspace (for Studio plan users)
+  const createWorkspace = async (name: string): Promise<{ success: boolean; limitReached?: boolean; workspaceId?: string }> => {
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) {
+        toast.error('Usuário não autenticado');
+        return { success: false };
+      }
+
+      // Count current owned workspaces
+      const { data: ownedWorkspaces, error: countError } = await supabase
+        .from('workspaces')
+        .select('id')
+        .eq('owner_id', userData.user.id);
+
+      if (countError) {
+        console.error('Error counting workspaces:', countError);
+        toast.error('Erro ao verificar limite');
+        return { success: false };
+      }
+
+      const currentCount = ownedWorkspaces?.length || 0;
+
+      // Get user's plan limits
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('plan_type, extra_workspaces_packs, is_internal_tester')
+        .eq('user_id', userData.user.id)
+        .single();
+
+      const planType = profile?.is_internal_tester ? 'studio' : (profile?.plan_type || 'free');
+      const extraPacks = profile?.extra_workspaces_packs || 0;
+
+      const { data: planLimits } = await supabase
+        .from('plan_limits')
+        .select('max_workspaces')
+        .eq('plan_type', planType)
+        .single();
+
+      const baseLimit = planLimits?.max_workspaces || 1;
+      const totalLimit = baseLimit + (extraPacks * 5);
+
+      // Check limit
+      if (currentCount >= totalLimit) {
+        return { success: false, limitReached: true };
+      }
+
+      // Create workspace
+      const { data: newWorkspace, error: createError } = await supabase
+        .from('workspaces')
+        .insert({
+          owner_id: userData.user.id,
+          name: name.trim() || 'Novo Workspace',
+        })
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('Error creating workspace:', createError);
+        toast.error('Erro ao criar workspace');
+        return { success: false };
+      }
+
+      toast.success('Workspace criado com sucesso!');
+      await fetchWorkspace();
+      return { success: true, workspaceId: newWorkspace.id };
+    } catch (error) {
+      console.error('Error creating workspace:', error);
+      toast.error('Erro ao criar workspace');
+      return { success: false };
+    }
+  };
+
   return {
     workspace,
     myRole,
@@ -357,6 +430,7 @@ export const useWorkspace = (): UseWorkspaceReturn => {
     updateMemberPermissions,
     cancelInvite,
     resendInvite,
+    createWorkspace,
     refetch: fetchWorkspace,
   };
 };
