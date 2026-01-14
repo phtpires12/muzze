@@ -82,31 +82,39 @@ export const PlanContextProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   // Fetch profile data directly with explicit field selection
-  useEffect(() => {
-    const fetchProfileData = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      
-      // Query with explicit field selection and type casting
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('user_id, plan_type, is_internal_tester, extra_workspaces_packs, timezone')
-        .eq('user_id', user.id)
-        .maybeSingle();
-      
-      if (error) {
-        console.error('Error fetching profile for plan context:', error);
-        return;
-      }
-      
-      if (data) {
-        // Cast to our interface since types.ts might not have these fields yet
-        setProfileData(data as unknown as ProfileWithPlanFields);
-      }
-    };
+  const fetchProfileData = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
     
-    fetchProfileData();
+    // Query with explicit field selection and type casting
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('user_id, plan_type, is_internal_tester, extra_workspaces_packs, timezone')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    
+    if (error) {
+      console.error('[PlanContext] Error fetching profile:', error);
+      return;
+    }
+    
+    if (data) {
+      // DEBUG LOG - mostra exatamente o que vem do banco
+      console.log('[PlanContext] 🔍 Profile data from DB:', {
+        plan_type: (data as any).plan_type,
+        is_internal_tester: (data as any).is_internal_tester,
+        extra_workspaces_packs: (data as any).extra_workspaces_packs,
+        raw: data
+      });
+      
+      // Cast to our interface since types.ts might not have these fields yet
+      setProfileData(data as unknown as ProfileWithPlanFields);
+    }
   }, []);
+  
+  useEffect(() => {
+    fetchProfileData();
+  }, [fetchProfileData]);
   
   // Determinar planType com override para internal testers e simulação
   const rawPlanType = (profileData?.plan_type || 'free') as 'free' | 'pro' | 'studio';
