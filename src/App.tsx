@@ -10,11 +10,15 @@ import { CelebrationContextProvider } from "@/contexts/CelebrationContext";
 import { ProfileContextProvider } from "@/contexts/ProfileContext";
 import { GlobalCelebrations } from "@/components/GlobalCelebrations";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { setupGlobalErrorHandlers } from "@/lib/error-logger";
 import Onboarding from "./pages/NewOnboarding";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+
+// Initialize global error handlers
+setupGlobalErrorHandlers();
 import Index from "./pages/Index";
 import Stats from "./pages/Stats";
 import Novidades from "./pages/Novidades";
