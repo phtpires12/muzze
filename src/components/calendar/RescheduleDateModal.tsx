@@ -11,6 +11,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { usePlanCapabilitiesOptional } from "@/contexts/PlanContext";
+import { isDateInCurrentWeek } from "@/lib/timezone-utils";
 
 interface RescheduleDateModalProps {
   open: boolean;
@@ -28,6 +30,22 @@ export const RescheduleDateModal = ({
   description = "Escolha uma nova data de publicação"
 }: RescheduleDateModalProps) => {
   const [date, setDate] = useState<Date>();
+  const planCapabilities = usePlanCapabilitiesOptional();
+  
+  // For Free plan, calculate which dates to disable (outside current week)
+  const disableDateForFreePlan = (dateToCheck: Date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    // Always disable past dates
+    if (dateToCheck < today) return true;
+    // If Free plan, disable dates outside current week
+    if (planCapabilities?.planType === 'free') {
+      const dateKey = format(dateToCheck, 'yyyy-MM-dd');
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Sao_Paulo';
+      return !isDateInCurrentWeek(dateKey, tz);
+    }
+    return false;
+  };
 
   const handleConfirm = () => {
     if (date) {
@@ -58,7 +76,7 @@ export const RescheduleDateModal = ({
             locale={ptBR}
             initialFocus
             className="pointer-events-auto"
-            disabled={(date) => date < new Date()}
+            disabled={disableDateForFreePlan}
           />
         </div>
         <DialogFooter>

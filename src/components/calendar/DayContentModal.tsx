@@ -14,6 +14,9 @@ import { useState } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { usePlanCapabilitiesOptional } from "@/contexts/PlanContext";
+import { Paywall } from "@/components/Paywall";
+import { isDateInCurrentWeek } from "@/lib/timezone-utils";
 
 interface Script {
   id: string;
@@ -94,6 +97,9 @@ function IdeaCard({
   const { toast } = useToast();
   const [showReschedule, setShowReschedule] = useState(false);
   const [rescheduleDate, setRescheduleDate] = useState<Date | undefined>(undefined);
+  const [showPaywall, setShowPaywall] = useState(false);
+  
+  const planCapabilities = usePlanCapabilitiesOptional();
 
   const isPosted = script.publish_status === "postado";
   const isLost = script.publish_status === "perdido";
@@ -154,6 +160,13 @@ function IdeaCard({
 
   const handleReschedule = async () => {
     if (!rescheduleDate) return;
+    
+    // Check plan limits for future dates
+    const targetDateKey = format(rescheduleDate, 'yyyy-MM-dd');
+    if (planCapabilities && !planCapabilities.canScheduleToDate(targetDateKey)) {
+      setShowPaywall(true);
+      return;
+    }
 
     try {
       await supabase
@@ -185,7 +198,28 @@ function IdeaCard({
   const stageLabel = getStageLabel(script);
   const cardBackground = getCardBackground(script);
 
+  // For Free plan, calculate which dates to disable (outside current week)
+  const disableDateForFreePlan = (date: Date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    // Always disable past dates
+    if (date < today) return true;
+    // If Free plan, disable dates outside current week
+    if (planCapabilities?.planType === 'free') {
+      const dateKey = format(date, 'yyyy-MM-dd');
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Sao_Paulo';
+      return !isDateInCurrentWeek(dateKey, tz);
+    }
+    return false;
+  };
+
   return (
+    <>
+      <Paywall
+        open={showPaywall}
+        onClose={() => setShowPaywall(false)}
+        action="schedule_future"
+      />
     <div className={cn(
       "p-4 rounded-lg border border-border space-y-3",
       cardBackground || "bg-card"
@@ -303,7 +337,7 @@ function IdeaCard({
                       mode="single"
                       selected={rescheduleDate}
                       onSelect={setRescheduleDate}
-                      disabled={(date) => date < new Date()}
+                      disabled={disableDateForFreePlan}
                       initialFocus
                       className="pointer-events-auto"
                     />
@@ -347,6 +381,7 @@ function IdeaCard({
         )}
       </div>
     </div>
+    </>
   );
 }
 
