@@ -102,6 +102,7 @@ export type Database = {
           cards_per_content: number
           created_at: string | null
           max_guests: number | null
+          max_workspaces: number
           plan_type: string
           weekly_scripts: number
         }
@@ -111,6 +112,7 @@ export type Database = {
           cards_per_content: number
           created_at?: string | null
           max_guests?: number | null
+          max_workspaces?: number
           plan_type: string
           weekly_scripts: number
         }
@@ -120,6 +122,7 @@ export type Database = {
           cards_per_content?: number
           created_at?: string | null
           max_guests?: number | null
+          max_workspaces?: number
           plan_type?: string
           weekly_scripts?: number
         }
@@ -131,8 +134,10 @@ export type Database = {
           created_at: string | null
           current_workflow: string | null
           daily_goal_minutes: number | null
+          extra_workspaces_packs: number | null
           first_login: boolean | null
           highest_level: number | null
+          is_internal_tester: boolean | null
           min_streak_minutes: number | null
           notifications_enabled: boolean | null
           onboarding_data: Json | null
@@ -152,8 +157,10 @@ export type Database = {
           created_at?: string | null
           current_workflow?: string | null
           daily_goal_minutes?: number | null
+          extra_workspaces_packs?: number | null
           first_login?: boolean | null
           highest_level?: number | null
+          is_internal_tester?: boolean | null
           min_streak_minutes?: number | null
           notifications_enabled?: boolean | null
           onboarding_data?: Json | null
@@ -173,8 +180,10 @@ export type Database = {
           created_at?: string | null
           current_workflow?: string | null
           daily_goal_minutes?: number | null
+          extra_workspaces_packs?: number | null
           first_login?: boolean | null
           highest_level?: number | null
+          is_internal_tester?: boolean | null
           min_streak_minutes?: number | null
           notifications_enabled?: boolean | null
           onboarding_data?: Json | null
@@ -541,6 +550,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_set_plan_type: {
+        Args: { new_plan: string; target_user: string }
+        Returns: undefined
+      }
       can_edit_stage: {
         Args: { _stage: string; _user_id: string; _workspace_id: string }
         Returns: boolean

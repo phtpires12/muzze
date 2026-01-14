@@ -10,6 +10,9 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
   },
+  define: {
+    'import.meta.env.VITE_BUILD_TIMESTAMP': JSON.stringify(new Date().toISOString()),
+  },
   plugins: [
     react(),
     mode === "development" && componentTagger(),
@@ -50,6 +53,10 @@ export default defineConfig(({ mode }) => ({
         globIgnores: ["**/muzze-favicon.png"],
         importScripts: ["/firebase-messaging-sw.js"],
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // 3 MB limit
+        // Force update strategy
+        skipWaiting: true,
+        clientsClaim: true,
+        cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
