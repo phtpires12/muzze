@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { getEffectiveLevel, getDailyGoalMinutesForLevel } from "@/lib/gamification";
 
 interface StageBreakdown {
   ideation: number;
@@ -61,29 +60,12 @@ interface StatsPageData {
   loading: boolean;
 }
 
-const XP_LEVELS = [
-  { level: 1, xpRequired: 0 },
-  { level: 2, xpRequired: 100 },
-  { level: 3, xpRequired: 250 },
-  { level: 4, xpRequired: 500 },
-  { level: 5, xpRequired: 1000 },
-  { level: 6, xpRequired: 2000 },
-  { level: 7, xpRequired: 3500 },
-  { level: 8, xpRequired: 5500 },
-  { level: 9, xpRequired: 8000 },
-  { level: 10, xpRequired: 12000 },
-];
+interface UseStatsPageParams {
+  effectiveLevel: number;
+  goalMinutes: number;
+}
 
-const calculateLevelFromXP = (xp: number): number => {
-  for (let i = XP_LEVELS.length - 1; i >= 0; i--) {
-    if (xp >= XP_LEVELS[i].xpRequired) {
-      return XP_LEVELS[i].level;
-    }
-  }
-  return 1;
-};
-
-export const useStatsPage = (): StatsPageData => {
+export const useStatsPage = ({ effectiveLevel, goalMinutes }: UseStatsPageParams): StatsPageData => {
   const [data, setData] = useState<StatsPageData>({
     weeklyData: [],
     totalSessions: 0,
@@ -219,9 +201,8 @@ export const useStatsPage = (): StatsPageData => {
       const profile = profileResult.data;
       const xpPoints = profile?.xp_points || 0;
       
-      // Meta dinâmica baseada no nível efetivo
-      const effectiveLevel = getEffectiveLevel(xpPoints, profile?.highest_level || 1);
-      const dailyGoalMinutes = getDailyGoalMinutesForLevel(effectiveLevel);
+      // Usar goalMinutes passado como parâmetro (calculado pelo useProfileWithLevel)
+      const dailyGoalMinutes = goalMinutes;
       
       const streak = streakResult.data?.current_streak || 0;
       const allStageTimesForSum = allStageTimesSumResult.data || [];
@@ -344,7 +325,7 @@ export const useStatsPage = (): StatsPageData => {
         },
         gamificationStats: {
           xp: xpPoints,
-          level: calculateLevelFromXP(xpPoints),
+          level: effectiveLevel,
           streak,
           totalHours,
           scriptsCreated: scriptsCount,

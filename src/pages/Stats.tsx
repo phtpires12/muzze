@@ -3,9 +3,9 @@ import { StatCard } from "@/components/StatCard";
 import { Card } from "@/components/ui/card";
 import { useStatsPage } from "@/hooks/useStatsPage";
 import { useLiveDailyProgress } from "@/hooks/useLiveDailyProgress";
+import { useProfileWithLevel } from "@/hooks/useProfileWithLevel";
 import { TROPHIES } from "@/lib/gamification";
 import { Progress } from "@/components/ui/progress";
-import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { StatsPageSkeleton } from "@/components/stats/StatsPageSkeleton";
 import {
@@ -33,6 +33,8 @@ const formatTimeDisplay = (hours: number): string => {
 };
 
 const Stats = () => {
+  const { effectiveLevel, goalMinutes, loading: profileLoading } = useProfileWithLevel();
+  
   const {
     weeklyData,
     totalSessions,
@@ -42,8 +44,8 @@ const Stats = () => {
     dailyGoal,
     profile,
     gamificationStats,
-    loading,
-  } = useStatsPage();
+    loading: statsLoading,
+  } = useStatsPage({ effectiveLevel, goalMinutes });
   
   // Hook para progresso live durante sessão ativa
   const liveGoal = useLiveDailyProgress(dailyGoal.actualMinutes, dailyGoal.goalMinutes);
@@ -127,6 +129,8 @@ const Stats = () => {
   };
 
   const nextTrophies = getLockedTrophiesWithProgress();
+
+  const loading = profileLoading || statsLoading;
 
   if (loading) {
     return <StatsPageSkeleton />;
