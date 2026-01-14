@@ -37,6 +37,9 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { RichTextRenderer } from "@/components/ui/rich-text-renderer";
 import { PRODUCTION_COLUMNS } from "@/lib/kanban-columns";
+import { usePlanCapabilitiesOptional } from "@/contexts/PlanContext";
+import { Paywall } from "@/components/Paywall";
+import { isDateInCurrentWeek } from "@/lib/timezone-utils";
 
 interface Script {
   id: string;
@@ -133,6 +136,9 @@ export default function ContentView() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [resolvedUrls, setResolvedUrls] = useState<Map<string, string>>(new Map());
+  const [showPaywall, setShowPaywall] = useState(false);
+  
+  const planCapabilities = usePlanCapabilitiesOptional();
 
   // Fetch script data
   useEffect(() => {
@@ -275,6 +281,14 @@ export default function ContentView() {
 
   const handleDateChange = async (newDate: Date | undefined) => {
     if (!script || !newDate || isUpdating) return;
+    
+    // Check plan limits for future dates
+    const targetDateKey = format(newDate, 'yyyy-MM-dd');
+    if (planCapabilities && !planCapabilities.canScheduleToDate(targetDateKey)) {
+      setShowPaywall(true);
+      return;
+    }
+    
     setIsUpdating(true);
     setShowDatePicker(false);
     
@@ -332,7 +346,13 @@ export default function ContentView() {
   const isPosted = script.publish_status === "postado";
 
   return (
-    <div className="min-h-screen bg-background">
+    <>
+      <Paywall
+        open={showPaywall}
+        onClose={() => setShowPaywall(false)}
+        action="schedule_future"
+      />
+      <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="sticky top-0 z-10 border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
         <div 
@@ -615,5 +635,6 @@ export default function ContentView() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+    </>
   );
 }

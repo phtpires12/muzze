@@ -8,6 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useWorkspaceContext } from "@/contexts/WorkspaceContext";
+import { usePlanCapabilitiesOptional } from "@/contexts/PlanContext";
+import { Paywall } from "@/components/Paywall";
+import { getDayKey, isDateInCurrentWeek } from "@/lib/timezone-utils";
 import { ArrowRight } from "lucide-react";
 
 const CONTENT_TYPES = [
@@ -26,12 +29,15 @@ export const IdeaForm = ({ scriptId }: IdeaFormProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { activeWorkspace } = useWorkspaceContext();
+  const planCapabilities = usePlanCapabilitiesOptional();
   
   const [title, setTitle] = useState("");
   const [contentType, setContentType] = useState("");
   const [centralIdea, setCentralIdea] = useState("");
   const [referenceUrl, setReferenceUrl] = useState("");
   const [publishDate, setPublishDate] = useState<string | null>(null);
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [paywallAction, setPaywallAction] = useState<'create_script' | 'schedule_future'>('create_script');
   const [loading, setLoading] = useState(false);
   const [currentScriptId, setCurrentScriptId] = useState<string | undefined>(scriptId);
 
@@ -87,6 +93,20 @@ export const IdeaForm = ({ scriptId }: IdeaFormProps) => {
         description: "Preencha o tipo de conteúdo e a ideia central para continuar.",
         variant: "destructive",
       });
+      return;
+    }
+
+    // Check plan limits for new scripts
+    if (!currentScriptId && planCapabilities && !planCapabilities.canCreateScript()) {
+      setPaywallAction('create_script');
+      setShowPaywall(true);
+      return;
+    }
+
+    // Check if trying to schedule to a future date outside current week
+    if (publishDate && planCapabilities && !planCapabilities.canScheduleToDate(publishDate)) {
+      setPaywallAction('schedule_future');
+      setShowPaywall(true);
       return;
     }
 
@@ -151,6 +171,12 @@ export const IdeaForm = ({ scriptId }: IdeaFormProps) => {
   const canAdvance = contentType && centralIdea.trim();
 
   return (
+    <>
+      <Paywall
+        open={showPaywall}
+        onClose={() => setShowPaywall(false)}
+        action={paywallAction}
+      />
     <div className="max-w-3xl mx-auto space-y-6">
       <div className="space-y-2">
         <Label htmlFor="title">Título (opcional)</Label>
@@ -229,5 +255,6 @@ export const IdeaForm = ({ scriptId }: IdeaFormProps) => {
         <ArrowRight className="w-4 h-4 ml-2" />
       </Button>
     </div>
+    </>
   );
 };
