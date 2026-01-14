@@ -1,8 +1,15 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useProfileContext } from "@/contexts/ProfileContext";
 import { useWorkspaceContext } from "@/contexts/WorkspaceContext";
 import { getWeekBoundsUTC, getWeekStartKey, getWeekEndKey, daysUntilWeekReset, isDateInCurrentWeek } from "@/lib/timezone-utils";
+
+interface ProfileWithPlanFields {
+  user_id: string;
+  plan_type: string | null;
+  is_internal_tester: boolean | null;
+  extra_workspaces_packs: number | null;
+  timezone: string | null;
+}
 
 interface PlanLimits {
   weeklyScripts: number;      // -1 = ilimitado
@@ -25,6 +32,7 @@ interface PlanCapabilities {
   limits: PlanLimits;
   usage: PlanUsage;
   loading: boolean;
+  isInternalTester: boolean;
   
   // Funções de verificação
   canCreateScript: () => boolean;
@@ -43,6 +51,9 @@ interface PlanCapabilities {
   
   // Refetch após ações
   refetchUsage: () => Promise<void>;
+  
+  // Admin: simular plano
+  setSimulatedPlan: (plan: 'free' | 'pro' | 'studio' | null) => void;
 }
 
 const DEFAULT_LIMITS: PlanLimits = {
@@ -57,10 +68,10 @@ const DEFAULT_LIMITS: PlanLimits = {
 const PlanContext = createContext<PlanCapabilities | undefined>(undefined);
 
 export const PlanContextProvider = ({ children }: { children: ReactNode }) => {
-  const { profile } = useProfileContext();
-  const { allWorkspaces } = useWorkspaceContext();
-  const { activeWorkspace } = useWorkspaceContext();
+  const { allWorkspaces, activeWorkspace } = useWorkspaceContext();
   
+  const [profileData, setProfileData] = useState<ProfileWithPlanFields | null>(null);
+  const [simulatedPlan, setSimulatedPlan] = useState<'free' | 'pro' | 'studio' | null>(null);
   const [limits, setLimits] = useState<PlanLimits>(DEFAULT_LIMITS);
   const [usage, setUsage] = useState<PlanUsage>({
     scriptsThisWeek: 0,
@@ -69,14 +80,45 @@ export const PlanContextProvider = ({ children }: { children: ReactNode }) => {
     ownedWorkspacesCount: 0,
   });
   const [loading, setLoading] = useState(true);
+
+  // Fetch profile data directly with explicit field selection
+  useEffect(() => {
+    const fetchProfileData = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      
+      // Query with explicit field selection and type casting
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('user_id, plan_type, is_internal_tester, extra_workspaces_packs, timezone')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      
+      if (error) {
+        console.error('Error fetching profile for plan context:', error);
+        return;
+      }
+      
+      if (data) {
+        // Cast to our interface since types.ts might not have these fields yet
+        setProfileData(data as unknown as ProfileWithPlanFields);
+      }
+    };
+    
+    fetchProfileData();
+  }, []);
   
-  // Determinar planType com override para internal testers
-  const rawPlanType = profile?.plan_type || 'free';
-  const isInternalTester = profile?.is_internal_tester === true;
-  const planType = isInternalTester ? 'studio' : (rawPlanType as 'free' | 'pro' | 'studio');
+  // Determinar planType com override para internal testers e simulação
+  const rawPlanType = (profileData?.plan_type || 'free') as 'free' | 'pro' | 'studio';
+  const isInternalTester = profileData?.is_internal_tester === true;
   
-  const timezone = profile?.timezone || 'America/Sao_Paulo';
-  const extraWorkspacesPacks = profile?.extra_workspaces_packs || 0;
+  // Se está simulando, usa o plano simulado; se é tester sem simulação, usa studio; senão, usa o plano real
+  const planType = simulatedPlan 
+    ? simulatedPlan 
+    : (isInternalTester ? 'studio' : rawPlanType);
+  
+  const timezone = profileData?.timezone || 'America/Sao_Paulo';
+  const extraWorkspacesPacks = profileData?.extra_workspaces_packs || 0;
 
   // Fetch plan limits from database
   const fetchLimits = useCallback(async () => {
@@ -230,6 +272,7 @@ export const PlanContextProvider = ({ children }: { children: ReactNode }) => {
     limits,
     usage,
     loading,
+    isInternalTester,
     canCreateScript,
     canScheduleToDate,
     remainingWeeklySlots,
@@ -240,6 +283,7 @@ export const PlanContextProvider = ({ children }: { children: ReactNode }) => {
     getExtraWorkspacesPacks,
     getBlockReason,
     refetchUsage: fetchUsage,
+    setSimulatedPlan,
   };
 
   return (

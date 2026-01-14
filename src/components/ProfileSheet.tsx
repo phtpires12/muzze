@@ -159,7 +159,8 @@ export const ProfileSheet = ({ onClose }: ProfileSheetProps) => {
   };
 
   const subscriptionStatus = getSubscriptionStatus();
-  const canCreateWorkspace = planCapabilities?.planType === 'studio';
+  // Allow Pro and Studio users to see the create workspace button
+  const canSeeCreateWorkspace = planCapabilities?.planType === 'studio' || planCapabilities?.planType === 'pro';
   const ownedWorkspaces = allWorkspaces.filter(w => w.role === 'owner').length;
   const workspaceLimit = planCapabilities?.totalWorkspacesLimit() || 1;
 
@@ -193,7 +194,7 @@ export const ProfileSheet = ({ onClose }: ProfileSheetProps) => {
       <div className="flex-1 py-4">
         <div className="flex items-center justify-between mb-3 px-1">
           <h4 className="text-sm font-medium text-muted-foreground">WORKSPACES</h4>
-          {canCreateWorkspace && (
+          {canSeeCreateWorkspace && (
             <span className="text-xs text-muted-foreground">
               {ownedWorkspaces}/{workspaceLimit}
             </span>
@@ -227,8 +228,8 @@ export const ProfileSheet = ({ onClose }: ProfileSheetProps) => {
             );
           })}
 
-          {/* Create Workspace Button - Only for Studio users */}
-          {canCreateWorkspace && (
+          {/* Create Workspace Button - Pro and Studio users */}
+          {canSeeCreateWorkspace && (
             <button
               onClick={handleCreateWorkspaceClick}
               className="w-full flex items-center gap-3 p-3 rounded-lg border-2 border-dashed border-border/70 hover:border-primary/50 hover:bg-primary/5 transition-colors text-muted-foreground hover:text-primary"

@@ -1,6 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Crown, Check, Sparkles, Building2, Users, Calendar, Infinity, Lock, Plus } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { ArrowLeft, Crown, Check, Sparkles, Building2, Users, Calendar, Infinity, Lock, Plus, Wrench } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { usePlanCapabilities } from "@/contexts/PlanContext";
 import { cn } from "@/lib/utils";
@@ -9,8 +11,9 @@ const MyPlan = () => {
   const navigate = useNavigate();
   const planCapabilities = usePlanCapabilities();
 
-  const getPlanDisplayName = () => {
-    switch (planCapabilities.planType) {
+  const getPlanDisplayName = (plan?: 'free' | 'pro' | 'studio') => {
+    const targetPlan = plan || planCapabilities.planType;
+    switch (targetPlan) {
       case 'studio': return 'Muzze Studio';
       case 'pro': return 'Muzze Pro';
       default: return 'Muzze Free';
@@ -78,6 +81,14 @@ const MyPlan = () => {
     console.log('Manage add-ons clicked');
   };
 
+  const handleSimulatePlan = (value: string) => {
+    if (value === 'real') {
+      planCapabilities.setSimulatedPlan(null);
+    } else {
+      planCapabilities.setSimulatedPlan(value as 'free' | 'pro' | 'studio');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background pb-24">
       <div className="border-b border-border bg-card">
@@ -86,15 +97,61 @@ const MyPlan = () => {
           style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}
         >
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/settings")}>
+            <Button variant="ghost" size="icon" onClick={() => navigate("/profile")}>
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <h1 className="text-2xl font-bold">Meu Plano</h1>
+            <h1 className="text-2xl font-bold">Gerenciar Assinatura</h1>
           </div>
         </div>
       </div>
 
       <div className="container mx-auto p-4 max-w-2xl space-y-6">
+        {/* Admin Mode Toggle - Only for internal testers */}
+        {planCapabilities.isInternalTester && (
+          <Card className="border-amber-500/30 bg-amber-500/5">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-amber-600 text-base">
+                <Wrench className="w-4 h-4" />
+                Modo Admin
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <p className="text-sm text-muted-foreground mb-4">
+                Simular visualização de outro plano para testar a UI:
+              </p>
+              <RadioGroup 
+                defaultValue="real" 
+                onValueChange={handleSimulatePlan}
+                className="flex flex-wrap gap-3"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="real" id="real" />
+                  <Label htmlFor="real" className="text-sm cursor-pointer">
+                    Real (Studio)
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="free" id="free" />
+                  <Label htmlFor="free" className="text-sm cursor-pointer">
+                    Free
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="pro" id="pro" />
+                  <Label htmlFor="pro" className="text-sm cursor-pointer">
+                    Pro
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="studio" id="studio" />
+                  <Label htmlFor="studio" className="text-sm cursor-pointer">
+                    Studio
+                  </Label>
+                </div>
+              </RadioGroup>
+            </CardContent>
+          </Card>
+        )}
         {/* Current Plan Card */}
         <Card className="overflow-hidden">
           <div className={cn("p-6", getPlanBadgeColor())}>

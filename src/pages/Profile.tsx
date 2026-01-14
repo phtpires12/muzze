@@ -115,7 +115,7 @@ const Profile = () => {
   // Base menu items (always shown)
   const baseMenuItems: MenuItemWithPath[] = [
     { icon: User, label: "Editar perfil", path: "/edit-profile" },
-    { icon: CheckCircle, label: "Meu Progresso", path: "/my-progress" },
+    { icon: Crown, label: "Gerenciar Assinatura", path: "/my-plan" },
     { icon: User, label: "Configurações", path: "/settings" },
   ];
 
