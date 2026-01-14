@@ -116,14 +116,23 @@ export const PlanContextProvider = ({ children }: { children: ReactNode }) => {
     fetchProfileData();
   }, [fetchProfileData]);
   
-  // Determinar planType com override para internal testers e simulação
+  // Determinar planType - prioridade: simulação (se tester) > plano real do banco
+  // is_internal_tester permite SIMULAR outros planos, mas NÃO substitui o plano real automaticamente
   const rawPlanType = (profileData?.plan_type || 'free') as 'free' | 'pro' | 'studio';
   const isInternalTester = profileData?.is_internal_tester === true;
   
-  // Se está simulando, usa o plano simulado; se é tester sem simulação, usa studio; senão, usa o plano real
-  const planType = simulatedPlan 
+  // Se está simulando E é tester, usa o simulado; senão, usa o plano real do banco
+  const planType = (simulatedPlan !== null && isInternalTester)
     ? simulatedPlan 
-    : (isInternalTester ? 'studio' : rawPlanType);
+    : rawPlanType;
+  
+  // DEBUG LOG
+  console.log('[PlanContext] 📊 Plan resolution:', {
+    rawPlanType,
+    isInternalTester,
+    simulatedPlan,
+    effectivePlanType: planType
+  });
   
   const timezone = profileData?.timezone || 'America/Sao_Paulo';
   const extraWorkspacesPacks = profileData?.extra_workspaces_packs || 0;
