@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Trophy, TROPHIES, checkNewTrophies, UserStats, getEffectiveLevel, getDailyGoalMinutesForLevel } from "@/lib/gamification";
 import { startOfWeek, addDays, format, isSameDay, isAfter } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { getDayKey, getDayBoundsUTC, getTodayKey } from "@/lib/timezone-utils";
 
 export interface WeekDay {
   date: Date;
@@ -50,41 +51,42 @@ export const useStreakCelebration = () => {
       const weekStart = startOfWeek(today, { weekStartsOn: 1 });
       const weekDays: WeekDay[] = [];
 
-      // Buscar perfil para calcular meta dinâmica baseada no nível
+      // Buscar perfil para calcular meta dinâmica e timezone
       const { data: profile } = await supabase
         .from('profiles')
-        .select('xp_points, highest_level')
+        .select('xp_points, highest_level, timezone')
         .eq('user_id', userId)
         .single();
 
+      const timezone = profile?.timezone || 'America/Sao_Paulo';
       const effectiveLevel = getEffectiveLevel(profile?.xp_points || 0, profile?.highest_level || 1);
       const goalMinutes = getDailyGoalMinutesForLevel(effectiveLevel);
+      const todayKey = getTodayKey(timezone);
 
       for (let i = 0; i < 7; i++) {
         const currentDay = addDays(weekStart, i);
         const dayName = format(currentDay, 'EEE', { locale: ptBR });
+        const dayKey = getDayKey(currentDay, timezone);
 
         if (isAfter(currentDay, today)) {
           weekDays.push({ date: currentDay, dayName, status: 'future' });
           continue;
         }
 
-        if (isSameDay(currentDay, today)) {
+        if (dayKey === todayKey) {
           weekDays.push({ date: currentDay, dayName, status: 'today' });
           continue;
         }
 
-        const dayStart = new Date(currentDay);
-        dayStart.setHours(0, 0, 0, 0);
-        const dayEnd = new Date(currentDay);
-        dayEnd.setHours(23, 59, 59, 999);
+        // Usar getDayBoundsUTC para queries corretas
+        const { startUTC, endUTC } = getDayBoundsUTC(dayKey, timezone);
 
         const { data: freezeUsage } = await supabase
           .from('streak_freeze_usage')
           .select('*')
           .eq('user_id', userId)
-          .gte('used_at', dayStart.toISOString())
-          .lte('used_at', dayEnd.toISOString())
+          .gte('used_at', startUTC.toISOString())
+          .lte('used_at', endUTC.toISOString())
           .maybeSingle();
 
         if (freezeUsage) {
@@ -96,12 +98,11 @@ export const useStreakCelebration = () => {
           .from('stage_times')
           .select('duration_seconds')
           .eq('user_id', userId)
-          .gte('started_at', dayStart.toISOString())
-          .lte('started_at', dayEnd.toISOString());
+          .gte('created_at', startUTC.toISOString())
+          .lte('created_at', endUTC.toISOString());
 
         const totalMinutes = sessions?.reduce((sum, s) => sum + (s.duration_seconds || 0), 0) / 60 || 0;
 
-        // Meta dinâmica baseada no nível efetivo
         weekDays.push({
           date: currentDay,
           dayName,

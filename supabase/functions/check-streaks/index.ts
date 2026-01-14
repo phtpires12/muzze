@@ -5,8 +5,84 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// ============= TIMEZONE UTILS (duplicado do frontend para Deno) =============
+
+/**
+ * Retorna a chave do dia no formato 'YYYY-MM-DD' para uma data em uma timezone específica
+ */
+function getDayKey(date: Date, timezone: string): string {
+  return date.toLocaleDateString('en-CA', { timeZone: timezone });
+}
+
+/**
+ * Retorna a chave do dia atual na timezone especificada
+ */
+function getTodayKey(timezone: string): string {
+  return getDayKey(new Date(), timezone);
+}
+
+/**
+ * Retorna a chave do dia anterior na timezone especificada
+ */
+function getYesterdayKey(timezone: string): string {
+  const todayKey = getTodayKey(timezone);
+  const [year, month, day] = todayKey.split('-').map(Number);
+  
+  // Criar data no meio do dia para evitar problemas de DST
+  const todayNoon = new Date(year, month - 1, day, 12, 0, 0);
+  todayNoon.setDate(todayNoon.getDate() - 1);
+  
+  return `${todayNoon.getFullYear()}-${String(todayNoon.getMonth() + 1).padStart(2, '0')}-${String(todayNoon.getDate()).padStart(2, '0')}`;
+}
+
+/**
+ * Converte um dayKey (YYYY-MM-DD) em uma timezone para bounds UTC
+ */
+function getDayBoundsUTC(dayKey: string, timezone: string): { startUTC: Date; endUTC: Date } {
+  const [year, month, day] = dayKey.split('-').map(Number);
+  
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+  
+  // Criar data de referência ao meio-dia para evitar problemas de DST
+  const refDate = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+  
+  // Calcular offset da timezone
+  const parts = formatter.formatToParts(refDate);
+  const getPart = (type: string) => parts.find(p => p.type === type)?.value || '0';
+  
+  const localDay = parseInt(getPart('day'));
+  const localHour = parseInt(getPart('hour'));
+  
+  // Calcular diferença para encontrar offset
+  const utcHours = refDate.getUTCHours();
+  let offsetHours = utcHours - localHour;
+  
+  // Ajustar para mudança de dia
+  if (localDay !== day) {
+    offsetHours += (localDay > day ? -24 : 24);
+  }
+  
+  // Criar início do dia: 00:00:00 na timezone → UTC
+  const startUTC = new Date(Date.UTC(year, month - 1, day, 0 + offsetHours, 0, 0, 0));
+  
+  // Criar fim do dia: 23:59:59.999 na timezone → UTC
+  const endUTC = new Date(Date.UTC(year, month - 1, day, 23 + offsetHours, 59, 59, 999));
+  
+  return { startUTC, endUTC };
+}
+
+// ============= GAMIFICATION UTILS (duplicado do frontend para Deno) =============
+
 // Rampa de hábito: meta diária mínima baseada no nível
-// Sincronizado com src/lib/gamification.ts getDailyGoalMinutesForLevel
 function getDailyGoalMinutesForLevel(level: number): number {
   const safeLevel = typeof level === 'number' && !isNaN(level) ? Math.floor(level) : 1;
   if (safeLevel <= 1) return 5;
@@ -15,7 +91,7 @@ function getDailyGoalMinutesForLevel(level: number): number {
   return 25; // Nível 4+
 }
 
-// Calcula nível baseado em XP (sincronizado com gamification.ts)
+// Calcula nível baseado em XP
 function calculateLevelByXP(xp: number): number {
   const XP_LEVELS = [
     { level: 1, xpRequired: 0 },
@@ -40,6 +116,8 @@ function getEffectiveLevel(xp: number, highestLevel: number): number {
   const calculatedLevel = calculateLevelByXP(xp);
   return Math.max(highestLevel || 1, calculatedLevel);
 }
+
+// ============= MAIN HANDLER =============
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -80,23 +158,26 @@ Deno.serve(async (req) => {
 
     for (const profile of profiles || []) {
       try {
-        // Calculate yesterday's date range in user's timezone
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        yesterday.setHours(0, 0, 0, 0);
+        const timezone = profile.timezone || 'America/Sao_Paulo';
+        
+        // CORREÇÃO: Calcular "ontem" na timezone do usuário, não UTC
+        const yesterdayKey = getYesterdayKey(timezone);
+        const { startUTC, endUTC } = getDayBoundsUTC(yesterdayKey, timezone);
 
-        const yesterdayEnd = new Date(yesterday);
-        yesterdayEnd.setHours(23, 59, 59, 999);
+        console.log(`[check-streaks] User ${profile.user_id}:`, {
+          timezone,
+          yesterdayKey,
+          startUTC: startUTC.toISOString(),
+          endUTC: endUTC.toISOString(),
+        });
 
-        console.log(`Checking user ${profile.user_id} for date ${yesterday.toISOString()}`);
-
-        // Get all sessions from yesterday
+        // Get all sessions from yesterday (usando created_at para consistência)
         const { data: sessions, error: sessionsError } = await supabase
           .from('stage_times')
-          .select('duration_seconds')
+          .select('duration_seconds, created_at')
           .eq('user_id', profile.user_id)
-          .gte('started_at', yesterday.toISOString())
-          .lte('started_at', yesterdayEnd.toISOString());
+          .gte('created_at', startUTC.toISOString())
+          .lte('created_at', endUTC.toISOString());
 
         if (sessionsError) {
           console.error(`Error fetching sessions for user ${profile.user_id}:`, sessionsError);
@@ -110,13 +191,15 @@ Deno.serve(async (req) => {
         const levelGoal = getDailyGoalMinutesForLevel(effectiveLevel);
         const userOverride = profile.min_streak_minutes || 0;
         const metMinutes = Math.max(levelGoal, userOverride);
+        
+        const passed = totalMinutes >= metMinutes;
 
-        console.log(`User ${profile.user_id}: ${totalMinutes} minutes (goal: ${metMinutes}, level: ${effectiveLevel})`);
+        console.log(`[check-streaks] User ${profile.user_id}: ${totalMinutes.toFixed(2)} min (goal: ${metMinutes}, level: ${effectiveLevel}, passed: ${passed})`);
 
-        if (totalMinutes < metMinutes) {
+        if (!passed) {
           // Didn't meet goal - use freeze if available
           if (profile.streak_freezes > 0) {
-            console.log(`Using freeze for user ${profile.user_id}`);
+            console.log(`[check-streaks] Using freeze for user ${profile.user_id}`);
 
             // Deduct freeze
             const { error: updateError } = await supabase
@@ -129,18 +212,19 @@ Deno.serve(async (req) => {
               continue;
             }
 
-            // Log freeze usage
+            // Log freeze usage com timestamp correto (meia-noite do dia perdido na timezone)
+            const freezeTimestamp = startUTC.toISOString();
             const { error: logError } = await supabase
               .from('streak_freeze_usage')
-              .insert({ user_id: profile.user_id, used_at: yesterday.toISOString() });
+              .insert({ user_id: profile.user_id, used_at: freezeTimestamp });
 
             if (logError) {
               console.error(`Error logging freeze usage for user ${profile.user_id}:`, logError);
             }
 
-            console.log(`Freeze used successfully for user ${profile.user_id}`);
+            console.log(`[check-streaks] Freeze used successfully for user ${profile.user_id}, recorded for ${yesterdayKey}`);
           } else {
-            console.log(`Resetting streak for user ${profile.user_id} (no freezes available)`);
+            console.log(`[check-streaks] Resetting streak for user ${profile.user_id} (no freezes available)`);
 
             // Reset streak
             const { error: resetError } = await supabase
@@ -153,7 +237,7 @@ Deno.serve(async (req) => {
             }
           }
         } else {
-          console.log(`User ${profile.user_id} met their goal!`);
+          console.log(`[check-streaks] User ${profile.user_id} met their goal for ${yesterdayKey}!`);
         }
       } catch (userError) {
         console.error(`Error processing user ${profile.user_id}:`, userError);

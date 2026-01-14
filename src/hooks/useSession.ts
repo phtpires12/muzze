@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useSessionContext, SessionStage } from "@/contexts/SessionContext";
 import { calculateXPWithStreakBonus, calculateLevelByXP, getLevelInfo, getEffectiveLevel, getDailyGoalMinutesForLevel } from "@/lib/gamification";
+import { getTodayKey, getYesterdayKey, getDayBoundsUTC } from "@/lib/timezone-utils";
 
 export type { SessionStage };
 
@@ -186,7 +187,7 @@ export const useSession = (options: UseSessionOptions = {}) => {
     }
   }, [timer, toast, saveStageTime, resetTimer]);
 
-  // updateStreak - lógica de streak
+  // updateStreak - lógica de streak com timezone corrigido
   const updateStreak = async (userId: string, sessionMinutes: number) => {
     try {
       const { data: profile } = await supabase
@@ -202,30 +203,28 @@ export const useSession = (options: UseSessionOptions = {}) => {
       // Calcular meta de ofensiva baseada no nível do usuário
       const effectiveLevel = getEffectiveLevel(profile?.xp_points || 0, profile?.highest_level || 1);
       const streakGoalMinutes = getDailyGoalMinutesForLevel(effectiveLevel);
-      console.log(`[updateStreak] Nível efetivo: ${effectiveLevel}, Meta de ofensiva: ${streakGoalMinutes}min`);
 
-      // Get today's date in user's timezone
-      const now = new Date();
-      const userDate = new Date(now.toLocaleString('en-US', { timeZone: timezone }));
-      const today = userDate.toISOString().split('T')[0];
+      // Usar utilitários centrais de timezone
+      const todayKey = getTodayKey(timezone);
+      const yesterdayKey = getYesterdayKey(timezone);
+      const { startUTC, endUTC } = getDayBoundsUTC(todayKey, timezone);
 
-      // Calculate total creative minutes today
-      const startOfDay = new Date(userDate);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(userDate);
-      endOfDay.setHours(23, 59, 59, 999);
+      console.log(`[updateStreak] timezone: ${timezone}, todayKey: ${todayKey}, level: ${effectiveLevel}, goal: ${streakGoalMinutes}min`);
+      console.log(`[updateStreak] Query range: ${startUTC.toISOString()} to ${endUTC.toISOString()}`);
 
       const { data: todaySessions } = await supabase
         .from('stage_times')
         .select('duration_seconds')
         .eq('user_id', userId)
-        .gte('created_at', startOfDay.toISOString())
-        .lte('created_at', endOfDay.toISOString());
+        .gte('created_at', startUTC.toISOString())
+        .lte('created_at', endUTC.toISOString());
 
       const creativeMinutesToday = (todaySessions || []).reduce(
         (sum, session) => sum + (session.duration_seconds / 60), 
         0
       );
+
+      console.log(`[updateStreak] creativeMinutesToday: ${creativeMinutesToday.toFixed(2)}min`);
 
       // Check if day is fulfilled usando meta dinâmica por nível
       const dayFulfilled = creativeMinutesToday >= streakGoalMinutes;
@@ -247,7 +246,7 @@ export const useSession = (options: UseSessionOptions = {}) => {
           user_id: userId,
           current_streak: 1,
           longest_streak: 1,
-          last_event_date: today,
+          last_event_date: todayKey,
         });
         return { streakAchieved: true, newStreak: 1, creativeMinutesToday };
       }
@@ -257,7 +256,7 @@ export const useSession = (options: UseSessionOptions = {}) => {
       const longestStreak = streak.longest_streak || 0;
 
       // Check if already counted today
-      if (lastEventDate === today) {
+      if (lastEventDate === todayKey) {
         return { 
           streakAchieved: true, 
           newStreak: currentStreak, 
@@ -267,12 +266,8 @@ export const useSession = (options: UseSessionOptions = {}) => {
       }
 
       // Check if yesterday (consecutive) or gap
-      const yesterday = new Date(userDate);
-      yesterday.setDate(yesterday.getDate() - 1);
-      const yesterdayStr = yesterday.toISOString().split('T')[0];
-
       let newStreak: number;
-      if (lastEventDate === yesterdayStr) {
+      if (lastEventDate === yesterdayKey) {
         // Consecutive day
         newStreak = currentStreak + 1;
       } else {
@@ -287,9 +282,11 @@ export const useSession = (options: UseSessionOptions = {}) => {
         .update({
           current_streak: newStreak,
           longest_streak: newLongest,
-          last_event_date: today,
+          last_event_date: todayKey,
         })
         .eq('user_id', userId);
+
+      console.log(`[updateStreak] Streak updated: ${currentStreak} -> ${newStreak}, lastEventDate: ${lastEventDate} -> ${todayKey}`);
 
       return { 
         streakAchieved: true, 

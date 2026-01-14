@@ -15,6 +15,7 @@ import * as htmlToImage from 'html-to-image';
 import StreakShareCard from "@/components/StreakShareCard";
 import FireIcon from "@/components/ofensiva/FireIcon";
 import DayDetailDrawer, { DayProgress } from "@/components/ofensiva/DayDetailDrawer";
+import { getDayKey, getDayBoundsUTC, getMonthStartKey, getMonthEndKey, dayKeyToLocalDate, getDayKeysInRange } from "@/lib/timezone-utils";
 
 const Ofensiva = () => {
   const navigate = useNavigate();
@@ -75,36 +76,40 @@ const Ofensiva = () => {
     // Usar timezone do usuário para calcular datas corretamente
     const userTimezone = profile?.timezone || 'America/Sao_Paulo';
     
-    // Criar datas no timezone do usuário
-    const now = new Date();
-    const userNow = new Date(now.toLocaleString('en-US', { timeZone: userTimezone }));
+    // Calcular bounds do mês na timezone do usuário usando utilitários centrais
+    const monthStartKey = getMonthStartKey(currentMonth, userTimezone);
+    const monthEndKey = getMonthEndKey(currentMonth, userTimezone);
     
-    // Ajustar currentMonth para o timezone do usuário
-    const monthStart = startOfMonth(currentMonth);
-    const monthEnd = endOfMonth(currentMonth);
+    // Converter para UTC para queries
+    const { startUTC: monthStartUTC } = getDayBoundsUTC(monthStartKey, userTimezone);
+    const { endUTC: monthEndUTC } = getDayBoundsUTC(monthEndKey, userTimezone);
 
-    // Meta dinâmica baseada no nível efetivo do usuário (agora vem do hook)
-    const minMinutes = goalMinutes;
+    console.log(`[Ofensiva] Buscando sessões do mês:`, {
+      userTimezone,
+      monthStartKey,
+      monthEndKey,
+      monthStartUTC: monthStartUTC.toISOString(),
+      monthEndUTC: monthEndUTC.toISOString(),
+    });
 
     const { data: sessions } = await supabase
       .from('stage_times')
       .select('created_at, duration_seconds')
       .eq('user_id', user.id)
-      .gte('created_at', monthStart.toISOString())
-      .lte('created_at', monthEnd.toISOString());
+      .gte('created_at', monthStartUTC.toISOString())
+      .lte('created_at', monthEndUTC.toISOString());
 
-    // Group sessions by day in user's timezone (usando created_at para consistência com o resto do app)
+    // Agrupar sessions por dayKey na timezone do usuário
     const dayMap = new Map<string, number>();
     sessions?.forEach(session => {
       if (!session.created_at) return;
       
-      // Converter para timezone do usuário
+      // Usar getDayKey para consistência de timezone
       const sessionDate = new Date(session.created_at);
-      const userSessionDate = new Date(sessionDate.toLocaleString('en-US', { timeZone: userTimezone }));
-      const day = format(userSessionDate, 'yyyy-MM-dd');
+      const dayKey = getDayKey(sessionDate, userTimezone);
       
       const minutes = (session.duration_seconds || 0) / 60;
-      dayMap.set(day, (dayMap.get(day) || 0) + minutes);
+      dayMap.set(dayKey, (dayMap.get(dayKey) || 0) + minutes);
     });
 
     // Converter dayMap para dayProgressMap
@@ -113,6 +118,7 @@ const Ofensiva = () => {
       progressMap.set(dayStr, { minutes });
     });
 
+    console.log(`[Ofensiva] Progresso do mês:`, Object.fromEntries(progressMap));
     setDayProgressMap(progressMap);
   };
 
@@ -121,27 +127,33 @@ const Ofensiva = () => {
     if (!user) return;
 
     const userTimezone = profile?.timezone || 'America/Sao_Paulo';
-    const monthStart = startOfMonth(currentMonth);
-    const monthEnd = endOfMonth(currentMonth);
+    
+    // Calcular bounds do mês na timezone do usuário usando utilitários centrais
+    const monthStartKey = getMonthStartKey(currentMonth, userTimezone);
+    const monthEndKey = getMonthEndKey(currentMonth, userTimezone);
+    
+    // Converter para UTC para queries
+    const { startUTC: monthStartUTC } = getDayBoundsUTC(monthStartKey, userTimezone);
+    const { endUTC: monthEndUTC } = getDayBoundsUTC(monthEndKey, userTimezone);
 
     const { data: freezeUsage } = await supabase
       .from('streak_freeze_usage')
       .select('used_at')
       .eq('user_id', user.id)
-      .gte('used_at', monthStart.toISOString())
-      .lte('used_at', monthEnd.toISOString());
+      .gte('used_at', monthStartUTC.toISOString())
+      .lte('used_at', monthEndUTC.toISOString());
 
     setFreezesUsedThisMonth(freezeUsage?.length || 0);
 
-    // Converter freeze dates para timezone do usuário
+    // Converter freeze dates para timezone do usuário usando getDayKey
     const freezeDates = freezeUsage?.map(f => {
       if (!f.used_at) return new Date();
       const freezeDate = new Date(f.used_at);
-      const userFreezeDate = new Date(freezeDate.toLocaleString('en-US', { timeZone: userTimezone }));
-      const [year, month, day] = format(userFreezeDate, 'yyyy-MM-dd').split('-').map(Number);
-      return new Date(year, month - 1, day);
+      const dayKey = getDayKey(freezeDate, userTimezone);
+      return dayKeyToLocalDate(dayKey);
     }) || [];
     
+    console.log(`[Ofensiva] Freezes usados este mês:`, freezeUsage?.length, freezeDates.map(d => format(d, 'yyyy-MM-dd')));
     setFreezeDays(freezeDates);
   };
 
