@@ -120,10 +120,12 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 const RootLayout = () => (
   <AppNavigationProvider>
     <WorkspaceContextProvider>
-      <GlobalCelebrations />
-      <LevelUpModal />
-      <TrophyUnlockedModal />
-      <Outlet />
+      <PlanContextProvider>
+        <GlobalCelebrations />
+        <LevelUpModal />
+        <TrophyUnlockedModal />
+        <Outlet />
+      </PlanContextProvider>
     </WorkspaceContextProvider>
   </AppNavigationProvider>
 );
@@ -168,16 +170,14 @@ const App = () => {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <SessionContextProvider>
-          <ProfileContextProvider>
-            <PlanContextProvider>
-              <CelebrationContextProvider>
+      <ProfileContextProvider>
+            <CelebrationContextProvider>
                 <TooltipProvider>
                   <Toaster />
                   <Sonner />
                   <RouterProvider router={router} />
                 </TooltipProvider>
               </CelebrationContextProvider>
-            </PlanContextProvider>
           </ProfileContextProvider>
         </SessionContextProvider>
         </QueryClientProvider>
