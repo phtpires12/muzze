@@ -12,6 +12,7 @@ import { PlanContextProvider } from "@/contexts/PlanContext";
 import { GlobalCelebrations } from "@/components/GlobalCelebrations";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { setupGlobalErrorHandlers } from "@/lib/error-logger";
+import { PWAUpdatePrompt } from "@/components/PWAUpdatePrompt";
 import Onboarding from "./pages/NewOnboarding";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
@@ -177,6 +178,7 @@ const App = () => {
                 <TooltipProvider>
                   <Toaster />
                   <Sonner />
+                  <PWAUpdatePrompt />
                   <RouterProvider router={router} />
                 </TooltipProvider>
               </CelebrationContextProvider>

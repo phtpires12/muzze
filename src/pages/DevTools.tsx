@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Flame, Trophy, Navigation, Trash2, RotateCcw, Wrench, Timer, Calendar, Search, Copy } from "lucide-react";
+import { ArrowLeft, Flame, Trophy, Navigation, Trash2, RotateCcw, Wrench, Timer, Calendar, Search, Copy, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -14,6 +14,7 @@ import { DraggableSessionTimer } from "@/components/DraggableSessionTimer";
 import { PostConfirmationPopup } from "@/components/calendar/PostConfirmationPopup";
 import { useToast } from "@/hooks/use-toast";
 import { AdminPlanSwitcher } from "@/components/dev/AdminPlanSwitcher";
+import { BuildInfo } from "@/components/BuildInfo";
 
 const DevTools = () => {
   const navigate = useNavigate();
@@ -331,10 +332,10 @@ const DevTools = () => {
         <Card className="mb-4">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              🗑️ Storage
+              🗑️ Storage & Cache
             </CardTitle>
             <CardDescription>
-              Gerenciar dados locais e resetar estados
+              Gerenciar dados locais, cache e resetar estados
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -354,8 +355,36 @@ const DevTools = () => {
               <RotateCcw className="w-4 h-4 mr-2 text-blue-500" />
               Resetar Onboarding
             </Button>
+            <Button
+              onClick={async () => {
+                try {
+                  // Clear all SW caches
+                  const cacheNames = await caches.keys();
+                  await Promise.all(cacheNames.map(name => caches.delete(name)));
+                  
+                  // Unregister all service workers
+                  const registrations = await navigator.serviceWorker.getRegistrations();
+                  await Promise.all(registrations.map(reg => reg.unregister()));
+                  
+                  toast({ title: "✅ Cache PWA limpo!", description: "Recarregando página..." });
+                  setTimeout(() => window.location.reload(), 500);
+                } catch (err) {
+                  toast({ title: "Erro ao limpar cache", variant: "destructive" });
+                }
+              }}
+              className="w-full justify-start"
+              variant="outline"
+            >
+              <RefreshCw className="w-4 h-4 mr-2 text-green-500" />
+              Limpar Cache PWA e Recarregar
+            </Button>
           </CardContent>
         </Card>
+
+        {/* Build Info Footer */}
+        <div className="text-center py-4">
+          <BuildInfo showMode className="justify-center" />
+        </div>
       </div>
 
       {/* Celebration Components */}
