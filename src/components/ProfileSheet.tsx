@@ -194,7 +194,7 @@ export const ProfileSheet = ({ onClose }: ProfileSheetProps) => {
       <div className="flex-1 py-4">
         <div className="flex items-center justify-between mb-3 px-1">
           <h4 className="text-sm font-medium text-muted-foreground">WORKSPACES</h4>
-          {canCreateWorkspace && (
+          {canSeeCreateWorkspace && (
             <span className="text-xs text-muted-foreground">
               {ownedWorkspaces}/{workspaceLimit}
             </span>
