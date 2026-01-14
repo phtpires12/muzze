@@ -593,16 +593,39 @@ const Ofensiva = () => {
 
             {/* Dias do mês */}
             {monthDays.map(day => {
-              // CORREÇÃO: Usar getDayKey com timezone do usuário para consistência
-              const userTimezone = profile?.timezone || 'America/Sao_Paulo';
-              const dayKey = getDayKey(day, userTimezone);
+              // CORREÇÃO DEFINITIVA: dayKey para o calendário deve ser calculado
+              // diretamente do Date sem conversão de timezone, já que eachDayOfInterval
+              // cria datas locais. O importante é que seja consistente com fetchMonthProgress.
+              // 
+              // Para garantir consistência, extraímos ano/mês/dia diretamente do objeto Date
+              // que representa o dia no calendário (criado por eachDayOfInterval).
+              const year = day.getFullYear();
+              const month = String(day.getMonth() + 1).padStart(2, '0');
+              const dayNum = String(day.getDate()).padStart(2, '0');
+              const dayKey = `${year}-${month}-${dayNum}`;
+              
               const dayNumber = format(day, 'd');
               const progress = dayProgressMap.get(dayKey);
               const minutes = progress?.minutes || 0;
               
-              // CORREÇÃO: Comparar freezes por dayKey, não por isSameDay
+              // Debug para dia 12
+              if (dayKey === '2026-01-12') {
+                console.log(`[Ofensiva Render] Dia 12:`, {
+                  dayKey,
+                  progress,
+                  minutes,
+                  goalMinutes,
+                  isComplete: minutes >= goalMinutes
+                });
+              }
+              
+              // CORREÇÃO: Comparar freezes por dayKey extraído da mesma forma
+              const userTimezone = profile?.timezone || 'America/Sao_Paulo';
               const freezeUsed = freezeDays.some(freezeDate => {
-                const freezeDayKey = getDayKey(freezeDate, userTimezone);
+                const fYear = freezeDate.getFullYear();
+                const fMonth = String(freezeDate.getMonth() + 1).padStart(2, '0');
+                const fDay = String(freezeDate.getDate()).padStart(2, '0');
+                const freezeDayKey = `${fYear}-${fMonth}-${fDay}`;
                 return freezeDayKey === dayKey;
               });
               
