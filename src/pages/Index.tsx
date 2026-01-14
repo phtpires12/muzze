@@ -488,8 +488,13 @@ const Index = () => {
         </div>
       </header>
 
+      {/* Free Plan Banner */}
+      <div className="px-6 mt-4">
+        <FreePlanBanner />
+      </div>
+
       {/* Main Panel */}
-      <div className="px-6 mt-8">
+      <div className="px-6 mt-6">
         <Card 
           className={cn(
             "p-8 backdrop-blur-md bg-card/85 border-border/20",
