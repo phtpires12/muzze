@@ -171,13 +171,13 @@ Deno.serve(async (req) => {
           endUTC: endUTC.toISOString(),
         });
 
-        // Get all sessions from yesterday (usando created_at para consistência)
+        // CORREÇÃO: Usar started_at em vez de created_at para determinar "qual dia" a sessão pertence
         const { data: sessions, error: sessionsError } = await supabase
           .from('stage_times')
-          .select('duration_seconds, created_at')
+          .select('duration_seconds, started_at')
           .eq('user_id', profile.user_id)
-          .gte('created_at', startUTC.toISOString())
-          .lte('created_at', endUTC.toISOString());
+          .gte('started_at', startUTC.toISOString())
+          .lte('started_at', endUTC.toISOString());
 
         if (sessionsError) {
           console.error(`Error fetching sessions for user ${profile.user_id}:`, sessionsError);
@@ -194,11 +194,25 @@ Deno.serve(async (req) => {
         
         const passed = totalMinutes >= metMinutes;
 
-        console.log(`[check-streaks] User ${profile.user_id}: ${totalMinutes.toFixed(2)} min (goal: ${metMinutes}, level: ${effectiveLevel}, passed: ${passed})`);
+        console.log(`[check-streaks] User ${profile.user_id}: ${totalMinutes.toFixed(2)} min via started_at (goal: ${metMinutes}, level: ${effectiveLevel}, passed: ${passed})`);
 
         if (!passed) {
           // Didn't meet goal - use freeze if available
           if (profile.streak_freezes > 0) {
+            // IDEMPOTÊNCIA: Verificar se já existe freeze para esse dia antes de inserir
+            const { data: existingFreeze } = await supabase
+              .from('streak_freeze_usage')
+              .select('id')
+              .eq('user_id', profile.user_id)
+              .gte('used_at', startUTC.toISOString())
+              .lte('used_at', endUTC.toISOString())
+              .maybeSingle();
+
+            if (existingFreeze) {
+              console.log(`[check-streaks] Freeze already exists for ${yesterdayKey}, skipping user ${profile.user_id}`);
+              continue;
+            }
+
             console.log(`[check-streaks] Using freeze for user ${profile.user_id}`);
 
             // Deduct freeze

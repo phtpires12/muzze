@@ -212,12 +212,13 @@ export const useSession = (options: UseSessionOptions = {}) => {
       console.log(`[updateStreak] timezone: ${timezone}, todayKey: ${todayKey}, level: ${effectiveLevel}, goal: ${streakGoalMinutes}min`);
       console.log(`[updateStreak] Query range: ${startUTC.toISOString()} to ${endUTC.toISOString()}`);
 
+      // CORREÇÃO: Usar started_at em vez de created_at para determinar "qual dia" a sessão pertence
       const { data: todaySessions } = await supabase
         .from('stage_times')
-        .select('duration_seconds')
+        .select('duration_seconds, started_at')
         .eq('user_id', userId)
-        .gte('created_at', startUTC.toISOString())
-        .lte('created_at', endUTC.toISOString());
+        .gte('started_at', startUTC.toISOString())
+        .lte('started_at', endUTC.toISOString());
 
       const creativeMinutesToday = (todaySessions || []).reduce(
         (sum, session) => sum + (session.duration_seconds / 60), 
