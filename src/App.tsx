@@ -8,6 +8,7 @@ import { SessionContextProvider } from "@/contexts/SessionContext";
 import { WorkspaceContextProvider } from "@/contexts/WorkspaceContext";
 import { CelebrationContextProvider } from "@/contexts/CelebrationContext";
 import { ProfileContextProvider } from "@/contexts/ProfileContext";
+import { PlanContextProvider } from "@/contexts/PlanContext";
 import { GlobalCelebrations } from "@/components/GlobalCelebrations";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { setupGlobalErrorHandlers } from "@/lib/error-logger";
@@ -168,16 +169,18 @@ const App = () => {
       <QueryClientProvider client={queryClient}>
         <SessionContextProvider>
           <ProfileContextProvider>
-            <CelebrationContextProvider>
-              <TooltipProvider>
-                <Toaster />
-                <Sonner />
-                <RouterProvider router={router} />
-              </TooltipProvider>
-            </CelebrationContextProvider>
+            <PlanContextProvider>
+              <CelebrationContextProvider>
+                <TooltipProvider>
+                  <Toaster />
+                  <Sonner />
+                  <RouterProvider router={router} />
+                </TooltipProvider>
+              </CelebrationContextProvider>
+            </PlanContextProvider>
           </ProfileContextProvider>
         </SessionContextProvider>
-      </QueryClientProvider>
+        </QueryClientProvider>
     </ErrorBoundary>
   );
 };

@@ -165,6 +165,68 @@ export function getMonthEndKey(referenceDate: Date, timezone: string): string {
   return `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 }
 
+// ============= FUNÇÕES DE SEMANA (PLANO FREE) =============
+
+/**
+ * Retorna o início da semana atual (domingo 00:00) como dayKey na timezone do usuário
+ */
+export function getWeekStartKey(timezone: string): string {
+  const todayKey = getTodayKey(timezone);
+  const [year, month, day] = todayKey.split('-').map(Number);
+  const date = new Date(year, month - 1, day, 12, 0, 0);
+  
+  // Ajustar para domingo (0 = dom)
+  const dayOfWeek = date.getDay();
+  date.setDate(date.getDate() - dayOfWeek);
+  
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+/**
+ * Retorna o fim da semana atual (sábado 23:59) como dayKey na timezone do usuário
+ */
+export function getWeekEndKey(timezone: string): string {
+  const weekStartKey = getWeekStartKey(timezone);
+  const [year, month, day] = weekStartKey.split('-').map(Number);
+  const date = new Date(year, month - 1, day + 6, 12, 0, 0);
+  
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+/**
+ * Retorna bounds UTC para a semana atual (domingo 00:00 até sábado 23:59:59)
+ */
+export function getWeekBoundsUTC(timezone: string): { startUTC: Date; endUTC: Date } {
+  const weekStartKey = getWeekStartKey(timezone);
+  const weekEndKey = getWeekEndKey(timezone);
+  
+  const startBounds = getDayBoundsUTC(weekStartKey, timezone);
+  const endBounds = getDayBoundsUTC(weekEndKey, timezone);
+  
+  return { startUTC: startBounds.startUTC, endUTC: endBounds.endUTC };
+}
+
+/**
+ * Verifica se uma data (dayKey) está dentro da semana atual
+ */
+export function isDateInCurrentWeek(dateKey: string, timezone: string): boolean {
+  const weekStart = getWeekStartKey(timezone);
+  const weekEnd = getWeekEndKey(timezone);
+  
+  return dateKey >= weekStart && dateKey <= weekEnd;
+}
+
+/**
+ * Retorna quantos dias faltam para a semana resetar (próximo domingo)
+ */
+export function daysUntilWeekReset(timezone: string): number {
+  const todayKey = getTodayKey(timezone);
+  const weekEndKey = getWeekEndKey(timezone);
+  
+  // Diferença em dias + 1 (próximo domingo)
+  return diffDays(todayKey, weekEndKey) + 1;
+}
+
 // ============= VERSÕES PARA DENO/EDGE FUNCTIONS =============
 // Essas são idênticas mas exportadas separadamente para facilitar copy/paste
 
@@ -187,3 +249,11 @@ export const getTodayKeyDeno = getTodayKey;
  * Versão Deno-compatible do getYesterdayKey
  */
 export const getYesterdayKeyDeno = getYesterdayKey;
+
+/**
+ * Versão Deno-compatible das funções de semana
+ */
+export const getWeekStartKeyDeno = getWeekStartKey;
+export const getWeekEndKeyDeno = getWeekEndKey;
+export const getWeekBoundsUTCDeno = getWeekBoundsUTC;
+export const isDateInCurrentWeekDeno = isDateInCurrentWeek;
