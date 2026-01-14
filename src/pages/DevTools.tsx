@@ -71,36 +71,6 @@ const DevTools = () => {
     toast({ title: "Debug copiado para clipboard!" });
   };
 
-  // Admin: Set plan via RPC
-  const handleSetPlanType = async (newPlan: 'free' | 'pro' | 'studio') => {
-    if (!currentUserId) {
-      toast({ title: "Erro", description: "User ID não encontrado", variant: "destructive" });
-      return;
-    }
-    
-    setSettingPlan(true);
-    try {
-      const { error } = await supabase.rpc('admin_set_plan_type', {
-        target_user: currentUserId,
-        new_plan: newPlan
-      });
-      
-      if (error) throw error;
-      
-      toast({ title: "✅ Plano atualizado!", description: `Seu plano agora é ${newPlan.toUpperCase()}. Atualizando dados...` });
-      
-      // Use refetchAll instead of page reload
-      await planCapabilities.refetchAll();
-      
-      toast({ title: "✅ Dados atualizados!", description: `Plano ${newPlan.toUpperCase()} aplicado com sucesso.` });
-    } catch (err: any) {
-      console.error('[DevTools] Error setting plan:', err);
-      toast({ title: "Erro ao definir plano", description: err.message, variant: "destructive" });
-    } finally {
-      setSettingPlan(false);
-    }
-  };
-
   const handleMockMarkAsPosted = async () => {
     toast({ title: "✅ Simulação", description: "Marcar como postado: " + mockScript.id });
     setShowPopupSimulation(false);
