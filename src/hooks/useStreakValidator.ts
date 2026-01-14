@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { calculateFreezeCost, MAX_STREAK_FREEZES, getEffectiveLevel, getDailyGoalMinutesForLevel } from '@/lib/gamification';
+import { MAX_STREAK_FREEZES } from '@/lib/gamification';
 
 interface LostDaysResult {
   hasLostDays: boolean;
@@ -16,26 +16,22 @@ interface LostDaysResult {
 interface UseStreakValidatorParams {
   profile: any;
   refetchProfile?: () => void;
+  // Valores derivados do useProfileWithLevel
+  effectiveLevel: number;
+  goalMinutes: number;
+  freezeCost: number;
 }
 
-export const useStreakValidator = ({ profile, refetchProfile }: UseStreakValidatorParams) => {
+export const useStreakValidator = ({ 
+  profile, 
+  refetchProfile,
+  effectiveLevel,
+  goalMinutes,
+  freezeCost,
+}: UseStreakValidatorParams) => {
   const [result, setResult] = useState<LostDaysResult | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasChecked, setHasChecked] = useState(false);
-
-  // Meta dinâmica baseada no nível efetivo do usuário
-  const effectiveLevel = useMemo(() => 
-    getEffectiveLevel(profile?.xp_points || 0, profile?.highest_level || 1), 
-    [profile?.xp_points, profile?.highest_level]
-  );
-  const goalMinutes = useMemo(() => 
-    getDailyGoalMinutesForLevel(effectiveLevel), 
-    [effectiveLevel]
-  );
-  const freezeCost = useMemo(() => 
-    calculateFreezeCost(goalMinutes), 
-    [goalMinutes]
-  );
 
   const checkLostDays = useCallback(async () => {
     try {

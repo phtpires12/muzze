@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { useProfile } from "@/hooks/useProfile";
+import { useProfileWithLevel } from "@/hooks/useProfileWithLevel";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { useSessionContext } from "@/contexts/SessionContext";
 import { useInProgressProjects } from "@/hooks/useInProgressProjects";
@@ -56,7 +56,14 @@ interface ContentItem {
 
 const Index = () => {
   const navigate = useNavigate();
-  const { profile, loading: profileLoading, refetch } = useProfile();
+  const { 
+    profile, 
+    loading: profileLoading, 
+    refetch,
+    effectiveLevel,
+    goalMinutes,
+    freezeCost,
+  } = useProfileWithLevel();
   const { trackEvent } = useAnalytics();
   const { muzzeSession, setMuzzeSession, resetMuzzeSession } = useSessionContext();
   const { stats } = useGamification();
@@ -70,9 +77,14 @@ const Index = () => {
     resetStreak,
     dismissCheck,
     autoUseFreezesIfAvailable,
-    freezeCost,
     maxFreezes,
-  } = useStreakValidator({ profile, refetchProfile: refetch });
+  } = useStreakValidator({ 
+    profile, 
+    refetchProfile: refetch,
+    effectiveLevel,
+    goalMinutes,
+    freezeCost,
+  });
   const { recoverMissedStreaks, isRecovering: isRecoveringStreak } = useStreakAutoRecovery({ profile });
   const { progress: dbProgress } = useDailyGoalProgress();
   const liveProgress = useLiveDailyProgress(dbProgress.actualMinutes, dbProgress.goalMinutes);
