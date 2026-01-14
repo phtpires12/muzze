@@ -19,18 +19,7 @@ const DevTools = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isDeveloper, isAdmin, isLoading } = useUserRole();
-  const planCapabilities = usePlanCapabilities();
   const { celebrationData, triggerCelebration, triggerTrophyDirectly, dismissStreakCelebration, dismissTrophyCelebration } = useStreakCelebration();
-  
-  // Plan Admin state
-  const [settingPlan, setSettingPlan] = useState(false);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setCurrentUserId(user?.id || null);
-    });
-  }, []);
   
   // Timer simulation state
   const [showTimerSimulation, setShowTimerSimulation] = useState(false);

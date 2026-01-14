@@ -63,7 +63,7 @@ export const ProfileSheet = ({ onClose }: ProfileSheetProps) => {
 
   const getSubscriptionStatus = () => {
     // IMPORTANT: No fallback here - if planCapabilities is null/loading, we handle it in render
-    if (!planCapabilities || planCapabilities.isLoading) {
+    if (!planCapabilities || planCapabilities.loading) {
       return { label: null, variant: 'secondary' as const, color: 'text-muted-foreground', isLoading: true };
     }
     if (planCapabilities.planError) {

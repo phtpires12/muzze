@@ -178,7 +178,7 @@ export const AdminPlanSwitcher = () => {
         <div className="p-3 bg-muted rounded">
           <p className="text-sm text-muted-foreground mb-2">PlanContext.planType:</p>
           <Badge variant="secondary" className="text-sm">
-            {planCapabilities.isLoading ? 'loading...' : planCapabilities.planType.toUpperCase()}
+            {planCapabilities.loading ? 'loading...' : planCapabilities.planType.toUpperCase()}
           </Badge>
           {planCapabilities.isInternalTester && (
             <Badge variant="outline" className="ml-2 text-xs border-amber-500/50 text-amber-600">
