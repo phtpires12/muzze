@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { User, Mail, CheckCircle, Wrench, Users } from "lucide-react";
+import { User, Mail, CheckCircle, Wrench, Users, Crown } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";

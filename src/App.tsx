@@ -44,6 +44,7 @@ import Install from "./pages/Install";
 import Guests from "./pages/Guests";
 import AcceptInvite from "./pages/AcceptInvite";
 import ContentView from "./pages/ContentView";
+import MyPlan from "./pages/MyPlan";
 import { LevelUpModal } from "./components/LevelUpModal";
 import { TrophyUnlockedModal } from "./components/TrophyUnlockedModal";
 
