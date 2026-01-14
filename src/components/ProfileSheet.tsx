@@ -159,7 +159,8 @@ export const ProfileSheet = ({ onClose }: ProfileSheetProps) => {
   };
 
   const subscriptionStatus = getSubscriptionStatus();
-  const canCreateWorkspace = planCapabilities?.planType === 'studio';
+  // Allow Pro and Studio users to see the create workspace button
+  const canSeeCreateWorkspace = planCapabilities?.planType === 'studio' || planCapabilities?.planType === 'pro';
   const ownedWorkspaces = allWorkspaces.filter(w => w.role === 'owner').length;
   const workspaceLimit = planCapabilities?.totalWorkspacesLimit() || 1;
 
