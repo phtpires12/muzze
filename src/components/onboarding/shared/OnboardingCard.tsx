@@ -24,10 +24,10 @@ export const OnboardingCard = ({
   return (
     <Card
       className={cn(
-        "p-6 transition-all duration-300",
-        onClick && "cursor-pointer hover:scale-[1.02]",
-        selected && "border-2 border-primary bg-primary/5 shadow-lg",
-        !selected && onClick && "border-2 border-transparent hover:border-primary/20",
+        "p-6 transition-all duration-200",
+        onClick && "cursor-pointer hover:shadow-md",
+        selected && "border-2 border-primary shadow-sm",
+        !selected && onClick && "border border-border hover:border-primary/50",
         className
       )}
       onClick={onClick}

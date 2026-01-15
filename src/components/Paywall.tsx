@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Crown, Calendar, Sparkles, X, Building2, Users } from "lucide-react";
+import { Crown, Calendar, Sparkles, X, Building2, Users, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { 
   Drawer,
@@ -123,10 +123,10 @@ export const Paywall = ({
 
   const ContentBody = () => (
     <div className="space-y-6">
-      {/* Icon and Title */}
+      {/* Icon */}
       <div className="flex flex-col items-center text-center gap-3">
-        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
-          <Icon className="w-8 h-8 text-primary" />
+        <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+          <Icon className="w-7 h-7 text-primary" strokeWidth={1.5} />
         </div>
       </div>
 
@@ -140,7 +140,7 @@ export const Paywall = ({
                 "w-8 h-8 rounded-full border-2 transition-colors",
                 i < (currentUsage || 0)
                   ? "bg-primary border-primary"
-                  : "border-muted-foreground/30"
+                  : "border-border"
               )}
             />
           ))}
@@ -151,13 +151,13 @@ export const Paywall = ({
       )}
 
       {/* Benefits list */}
-      <div className="space-y-2 py-4 border-t border-border">
-        <p className="text-sm font-medium text-center mb-3">Com o Pro você ganha:</p>
-        <ul className="space-y-2">
+      <div className="space-y-3 py-4 border-t border-border">
+        <p className="text-sm font-semibold text-center">Com o Pro você ganha:</p>
+        <ul className="space-y-2.5">
           {PRO_BENEFITS.map((benefit, i) => (
-            <li key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
+            <li key={i} className="flex items-center gap-3 text-sm text-muted-foreground">
               <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <Sparkles className="w-3 h-3 text-primary" />
+                <Check className="w-3 h-3 text-primary" strokeWidth={2} />
               </div>
               {benefit}
             </li>
@@ -185,9 +185,11 @@ export const Paywall = ({
           <DrawerFooter className="gap-2">
             <Button 
               onClick={handleUpgradeClick}
-              className="w-full bg-gradient-to-r from-primary to-accent"
+              variant="gradient-pill"
+              size="lg"
+              className="w-full"
             >
-              <Crown className="w-4 h-4 mr-2" />
+              <Crown className="w-4 h-4 mr-2" strokeWidth={1.5} />
               Ver planos Pro
             </Button>
             <DrawerClose asChild>
@@ -216,9 +218,11 @@ export const Paywall = ({
         <DialogFooter className="flex-col sm:flex-col gap-2">
           <Button 
             onClick={handleUpgradeClick}
-            className="w-full bg-gradient-to-r from-primary to-accent"
+            variant="gradient-pill"
+            size="lg"
+            className="w-full"
           >
-            <Crown className="w-4 h-4 mr-2" />
+            <Crown className="w-4 h-4 mr-2" strokeWidth={1.5} />
             Ver planos Pro
           </Button>
           <Button variant="ghost" onClick={handleClose} className="w-full">

@@ -157,7 +157,7 @@ export const BottomNav = () => {
         className="fixed left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-2xl z-50"
         style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' }}
       >
-        <div className="bg-background/40 backdrop-blur-xl border border-border/50 rounded-3xl shadow-2xl px-4 py-3">
+        <div className="bg-background/95 backdrop-blur-sm border border-border rounded-2xl shadow-lg px-4 py-3">
           <div className="flex items-center justify-around gap-2">
             {/* Left navigation items */}
             {navigation.slice(0, 2).map((item) => (
@@ -165,15 +165,15 @@ export const BottomNav = () => {
                 key={item.name}
                 to={item.href}
                 onClick={() => handleNavClick(item.name, item.href)}
-                className="flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all duration-300 text-muted-foreground hover:text-foreground hover:bg-accent/10"
-                activeClassName="text-primary bg-primary/10"
+                className="flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all duration-200 text-muted-foreground hover:text-foreground"
+                activeClassName="text-primary"
               >
-                <item.icon className="w-5 h-5" />
+                <item.icon className="w-5 h-5" strokeWidth={1.5} />
                 <span className="text-xs font-medium hidden sm:block">{item.name}</span>
               </NavLink>
             ))}
 
-            {/* Center session button */}
+            {/* Center session button - mantém gradiente como identidade */}
             <div className="relative">
               <Button
                 size="icon"
@@ -182,18 +182,17 @@ export const BottomNav = () => {
                 onTouchStart={handleMouseDown}
                 onTouchEnd={handleMouseUp}
                 className={cn(
-                  "h-12 w-12 rounded-full shadow-lg bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-all duration-300",
-                  hasInProgressProjects && "ring-2 ring-primary/50 ring-offset-2 ring-offset-background",
-                  hasProgress && !hasInProgressProjects && "animate-pulse ring-2 ring-yellow-500/50 ring-offset-2 ring-offset-background"
+                  "h-12 w-12 rounded-full shadow-md bg-gradient-to-r from-accent to-primary hover:opacity-90 transition-all duration-200",
+                  hasInProgressProjects && "ring-2 ring-primary/30 ring-offset-2 ring-offset-background"
                 )}
               >
                 <img src={muzzeLeafWhite} alt="Criar" className="w-8 h-8 object-contain" />
               </Button>
               {hasInProgressProjects && (
-                <div className="absolute -top-1 -right-1 h-4 w-4 bg-green-500 rounded-full border-2 border-background" />
+                <div className="absolute -top-1 -right-1 h-3.5 w-3.5 bg-green-500 rounded-full border-2 border-background" />
               )}
               {hasProgress && !hasInProgressProjects && (
-                <div className="absolute -top-1 -right-1 h-4 w-4 bg-yellow-500 rounded-full border-2 border-background animate-pulse" />
+                <div className="absolute -top-1 -right-1 h-3.5 w-3.5 bg-primary rounded-full border-2 border-background" />
               )}
             </div>
 
@@ -203,10 +202,10 @@ export const BottomNav = () => {
                 key={item.name}
                 to={item.href}
                 onClick={() => handleNavClick(item.name, item.href)}
-                className="flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all duration-300 text-muted-foreground hover:text-foreground hover:bg-accent/10"
-                activeClassName="text-primary bg-primary/10"
+                className="flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all duration-200 text-muted-foreground hover:text-foreground"
+                activeClassName="text-primary"
               >
-                <item.icon className="w-5 h-5" />
+                <item.icon className="w-5 h-5" strokeWidth={1.5} />
                 <span className="text-xs font-medium hidden sm:block">{item.name}</span>
               </NavLink>
             ))}
@@ -235,7 +234,7 @@ export const BottomNav = () => {
                   <Button
                     key={project.id}
                     variant="outline"
-                    className="w-full h-auto p-4 flex items-start gap-3 hover:bg-primary/5 hover:border-primary/50"
+                    className="w-full h-auto p-4 flex items-start gap-3 hover:border-primary/50"
                     onClick={() => {
                       continueProject(project);
                       setIsStageSelectOpen(false);
@@ -243,9 +242,9 @@ export const BottomNav = () => {
                   >
                     <div className="flex-1 text-left">
                       <div className="flex items-center gap-2 mb-1">
-                        {project.type === "idea" && <Lightbulb className="w-4 h-4 text-primary" />}
-                        {project.type === "script" && <Video className="w-4 h-4 text-primary" />}
-                        {project.type === "shotlist" && <Mic className="w-4 h-4 text-primary" />}
+                        {project.type === "idea" && <Lightbulb className="w-4 h-4 text-primary" strokeWidth={1.5} />}
+                        {project.type === "script" && <Video className="w-4 h-4 text-primary" strokeWidth={1.5} />}
+                        {project.type === "shotlist" && <Mic className="w-4 h-4 text-primary" strokeWidth={1.5} />}
                         <span className="font-medium text-sm">{project.title}</span>
                       </div>
                       <p className="text-xs text-muted-foreground">
@@ -267,10 +266,10 @@ export const BottomNav = () => {
                   <Button
                     key={stage}
                     variant="outline"
-                    className="h-24 flex flex-col gap-2"
+                    className="h-24 flex flex-col gap-2 hover:border-primary/50"
                     onClick={() => handleStageSelect(stage)}
                   >
-                    <Icon className="w-6 h-6" />
+                    <Icon className="w-6 h-6" strokeWidth={1.5} />
                     <span className="capitalize text-xs">{stage}</span>
                   </Button>
                 ))}
