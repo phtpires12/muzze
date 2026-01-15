@@ -527,14 +527,15 @@ const CalendarioEditorial = () => {
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      <div className="border-b border-border bg-card">
+      {/* Header - Seção branca */}
+      <div className="border-b border-border bg-background">
         <div 
-          className="container mx-auto px-4 py-4"
-          style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}
+          className="container mx-auto px-4 py-6"
+          style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1.5rem)' }}
         >
           <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold">Calendário Editorial</h1>
-            <Button onClick={handleCreateNewScript}>
+            <h1 className="text-3xl font-bold tracking-tight">Calendário Editorial</h1>
+            <Button onClick={handleCreateNewScript} variant="default" className="rounded-lg">
               <Plus className="w-4 h-4 mr-2" />
               Nova Ideia
             </Button>
@@ -553,34 +554,44 @@ const CalendarioEditorial = () => {
         </div>
       )}
 
-      <div className="container mx-auto px-4 py-4">
-        {/* View Switcher */}
-        <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1 mb-4 w-fit">
-          <Button 
-            variant={viewType === "calendar" ? "secondary" : "ghost"} 
-            size="sm"
-            onClick={() => setViewType("calendar")}
-          >
-            <CalendarIcon className="w-4 h-4 mr-1.5" />
-            Calendário
-          </Button>
-          <Button 
-            variant={viewType === "gallery" ? "secondary" : "ghost"} 
-            size="sm"
-            onClick={handleGalleryClick}
-          >
-            <LayoutGrid className="w-4 h-4 mr-1.5" />
-            Galeria
-          </Button>
-          <Button 
-            variant={viewType === "board" ? "secondary" : "ghost"} 
-            size="sm"
-            onClick={() => setViewType("board")}
-          >
-            <Columns3 className="w-4 h-4 mr-1.5" />
-            Quadro
-          </Button>
+      {/* Seção alternada cinza para controles */}
+      <div className="bg-muted/30 py-4">
+        <div className="container mx-auto px-4">
+          {/* View Switcher */}
+          <div className="flex items-center gap-1 bg-background rounded-lg p-1 mb-4 w-fit border border-border">
+            <Button 
+              variant={viewType === "calendar" ? "secondary" : "ghost"} 
+              size="sm"
+              onClick={() => setViewType("calendar")}
+              className="rounded-md"
+            >
+              <CalendarIcon className="w-4 h-4 mr-1.5" />
+              Calendário
+            </Button>
+            <Button 
+              variant={viewType === "gallery" ? "secondary" : "ghost"} 
+              size="sm"
+              onClick={handleGalleryClick}
+              className="rounded-md"
+            >
+              <LayoutGrid className="w-4 h-4 mr-1.5" />
+              Galeria
+            </Button>
+            <Button 
+              variant={viewType === "board" ? "secondary" : "ghost"} 
+              size="sm"
+              onClick={() => setViewType("board")}
+              className="rounded-md"
+            >
+              <Columns3 className="w-4 h-4 mr-1.5" />
+              Quadro
+            </Button>
+          </div>
         </div>
+      </div>
+      
+      {/* Conteúdo principal - Seção branca */}
+      <div className="container mx-auto px-4 py-6">
 
         {viewType === "calendar" ? (
         <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "month" | "week")}>

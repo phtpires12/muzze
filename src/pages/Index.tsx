@@ -336,7 +336,7 @@ const Index = () => {
   // Se celebração está ativa, renderizar tela mínima para evitar flash
   if (isShowingAnyCelebration) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-accent/10 via-background to-primary/10">
+      <div className="min-h-screen bg-background">
         {/* Tela em branco - celebração aparece como overlay via GlobalCelebrations */}
       </div>
     );
@@ -344,7 +344,7 @@ const Index = () => {
 
   if (profileLoading || !profile) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-accent/10 via-background to-primary/10">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-muted-foreground">Carregando...</p>
@@ -423,10 +423,10 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-accent/10 via-background to-primary/10 pb-24">
+    <div className="min-h-screen bg-background pb-24">
       {/* Header */}
       <header 
-        className="px-6 pb-4"
+        className="px-6 pb-4 bg-background"
         style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 2rem)' }}
       >
         <div className="flex items-center justify-between gap-3 mb-2">
@@ -497,9 +497,9 @@ const Index = () => {
       <div className="px-6 mt-6">
         <Card 
           className={cn(
-            "p-8 backdrop-blur-md bg-card/85 border-border/20",
-            "shadow-[0_8px_30px_-8px_hsl(var(--shadow-panel))]",
-            "rounded-[28px] animate-fade-in"
+            "p-8 bg-card border border-border",
+            "shadow-sm hover:shadow-md transition-shadow",
+            "rounded-xl animate-fade-in"
           )}
         >
           {projectsLoading ? (
@@ -584,16 +584,16 @@ const Index = () => {
         </Card>
       </div>
 
-      {/* Progress Section */}
-      <div className="px-6 mt-8">
-        <h3 className="text-lg font-semibold text-foreground mb-4">
+      {/* Progress Section - Seção alternada cinza */}
+      <div className="px-6 py-8 mt-6 bg-muted/30">
+        <h3 className="text-xl font-bold text-foreground mb-6">
           Seu progresso na Muzze
         </h3>
 
         <div className="space-y-4">
           <button 
             onClick={() => navigate('/levels')}
-            className="w-full p-4 bg-card rounded-2xl border border-border/20 shadow-sm hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+            className="w-full p-4 bg-card rounded-xl border border-border shadow-sm hover:shadow-md active:scale-[0.98] transition-all cursor-pointer"
           >
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-foreground">
@@ -612,10 +612,10 @@ const Index = () => {
           <div className="grid grid-cols-3 gap-3">
             <button 
               onClick={() => setIsTrophiesModalOpen(true)}
-              className="p-4 bg-card rounded-2xl border border-border/20 shadow-sm text-center hover:bg-accent/10 transition-colors"
+              className="p-4 bg-card rounded-xl border border-border text-center hover:shadow-md transition-all"
             >
-              <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-gradient-to-br from-accent to-primary flex items-center justify-center">
-                <Trophy className="w-6 h-6 text-white" />
+              <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-primary flex items-center justify-center">
+                <Trophy className="w-6 h-6 text-primary-foreground" />
               </div>
               <div className="text-sm font-semibold text-foreground">
                 {stats?.trophies?.length ?? 0}/{TROPHIES.length}
@@ -627,10 +627,10 @@ const Index = () => {
 
             <button 
               onClick={handleOpenTimeModal}
-              className="p-4 bg-card rounded-2xl border border-border/20 shadow-sm text-center hover:bg-accent/10 transition-colors"
+              className="p-4 bg-card rounded-xl border border-border text-center hover:shadow-md transition-all"
             >
-              <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-gradient-to-br from-accent to-primary flex items-center justify-center">
-                <Clock className="w-6 h-6 text-white" />
+              <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-primary flex items-center justify-center">
+                <Clock className="w-6 h-6 text-primary-foreground" />
               </div>
               <div className="text-sm font-semibold text-foreground">
                 {totalHours}h {totalMinutes}m
@@ -642,10 +642,10 @@ const Index = () => {
 
             <button 
               onClick={() => navigate('/novidades')}
-              className="p-4 bg-card rounded-2xl border border-border/20 shadow-sm text-center hover:bg-accent/10 transition-colors"
+              className="p-4 bg-card rounded-xl border border-border text-center hover:shadow-md transition-all"
             >
-              <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                <Sparkles className="w-6 h-6 text-white" />
+              <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-accent flex items-center justify-center">
+                <Sparkles className="w-6 h-6 text-accent-foreground" />
               </div>
               <div className="text-sm font-semibold text-foreground">
                 Em breve
@@ -997,18 +997,18 @@ function MotivationalCard({ currentStreak }: { currentStreak: number }) {
   const quote = useMemo(() => getRandomQuote(), []);
   
   return (
-    <div className="px-6 mt-8">
-      <Card className="p-6 bg-gradient-to-br from-accent to-primary text-white border-0 rounded-2xl shadow-lg">
+    <div className="px-6 py-8 bg-background">
+      <Card className="p-6 bg-primary text-primary-foreground border-0 rounded-xl shadow-md">
         {currentStreak > 0 ? (
-          <p className="text-center font-medium">
+          <p className="text-center font-semibold">
             Você está há {currentStreak} dias com a mente em movimento.
           </p>
         ) : (
           <div className="text-center">
-            <p className="font-medium text-lg leading-relaxed italic">
+            <p className="font-semibold text-lg leading-relaxed italic">
               "{quote.text}"
             </p>
-            <p className="text-sm mt-3 text-white/80">
+            <p className="text-sm mt-3 text-primary-foreground/80">
               — {quote.author}
             </p>
           </div>

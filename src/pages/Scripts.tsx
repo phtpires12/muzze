@@ -330,17 +330,25 @@ const Scripts = () => {
   };
 
   return (
-    <div className="p-8 space-y-8">
-      <div>
-        <h1 className="text-4xl font-bold mb-2">Roteiros</h1>
-        <p className="text-muted-foreground">Organize suas ideias e scripts</p>
+    <div className="min-h-screen bg-background pb-24">
+      {/* Header - Seção branca */}
+      <div className="border-b border-border bg-background">
+        <div 
+          className="container mx-auto px-4 py-6"
+          style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1.5rem)' }}
+        >
+          <h1 className="text-3xl font-bold tracking-tight mb-1">Roteiros</h1>
+          <p className="text-muted-foreground">Organize suas ideias e scripts</p>
+        </div>
       </div>
 
-      <Tabs defaultValue="scripts" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="scripts">Roteiros</TabsTrigger>
-          <TabsTrigger value="shotlists">Shot Lists</TabsTrigger>
-        </TabsList>
+      {/* Conteúdo principal */}
+      <div className="container mx-auto px-4 py-6">
+        <Tabs defaultValue="scripts" className="space-y-6">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="scripts">Roteiros</TabsTrigger>
+            <TabsTrigger value="shotlists">Shot Lists</TabsTrigger>
+          </TabsList>
 
         <TabsContent value="scripts" className="space-y-6">
           <div className="flex justify-end">
@@ -393,12 +401,12 @@ const Scripts = () => {
                 scripts.map((script) => {
                   const StatusIcon = statusConfig[script.status].icon;
                   return (
-                    <Card key={script.id} className="p-6 space-y-4 hover:shadow-lg transition-all duration-300">
+                    <Card key={script.id} className="p-6 space-y-4 border border-border hover:shadow-md transition-all duration-200">
                       <div>
                         <div className="flex items-center gap-2 mb-2">
                           <h3 className="text-lg font-semibold flex-1">{script.title}</h3>
-                          <Badge variant="outline" className={cn("gap-1", statusConfig[script.status].color)}>
-                            <StatusIcon className="w-3 h-3" />
+                          <Badge variant="secondary" className="gap-1">
+                            <StatusIcon className={cn("w-3 h-3", statusConfig[script.status].color)} />
                             {statusConfig[script.status].label}
                           </Badge>
                         </div>
@@ -417,6 +425,7 @@ const Scripts = () => {
                               variant="outline"
                               onClick={() => advanceStatus(script)}
                               title="Avançar status"
+                              className="rounded-lg"
                             >
                               <Check className="w-4 h-4" />
                             </Button>
@@ -425,6 +434,7 @@ const Scripts = () => {
                             size="sm"
                             variant="outline"
                             onClick={() => handleEdit(script)}
+                            className="rounded-lg"
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
@@ -432,6 +442,7 @@ const Scripts = () => {
                             size="sm"
                             variant="outline"
                             onClick={() => handleDelete(script.id)}
+                            className="rounded-lg"
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
@@ -506,7 +517,7 @@ const Scripts = () => {
                     {total > 0 && (
                       <div className="h-2 bg-secondary rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-gradient-to-r from-accent to-primary transition-all duration-500"
+                          className="h-full bg-primary transition-all duration-500"
                           style={{ width: `${progress}%` }}
                         />
                       </div>
@@ -561,7 +572,8 @@ const Scripts = () => {
             )}
           </div>
         </TabsContent>
-      </Tabs>
+        </Tabs>
+      </div>
 
       {/* Detail Dialog for Record/Edit */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
