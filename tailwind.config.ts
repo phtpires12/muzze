@@ -80,26 +80,45 @@ export default {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
-        "aurora-shift": {
-          "0%, 100%": { transform: "translate(0, 0) scale(1)" },
-          "25%": { transform: "translate(5%, 5%) scale(1.05)" },
-          "50%": { transform: "translate(-3%, 8%) scale(0.98)" },
-          "75%": { transform: "translate(-5%, -3%) scale(1.02)" },
+        "aurora-wave": {
+          "0%, 100%": { 
+            transform: "translateX(0) translateY(0) rotate(-15deg) scaleY(1)",
+            opacity: "1"
+          },
+          "33%": { 
+            transform: "translateX(3%) translateY(-4%) rotate(-12deg) scaleY(1.08)",
+            opacity: "0.9"
+          },
+          "66%": { 
+            transform: "translateX(-2%) translateY(3%) rotate(-18deg) scaleY(0.95)",
+            opacity: "1"
+          },
         },
-        "aurora-shift-reverse": {
-          "0%, 100%": { transform: "translate(0, 0) scale(1)" },
-          "25%": { transform: "translate(-5%, -5%) scale(0.95)" },
-          "50%": { transform: "translate(3%, -8%) scale(1.02)" },
-          "75%": { transform: "translate(5%, 3%) scale(0.98)" },
+        "aurora-wave-delayed": {
+          "0%, 100%": { 
+            transform: "translateX(0) translateY(0) rotate(-8deg) scaleX(1)",
+            opacity: "1"
+          },
+          "40%": { 
+            transform: "translateX(-3%) translateY(2%) rotate(-5deg) scaleX(1.05)",
+            opacity: "0.85"
+          },
+          "70%": { 
+            transform: "translateX(2%) translateY(-3%) rotate(-11deg) scaleX(0.97)",
+            opacity: "1"
+          },
         },
-        "aurora-shift-delayed": {
-          "0%, 100%": { transform: "translate(0, 0) scale(1)" },
-          "33%": { transform: "translate(8%, -5%) scale(1.03)" },
-          "66%": { transform: "translate(-6%, 6%) scale(0.97)" },
+        "aurora-breathe": {
+          "0%, 100%": { opacity: "1", transform: "rotate(12deg) scale(1)" },
+          "50%": { opacity: "0.75", transform: "rotate(12deg) scale(1.05)" },
+        },
+        "aurora-drift": {
+          "0%, 100%": { transform: "translateX(0) translateY(0) rotate(-20deg)" },
+          "50%": { transform: "translateX(5%) translateY(-2%) rotate(-17deg)" },
         },
         "aurora-pulse": {
-          "0%, 100%": { opacity: "0.3", transform: "scale(1)" },
-          "50%": { opacity: "0.6", transform: "scale(1.1)" },
+          "0%, 100%": { opacity: "1", transform: "rotate(-5deg) scale(1)" },
+          "50%": { opacity: "0.6", transform: "rotate(-5deg) scale(1.08)" },
         },
         "fade-in": {
           "0%": {
@@ -145,10 +164,11 @@ export default {
         "flame-dance": "flame-dance 2s ease-in-out infinite",
         "confetti-fall": "confetti-fall 3s linear forwards",
         "slide-up-bounce": "slide-up-bounce 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)",
-        "aurora-shift": "aurora-shift 15s ease-in-out infinite",
-        "aurora-shift-reverse": "aurora-shift-reverse 18s ease-in-out infinite",
-        "aurora-shift-delayed": "aurora-shift-delayed 20s ease-in-out infinite",
-        "aurora-pulse": "aurora-pulse 8s ease-in-out infinite",
+        "aurora-wave": "aurora-wave 20s ease-in-out infinite",
+        "aurora-wave-delayed": "aurora-wave-delayed 25s ease-in-out infinite",
+        "aurora-breathe": "aurora-breathe 15s ease-in-out infinite",
+        "aurora-drift": "aurora-drift 30s ease-in-out infinite",
+        "aurora-pulse": "aurora-pulse 12s ease-in-out infinite",
       },
     },
   },
