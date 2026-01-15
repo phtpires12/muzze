@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { AuroraBackground } from "@/components/ui/aurora-background";
 import { LevelDefinition } from "@/lib/gamification";
 import { Sparkles } from "lucide-react";
 
@@ -27,28 +26,22 @@ export const LevelUpModal = () => {
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="max-w-md overflow-hidden p-0">
-        <AuroraBackground 
-          variant="full" 
-          intensity="medium" 
-          animated={true}
-          className="p-6"
-        >
-          <DialogHeader>
-            <DialogTitle className="text-center text-2xl">Parabéns! 🎉</DialogTitle>
-          </DialogHeader>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-center text-2xl">Parabéns! 🎉</DialogTitle>
+        </DialogHeader>
 
-          <div className="space-y-6 py-4">
-            <div className="flex flex-col items-center gap-4 text-center">
-              <div className="relative">
-                <div
-                  className="w-24 h-24 rounded-full flex items-center justify-center text-4xl font-bold text-white animate-scale-in shadow-2xl"
-                  style={{ background: levelInfo.color }}
-                >
-                  {levelInfo.level}
-                </div>
-                <Sparkles className="w-6 h-6 text-accent absolute -top-2 -right-2 animate-pulse" />
+        <div className="space-y-6 py-4">
+          <div className="flex flex-col items-center gap-4 text-center">
+            <div className="relative">
+              <div
+                className="w-24 h-24 rounded-full flex items-center justify-center text-4xl font-bold text-white animate-scale-in shadow-2xl"
+                style={{ background: levelInfo.color }}
+              >
+                {levelInfo.level}
               </div>
+              <Sparkles className="w-6 h-6 text-accent absolute -top-2 -right-2 animate-pulse" />
+            </div>
 
             <div className="space-y-2">
               <h2 className="text-2xl font-bold">
@@ -77,15 +70,14 @@ export const LevelUpModal = () => {
             </div>
           )}
 
-            <Button
-              onClick={() => setIsOpen(false)}
-              className="w-full"
-              size="lg"
-            >
-              Continuar
-            </Button>
-          </div>
-        </AuroraBackground>
+          <Button
+            onClick={() => setIsOpen(false)}
+            className="w-full"
+            size="lg"
+          >
+            Continuar
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );
