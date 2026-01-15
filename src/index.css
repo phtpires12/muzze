@@ -2,6 +2,87 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Aurora Gradient Effect */
+:root {
+  --aurora-pink: 330 85% 65%;
+  --aurora-purple: 270 85% 60%;
+  --aurora-blue: 220 80% 60%;
+}
+
+.dark {
+  --aurora-pink: 330 75% 55%;
+  --aurora-purple: 270 75% 50%;
+  --aurora-blue: 220 70% 50%;
+}
+
+@keyframes aurora-shift {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  25% {
+    transform: translate(5%, 5%) scale(1.05);
+  }
+  50% {
+    transform: translate(-3%, 8%) scale(0.98);
+  }
+  75% {
+    transform: translate(-5%, -3%) scale(1.02);
+  }
+}
+
+@keyframes aurora-shift-reverse {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  25% {
+    transform: translate(-5%, -5%) scale(0.95);
+  }
+  50% {
+    transform: translate(3%, -8%) scale(1.02);
+  }
+  75% {
+    transform: translate(5%, 3%) scale(0.98);
+  }
+}
+
+@keyframes aurora-shift-delayed {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(8%, -5%) scale(1.03);
+  }
+  66% {
+    transform: translate(-6%, 6%) scale(0.97);
+  }
+}
+
+@keyframes aurora-pulse {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.1);
+  }
+}
+
+.aurora-noise {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  opacity: 0.04;
+  mix-blend-mode: overlay;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-aurora-shift,
+  .animate-aurora-shift-reverse,
+  .animate-aurora-shift-delayed,
+  .animate-aurora-pulse {
+    animation: none !important;
+  }
+}
+
 /* ============================================
    MUZZE DESIGN SYSTEM v2 - Clean & Professional
    Inspirado em Uppbeat: minimalista, alto contraste

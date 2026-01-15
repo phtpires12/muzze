@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { Crown, Calendar, Sparkles, X, Building2, Users, Check } from "lucide-react";
+import { Crown, Calendar, Sparkles, Building2, Users, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { 
   Drawer,
@@ -20,6 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { useDeviceType } from "@/hooks/useDeviceType";
 import { useAnalytics } from "@/hooks/useAnalytics";
+import { AuroraBackground } from "@/components/ui/aurora-background";
 import { cn } from "@/lib/utils";
 
 export type PaywallAction = 'create_script' | 'schedule_future' | 'invite_user' | 'create_workspace' | 'invite_guest_limit';
@@ -123,12 +123,19 @@ export const Paywall = ({
 
   const ContentBody = () => (
     <div className="space-y-6">
-      {/* Icon */}
-      <div className="flex flex-col items-center text-center gap-3">
-        <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
-          <Icon className="w-7 h-7 text-primary" strokeWidth={1.5} />
+      {/* Aurora header with icon */}
+      <AuroraBackground 
+        variant="full" 
+        intensity="subtle" 
+        animated={false}
+        className="rounded-xl py-6 -mx-2"
+      >
+        <div className="flex flex-col items-center text-center gap-3">
+          <div className="w-14 h-14 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center shadow-lg">
+            <Icon className="w-7 h-7 text-primary" strokeWidth={1.5} />
+          </div>
         </div>
-      </div>
+      </AuroraBackground>
 
       {/* Usage indicator (for create_script) */}
       {action === 'create_script' && limit && (
