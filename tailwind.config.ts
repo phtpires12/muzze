@@ -73,20 +73,33 @@ export default {
       },
       keyframes: {
         "accordion-down": {
-          from: {
-            height: "0",
-          },
-          to: {
-            height: "var(--radix-accordion-content-height)",
-          },
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" },
         },
         "accordion-up": {
-          from: {
-            height: "var(--radix-accordion-content-height)",
-          },
-          to: {
-            height: "0",
-          },
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" },
+        },
+        "aurora-shift": {
+          "0%, 100%": { transform: "translate(0, 0) scale(1)" },
+          "25%": { transform: "translate(5%, 5%) scale(1.05)" },
+          "50%": { transform: "translate(-3%, 8%) scale(0.98)" },
+          "75%": { transform: "translate(-5%, -3%) scale(1.02)" },
+        },
+        "aurora-shift-reverse": {
+          "0%, 100%": { transform: "translate(0, 0) scale(1)" },
+          "25%": { transform: "translate(-5%, -5%) scale(0.95)" },
+          "50%": { transform: "translate(3%, -8%) scale(1.02)" },
+          "75%": { transform: "translate(5%, 3%) scale(0.98)" },
+        },
+        "aurora-shift-delayed": {
+          "0%, 100%": { transform: "translate(0, 0) scale(1)" },
+          "33%": { transform: "translate(8%, -5%) scale(1.03)" },
+          "66%": { transform: "translate(-6%, 6%) scale(0.97)" },
+        },
+        "aurora-pulse": {
+          "0%, 100%": { opacity: "0.3", transform: "scale(1)" },
+          "50%": { opacity: "0.6", transform: "scale(1.1)" },
         },
         "fade-in": {
           "0%": {
@@ -132,6 +145,10 @@ export default {
         "flame-dance": "flame-dance 2s ease-in-out infinite",
         "confetti-fall": "confetti-fall 3s linear forwards",
         "slide-up-bounce": "slide-up-bounce 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)",
+        "aurora-shift": "aurora-shift 15s ease-in-out infinite",
+        "aurora-shift-reverse": "aurora-shift-reverse 18s ease-in-out infinite",
+        "aurora-shift-delayed": "aurora-shift-delayed 20s ease-in-out infinite",
+        "aurora-pulse": "aurora-pulse 8s ease-in-out infinite",
       },
     },
   },
