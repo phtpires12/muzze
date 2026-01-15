@@ -2,119 +2,127 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* ============================================
+   MUZZE DESIGN SYSTEM v2 - Clean & Professional
+   Inspirado em Uppbeat: minimalista, alto contraste
+   ============================================ */
 
 @layer base {
   :root {
-    /* Muzze Colors - Gradiente laranja → roxo */
+    /* Background: Branco puro para máxima limpeza */
     --background: 0 0% 100%;
-    --foreground: 0 0% 24%;
+    --foreground: 0 0% 12%;
 
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 24%;
+    --card-foreground: 0 0% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 24%;
+    --popover-foreground: 0 0% 12%;
 
-    /* Lilás primário #B68CFF (270, 100%, 77%) */
-    --primary: 270 100% 77%;
+    /* Primary: Lilás Muzze mais saturado e profissional */
+    --primary: 270 85% 60%;
     --primary-foreground: 0 0% 100%;
 
+    /* Secondary: Cinza muito claro */
     --secondary: 0 0% 96%;
-    --secondary-foreground: 0 0% 42%;
+    --secondary-foreground: 0 0% 35%;
 
     --muted: 0 0% 96%;
-    --muted-foreground: 0 0% 42%;
+    --muted-foreground: 0 0% 45%;
 
-    /* Laranja #FF9A5F (23, 100%, 69%) */
+    /* Accent: Laranja apenas para momentos pontuais */
     --accent: 23 100% 69%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84.2% 60.2%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 91%;
-    --input: 0 0% 91%;
-    --ring: 270 100% 77%;
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 270 85% 60%;
 
-    --radius: 1.75rem;
+    /* Radius System - Mais profissional */
+    --radius: 1rem;
+    --radius-sm: 0.5rem;
+    --radius-md: 0.75rem;
+    --radius-lg: 1rem;
+    --radius-xl: 1.25rem;
+    --radius-pill: 9999px;
 
-    /* Safe Area Insets for iOS Dynamic Island */
+    /* Safe Area Insets for iOS */
     --safe-area-inset-top: env(safe-area-inset-top, 0px);
     --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
     --safe-area-inset-left: env(safe-area-inset-left, 0px);
     --safe-area-inset-right: env(safe-area-inset-right, 0px);
 
-    /* Gradiente principal: laranja → roxo (#FF9A5F → #A06AF9) */
-    --gradient-primary: linear-gradient(135deg, hsl(23 100% 69%), hsl(270 93% 69%));
-    --gradient-subtle: linear-gradient(180deg, hsl(0 0% 100%), hsl(270 100% 98%));
+    /* Gradiente principal: usado apenas em elementos de destaque */
+    --gradient-primary: linear-gradient(135deg, hsl(23 100% 69%), hsl(270 85% 60%));
     
-    /* Sombras suaves */
-    --shadow-soft: 0 4px 25px -6px hsl(0 0% 92%);
-    --shadow-hover: 0 12px 40px -10px hsl(270 100% 77% / 0.2);
-    --shadow-panel: 0 8px 30px -8px hsl(0 0% 92%);
-    
-    /* Efeitos de brilho */
-    --glow-purple: 0 0 60px hsl(270 100% 77% / 0.3);
-    --glow-orange: 0 0 40px hsl(23 100% 69% / 0.3);
+    /* Sombras neutras e sutis */
+    --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.05);
+    --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.1);
+    --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.1);
+    --shadow-hover: 0 10px 25px -5px hsl(0 0% 0% / 0.1);
+
+    /* Seções alternadas */
+    --section-alt: 0 0% 98%;
 
     --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 0 0% 24%;
-    --sidebar-primary: 270 100% 77%;
+    --sidebar-foreground: 0 0% 12%;
+    --sidebar-primary: 270 85% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 0 0% 96%;
-    --sidebar-accent-foreground: 0 0% 24%;
-    --sidebar-border: 0 0% 91%;
-    --sidebar-ring: 270 100% 77%;
+    --sidebar-accent-foreground: 0 0% 12%;
+    --sidebar-border: 0 0% 90%;
+    --sidebar-ring: 270 85% 60%;
   }
 
   .dark {
-    --background: 0 0% 8%;
+    --background: 0 0% 7%;
     --foreground: 0 0% 95%;
 
-    --card: 0 0% 12%;
+    --card: 0 0% 10%;
     --card-foreground: 0 0% 95%;
 
-    --popover: 0 0% 12%;
+    --popover: 0 0% 10%;
     --popover-foreground: 0 0% 95%;
 
-    --primary: 270 100% 80%;
+    --primary: 270 85% 70%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 0 0% 18%;
+    --secondary: 0 0% 15%;
     --secondary-foreground: 0 0% 95%;
 
-    --muted: 0 0% 18%;
-    --muted-foreground: 0 0% 65%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 60%;
 
     --accent: 23 100% 72%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 62.8% 50%;
+    --destructive: 0 62% 50%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 0 0% 20%;
-    --input: 0 0% 20%;
-    --ring: 270 100% 80%;
+    --border: 0 0% 18%;
+    --input: 0 0% 18%;
+    --ring: 270 85% 70%;
 
-    --gradient-primary: linear-gradient(135deg, hsl(23 100% 72%), hsl(270 93% 72%));
-    --gradient-subtle: linear-gradient(180deg, hsl(0 0% 12%), hsl(0 0% 14%));
-    --shadow-soft: 0 4px 25px -6px hsl(0 0% 0% / 0.5);
-    --shadow-hover: 0 12px 40px -10px hsl(270 100% 80% / 0.3);
-    --shadow-panel: 0 8px 30px -8px hsl(0 0% 0% / 0.4);
-    --glow-purple: 0 0 60px hsl(270 100% 80% / 0.4);
-    --glow-orange: 0 0 40px hsl(23 100% 72% / 0.4);
+    --gradient-primary: linear-gradient(135deg, hsl(23 100% 72%), hsl(270 85% 70%));
+    
+    --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.3);
+    --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.4);
+    --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.4);
+    --shadow-hover: 0 10px 25px -5px hsl(0 0% 0% / 0.4);
 
-    --sidebar-background: 0 0% 12%;
+    --section-alt: 0 0% 9%;
+
+    --sidebar-background: 0 0% 10%;
     --sidebar-foreground: 0 0% 95%;
-    --sidebar-primary: 270 100% 80%;
+    --sidebar-primary: 270 85% 70%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 18%;
+    --sidebar-accent: 0 0% 15%;
     --sidebar-accent-foreground: 0 0% 95%;
-    --sidebar-border: 0 0% 20%;
-    --sidebar-ring: 270 100% 80%;
+    --sidebar-border: 0 0% 18%;
+    --sidebar-ring: 270 85% 70%;
   }
 }
 
@@ -155,6 +163,11 @@ All colors MUST be HSL.
 
 .fixed-safe-bottom {
   bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);
+}
+
+/* Section alternating backgrounds */
+.section-alt {
+  background-color: hsl(var(--section-alt));
 }
 
 /* ===== TipTap Rich Text Editor Styles ===== */
@@ -498,17 +511,18 @@ All colors MUST be HSL.
     max-width: 100%;
     white-space: pre-wrap;
   }
-  
-  .rich-text-editor .ProseMirror p,
-  .rich-text-editor .ProseMirror li {
-    word-break: break-word;
-    overflow-wrap: anywhere;
-    max-width: 100%;
-  }
-  
-  /* Prevent horizontal overflow on mobile */
+
+  /* Prevent horizontal overflow */
   .rich-text-editor {
     max-width: 100%;
     overflow-x: hidden;
+  }
+
+  .rich-text-editor .ProseMirror p,
+  .rich-text-editor .ProseMirror li,
+  .rich-text-editor .ProseMirror div {
+    max-width: 100%;
+    word-break: break-word;
+    overflow-wrap: anywhere;
   }
 }

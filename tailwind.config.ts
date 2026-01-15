@@ -60,8 +60,16 @@ export default {
       },
       borderRadius: {
         lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        md: "calc(var(--radius) - 4px)",
+        sm: "calc(var(--radius) - 8px)",
+        xl: "var(--radius-xl)",
+        pill: "var(--radius-pill)",
+      },
+      boxShadow: {
+        sm: "var(--shadow-sm)",
+        md: "var(--shadow-md)",
+        lg: "var(--shadow-lg)",
+        hover: "var(--shadow-hover)",
       },
       keyframes: {
         "accordion-down": {
@@ -80,16 +88,6 @@ export default {
             height: "0",
           },
         },
-        "pulse-glow": {
-          "0%, 100%": {
-            opacity: "1",
-            transform: "scale(1)",
-          },
-          "50%": {
-            opacity: "0.8",
-            transform: "scale(1.05)",
-          },
-        },
         "fade-in": {
           "0%": {
             opacity: "0",
@@ -100,60 +98,40 @@ export default {
             transform: "translateY(0)",
           },
         },
-        "wiggle": {
-          "0%, 100%": {
-            transform: "rotate(-3deg)",
-          },
-          "50%": {
-            transform: "rotate(3deg)",
-          },
+        "scale-in": {
+          "0%": { transform: "scale(0.95)", opacity: "0" },
+          "100%": { transform: "scale(1)", opacity: "1" },
         },
         "count-up": {
           "0%": { transform: "scale(0.5)", opacity: "0" },
-          "50%": { transform: "scale(1.2)" },
+          "50%": { transform: "scale(1.1)" },
           "100%": { transform: "scale(1)", opacity: "1" },
         },
         "flame-dance": {
           "0%, 100%": { transform: "scaleY(1) rotate(0deg)" },
-          "25%": { transform: "scaleY(1.1) rotate(-3deg)" },
-          "50%": { transform: "scaleY(0.95) rotate(0deg)" },
-          "75%": { transform: "scaleY(1.1) rotate(3deg)" },
+          "25%": { transform: "scaleY(1.05) rotate(-2deg)" },
+          "50%": { transform: "scaleY(0.98) rotate(0deg)" },
+          "75%": { transform: "scaleY(1.05) rotate(2deg)" },
         },
         "confetti-fall": {
           "0%": { transform: "translateY(-100vh) rotate(0deg)", opacity: "1" },
           "100%": { transform: "translateY(100vh) rotate(720deg)", opacity: "0" },
         },
-        "glow-pulse": {
-          "0%, 100%": { opacity: "0.3", transform: "scale(1)" },
-          "50%": { opacity: "0.6", transform: "scale(1.05)" },
-        },
-        "glow-pulse-delayed": {
-          "0%, 100%": { opacity: "0.2", transform: "scale(1)" },
-          "50%": { opacity: "0.5", transform: "scale(1.1)" },
-        },
         "slide-up-bounce": {
           "0%": { transform: "translateY(100%)", opacity: "0" },
-          "60%": { transform: "translateY(-10%)" },
+          "60%": { transform: "translateY(-5%)" },
           "100%": { transform: "translateY(0)", opacity: "1" },
-        },
-        "scale-in": {
-          "0%": { transform: "scale(0.8)", opacity: "0" },
-          "100%": { transform: "scale(1)", opacity: "1" },
         },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
-        "pulse-glow": "pulse-glow 2s ease-in-out infinite",
         "fade-in": "fade-in 0.3s ease-out",
-        "wiggle": "wiggle 1s ease-in-out infinite",
-        "count-up": "count-up 1.5s cubic-bezier(0.34, 1.56, 0.64, 1)",
+        "scale-in": "scale-in 0.2s ease-out",
+        "count-up": "count-up 1s cubic-bezier(0.34, 1.56, 0.64, 1)",
         "flame-dance": "flame-dance 2s ease-in-out infinite",
         "confetti-fall": "confetti-fall 3s linear forwards",
-        "glow-pulse": "glow-pulse 2s ease-in-out infinite",
-        "glow-pulse-delayed": "glow-pulse-delayed 2s ease-in-out infinite 0.5s",
-        "slide-up-bounce": "slide-up-bounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)",
-        "scale-in": "scale-in 0.3s ease-out",
+        "slide-up-bounce": "slide-up-bounce 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)",
       },
     },
   },

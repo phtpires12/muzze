@@ -25,31 +25,31 @@ export const FreePlanBanner = () => {
   return (
     <div 
       className={cn(
-        "rounded-2xl p-4 flex items-center justify-between gap-3",
-        "border transition-colors",
+        "rounded-xl p-4 flex items-center justify-between gap-3",
+        "border transition-all duration-200",
         isEmpty 
-          ? "bg-destructive/10 border-destructive/30" 
+          ? "border-destructive/40 bg-destructive/5" 
           : isLow 
-            ? "bg-amber-500/10 border-amber-500/30" 
-            : "bg-primary/5 border-primary/20"
+            ? "border-amber-500/40 bg-amber-500/5" 
+            : "border-border bg-card"
       )}
     >
       <div className="flex items-center gap-3">
         <div className={cn(
-          "w-10 h-10 rounded-xl flex items-center justify-center",
+          "w-10 h-10 rounded-lg flex items-center justify-center",
           isEmpty 
-            ? "bg-destructive/20" 
+            ? "bg-destructive/10" 
             : isLow 
-              ? "bg-amber-500/20" 
+              ? "bg-amber-500/10" 
               : "bg-primary/10"
         )}>
           {isEmpty ? (
-            <Clock className={cn("w-5 h-5", "text-destructive")} />
+            <Clock className="w-5 h-5 text-destructive" strokeWidth={1.5} />
           ) : (
             <Sparkles className={cn(
               "w-5 h-5",
-              isLow ? "text-amber-500" : "text-primary"
-            )} />
+              isLow ? "text-amber-600 dark:text-amber-400" : "text-primary"
+            )} strokeWidth={1.5} />
           )}
         </div>
         <div>
@@ -77,12 +77,7 @@ export const FreePlanBanner = () => {
       
       <button
         onClick={() => navigate('/settings')}
-        className={cn(
-          "text-xs font-medium px-3 py-1.5 rounded-lg transition-colors",
-          isEmpty 
-            ? "bg-destructive/20 text-destructive hover:bg-destructive/30" 
-            : "bg-primary/10 text-primary hover:bg-primary/20"
-        )}
+        className="text-xs font-semibold px-4 py-2 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
       >
         Upgrade
       </button>
