@@ -432,6 +432,7 @@ const Index = () => {
         <div className="flex items-center justify-between gap-3 mb-2">
           {/* Ofensiva - lado esquerdo */}
           <button 
+            id="tutorial-streak"
             onClick={() => navigate('/ofensiva')}
             className="flex items-center gap-2 text-foreground hover:text-accent transition-colors active:scale-95 shrink-0"
           >
@@ -441,6 +442,7 @@ const Index = () => {
           
           {/* Barra de Progresso - centro */}
           <button
+            id="tutorial-daily-progress"
             onClick={() => navigate('/stats')}
             className="flex-1 max-w-[160px] flex items-center gap-2 group active:scale-95 transition-transform"
           >
@@ -470,7 +472,7 @@ const Index = () => {
           {/* Avatar - lado direito */}
           <Sheet open={isProfileSheetOpen} onOpenChange={setIsProfileSheetOpen}>
             <SheetTrigger asChild>
-              <button className="focus:outline-none focus:ring-2 focus:ring-primary rounded-full transition-all hover:ring-2 hover:ring-primary/50 shrink-0">
+              <button id="tutorial-profile" className="focus:outline-none focus:ring-2 focus:ring-primary rounded-full transition-all hover:ring-2 hover:ring-primary/50 shrink-0">
                 <Avatar className="h-9 w-9 cursor-pointer">
                   {profile?.avatar_url ? (
                     <AvatarImage src={profile.avatar_url} alt={profile?.username || "Avatar"} />
@@ -544,6 +546,7 @@ const Index = () => {
               </div>
               
               <Button
+                id="tutorial-start-session"
                 onClick={handleContinueActivity}
                 className="w-full bg-gradient-to-r from-primary to-accent hover:opacity-90 text-white shadow-lg h-12 rounded-xl font-semibold"
               >
@@ -565,6 +568,7 @@ const Index = () => {
               </h2>
               
               <Button
+                id="tutorial-start-session"
                 data-testid="cta-start-session"
                 onClick={handleStartSession}
                 className="w-full relative overflow-hidden group h-14 rounded-2xl font-semibold text-base shadow-[0_0_20px_hsl(var(--primary)/0.4),0_0_40px_hsl(var(--accent)/0.2)]"

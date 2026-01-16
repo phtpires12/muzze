@@ -50,6 +50,8 @@ import PaywallPage from "./pages/PaywallPage";
 import PaywallSuccess from "./pages/PaywallSuccess";
 import { LevelUpModal } from "./components/LevelUpModal";
 import { TrophyUnlockedModal } from "./components/TrophyUnlockedModal";
+import { TutorialProvider } from "./components/tutorial/TutorialProvider";
+import { TutorialOverlay } from "./components/tutorial/TutorialOverlay";
 
 const queryClient = new QueryClient();
 
@@ -125,10 +127,13 @@ const RootLayout = () => (
   <AppNavigationProvider>
     <WorkspaceContextProvider>
       <PlanContextProvider>
-        <GlobalCelebrations />
-        <LevelUpModal />
-        <TrophyUnlockedModal />
-        <Outlet />
+        <TutorialProvider>
+          <GlobalCelebrations />
+          <LevelUpModal />
+          <TrophyUnlockedModal />
+          <TutorialOverlay />
+          <Outlet />
+        </TutorialProvider>
       </PlanContextProvider>
     </WorkspaceContextProvider>
   </AppNavigationProvider>

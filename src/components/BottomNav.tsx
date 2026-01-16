@@ -165,6 +165,7 @@ export const BottomNav = () => {
                 key={item.name}
                 to={item.href}
                 onClick={() => handleNavClick(item.name, item.href)}
+                id={item.name === 'Calendário' ? 'tutorial-calendar' : undefined}
                 className="flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all duration-200 text-muted-foreground hover:text-foreground"
                 activeClassName="text-primary"
               >
@@ -202,6 +203,7 @@ export const BottomNav = () => {
                 key={item.name}
                 to={item.href}
                 onClick={() => handleNavClick(item.name, item.href)}
+                id={item.name === 'Stats' ? 'tutorial-stats' : undefined}
                 className="flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all duration-200 text-muted-foreground hover:text-foreground"
                 activeClassName="text-primary"
               >

@@ -36,6 +36,7 @@ import { Screen23Notifications } from "@/components/onboarding/screens/phase6/Sc
 import { Screen24Review } from "@/components/onboarding/screens/phase6/Screen24Review";
 import { Screen25Paywall } from "@/components/onboarding/screens/phase6/Screen25Paywall";
 import { Screen26Install } from "@/components/onboarding/screens/phase6/Screen26Install";
+import { DesktopOnboarding } from "@/components/onboarding/DesktopOnboarding";
 
 const NewOnboarding = () => {
   const navigate = useNavigate();
@@ -55,6 +56,9 @@ const NewOnboarding = () => {
 
   useEffect(() => {
     const checkAuth = async () => {
+      // Skip auth check for desktop (handled by DesktopOnboarding)
+      if (isMobile === false) return;
+      
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -69,7 +73,7 @@ const NewOnboarding = () => {
       }
     };
     checkAuth();
-  }, [navigate, trackEvent, state.phase, state.screen]);
+  }, [navigate, trackEvent, state.phase, state.screen, isMobile]);
 
   // Auto-skip Screen24Review (Review/Rating) on non-mobile devices
   // App Store review only makes sense on mobile
@@ -78,6 +82,12 @@ const NewOnboarding = () => {
       nextScreen();
     }
   }, [state.phase, state.screen, isMobile, nextScreen]);
+
+  // Desktop users get the minimal onboarding flow
+  // Note: isMobile is undefined during initial render, so we wait for it
+  if (isMobile === false) {
+    return <DesktopOnboarding />;
+  }
 
   const handleContinue = () => {
     nextScreen();
