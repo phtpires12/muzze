@@ -9,10 +9,10 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { OnboardingLayout } from "@/components/onboarding/shared/OnboardingLayout";
 import { Button } from "@/components/ui/button";
 import { Shield } from "lucide-react";
-import { Screen0Welcome } from "@/components/onboarding/screens/phase1/Screen0Welcome";
-import { Screen1Methodology } from "@/components/onboarding/screens/phase1/Screen1Methodology";
-import { Screen2Username } from "@/components/onboarding/screens/phase1/Screen2Username";
-import { Screen3Platform } from "@/components/onboarding/screens/phase1/Screen3Platform";
+import { Screen0DreamSelection } from "@/components/onboarding/screens/phase1/Screen0DreamSelection";
+import { Screen1Revelation } from "@/components/onboarding/screens/phase1/Screen1Revelation";
+import { Screen2Process } from "@/components/onboarding/screens/phase1/Screen2Process";
+import { Screen3Comparison } from "@/components/onboarding/screens/phase1/Screen3Comparison";
 import { Screen4StickingPoints } from "@/components/onboarding/screens/phase2/Screen4StickingPoints";
 import { Screen5MonthsTrying } from "@/components/onboarding/screens/phase2/Screen5MonthsTrying";
 import { Screen6CurrentPosts } from "@/components/onboarding/screens/phase2/Screen6CurrentPosts";
@@ -139,12 +139,12 @@ const NewOnboarding = () => {
 
     const { phase, screen, data } = state;
 
-    // Phase 0 (Hook + Dream Outcome)
+    // Phase 0 (Amplify the Dream)
     if (phase === 0) {
-      if (screen === 0) return true;
-      if (screen === 1) return true;
-      if (screen === 2) return !!data.username?.trim();
-      if (screen === 3) return (data.preferred_platform?.length ?? 0) > 0;
+      if (screen === 0) return !!data.dream_goal; // Dream selection required
+      if (screen === 1) return true; // Revelation - just continue
+      if (screen === 2) return true; // Process - just continue
+      if (screen === 3) return true; // Comparison - just continue
     }
 
     // Phase 1 (Pain Diagnosis)
@@ -208,28 +208,30 @@ const NewOnboarding = () => {
   const renderScreen = () => {
     const { phase, screen } = state;
 
-    // Phase 0: Hook + Dream Outcome
+    // Phase 0: Amplify the Dream
     if (phase === 0) {
-      if (screen === 0) return <Screen0Welcome onContinue={handleContinue} onLogin={handleLogin} />;
-      if (screen === 1) return <Screen1Methodology onContinue={handleContinue} />;
-      if (screen === 2) {
+      if (screen === 0) {
         return (
-          <Screen2Username
-            value={state.data.username || ""}
-            onChange={(value) => updateData({ username: value })}
+          <Screen0DreamSelection
+            value={state.data.dream_goal || ""}
+            onChange={(value) => updateData({ dream_goal: value })}
+            onContinue={handleContinue}
           />
         );
       }
-      if (screen === 3) {
-        const platforms = state.data.preferred_platform
-          ? state.data.preferred_platform.split(",")
-          : [];
+      if (screen === 1) {
         return (
-          <Screen3Platform
-            value={platforms}
-            onChange={(value) => updateData({ preferred_platform: value.join(",") })}
+          <Screen1Revelation
+            selectedDream={state.data.dream_goal || ""}
+            onContinue={handleContinue}
           />
         );
+      }
+      if (screen === 2) {
+        return <Screen2Process onContinue={handleContinue} />;
+      }
+      if (screen === 3) {
+        return <Screen3Comparison onContinue={handleContinue} />;
       }
     }
 
@@ -424,8 +426,8 @@ const NewOnboarding = () => {
   // Mostrar botão de voltar em todas as telas exceto a primeira
   // Esconde botão voltar na primeira tela, no Paywall e no Install (navegação interna)
   const showBack = !(state.phase === 0 && state.screen === 0) && !(state.phase === 5 && state.screen === 4) && !(state.phase === 5 && state.screen === 5);
+  // Phase 0 screens handle their own continue buttons internally
   const showContinueButton =
-    (state.phase === 0 && (state.screen === 2 || state.screen === 3)) ||
     (state.phase === 1 && state.screen >= 0 && state.screen <= 4) ||
     (state.phase === 2 && state.screen >= 0 && state.screen <= 4) ||
     (state.phase === 3 && state.screen >= 0 && state.screen <= 4) ||
