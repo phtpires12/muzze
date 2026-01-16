@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Flame, Trophy, Navigation, Trash2, RotateCcw, Wrench, Timer, Calendar, Search, Copy, RefreshCw } from "lucide-react";
+import { ArrowLeft, Flame, Trophy, Navigation, Trash2, RotateCcw, Wrench, Timer, Calendar, Search, Copy, RefreshCw, BookOpen, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -15,12 +15,14 @@ import { PostConfirmationPopup } from "@/components/calendar/PostConfirmationPop
 import { useToast } from "@/hooks/use-toast";
 import { AdminPlanSwitcher } from "@/components/dev/AdminPlanSwitcher";
 import { BuildInfo } from "@/components/BuildInfo";
+import { useTutorial } from "@/components/tutorial/TutorialProvider";
 
 const DevTools = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isDeveloper, isAdmin, isLoading } = useUserRole();
   const { celebrationData, triggerCelebration, triggerTrophyDirectly, dismissStreakCelebration, dismissTrophyCelebration } = useStreakCelebration();
+  const { isActive: isTutorialActive, restartTutorial, skipTutorial } = useTutorial();
   
   // Timer simulation state
   const [showTimerSimulation, setShowTimerSimulation] = useState(false);
@@ -261,6 +263,52 @@ const DevTools = () => {
               <Calendar className="w-4 h-4 mr-2 text-purple-500" />
               Simular Popup de Status de Publicação
             </Button>
+          </CardContent>
+        </Card>
+
+        {/* Tutorial Desktop Section */}
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BookOpen className="w-5 h-5" />
+              Tutorial Desktop
+            </CardTitle>
+            <CardDescription>
+              Controlar o tutorial de tooltips para novos usuários
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between p-3 bg-muted rounded">
+              <span className="text-sm">Tutorial ativo</span>
+              <Badge variant={isTutorialActive ? "default" : "secondary"}>
+                {isTutorialActive ? "Sim" : "Não"}
+              </Badge>
+            </div>
+            <Button
+              onClick={() => {
+                restartTutorial();
+                navigate("/");
+                toast({ title: "Tutorial reiniciado!", description: "Vá para a Home para ver o tutorial." });
+              }}
+              className="w-full justify-start"
+              variant="outline"
+            >
+              <RotateCcw className="w-4 h-4 mr-2 text-blue-500" />
+              Reiniciar Tutorial
+            </Button>
+            {isTutorialActive && (
+              <Button
+                onClick={() => {
+                  skipTutorial();
+                  toast({ title: "Tutorial pulado!" });
+                }}
+                className="w-full justify-start"
+                variant="outline"
+              >
+                <X className="w-4 h-4 mr-2 text-red-500" />
+                Pular Tutorial
+              </Button>
+            )}
           </CardContent>
         </Card>
 

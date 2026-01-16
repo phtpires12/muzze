@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -80,12 +81,13 @@ export function useDesktopTutorial(): UseDesktopTutorialReturn {
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const isMobile = useIsMobile();
+  const location = useLocation();
 
-  // Check if tutorial should be shown on mount (desktop only)
+  // Check if tutorial should be shown on mount (desktop only, home route only)
   useEffect(() => {
     const checkTutorialStatus = async () => {
-      // Don't activate tutorial on mobile devices
-      if (isMobile) {
+      // Don't activate tutorial on mobile devices or outside home route
+      if (isMobile || location.pathname !== '/') {
         setIsLoading(false);
         return;
       }
@@ -114,7 +116,7 @@ export function useDesktopTutorial(): UseDesktopTutorialReturn {
     };
 
     checkTutorialStatus();
-  }, [isMobile]);
+  }, [isMobile, location.pathname]);
 
   const saveTutorialCompleted = useCallback(async () => {
     try {
