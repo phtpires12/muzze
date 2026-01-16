@@ -22,7 +22,7 @@ const DevTools = () => {
   const { toast } = useToast();
   const { isDeveloper, isAdmin, isLoading } = useUserRole();
   const { celebrationData, triggerCelebration, triggerTrophyDirectly, dismissStreakCelebration, dismissTrophyCelebration } = useStreakCelebration();
-  const { isActive: isTutorialActive, restartTutorial, skipTutorial } = useTutorial();
+  const { isActive: isTutorialActive, currentContext, restartTutorial, restartAllTutorials, skipTutorial } = useTutorial();
   
   // Timer simulation state
   const [showTimerSimulation, setShowTimerSimulation] = useState(false);
@@ -281,20 +281,31 @@ const DevTools = () => {
             <div className="flex items-center justify-between p-3 bg-muted rounded">
               <span className="text-sm">Tutorial ativo</span>
               <Badge variant={isTutorialActive ? "default" : "secondary"}>
-                {isTutorialActive ? "Sim" : "Não"}
+                {isTutorialActive ? `Sim (${currentContext})` : "Não"}
               </Badge>
             </div>
             <Button
               onClick={() => {
                 restartTutorial();
-                navigate("/");
-                toast({ title: "Tutorial reiniciado!", description: "Vá para a Home para ver o tutorial." });
+                toast({ title: "Tutorial reiniciado!", description: `Contexto: ${currentContext || 'home'}` });
               }}
               className="w-full justify-start"
               variant="outline"
             >
               <RotateCcw className="w-4 h-4 mr-2 text-blue-500" />
-              Reiniciar Tutorial
+              Reiniciar Tutorial Atual
+            </Button>
+            <Button
+              onClick={async () => {
+                await restartAllTutorials();
+                navigate("/");
+                toast({ title: "Todos os tutoriais reiniciados!", description: "Navegue pelo app para ver os tutoriais." });
+              }}
+              className="w-full justify-start"
+              variant="outline"
+            >
+              <RefreshCw className="w-4 h-4 mr-2 text-green-500" />
+              Reiniciar TODOS os Tutoriais
             </Button>
             {isTutorialActive && (
               <Button

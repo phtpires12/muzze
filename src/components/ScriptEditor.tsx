@@ -627,7 +627,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
         )}
 
         {/* Title */}
-        <div className="mb-4 md:mb-6">
+        <div id="script-title" className="mb-4 md:mb-6">
           <input
             type="text"
             value={title}
@@ -890,7 +890,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
         </Collapsible>
 
         {/* Content Editor - z-10 to stay above properties and isolate stacking */}
-        <div className="space-y-4 relative z-10 isolation-isolate">
+        <div id="script-editor" className="space-y-4 relative z-10 isolation-isolate">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
             <div className="border-l-4 border-primary/30 pl-4">
               <h3 className="text-base md:text-lg font-semibold text-foreground flex items-center gap-2">
@@ -900,6 +900,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
             
             {/* Desktop: Button inline */}
             <Button
+              id={isReviewMode ? 'review-advance' : 'script-advance'}
               onClick={handleNextStage}
               className="hidden md:flex gap-2 bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-opacity"
               size="lg"

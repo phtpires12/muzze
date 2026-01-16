@@ -333,10 +333,14 @@ export const BrainstormWorkspace = () => {
 
               <SortableContext items={ideas.map(i => i.id)}>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                  {[0, 1, 2].map((index) => {
+                {[0, 1, 2].map((index) => {
                     const idea = ideas[index];
                     return idea ? (
-                      <div key={idea.id} className="h-[400px]">
+                      <div 
+                        key={idea.id} 
+                        id={index === 0 ? 'ideation-card-first' : undefined}
+                        className="h-[400px]"
+                      >
                         <IdeaCard
                           id={idea.id}
                           title={idea.title || undefined}
@@ -351,6 +355,7 @@ export const BrainstormWorkspace = () => {
                     ) : (
                       <Card
                         key={`empty-${index}`}
+                        id={index === 0 ? 'ideation-card-new' : undefined}
                         className="h-[400px] border-dashed border-2 flex items-center justify-center cursor-pointer hover:bg-accent/50 transition-colors"
                         onClick={createNewIdea}
                       >
@@ -365,10 +370,12 @@ export const BrainstormWorkspace = () => {
               </SortableContext>
             </div>
 
-            <CompactCalendar 
-              scheduledIdeas={scheduledIdeas}
-              onDayClick={handleDayClick}
-            />
+            <div id="ideation-calendar">
+              <CompactCalendar 
+                scheduledIdeas={scheduledIdeas}
+                onDayClick={handleDayClick}
+              />
+            </div>
           </>
         )}
       </div>

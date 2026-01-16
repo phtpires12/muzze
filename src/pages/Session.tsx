@@ -433,6 +433,7 @@ const Session = () => {
                 return (
                   <button
                     key={stage.id}
+                    id={`session-stage-${stage.id}`}
                     onClick={() => handleStart(stage.id)}
                     className={cn(
                       "w-full p-4 rounded-xl border border-border",

@@ -148,6 +148,7 @@ export type Database = {
           reminder_time: string | null
           streak_freezes: number | null
           timezone: string
+          tutorial_progress: Json | null
           user_id: string
           username: string | null
           weekly_goal_minutes: number | null
@@ -172,6 +173,7 @@ export type Database = {
           reminder_time?: string | null
           streak_freezes?: number | null
           timezone?: string
+          tutorial_progress?: Json | null
           user_id: string
           username?: string | null
           weekly_goal_minutes?: number | null
@@ -196,6 +198,7 @@ export type Database = {
           reminder_time?: string | null
           streak_freezes?: number | null
           timezone?: string
+          tutorial_progress?: Json | null
           user_id?: string
           username?: string | null
           weekly_goal_minutes?: number | null

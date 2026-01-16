@@ -301,15 +301,19 @@ export const EditingChecklist = ({ scriptId, onAllCompleted }: EditingChecklistP
     });
   };
 
+  // Check if all steps are completed for the tutorial target
+  const allCompleted = Object.values(stepStates).every(s => s.status === 'completed');
+
   return (
-    <div className="grid grid-cols-2 gap-3">
-      {EDIT_STEPS.map((step) => {
+    <div id="edit-checklist" className="grid grid-cols-2 gap-3">
+      {EDIT_STEPS.map((step, index) => {
         const Icon = step.icon;
         const state = stepStates[step.id];
         
         return (
           <div
             key={step.id}
+            id={step.id === 'decupagem' ? 'edit-step-decupagem' : undefined}
             className={cn(
               "p-4 rounded-xl border-2 transition-all duration-300 relative",
               "flex flex-col items-center gap-2",
