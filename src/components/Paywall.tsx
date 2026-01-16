@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Crown, Calendar, Sparkles, X, Building2, Users, Check } from "lucide-react";
+import { Crown, Calendar, Sparkles, Building2, Users, Check } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { 
   Drawer,
@@ -91,6 +91,7 @@ export const Paywall = ({
   daysUntilReset,
   context,
 }: PaywallProps) => {
+  const navigate = useNavigate();
   const deviceType = useDeviceType();
   const { trackEvent } = useAnalytics();
   const isMobile = deviceType === "mobile";
@@ -107,9 +108,8 @@ export const Paywall = ({
       context,
     });
     
-    // TODO: Implementar navegação para página de upgrade/Stripe
-    console.log('[Paywall] Upgrade clicked - implement Stripe integration');
     onClose();
+    navigate('/paywall');
   };
 
   const handleClose = () => {

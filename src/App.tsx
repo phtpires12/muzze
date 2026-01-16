@@ -46,6 +46,7 @@ import Guests from "./pages/Guests";
 import AcceptInvite from "./pages/AcceptInvite";
 import ContentView from "./pages/ContentView";
 import MyPlan from "./pages/MyPlan";
+import PaywallPage from "./pages/PaywallPage";
 import { LevelUpModal } from "./components/LevelUpModal";
 import { TrophyUnlockedModal } from "./components/TrophyUnlockedModal";
 
@@ -151,6 +152,7 @@ const router = createBrowserRouter([
       { path: "/profile", element: <ProtectedRoute><Layout><Profile /></Layout></ProtectedRoute> },
       { path: "/edit-profile", element: <ProtectedRoute><Layout><EditProfile /></Layout></ProtectedRoute> },
       { path: "/my-plan", element: <ProtectedRoute><Layout><MyPlan /></Layout></ProtectedRoute> },
+      { path: "/paywall", element: <ProtectedRoute><PaywallPage /></ProtectedRoute> },
       { path: "/my-progress", element: <Navigate to="/my-plan" replace /> },
       { path: "/settings", element: <ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute> },
       { path: "/send-suggestions", element: <ProtectedRoute><Layout><SendSuggestions /></Layout></ProtectedRoute> },
