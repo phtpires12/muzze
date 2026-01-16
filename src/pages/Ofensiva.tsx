@@ -367,14 +367,21 @@ const Ofensiva = () => {
   const emptyDays = Array(firstDayOfWeek).fill(null);
 
   if (loading || profileLoading) {
-    return <div className="min-h-screen bg-background flex items-center justify-center">Carregando...</div>;
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-3">
+          <div className="w-12 h-12 rounded-full bg-muted animate-pulse mx-auto" />
+          <p className="text-muted-foreground text-sm">Carregando...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="min-h-screen bg-background pb-8">
       {/* Header */}
       <header 
-        className="sticky z-10 bg-background/95 backdrop-blur-sm border-b border-border/50 px-4"
+        className="sticky z-10 bg-background border-b border-border px-4"
         style={{ 
           top: 'env(safe-area-inset-top, 0px)',
           paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)',
@@ -386,148 +393,150 @@ const Ofensiva = () => {
             variant="ghost"
             size="icon"
             onClick={() => navigate('/')}
-            className="hover:bg-accent/10"
+            className="rounded-lg"
           >
             <X className="w-5 h-5" />
           </Button>
           
-          <h1 className="text-lg font-bold text-foreground">Ofensiva</h1>
+          <h1 className="text-lg font-bold tracking-tight text-foreground">Ofensiva</h1>
           
           <Button
             variant="ghost"
             size="icon"
             onClick={handleShare}
-            className="hover:bg-accent/10"
+            className="rounded-lg"
           >
             <Share2 className="w-5 h-5" />
           </Button>
         </div>
       </header>
 
-      <div className="max-w-2xl mx-auto px-4 py-8 space-y-8">
+      <div className="max-w-2xl mx-auto space-y-0">
         {/* Hero Section - Contador de Streak */}
-        <div className="text-center space-y-6">
-          {/* Ícone de chama gigante animado */}
-          <div className="relative w-32 h-32 mx-auto">
-            {/* Halo pulsante */}
-            <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/20 via-orange-500/30 to-red-500/20 blur-2xl animate-pulse" />
-            
-            {/* Emoji de fogo principal */}
-            <div className="relative z-10 w-full h-full rounded-full bg-zinc-800/90 flex items-center justify-center shadow-2xl shadow-orange-500/30">
-              <span className="text-7xl animate-pulse drop-shadow-[0_0_15px_rgba(251,146,60,0.5)]">🔥</span>
+        <section className="px-4 py-10 text-center space-y-6">
+          {/* Ícone de chama */}
+          <div className="relative w-28 h-28 mx-auto">
+            <div className="w-full h-full rounded-full bg-primary/10 flex items-center justify-center">
+              <span className="text-6xl drop-shadow-[0_0_12px_rgba(251,146,60,0.6)]">🔥</span>
             </div>
             
             {/* Badge do número */}
-            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-background border-2 border-yellow-500/50 rounded-full px-4 py-1 shadow-lg">
-              <span className="text-sm font-bold text-foreground">{streakCount}</span>
+            <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-background border border-border rounded-full px-3 py-0.5 shadow-sm">
+              <span className="text-xs font-bold text-foreground">{streakCount}</span>
             </div>
           </div>
 
           {/* Texto principal */}
           <div>
-            <h2 className="text-4xl font-bold text-transparent bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 bg-clip-text mb-2">
+            <h2 className="text-5xl font-bold tracking-tight text-foreground mb-1">
               {streakCount}
             </h2>
-            <p className="text-lg font-semibold text-transparent bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 bg-clip-text">
-              {streakCount === 1 ? "dia de ofensiva!" : "dias de ofensiva!"}
+            <p className="text-lg font-medium text-muted-foreground">
+              {streakCount === 1 ? "dia de ofensiva" : "dias de ofensiva"}
             </p>
           </div>
-        </div>
+        </section>
 
-        {/* Card de Motivação */}
-        <Card className="p-4 bg-card/50 border border-border/50 rounded-2xl">
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center flex-shrink-0">
-              <span className="text-xl">🔥</span>
+        {/* Card de Motivação - Seção Alternada */}
+        <section className="bg-muted/30 px-4 py-6">
+          <Card className="p-4 bg-background border border-border rounded-xl">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <span className="text-lg">🔥</span>
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-foreground mb-1">
+                  {getMotivationalMessage(streakCount)}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Dedique pelo menos {goalMinutes} minutos criando por dia para manter sua ofensiva.
+                </p>
+              </div>
             </div>
-            <div className="flex-1">
-              <p className="text-sm font-medium text-foreground mb-1">
-                {getMotivationalMessage(streakCount)}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Dedique pelo menos {goalMinutes} minutos criando por dia para manter sua ofensiva.
-              </p>
-            </div>
-          </div>
-        </Card>
+          </Card>
+        </section>
 
         {/* Card de Bônus de XP Progressivo */}
-        <Card className="p-4 bg-gradient-to-br from-yellow-500/10 via-orange-500/10 to-red-500/10 border border-orange-500/30 rounded-2xl">
-          <div className="flex items-start gap-3">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-yellow-400 via-orange-500 to-red-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-orange-500/30">
-              <TrendingUp className="w-6 h-6 text-white" />
-            </div>
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <p className="text-lg font-bold text-foreground">
-                  +{streakCount}% de XP
-                </p>
-                <Badge variant="outline" className="text-xs border-orange-500/50 text-orange-500">
-                  Bônus Ativo
-                </Badge>
+        <section className="px-4 py-6">
+          <Card className="p-4 bg-primary/5 border border-primary/20 rounded-xl">
+            <div className="flex items-start gap-3">
+              <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <TrendingUp className="w-5 h-5 text-primary" />
               </div>
-              <p className="text-sm text-muted-foreground mb-2">
-                Cada dia de ofensiva = +1% de bônus em todo XP ganho
-              </p>
-              {streakCount < MAX_STREAK_BONUS_DAYS && (
-                <div className="flex items-center gap-2 text-xs">
-                  <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 transition-all duration-500"
-                      style={{ width: `${(streakCount / MAX_STREAK_BONUS_DAYS) * 100}%` }}
-                    />
-                  </div>
-                  <span className="text-muted-foreground">
-                    {streakCount}/{MAX_STREAK_BONUS_DAYS}
-                  </span>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <p className="text-lg font-bold text-foreground">
+                    +{streakCount}% de XP
+                  </p>
+                  <Badge variant="secondary" className="text-xs">
+                    Bônus Ativo
+                  </Badge>
                 </div>
-              )}
-              {streakCount >= MAX_STREAK_BONUS_DAYS && (
-                <p className="text-xs font-medium text-orange-500">
-                  🎉 Bônus máximo atingido! Você é lendário!
+                <p className="text-sm text-muted-foreground mb-3">
+                  Cada dia de ofensiva = +1% de bônus em todo XP ganho
                 </p>
-              )}
+                {streakCount < MAX_STREAK_BONUS_DAYS && (
+                  <div className="flex items-center gap-2 text-xs">
+                    <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-primary transition-all duration-500"
+                        style={{ width: `${(streakCount / MAX_STREAK_BONUS_DAYS) * 100}%` }}
+                      />
+                    </div>
+                    <span className="text-muted-foreground">
+                      {streakCount}/{MAX_STREAK_BONUS_DAYS}
+                    </span>
+                  </div>
+                )}
+                {streakCount >= MAX_STREAK_BONUS_DAYS && (
+                  <p className="text-xs font-medium text-primary">
+                    🎉 Bônus máximo atingido! Você é lendário!
+                  </p>
+                )}
+              </div>
             </div>
+          </Card>
+        </section>
+
+        {/* Estatísticas do Mês - Seção Alternada */}
+        <section className="bg-muted/30 px-4 py-6">
+          <div className="grid grid-cols-2 gap-4">
+            <Card className="p-4 bg-background border border-border rounded-xl text-center">
+              <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-primary/10 flex items-center justify-center">
+                <span className="text-lg">🔥</span>
+              </div>
+              <div className="text-2xl font-bold tracking-tight text-foreground">{daysCompleted}</div>
+              <div className="text-xs text-muted-foreground">Dias de prática</div>
+            </Card>
+
+            <Card className="p-4 bg-background border border-border rounded-xl text-center">
+              <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-cyan-500/10 flex items-center justify-center">
+                <Snowflake className="w-5 h-5 text-cyan-500" />
+              </div>
+              <div className="text-2xl font-bold tracking-tight text-foreground">{freezesUsedThisMonth}</div>
+              <div className="text-xs text-muted-foreground">Bloqueios utilizados</div>
+            </Card>
           </div>
-        </Card>
-
-        {/* Estatísticas do Mês */}
-        <div className="grid grid-cols-2 gap-4">
-          <Card className="p-4 bg-card/50 border border-border/50 rounded-2xl text-center">
-            <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-zinc-800 flex items-center justify-center">
-              <span className="text-xl">🔥</span>
-            </div>
-            <div className="text-2xl font-bold text-foreground">{daysCompleted}</div>
-            <div className="text-xs text-muted-foreground">Dias de prática</div>
-          </Card>
-
-          <Card className="p-4 bg-card/50 border border-border/50 rounded-2xl text-center">
-            <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center">
-              <Snowflake className="w-5 h-5 text-white" />
-            </div>
-            <div className="text-2xl font-bold text-foreground">{freezesUsedThisMonth}</div>
-            <div className="text-xs text-muted-foreground">Bloqueios utilizados</div>
-          </Card>
-        </div>
+        </section>
 
         {/* Meta de Ofensiva */}
-        <div className="space-y-4">
-          <h2 className="text-2xl font-bold text-foreground">Meta de ofensiva</h2>
+        <section className="px-4 py-6 space-y-4">
+          <h2 className="text-xl font-bold tracking-tight text-foreground">Meta de ofensiva</h2>
 
-          <Card className="p-6 bg-card/50 border border-border/50 rounded-2xl">
+          <Card className="p-5 bg-background border border-border rounded-xl">
             <div className="flex items-center justify-between mb-2">
               {/* Previous milestone */}
               <div className="flex items-center gap-2">
-                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-yellow-400 via-orange-500 to-red-500 flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">{milestones.previous}</span>
+                <div className="w-11 h-11 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <span className="text-primary font-bold text-sm">{milestones.previous}</span>
                 </div>
               </div>
 
               {/* Progress bar */}
               <div className="flex-1 mx-4">
-                <div className="h-3 bg-muted rounded-full overflow-hidden">
+                <div className="h-2.5 bg-muted rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 transition-all duration-500"
+                    className="h-full bg-primary transition-all duration-500"
                     style={{ width: `${milestones.progress}%` }}
                   />
                 </div>
@@ -535,199 +544,195 @@ const Ofensiva = () => {
 
               {/* Next milestone */}
               <div className="flex items-center gap-2">
-                <div className="w-12 h-12 rounded-lg border-2 border-muted flex items-center justify-center">
+                <div className="w-11 h-11 rounded-lg border border-border flex items-center justify-center">
                   <span className="text-muted-foreground font-bold text-sm">{milestones.next}</span>
                 </div>
               </div>
             </div>
 
-            <p className="text-xs text-muted-foreground text-center mt-2">
+            <p className="text-xs text-muted-foreground text-center mt-3">
               Faltam {milestones.next - streakCount} dias para atingir {milestones.next}
             </p>
           </Card>
-        </div>
+        </section>
 
-        {/* Calendário Visual */}
-        <Card className="p-4 bg-card/30 border border-border/30 rounded-xl">
-          {/* Header de navegação do mês */}
-          <div className="flex items-center justify-between mb-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handlePreviousMonth}
-              className="h-7 w-7 text-muted-foreground hover:text-foreground"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            
-            <h3 className="text-sm font-medium text-foreground/80 capitalize">
-              {format(currentMonth, 'MMMM yyyy', { locale: ptBR })}
-            </h3>
-            
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleNextMonth}
-              disabled={isSameMonth(currentMonth, new Date())}
-              className="h-7 w-7 text-muted-foreground hover:text-foreground disabled:opacity-30"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
+        {/* Calendário Visual - Seção Alternada */}
+        <section className="bg-muted/30 px-4 py-6">
+          <Card className="p-4 bg-background border border-border rounded-xl">
+            {/* Header de navegação do mês */}
+            <div className="flex items-center justify-between mb-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handlePreviousMonth}
+                className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              
+              <h3 className="text-sm font-semibold text-foreground capitalize">
+                {format(currentMonth, 'MMMM yyyy', { locale: ptBR })}
+              </h3>
+              
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleNextMonth}
+                disabled={isSameMonth(currentMonth, new Date())}
+                className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground disabled:opacity-30"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
 
-          {/* Cabeçalho dos dias da semana */}
-          <div className="grid grid-cols-7 gap-1 mb-2">
-            {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((day, i) => (
-              <div key={i} className="text-center text-[10px] font-medium text-muted-foreground/50">
-                {day}
-              </div>
-            ))}
-          </div>
+            {/* Cabeçalho dos dias da semana */}
+            <div className="grid grid-cols-7 gap-1 mb-2">
+              {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((day, i) => (
+                <div key={i} className="text-center text-[10px] font-medium text-muted-foreground">
+                  {day}
+                </div>
+              ))}
+            </div>
 
-          {/* Grid do calendário */}
-          <div className="grid grid-cols-7 gap-1">
-            {/* Dias vazios antes do primeiro dia do mês */}
-            {emptyDays.map((_, index) => (
-              <div key={`empty-${index}`} className="aspect-square" />
-            ))}
+            {/* Grid do calendário */}
+            <div className="grid grid-cols-7 gap-1">
+              {/* Dias vazios antes do primeiro dia do mês */}
+              {emptyDays.map((_, index) => (
+                <div key={`empty-${index}`} className="aspect-square" />
+              ))}
 
-            {/* Dias do mês */}
-            {monthDays.map(day => {
-              // CORREÇÃO DEFINITIVA: dayKey para o calendário deve ser calculado
-              // diretamente do Date sem conversão de timezone, já que eachDayOfInterval
-              // cria datas locais. O importante é que seja consistente com fetchMonthProgress.
-              // 
-              // Para garantir consistência, extraímos ano/mês/dia diretamente do objeto Date
-              // que representa o dia no calendário (criado por eachDayOfInterval).
-              const year = day.getFullYear();
-              const month = String(day.getMonth() + 1).padStart(2, '0');
-              const dayNum = String(day.getDate()).padStart(2, '0');
-              const dayKey = `${year}-${month}-${dayNum}`;
-              
-              const dayNumber = format(day, 'd');
-              const progress = dayProgressMap.get(dayKey);
-              const minutes = progress?.minutes || 0;
-              
-              // Debug para dia 12
-              if (dayKey === '2026-01-12') {
-                console.log(`[Ofensiva Render] Dia 12:`, {
-                  dayKey,
-                  progress,
-                  minutes,
-                  goalMinutes,
-                  isComplete: minutes >= goalMinutes
-                });
-              }
-              
-              // CORREÇÃO: Comparar freezes por dayKey extraído da mesma forma
-              const userTimezone = profile?.timezone || 'America/Sao_Paulo';
-              const freezeUsed = freezeDays.some(freezeDate => {
-                const fYear = freezeDate.getFullYear();
-                const fMonth = String(freezeDate.getMonth() + 1).padStart(2, '0');
-                const fDay = String(freezeDate.getDate()).padStart(2, '0');
-                const freezeDayKey = `${fYear}-${fMonth}-${fDay}`;
-                return freezeDayKey === dayKey;
-              });
-              
-              const isDayFuture = isFuture(day) && !isToday(day);
-              const isDayToday = isToday(day);
-              
-              const status: DayProgress['status'] = 
-                freezeUsed ? 'freeze' :
-                minutes >= goalMinutes ? 'complete' :
-                minutes > 0 ? 'partial' : 'empty';
-
-              const handleDayClick = () => {
-                if (!isDayFuture) {
-                  setSelectedDay({
-                    date: day,
+              {/* Dias do mês */}
+              {monthDays.map(day => {
+                const year = day.getFullYear();
+                const month = String(day.getMonth() + 1).padStart(2, '0');
+                const dayNum = String(day.getDate()).padStart(2, '0');
+                const dayKey = `${year}-${month}-${dayNum}`;
+                
+                const dayNumber = format(day, 'd');
+                const progress = dayProgressMap.get(dayKey);
+                const minutes = progress?.minutes || 0;
+                
+                // Debug para dia 12
+                if (dayKey === '2026-01-12') {
+                  console.log(`[Ofensiva Render] Dia 12:`, {
+                    dayKey,
+                    progress,
                     minutes,
-                    status
+                    goalMinutes,
+                    isComplete: minutes >= goalMinutes
                   });
                 }
-              };
+                
+                // CORREÇÃO: Comparar freezes por dayKey extraído da mesma forma
+                const userTimezone = profile?.timezone || 'America/Sao_Paulo';
+                const freezeUsed = freezeDays.some(freezeDate => {
+                  const fYear = freezeDate.getFullYear();
+                  const fMonth = String(freezeDate.getMonth() + 1).padStart(2, '0');
+                  const fDay = String(freezeDate.getDate()).padStart(2, '0');
+                  const freezeDayKey = `${fYear}-${fMonth}-${fDay}`;
+                  return freezeDayKey === dayKey;
+                });
+                
+                const isDayFuture = isFuture(day) && !isToday(day);
+                const isDayToday = isToday(day);
+                
+                const status: DayProgress['status'] = 
+                  freezeUsed ? 'freeze' :
+                  minutes >= goalMinutes ? 'complete' :
+                  minutes > 0 ? 'partial' : 'empty';
 
-              // Dia futuro - apenas número suave
-              if (isDayFuture) {
-                return (
-                  <div
-                    key={day.toString()}
-                    className="aspect-square flex flex-col items-center justify-center"
-                  >
-                    <span className="text-[10px] text-muted-foreground/30">{dayNumber}</span>
-                  </div>
-                );
-              }
+                const handleDayClick = () => {
+                  if (!isDayFuture) {
+                    setSelectedDay({
+                      date: day,
+                      minutes,
+                      status
+                    });
+                  }
+                };
 
-              // Freeze usado - floco de neve
-              if (freezeUsed) {
+                // Dia futuro - apenas número suave
+                if (isDayFuture) {
+                  return (
+                    <div
+                      key={day.toString()}
+                      className="aspect-square flex flex-col items-center justify-center"
+                    >
+                      <span className="text-[10px] text-muted-foreground/30">{dayNumber}</span>
+                    </div>
+                  );
+                }
+
+                // Freeze usado - floco de neve
+                if (freezeUsed) {
+                  return (
+                    <button
+                      key={day.toString()}
+                      onClick={handleDayClick}
+                      className={`aspect-square flex flex-col items-center justify-center gap-0.5 rounded-lg transition-colors hover:bg-muted ${
+                        isDayToday ? 'ring-1 ring-cyan-500/50' : ''
+                      }`}
+                    >
+                      <span className="text-lg opacity-70">❄️</span>
+                      <span className="text-[10px] text-muted-foreground/50">{dayNumber}</span>
+                    </button>
+                  );
+                }
+
+                // Dia com/sem progresso - mostra FireIcon
+                const isComplete = minutes >= goalMinutes;
+                
                 return (
                   <button
                     key={day.toString()}
                     onClick={handleDayClick}
-                    className={`aspect-square flex flex-col items-center justify-center gap-0.5 rounded-lg transition-colors hover:bg-muted/30 ${
-                      isDayToday ? 'ring-1 ring-cyan-500/50' : ''
+                    className={`aspect-square flex flex-col items-center justify-center gap-0.5 rounded-lg transition-colors hover:bg-muted ${
+                      isDayToday ? 'ring-1 ring-primary/50' : ''
+                    } ${
+                      isComplete ? 'bg-primary/5' : ''
                     }`}
                   >
-                    <span className="text-lg opacity-70">❄️</span>
-                    <span className="text-[10px] text-muted-foreground/50">{dayNumber}</span>
+                    <FireIcon 
+                      minutes={minutes} 
+                      goalMinutes={goalMinutes} 
+                      isToday={isDayToday}
+                    />
+                    <span className={`text-[10px] ${
+                      isComplete 
+                        ? 'text-primary' 
+                        : minutes > 0 
+                          ? 'text-amber-500/70' 
+                          : 'text-muted-foreground/40'
+                    }`}>
+                      {dayNumber}
+                    </span>
                   </button>
                 );
-              }
-
-              // Dia com/sem progresso - mostra FireIcon
-              const isComplete = minutes >= goalMinutes;
-              
-              return (
-                <button
-                  key={day.toString()}
-                  onClick={handleDayClick}
-                  className={`aspect-square flex flex-col items-center justify-center gap-0.5 rounded-lg transition-colors hover:bg-muted/30 ${
-                    isDayToday ? 'ring-1 ring-orange-500/50' : ''
-                  } ${
-                    isComplete ? 'bg-orange-500/10' : ''
-                  }`}
-                >
-                  <FireIcon 
-                    minutes={minutes} 
-                    goalMinutes={goalMinutes} 
-                    isToday={isDayToday}
-                  />
-                  <span className={`text-[10px] ${
-                    isComplete 
-                      ? 'text-orange-400/80' 
-                      : minutes > 0 
-                        ? 'text-yellow-500/60' 
-                        : 'text-muted-foreground/40'
-                  }`}>
-                    {dayNumber}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </Card>
+              })}
+            </div>
+          </Card>
+        </section>
 
         {/* Proteja a sua Ofensiva (Loja) */}
-        <div className="space-y-4">
-          <h2 className="text-2xl font-bold text-foreground">Proteja a sua ofensiva</h2>
+        <section className="px-4 py-6 space-y-4">
+          <h2 className="text-xl font-bold tracking-tight text-foreground">Proteja a sua ofensiva</h2>
 
           {/* XP Balance */}
-          <Card className="p-4 bg-card/50 border border-border/50 rounded-2xl">
+          <Card className="p-4 bg-background border border-border rounded-xl">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
-                  <Gem className="w-5 h-5 text-white" />
+                <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center">
+                  <Gem className="w-5 h-5 text-blue-500" />
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Seu saldo de XP</p>
-                  <p className="text-lg font-bold text-foreground">{profile?.xp_points || 0} XP</p>
+                  <p className="text-lg font-bold tracking-tight text-foreground">{profile?.xp_points || 0} XP</p>
                 </div>
               </div>
 
               <div className="text-right">
                 <p className="text-xs text-muted-foreground">Bloqueios disponíveis</p>
-                <p className="text-lg font-bold text-cyan-500">
+                <p className="text-lg font-bold tracking-tight text-cyan-500">
                   {profile?.streak_freezes || 0}
                   <span className="text-muted-foreground font-normal">/{MAX_STREAK_FREEZES}</span>
                 </p>
@@ -736,18 +741,16 @@ const Ofensiva = () => {
           </Card>
 
           {/* Freeze Purchase Card */}
-          <Card className="p-6 bg-card/50 border border-border/50 rounded-2xl">
+          <Card className="p-5 bg-background border border-border rounded-xl">
             <div className="flex items-center gap-4">
               {/* Freeze icon */}
-              <div className="relative">
-                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center shadow-lg">
-                  <Snowflake className="w-10 h-10 text-white" />
-                </div>
+              <div className="w-16 h-16 rounded-full bg-cyan-500/10 flex items-center justify-center flex-shrink-0">
+                <Snowflake className="w-8 h-8 text-cyan-500" />
               </div>
 
               {/* Info and button */}
               <div className="flex-1">
-                <h3 className="text-lg font-bold text-foreground mb-1">Bloqueio de ofensiva</h3>
+                <h3 className="text-base font-bold text-foreground mb-1">Bloqueio de ofensiva</h3>
                 <p className="text-xs text-muted-foreground mb-3">
                   Proteja sua ofensiva por 1 dia caso você não consiga cumprir sua meta
                 </p>
@@ -759,7 +762,7 @@ const Ofensiva = () => {
                     (profile.xp_points || 0) < freezeCost ||
                     (profile.streak_freezes || 0) >= MAX_STREAK_FREEZES
                   }
-                  className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-bold"
+                  className="w-full rounded-lg font-semibold"
                 >
                   <div className="flex items-center justify-center gap-2">
                     <span>COMPRAR POR</span>
@@ -769,7 +772,7 @@ const Ofensiva = () => {
                 </Button>
 
                 {profile && (profile.streak_freezes || 0) >= MAX_STREAK_FREEZES && (
-                  <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-2 text-center">
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 text-center">
                     Você já tem o máximo de {MAX_STREAK_FREEZES} bloqueios
                   </p>
                 )}
@@ -791,7 +794,7 @@ const Ofensiva = () => {
               preservando sua ofensiva. Você ganha 2 XP por minuto de uso da plataforma.
             </p>
           </div>
-        </div>
+        </section>
       </div>
 
       {/* Drawer de detalhes do dia */}
