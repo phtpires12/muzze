@@ -391,7 +391,7 @@ export const ShotListTable = ({
       collisionDetection={closestCenter}
       onDragEnd={onDragEnd}
     >
-      <div className="rounded-lg border border-border overflow-hidden">
+      <div id="record-shot-table" className="rounded-lg border border-border overflow-hidden">
         <table className="w-full border-collapse table-fixed">
           <thead className="bg-muted/50 sticky top-0 z-10">
             <tr>

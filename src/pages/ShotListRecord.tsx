@@ -764,6 +764,7 @@ const ShotListRecord = () => {
 
           {/* Linha 2: Botão Avançar em largura total */}
           <Button
+            id="record-advance"
             onClick={handleAdvanceToEdit}
             disabled={autoSaveStatus === 'saving'}
             className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
