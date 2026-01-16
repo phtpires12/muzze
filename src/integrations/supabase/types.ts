@@ -382,6 +382,60 @@ export type Database = {
         }
         Relationships: []
       }
+      subscriptions: {
+        Row: {
+          cancelled_at: string | null
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          plan_type: string
+          raw_payload: Json | null
+          refunded_at: string | null
+          started_at: string | null
+          status: string
+          updated_at: string | null
+          user_id: string
+          zouti_customer_email: string
+          zouti_product_id: string | null
+          zouti_subscription_id: string | null
+          zouti_transaction_id: string | null
+        }
+        Insert: {
+          cancelled_at?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          plan_type?: string
+          raw_payload?: Json | null
+          refunded_at?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string | null
+          user_id: string
+          zouti_customer_email: string
+          zouti_product_id?: string | null
+          zouti_subscription_id?: string | null
+          zouti_transaction_id?: string | null
+        }
+        Update: {
+          cancelled_at?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          plan_type?: string
+          raw_payload?: Json | null
+          refunded_at?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+          zouti_customer_email?: string
+          zouti_product_id?: string | null
+          zouti_subscription_id?: string | null
+          zouti_transaction_id?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -595,6 +649,7 @@ export type Database = {
           used_stages: string[]
         }[]
       }
+      get_user_id_by_email: { Args: { _email: string }; Returns: string }
       get_user_workspace: { Args: { _user_id: string }; Returns: string }
       get_weekly_leaderboard: {
         Args: never

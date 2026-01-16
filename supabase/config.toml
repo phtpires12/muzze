@@ -11,3 +11,6 @@ verify_jwt = true
 
 [functions.check-streaks]
 verify_jwt = false
+
+[functions.zouti-webhook]
+verify_jwt = false
