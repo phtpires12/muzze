@@ -124,76 +124,92 @@ const EditProfile = () => {
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      <div className="border-b border-border bg-card">
+      {/* Header */}
+      <div className="border-b border-border bg-background">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/profile")}>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => navigate("/profile")}
+              className="rounded-lg hover:bg-muted"
+            >
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <h1 className="text-2xl font-bold">Editar Perfil</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Editar Perfil</h1>
           </div>
         </div>
       </div>
 
+      {/* Content */}
       <div className="container mx-auto p-4 max-w-2xl">
-        <Card>
-          <CardHeader>
-            <CardTitle>Informações Pessoais</CardTitle>
+        <Card className="border border-border rounded-xl bg-background">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg font-semibold tracking-tight">
+              Informações Pessoais
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Avatar Section */}
-            <div className="flex flex-col items-center">
+            <div className="flex flex-col items-center py-2">
               <div className="relative">
-                <Avatar className="h-24 w-24">
+                <Avatar className="h-24 w-24 border-2 border-border">
                   {profile?.avatar_url ? (
                     <AvatarImage src={profile.avatar_url} alt={profile?.username || "Avatar"} />
                   ) : (
-                    <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-primary-foreground text-2xl font-semibold">
+                    <AvatarFallback className="bg-primary/10 text-primary text-2xl font-semibold">
                       {getUserInitials()}
                     </AvatarFallback>
                   )}
                 </Avatar>
                 <Button 
                   size="icon" 
-                  variant="secondary"
-                  className="absolute bottom-0 right-0 rounded-full h-8 w-8"
+                  variant="outline"
+                  className="absolute bottom-0 right-0 rounded-full h-8 w-8 bg-background border-border hover:bg-muted"
                   onClick={() => setShowCropEditor(true)}
                   disabled={uploadingAvatar}
                 >
                   <Camera className="w-4 h-4" />
                 </Button>
               </div>
-              <p className="text-sm text-muted-foreground mt-2">
+              <p className="text-sm text-muted-foreground mt-3">
                 Toque para alterar a foto
               </p>
             </div>
 
+            {/* Form Fields */}
             <div className="space-y-2">
-              <Label htmlFor="name">Nome</Label>
+              <Label htmlFor="name" className="text-sm font-medium">
+                Nome
+              </Label>
               <Input
                 id="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                className="h-11 rounded-lg border-border focus:border-primary"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email">E-mail</Label>
+              <Label htmlFor="email" className="text-sm font-medium">
+                E-mail
+              </Label>
               <Input
                 id="email"
                 type="email"
                 value={email}
                 disabled
-                className="bg-muted cursor-not-allowed"
+                className="h-11 rounded-lg bg-muted/50 border-border cursor-not-allowed text-muted-foreground"
               />
               <p className="text-xs text-muted-foreground">
                 O e-mail não pode ser alterado.
               </p>
             </div>
 
+            {/* Save Button */}
             <Button 
               onClick={handleSave} 
-              className="w-full"
+              className="w-full h-11 rounded-lg font-medium"
               disabled={loading || initializing || !name.trim()}
             >
               {loading ? "Salvando..." : "Salvar Alterações"}
