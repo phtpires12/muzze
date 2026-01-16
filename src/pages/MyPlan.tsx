@@ -23,8 +23,8 @@ const MyPlan = () => {
 
   const getPlanBadgeColor = () => {
     switch (planCapabilities.planType) {
-      case 'studio': return 'bg-gradient-to-r from-violet-500 to-purple-600 text-white';
-      case 'pro': return 'bg-gradient-to-r from-amber-500 to-orange-500 text-white';
+      case 'studio': return 'bg-primary text-primary-foreground';
+      case 'pro': return 'bg-amber-500 text-white';
       default: return 'bg-muted text-muted-foreground';
     }
   };
@@ -92,16 +92,22 @@ const MyPlan = () => {
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      <div className="border-b border-border bg-card">
+      {/* Header */}
+      <div className="border-b border-border bg-background">
         <div 
           className="container mx-auto px-4 py-4"
           style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}
         >
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/profile")}>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => navigate("/profile")}
+              className="rounded-lg hover:bg-muted"
+            >
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <h1 className="text-2xl font-bold">Gerenciar Assinatura</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Gerenciar Assinatura</h1>
           </div>
         </div>
       </div>
@@ -109,9 +115,9 @@ const MyPlan = () => {
       <div className="container mx-auto p-4 max-w-2xl space-y-6">
         {/* Admin Mode Toggle - Only for internal testers */}
         {planCapabilities.isInternalTester && (
-          <Card className="border-amber-500/30 bg-amber-500/5">
+          <Card className="border border-amber-500/30 bg-amber-500/5 rounded-xl">
             <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-amber-600 text-base">
+              <CardTitle className="flex items-center gap-2 text-amber-600 text-base font-semibold">
                 <Wrench className="w-4 h-4" />
                 Modo Admin
               </CardTitle>
@@ -125,41 +131,33 @@ const MyPlan = () => {
                 onValueChange={handleSimulatePlan}
                 className="flex flex-wrap gap-3"
               >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="real" id="real" />
-                  <Label htmlFor="real" className="text-sm cursor-pointer">
-                    Real (Studio)
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="free" id="free" />
-                  <Label htmlFor="free" className="text-sm cursor-pointer">
-                    Free
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="pro" id="pro" />
-                  <Label htmlFor="pro" className="text-sm cursor-pointer">
-                    Pro
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="studio" id="studio" />
-                  <Label htmlFor="studio" className="text-sm cursor-pointer">
-                    Studio
-                  </Label>
-                </div>
+                {[
+                  { value: 'real', label: 'Real (Studio)' },
+                  { value: 'free', label: 'Free' },
+                  { value: 'pro', label: 'Pro' },
+                  { value: 'studio', label: 'Studio' },
+                ].map((option) => (
+                  <div 
+                    key={option.value}
+                    className="flex items-center space-x-2 rounded-lg px-3 py-2 hover:bg-muted/50 transition-colors"
+                  >
+                    <RadioGroupItem value={option.value} id={option.value} />
+                    <Label htmlFor={option.value} className="text-sm cursor-pointer">
+                      {option.label}
+                    </Label>
+                  </div>
+                ))}
               </RadioGroup>
             </CardContent>
           </Card>
         )}
         {/* Current Plan Card */}
-        <Card className="overflow-hidden">
+        <Card className="overflow-hidden border border-border rounded-xl bg-background">
           <div className={cn("p-6", getPlanBadgeColor())}>
             <div className="flex items-center gap-3">
               {getPlanIcon()}
               <div>
-                <h2 className="text-xl font-bold">{getPlanDisplayName()}</h2>
+                <h2 className="text-xl font-bold tracking-tight">{getPlanDisplayName()}</h2>
                 <p className="text-sm opacity-90">Seu plano atual</p>
               </div>
             </div>
@@ -168,10 +166,10 @@ const MyPlan = () => {
           <CardContent className="p-6 space-y-4">
             {/* Benefits List */}
             <div className="space-y-3">
-              <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+              <h3 className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">
                 O que inclui
               </h3>
-              <ul className="space-y-2">
+              <ul className="space-y-3">
                 {getCurrentBenefits().map((benefit, index) => (
                   <li key={index} className="flex items-center gap-3">
                     <div className={cn(
@@ -187,8 +185,8 @@ const MyPlan = () => {
                       )}
                     </div>
                     <span className={cn(
-                      "text-sm",
-                      !benefit.available && "text-muted-foreground line-through"
+                      "text-sm font-medium",
+                      !benefit.available && "text-muted-foreground line-through font-normal"
                     )}>
                       {benefit.text}
                     </span>
@@ -203,16 +201,16 @@ const MyPlan = () => {
         </Card>
 
         {/* Usage Stats */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Uso Atual</CardTitle>
+        <Card className="border border-border rounded-xl bg-background">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg font-semibold tracking-tight">Uso Atual</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Workspaces */}
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-violet-500/10 flex items-center justify-center">
-                  <Building2 className="w-5 h-5 text-violet-500" />
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Building2 className="w-5 h-5 text-primary" />
                 </div>
                 <div>
                   <p className="font-medium text-sm">Workspaces</p>
@@ -230,10 +228,10 @@ const MyPlan = () => {
             </div>
 
             {/* Guests per workspace */}
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                  <Users className="w-5 h-5 text-blue-500" />
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Users className="w-5 h-5 text-primary" />
                 </div>
                 <div>
                   <p className="font-medium text-sm">Convidados por workspace</p>
@@ -249,9 +247,9 @@ const MyPlan = () => {
 
             {/* Weekly scripts (for free plan) */}
             {planCapabilities.planType === 'free' && (
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
                     <Calendar className="w-5 h-5 text-amber-500" />
                   </div>
                   <div>
@@ -273,12 +271,12 @@ const MyPlan = () => {
         </Card>
 
         {/* CTAs */}
-        <Card>
+        <Card className="border border-border rounded-xl bg-background">
           <CardContent className="p-6">
             {planCapabilities.planType === 'free' && (
               <div className="space-y-3">
                 <Button 
-                  className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600"
+                  className="w-full h-11 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-medium"
                   onClick={handleUpgrade}
                 >
                   <Crown className="w-4 h-4 mr-2" />
@@ -286,7 +284,7 @@ const MyPlan = () => {
                 </Button>
                 <Button 
                   variant="outline"
-                  className="w-full"
+                  className="w-full h-11 rounded-lg border-border hover:bg-muted font-medium"
                   onClick={handleUpgrade}
                 >
                   <Building2 className="w-4 h-4 mr-2" />
@@ -297,7 +295,7 @@ const MyPlan = () => {
 
             {planCapabilities.planType === 'pro' && (
               <Button 
-                className="w-full bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700"
+                className="w-full h-11 rounded-lg bg-primary hover:bg-primary/90 font-medium"
                 onClick={handleUpgrade}
               >
                 <Building2 className="w-4 h-4 mr-2" />
@@ -308,7 +306,7 @@ const MyPlan = () => {
             {planCapabilities.planType === 'studio' && (
               <Button 
                 variant="outline"
-                className="w-full"
+                className="w-full h-11 rounded-lg border-border hover:bg-muted font-medium"
                 onClick={handleManageAddons}
               >
                 <Plus className="w-4 h-4 mr-2" />
@@ -320,11 +318,11 @@ const MyPlan = () => {
 
         {/* Studio Add-on Info */}
         {planCapabilities.planType === 'studio' && planCapabilities.getExtraWorkspacesPacks() > 0 && (
-          <Card className="border-violet-500/30 bg-violet-500/5">
+          <Card className="border border-primary/20 bg-primary/5 rounded-xl">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-violet-500/20 flex items-center justify-center">
-                  <Plus className="w-5 h-5 text-violet-500" />
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Plus className="w-5 h-5 text-primary" />
                 </div>
                 <div>
                   <p className="font-medium text-sm">Add-ons ativos</p>
