@@ -147,213 +147,230 @@ const Stats = () => {
   };
 
   return (
-    <div 
-      className="p-8 space-y-8 pb-24"
-      style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 2rem)' }}
-    >
-      <div>
-        <h1 className="text-4xl font-bold mb-2">Estatísticas</h1>
-        <p className="text-muted-foreground">Acompanhe seu progresso e conquistas</p>
-      </div>
+    <div className="min-h-screen bg-background pb-24">
+      {/* Header Section */}
+      <section 
+        className="px-4 py-8 sm:px-8"
+        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 2rem)' }}
+      >
+        <div className="max-w-6xl mx-auto">
+          <h1 className="text-3xl font-bold tracking-tight text-foreground mb-1">Estatísticas</h1>
+          <p className="text-sm text-muted-foreground">Acompanhe seu progresso e conquistas</p>
+        </div>
+      </section>
 
-      {/* Linha 1: 4 cards principais */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="p-6 transition-all duration-300 hover:shadow-lg">
-          <div className="flex items-start justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <p className="text-sm font-medium text-muted-foreground">Meta Diária</p>
-              {liveGoal.isLive && (
-                <span className="text-xs bg-green-500/20 text-green-500 px-1.5 py-0.5 rounded-full animate-pulse">
-                  LIVE
-                </span>
-              )}
-            </div>
-            <div className="p-3 rounded-xl bg-primary/10">
-              <Target className="w-6 h-6 text-primary" />
-            </div>
+      {/* Cards Principais - Seção Alternada */}
+      <section className="bg-muted/30 px-4 py-6 sm:px-8">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Card Meta Diária */}
+            <Card className="p-5 bg-background border border-border rounded-xl">
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium text-muted-foreground">Meta Diária</p>
+                  {liveGoal.isLive && (
+                    <span className="text-[10px] bg-green-500/10 text-green-600 px-1.5 py-0.5 rounded-full font-medium">
+                      LIVE
+                    </span>
+                  )}
+                </div>
+                <div className="p-2.5 rounded-lg bg-primary/10">
+                  <Target className="w-5 h-5 text-primary" />
+                </div>
+              </div>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">📅 Hoje</span>
+                  <span className="font-semibold">{liveGoal.actualMinutes}m</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">🎯 Sua Meta</span>
+                  <span className="font-semibold">{liveGoal.goalMinutes}m</span>
+                </div>
+                <Progress value={liveGoal.percentageProgress} className="h-2" />
+                <p className={cn(
+                  "text-xs text-center font-medium",
+                  liveGoal.isAbove ? "text-green-600" : "text-amber-600"
+                )}>
+                  {liveGoal.isAbove 
+                    ? `✅ Meta atingida! +${liveGoal.percentageProgress - 100}%`
+                    : `🔻 Faltam ${liveGoal.goalMinutes - liveGoal.actualMinutes} minutos`
+                  }
+                </p>
+              </div>
+            </Card>
+
+            <StatCard
+              title="Média Semanal"
+              value={formatTimeDisplay(weeklyAverage)}
+              icon={Target}
+              description="por dia"
+            />
+            <StatCard
+              title="Total de XP"
+              value={profile?.xp_points ?? 0}
+              icon={Zap}
+              highlight
+              description="pontos de experiência"
+            />
+            <StatCard
+              title="Sessões"
+              value={totalSessions}
+              icon={Award}
+              description="sessões completadas"
+            />
           </div>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">📅 Hoje</span>
-              <span className="font-bold">{liveGoal.actualMinutes}m</span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">🎯 Sua Meta</span>
-              <span className="font-bold">{liveGoal.goalMinutes}m</span>
-            </div>
-            <Progress value={liveGoal.percentageProgress} className="h-2" />
-            <p className={cn(
-              "text-sm text-center font-medium",
-              liveGoal.isAbove ? "text-green-600" : "text-orange-600"
-            )}>
-              {liveGoal.isAbove 
-                ? `✅ Meta atingida! +${liveGoal.percentageProgress - 100}%`
-                : `🔻 Faltam ${liveGoal.goalMinutes - liveGoal.actualMinutes} minutos`
-              }
-            </p>
+        </div>
+      </section>
+
+      {/* Gráfico + Resumo Semanal */}
+      <section className="px-4 py-6 sm:px-8">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <Card className="p-5 bg-background border border-border rounded-xl overflow-hidden">
+              <h3 className="text-base font-semibold text-foreground mb-5">Horas por Dia (Esta Semana)</h3>
+              <TooltipProvider>
+                <div className="flex items-end justify-between gap-1 sm:gap-2 md:gap-4 h-48 md:h-56">
+                  {weeklyData.map((data) => {
+                    const height = (data.hours / maxHours) * 100;
+                    const hasStageData = data.stageBreakdown && Object.values(data.stageBreakdown).some(v => v > 0);
+                    
+                    return (
+                      <Tooltip key={data.day}>
+                        <TooltipTrigger asChild>
+                          <div className="flex-1 flex flex-col items-center gap-1 sm:gap-2 cursor-pointer min-w-0">
+                            <div className="w-full flex items-end justify-center h-36 md:h-44">
+                              <div
+                                className="w-full bg-primary rounded-t-lg transition-all duration-500 hover:bg-primary/80 flex items-end justify-center pb-1 sm:pb-2"
+                                style={{ height: `${height}%`, minHeight: '24px' }}
+                              >
+                                <span className="text-[10px] sm:text-xs font-bold text-primary-foreground truncate px-0.5">{formatTimeDisplay(data.hours)}</span>
+                              </div>
+                            </div>
+                            <span className="text-xs sm:text-sm font-medium text-muted-foreground">{data.day}</span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="p-3 max-w-xs">
+                          <div className="space-y-2">
+                            <p className="font-semibold text-sm capitalize">
+                              {data.date.toLocaleDateString('pt-BR', { 
+                                weekday: 'long', 
+                                day: 'numeric', 
+                                month: 'short' 
+                              })}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Total: {formatTimeDisplay(data.hours)}
+                            </p>
+                            {hasStageData && (
+                              <div className="border-t border-border pt-2 space-y-1">
+                                {Object.entries(data.stageBreakdown).map(([stage, minutes]) => {
+                                  if (minutes === 0) return null;
+                                  const info = STAGE_LABELS[stage];
+                                  if (!info) return null;
+                                  return (
+                                    <div key={stage} className="flex justify-between text-xs">
+                                      <span>{info.emoji} {info.label}</span>
+                                      <span className="font-medium">{minutes}min</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    );
+                  })}
+                </div>
+              </TooltipProvider>
+            </Card>
+
+            <Card className="p-5 bg-primary/5 border border-primary/20 rounded-xl">
+              <WeeklySummaryCarousel
+                currentWeek={{
+                  totalMinutes: weeklyGoalStats.weeklyTotalMinutes,
+                  goalMinutes: weeklyGoalStats.weeklyGoalMinutes,
+                  productivity: weeklyGoalStats.weeklyProductivityPercentage,
+                }}
+                previousWeek={{
+                  totalMinutes: previousWeekStats.weeklyTotalMinutes,
+                  productivity: previousWeekStats.weeklyProductivityPercentage,
+                }}
+              />
+            </Card>
           </div>
-        </Card>
+        </div>
+      </section>
 
-        <StatCard
-          title="Média Semanal"
-          value={formatTimeDisplay(weeklyAverage)}
-          icon={Target}
-          description="por dia"
-        />
-        <StatCard
-          title="Total de XP"
-          value={profile?.xp_points ?? 0}
-          icon={Zap}
-          gradient
-          description="pontos de experiência"
-        />
-        <StatCard
-          title="Sessões"
-          value={totalSessions}
-          icon={Award}
-          description="sessões completadas"
-        />
-      </div>
+      {/* Conquistas - Seção Alternada */}
+      <section className="bg-muted/30 px-4 py-6 sm:px-8">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <Card className="p-5 bg-background border border-border rounded-xl">
+              <h3 className="text-base font-semibold text-foreground mb-4">Conquistas Recentes</h3>
+              <div className="space-y-3">
+                {unlockedTrophies.length > 0 ? (
+                  unlockedTrophies.map((trophy) => (
+                    <div
+                      key={trophy.id}
+                      className="flex items-center gap-3 p-3 rounded-lg bg-primary/5 border border-primary/10"
+                    >
+                      <div className="text-2xl">{trophy.icon}</div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-sm text-foreground">{trophy.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{trophy.description}</p>
+                        <span className="text-xs text-primary font-semibold">+{trophy.points} XP</span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-8">
+                    Continue trabalhando para desbloquear conquistas!
+                  </p>
+                )}
+              </div>
+            </Card>
 
-      {/* Linha 2: Gráfico + Resumo Semanal */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="p-4 sm:p-6 overflow-hidden">
-          <h3 className="text-lg font-semibold mb-4 sm:mb-6">Horas por Dia (Esta Semana)</h3>
-          <TooltipProvider>
-            <div className="flex items-end justify-between gap-1 sm:gap-2 md:gap-4 h-48 md:h-64">
-              {weeklyData.map((data) => {
-                const height = (data.hours / maxHours) * 100;
-                const hasStageData = data.stageBreakdown && Object.values(data.stageBreakdown).some(v => v > 0);
-                
-                return (
-                  <Tooltip key={data.day}>
-                    <TooltipTrigger asChild>
-                      <div className="flex-1 flex flex-col items-center gap-1 sm:gap-2 cursor-pointer min-w-0">
-                        <div className="w-full flex items-end justify-center h-36 md:h-48">
-                          <div
-                            className="w-full bg-gradient-to-t from-accent to-primary rounded-t-lg transition-all duration-500 hover:opacity-80 flex items-end justify-center pb-1 sm:pb-2"
-                            style={{ height: `${height}%`, minHeight: '24px' }}
-                          >
-                            <span className="text-[10px] sm:text-xs font-bold text-white truncate px-0.5">{formatTimeDisplay(data.hours)}</span>
+            <Card className="p-5 bg-background border border-border rounded-xl">
+              <h3 className="text-base font-semibold text-foreground mb-4">Próximas Conquistas</h3>
+              <div className="space-y-4">
+                {nextTrophies.length > 0 ? (
+                  nextTrophies.map((trophy) => (
+                    <div key={trophy.id} className="space-y-2">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <span className="text-xl">{trophy.icon}</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-sm text-foreground">{trophy.name}</p>
+                            <p className="text-xs text-muted-foreground truncate">{trophy.description}</p>
                           </div>
                         </div>
-                        <span className="text-xs sm:text-sm font-medium text-muted-foreground">{data.day}</span>
+                        <div className="text-right shrink-0">
+                          <span className="text-xs font-semibold text-primary">
+                            {trophy.progressText}
+                          </span>
+                        </div>
                       </div>
-                    </TooltipTrigger>
-                    <TooltipContent className="p-3 max-w-xs">
-                      <div className="space-y-2">
-                        <p className="font-bold text-sm capitalize">
-                          {data.date.toLocaleDateString('pt-BR', { 
-                            weekday: 'long', 
-                            day: 'numeric', 
-                            month: 'short' 
-                          })}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Total: {formatTimeDisplay(data.hours)}
-                        </p>
-                        {hasStageData && (
-                          <div className="border-t pt-2 space-y-1">
-                            {Object.entries(data.stageBreakdown).map(([stage, minutes]) => {
-                              if (minutes === 0) return null;
-                              const info = STAGE_LABELS[stage];
-                              if (!info) return null;
-                              return (
-                                <div key={stage} className="flex justify-between text-xs">
-                                  <span>{info.emoji} {info.label}</span>
-                                  <span className="font-medium">{minutes}min</span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
-                );
-              })}
-            </div>
-          </TooltipProvider>
-        </Card>
-
-        <Card className="p-6 bg-gradient-to-br from-primary/5 to-accent/5">
-          <WeeklySummaryCarousel
-            currentWeek={{
-              totalMinutes: weeklyGoalStats.weeklyTotalMinutes,
-              goalMinutes: weeklyGoalStats.weeklyGoalMinutes,
-              productivity: weeklyGoalStats.weeklyProductivityPercentage,
-            }}
-            previousWeek={{
-              totalMinutes: previousWeekStats.weeklyTotalMinutes,
-              productivity: previousWeekStats.weeklyProductivityPercentage,
-            }}
-          />
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-4">Conquistas Recentes</h3>
-          <div className="space-y-4">
-            {unlockedTrophies.length > 0 ? (
-              unlockedTrophies.map((trophy) => (
-                <div
-                  key={trophy.id}
-                  className="flex items-center gap-4 p-4 rounded-lg bg-gradient-to-r from-accent/10 to-primary/10 border border-primary/20"
-                >
-                  <div className="text-3xl">{trophy.icon}</div>
-                  <div className="flex-1">
-                    <p className="font-semibold">{trophy.name}</p>
-                    <p className="text-sm text-muted-foreground">{trophy.description}</p>
-                    <span className="text-xs text-primary font-semibold">+{trophy.points} XP</span>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <p className="text-sm text-muted-foreground text-center py-8">
-                Continue trabalhando para desbloquear conquistas!
-              </p>
-            )}
-          </div>
-        </Card>
-
-        <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-4">Próximas Conquistas</h3>
-          <div className="space-y-4">
-            {nextTrophies.length > 0 ? (
-              nextTrophies.map((trophy) => (
-                <div key={trophy.id} className="space-y-2">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-2 flex-1">
-                      <span className="text-2xl">{trophy.icon}</span>
-                      <div className="flex-1">
-                        <p className="font-semibold text-sm">{trophy.name}</p>
-                        <p className="text-xs text-muted-foreground">{trophy.description}</p>
+                      
+                      <div className="flex items-center gap-3">
+                        <Progress value={trophy.progress} className="h-1.5 flex-1" />
+                        <span className="text-[10px] text-muted-foreground shrink-0">
+                          +{trophy.points} XP
+                        </span>
                       </div>
                     </div>
-                    <div className="text-right shrink-0">
-                      <span className="text-sm font-bold text-primary">
-                        {trophy.progressText}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-3">
-                    <Progress value={trophy.progress} className="h-2 flex-1" />
-                    <span className="text-xs text-muted-foreground shrink-0">
-                      +{trophy.points} XP
-                    </span>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <p className="text-sm text-muted-foreground text-center py-8">
-                Parabéns! Você desbloqueou todas as conquistas! 🎉
-              </p>
-            )}
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-8">
+                    Parabéns! Você desbloqueou todas as conquistas! 🎉
+                  </p>
+                )}
+              </div>
+            </Card>
           </div>
-        </Card>
-      </div>
+        </div>
+      </section>
     </div>
   );
 };

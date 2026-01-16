@@ -6,41 +6,47 @@ interface StatCardProps {
   title: string;
   value: string | number;
   icon: LucideIcon;
-  gradient?: boolean;
+  highlight?: boolean;
   description?: string;
+  /** @deprecated Use highlight instead */
+  gradient?: boolean;
 }
 
-export const StatCard = ({ title, value, icon: Icon, gradient, description }: StatCardProps) => {
+export const StatCard = ({ title, value, icon: Icon, highlight, gradient, description }: StatCardProps) => {
+  // Support both highlight and deprecated gradient prop
+  const isHighlighted = highlight || gradient;
+  
   return (
     <Card className={cn(
-      "p-6 transition-all duration-300 hover:shadow-lg",
-      gradient && "bg-gradient-to-br from-accent to-primary text-white border-0"
+      "p-5 border rounded-xl transition-colors",
+      isHighlighted 
+        ? "bg-primary/10 border-primary/20" 
+        : "bg-background border-border"
     )}>
       <div className="flex items-start justify-between">
-        <div className="space-y-2">
-          <p className={cn(
-            "text-sm font-medium",
-            gradient ? "text-white/80" : "text-muted-foreground"
-          )}>
+        <div className="space-y-1.5">
+          <p className="text-sm font-medium text-muted-foreground">
             {title}
           </p>
-          <p className="text-3xl font-bold">{value}</p>
+          <p className={cn(
+            "text-2xl font-bold tracking-tight",
+            isHighlighted ? "text-primary" : "text-foreground"
+          )}>
+            {value}
+          </p>
           {description && (
-            <p className={cn(
-              "text-xs",
-              gradient ? "text-white/70" : "text-muted-foreground"
-            )}>
+            <p className="text-xs text-muted-foreground">
               {description}
             </p>
           )}
         </div>
         <div className={cn(
-          "p-3 rounded-xl",
-          gradient ? "bg-white/20" : "bg-primary/10"
+          "p-2.5 rounded-lg",
+          isHighlighted ? "bg-primary/10" : "bg-muted"
         )}>
           <Icon className={cn(
-            "w-6 h-6",
-            gradient ? "text-white" : "text-primary"
+            "w-5 h-5",
+            isHighlighted ? "text-primary" : "text-muted-foreground"
           )} />
         </div>
       </div>
