@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
-import { PhoneMockup } from "@/components/onboarding/shared/PhoneMockup";
+import { DeviceMockup } from "@/components/device/DeviceMockup";
 import muzzeLogo from "@/assets/muzze-logo.png";
+import macbookMockup from "@/assets/muzze-macbook-mockup.mp4";
 
 interface Screen0WelcomeProps {
   onContinue: () => void;
@@ -21,7 +22,16 @@ export const Screen0Welcome = ({ onContinue, onLogin }: Screen0WelcomeProps) => 
 
       {/* Phone Mockup */}
       <div className="mb-8">
-        <PhoneMockup />
+        <DeviceMockup size="md">
+          <video
+            src={macbookMockup}
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="w-full h-full object-cover"
+          />
+        </DeviceMockup>
       </div>
 
       {/* Text content */}
