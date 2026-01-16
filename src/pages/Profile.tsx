@@ -183,13 +183,13 @@ const Profile = () => {
     return (
       <div className="min-h-screen bg-background pb-24">
         <div 
-          className="container mx-auto p-4 max-w-2xl"
+          className="max-w-2xl mx-auto px-4 py-6"
           style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}
         >
-          <Skeleton className="h-40 w-full mb-6 rounded-lg" />
+          <Skeleton className="h-40 w-full mb-6 rounded-xl" />
           <div className="space-y-2">
             {[...Array(7)].map((_, i) => (
-              <Skeleton key={i} className="h-14 w-full" />
+              <Skeleton key={i} className="h-14 w-full rounded-lg" />
             ))}
           </div>
         </div>
@@ -199,99 +199,116 @@ const Profile = () => {
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      <div 
-        className="container mx-auto p-4 max-w-2xl"
-        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}
-      >
-        {/* Debug overlay apenas para devs com toggle ativo */}
-        {showDebugOverlay && (
-          <div className="text-[10px] text-muted-foreground mb-2 font-mono bg-yellow-500/10 p-2 rounded border border-yellow-500/30">
-            <div className="font-bold text-yellow-600 mb-1">🔧 DEV OVERLAY</div>
-            <div>ctx: role={activeRole || 'null'} | ws={activeWorkspace?.id?.slice(0,8) || 'null'} | owner={activeWorkspace?.owner_id?.slice(0,8) || 'null'}</div>
-            <div>fallback: isOwner={String(fallbackData?.isOwnerWorkspace)} | isAdmin={String(fallbackData?.isAdminMember)}</div>
-            <div>user: {currentUserId?.slice(0,8) || 'null'}</div>
-            <div className="text-green-500">canManageGuestsFinal: {String(canManageGuestsFinal)}</div>
-          </div>
-        )}
-
-        <Card className="mb-6">
-          <CardContent className="pt-8 pb-6">
-            <div className="text-center mb-6">
-              <h1 className="text-3xl font-bold mb-2">{displayName}</h1>
-              <p className="text-muted-foreground mb-4">{userEmail}</p>
-              {(() => {
-                const getPlanBadge = () => {
-                  switch (planCapabilities.planType) {
-                    case 'studio':
-                      return {
-                        text: 'Muzze Studio',
-                        className: 'bg-gradient-to-r from-violet-500/20 to-purple-600/20 text-violet-600 hover:from-violet-500/30 hover:to-purple-600/30 cursor-pointer',
-                        Icon: Building2
-                      };
-                    case 'pro':
-                      return {
-                        text: 'Muzze Pro',
-                        className: 'bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-600 hover:from-amber-500/30 hover:to-orange-500/30 cursor-pointer',
-                        Icon: Crown
-                      };
-                    default:
-                      return {
-                        text: 'Muzze Free',
-                        className: 'bg-muted text-muted-foreground hover:bg-muted/80 cursor-pointer',
-                        Icon: Sparkles
-                      };
-                  }
-                };
-                const planBadge = getPlanBadge();
-                return (
-                  <Badge 
-                    variant="secondary" 
-                    className={planBadge.className}
-                    onClick={() => navigate('/my-plan')}
-                  >
-                    <planBadge.Icon className="w-4 h-4 mr-1" />
-                    {planBadge.text}
-                  </Badge>
-                );
-              })()}
+      {/* Profile Header Section */}
+      <section className="bg-background py-6">
+        <div 
+          className="max-w-2xl mx-auto px-4"
+          style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.5rem)' }}
+        >
+          {/* Debug overlay apenas para devs com toggle ativo */}
+          {showDebugOverlay && (
+            <div className="text-[10px] text-muted-foreground mb-4 font-mono bg-amber-500/10 p-3 rounded-lg border border-amber-500/30">
+              <div className="font-bold text-amber-600 mb-1">🔧 DEV OVERLAY</div>
+              <div>ctx: role={activeRole || 'null'} | ws={activeWorkspace?.id?.slice(0,8) || 'null'} | owner={activeWorkspace?.owner_id?.slice(0,8) || 'null'}</div>
+              <div>fallback: isOwner={String(fallbackData?.isOwnerWorkspace)} | isAdmin={String(fallbackData?.isAdminMember)}</div>
+              <div>user: {currentUserId?.slice(0,8) || 'null'}</div>
+              <div className="text-green-600">canManageGuestsFinal: {String(canManageGuestsFinal)}</div>
             </div>
-          </CardContent>
-        </Card>
+          )}
 
-        <div className="space-y-2">
-          {allMenuItems.map((item, index) => {
-            const isGuestsItem = item.path === "/guests";
-            const isDisabled = isGuestsItem && !canManageGuestsFinal;
-            
-            return (
-              <Button
-                key={index}
-                variant="ghost"
-                className={`w-full justify-between h-auto py-4 px-6 ${isDisabled ? 'opacity-50' : ''}`}
-                onClick={() => handleMenuClick(item)}
-                disabled={false} // Keep clickable to show toast
-              >
-                <div className="flex items-center gap-3">
-                  <item.icon className="w-5 h-5" />
-                  <span className="text-base">{item.label}</span>
-                </div>
-                <span className="text-muted-foreground">›</span>
-              </Button>
-            );
-          })}
+          <Card className="border border-border rounded-xl bg-background">
+            <CardContent className="pt-8 pb-6">
+              <div className="text-center">
+                <h1 className="text-3xl font-bold tracking-tight mb-2">{displayName}</h1>
+                <p className="text-sm text-muted-foreground mb-4">{userEmail}</p>
+                {(() => {
+                  const getPlanBadge = () => {
+                    switch (planCapabilities.planType) {
+                      case 'studio':
+                        return {
+                          text: 'Muzze Studio',
+                          className: 'bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer',
+                          Icon: Building2
+                        };
+                      case 'pro':
+                        return {
+                          text: 'Muzze Pro',
+                          className: 'bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 cursor-pointer',
+                          Icon: Crown
+                        };
+                      default:
+                        return {
+                          text: 'Muzze Free',
+                          className: 'bg-muted text-muted-foreground hover:bg-muted/80 cursor-pointer',
+                          Icon: Sparkles
+                        };
+                    }
+                  };
+                  const planBadge = getPlanBadge();
+                  return (
+                    <Badge 
+                      variant="secondary" 
+                      className={`${planBadge.className} rounded-lg px-3 py-1`}
+                      onClick={() => navigate('/my-plan')}
+                    >
+                      <planBadge.Icon className="w-4 h-4 mr-1.5" />
+                      {planBadge.text}
+                    </Badge>
+                  );
+                })()}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
 
+      {/* Menu Items Section */}
+      <section className="bg-muted/30 py-6">
+        <div className="max-w-2xl mx-auto px-4">
+          <Card className="border border-border rounded-xl bg-background overflow-hidden">
+            <div className="divide-y divide-border">
+              {allMenuItems.map((item, index) => {
+                const isGuestsItem = item.path === "/guests";
+                const isDisabled = isGuestsItem && !canManageGuestsFinal;
+                
+                return (
+                  <Button
+                    key={index}
+                    variant="ghost"
+                    className={`w-full justify-between h-auto py-4 px-5 rounded-none hover:bg-muted/50 ${isDisabled ? 'opacity-50' : ''}`}
+                    onClick={() => handleMenuClick(item)}
+                    disabled={false}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-muted">
+                        <item.icon className="w-4 h-4 text-muted-foreground" />
+                      </div>
+                      <span className="text-sm font-medium">{item.label}</span>
+                    </div>
+                    <span className="text-muted-foreground text-lg">›</span>
+                  </Button>
+                );
+              })}
+            </div>
+          </Card>
+        </div>
+      </section>
+
+      {/* Logout Section */}
+      <section className="bg-background py-6">
+        <div className="max-w-2xl mx-auto px-4">
           <Button
-            variant="ghost"
-            className="w-full justify-start h-auto py-4 px-6 text-destructive hover:text-destructive"
+            variant="outline"
+            className="w-full h-12 rounded-lg text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive font-medium"
             onClick={async () => {
               await supabase.auth.signOut();
               navigate("/auth");
             }}
           >
-            Sair
+            Sair da conta
           </Button>
         </div>
-      </div>
+      </section>
     </div>
   );
 };
