@@ -134,6 +134,7 @@ export type Database = {
           created_at: string | null
           current_workflow: string | null
           daily_goal_minutes: number | null
+          desktop_tutorial_completed: boolean | null
           extra_workspaces_packs: number | null
           first_login: boolean | null
           highest_level: number | null
@@ -157,6 +158,7 @@ export type Database = {
           created_at?: string | null
           current_workflow?: string | null
           daily_goal_minutes?: number | null
+          desktop_tutorial_completed?: boolean | null
           extra_workspaces_packs?: number | null
           first_login?: boolean | null
           highest_level?: number | null
@@ -180,6 +182,7 @@ export type Database = {
           created_at?: string | null
           current_workflow?: string | null
           daily_goal_minutes?: number | null
+          desktop_tutorial_completed?: boolean | null
           extra_workspaces_packs?: number | null
           first_login?: boolean | null
           highest_level?: number | null
