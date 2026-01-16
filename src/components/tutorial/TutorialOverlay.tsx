@@ -28,9 +28,6 @@ export function TutorialOverlay() {
   const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
   const tooltipRef = useRef<HTMLDivElement>(null);
 
-  // Don't render tutorial overlay on mobile devices
-  if (isMobile) return null;
-
   // Find and track target element position
   useEffect(() => {
     if (!isActive || !currentStepData) {
@@ -106,7 +103,8 @@ export function TutorialOverlay() {
     setTooltipPosition({ top, left });
   }, [targetRect, currentStepData]);
 
-  if (!isActive || !currentStepData) return null;
+  // Don't render on mobile or when tutorial is not active
+  if (isMobile || !isActive || !currentStepData) return null;
 
   const isLastStep = currentStep === totalSteps - 1;
   const isFirstStep = currentStep === 0;
