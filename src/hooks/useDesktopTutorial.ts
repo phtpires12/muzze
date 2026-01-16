@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export interface TutorialStep {
   id: string;
@@ -78,10 +79,17 @@ export function useDesktopTutorial(): UseDesktopTutorialReturn {
   const [isActive, setIsActive] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const isMobile = useIsMobile();
 
-  // Check if tutorial should be shown on mount
+  // Check if tutorial should be shown on mount (desktop only)
   useEffect(() => {
     const checkTutorialStatus = async () => {
+      // Don't activate tutorial on mobile devices
+      if (isMobile) {
+        setIsLoading(false);
+        return;
+      }
+
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
@@ -106,7 +114,7 @@ export function useDesktopTutorial(): UseDesktopTutorialReturn {
     };
 
     checkTutorialStatus();
-  }, []);
+  }, [isMobile]);
 
   const saveTutorialCompleted = useCallback(async () => {
     try {

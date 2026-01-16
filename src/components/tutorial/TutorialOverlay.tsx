@@ -4,7 +4,7 @@ import { useTutorial } from "./TutorialProvider";
 import { Button } from "@/components/ui/button";
 import { X, ChevronRight, ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
-
+import { useIsMobile } from "@/hooks/use-mobile";
 interface TargetRect {
   top: number;
   left: number;
@@ -23,9 +23,13 @@ export function TutorialOverlay() {
     skipTutorial 
   } = useTutorial();
   
+  const isMobile = useIsMobile();
   const [targetRect, setTargetRect] = useState<TargetRect | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
   const tooltipRef = useRef<HTMLDivElement>(null);
+
+  // Don't render tutorial overlay on mobile devices
+  if (isMobile) return null;
 
   // Find and track target element position
   useEffect(() => {
