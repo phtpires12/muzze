@@ -382,7 +382,7 @@ const Session = () => {
   // Se celebração está ativa, renderizar tela mínima para evitar flash
   if (isShowingAnyCelebration) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-accent/10 via-background to-primary/10">
+      <div className="min-h-screen bg-background">
         {/* Tela em branco - celebração aparece como overlay via GlobalCelebrations */}
       </div>
     );
@@ -393,9 +393,10 @@ const Session = () => {
 
   if (isInitializingFromUrl) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-accent/10 via-background to-primary/10">
-        <div className="text-center">
-          <p className="text-lg text-muted-foreground">Carregando sessão...</p>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center space-y-3">
+          <div className="w-12 h-12 rounded-full bg-muted animate-pulse mx-auto" />
+          <p className="text-sm text-muted-foreground">Carregando sessão...</p>
         </div>
       </div>
     );
@@ -405,28 +406,28 @@ const Session = () => {
   if (!session.isActive && !isShowingAnyCelebration) {
     return (
       <div 
-        className="min-h-screen bg-gradient-to-br from-accent/10 via-background to-primary/10 p-6"
+        className="min-h-screen bg-background px-4 py-6"
         style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}
       >
         <div className="max-w-2xl mx-auto">
           <Button
             variant="ghost"
             onClick={() => navigate("/")}
-            className="mb-6 hover:bg-accent/10"
+            className="mb-6 rounded-lg"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Voltar ao Dashboard
           </Button>
 
-          <Card className="p-8 backdrop-blur-md bg-card/85 border-border/20 shadow-lg rounded-[28px]">
-            <h1 className="text-3xl font-bold text-foreground mb-2">
+          <Card className="p-6 bg-background border border-border rounded-xl">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground mb-1">
               Nova Sessão Criativa
             </h1>
-            <p className="text-muted-foreground mb-8">
+            <p className="text-sm text-muted-foreground mb-6">
               Escolha a etapa em que você vai trabalhar
             </p>
 
-            <div className="space-y-3">
+            <div className="space-y-2">
               {STAGES.map((stage) => {
                 const Icon = stage.icon;
                 return (
@@ -434,23 +435,23 @@ const Session = () => {
                     key={stage.id}
                     onClick={() => handleStart(stage.id)}
                     className={cn(
-                      "w-full p-6 rounded-2xl border-2 border-border/20",
-                      "bg-card hover:bg-accent/10 transition-all duration-200",
+                      "w-full p-4 rounded-xl border border-border",
+                      "bg-background hover:bg-muted/50 transition-colors",
                       "flex items-center gap-4 text-left",
-                      "hover:border-primary/50 hover:shadow-lg"
+                      "hover:border-primary/30"
                     )}
                   >
                     <div className={cn(
-                      "w-14 h-14 rounded-full flex items-center justify-center",
-                      "bg-gradient-to-br from-accent/20 to-primary/20"
+                      "w-12 h-12 rounded-full flex items-center justify-center",
+                      "bg-muted"
                     )}>
-                      <Icon className={cn("w-7 h-7", stage.color)} />
+                      <Icon className={cn("w-6 h-6", stage.color)} />
                     </div>
                     <div className="flex-1">
-                      <h3 className="text-xl font-semibold text-foreground">
+                      <h3 className="text-base font-semibold text-foreground">
                         {stage.label}
                       </h3>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-xs text-muted-foreground">
                         Iniciar sessão de {stage.label.toLowerCase()}
                       </p>
                     </div>
@@ -470,9 +471,10 @@ const Session = () => {
   // Fallback seguro se currentStage for undefined
   if (!currentStage) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5">
-        <div className="text-center">
-          <p className="text-lg text-muted-foreground">Carregando sessão...</p>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center space-y-3">
+          <div className="w-12 h-12 rounded-full bg-muted animate-pulse mx-auto" />
+          <p className="text-sm text-muted-foreground">Carregando sessão...</p>
         </div>
       </div>
     );
@@ -483,9 +485,10 @@ const Session = () => {
   // If stage is "record", show loading while fetching script
   if (session.stage === "record") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5">
-        <div className="text-center">
-          <p className="text-lg text-muted-foreground">Carregando shot list...</p>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center space-y-3">
+          <div className="w-12 h-12 rounded-full bg-muted animate-pulse mx-auto" />
+          <p className="text-sm text-muted-foreground">Carregando shot list...</p>
         </div>
       </div>
     );
@@ -495,12 +498,12 @@ const Session = () => {
   if (session.stage === "idea") {
     console.log('[Session] Rendering idea stage, scriptId:', scriptId, 'scriptIdParam:', scriptIdParam);
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
+      <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8">
           <Button
             variant="ghost"
             onClick={() => navigate("/")}
-            className="mb-6 hover:bg-accent/10"
+            className="mb-6 rounded-lg"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Voltar ao Dashboard
@@ -662,17 +665,17 @@ const Session = () => {
 
   return (
     <div 
-      className="min-h-screen bg-gradient-to-br from-accent/10 via-background to-primary/10 p-6"
+      className="min-h-screen bg-background px-4 py-6"
       style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}
     >
       <div className="max-w-2xl mx-auto">
         <Card className={cn(
-          "relative p-8 backdrop-blur-md border-border/20 shadow-lg rounded-[28px] transition-all duration-1000",
+          "relative p-6 border rounded-xl transition-all duration-500",
           session.isStreakMode 
-            ? "bg-gradient-to-br from-orange-500/10 via-red-500/10 to-orange-600/10 border-orange-500/30" 
+            ? "bg-primary/5 border-primary/30" 
             : isBonusMode
-              ? "bg-gradient-to-br from-orange-400/10 via-purple-500/10 to-violet-600/10 border-purple-400/30"
-              : "bg-card/85"
+              ? "bg-purple-500/5 border-purple-500/30"
+              : "bg-background border-border"
         )}>
           {/* Back to Recording Button - top left */}
           <Button
@@ -707,32 +710,32 @@ const Session = () => {
           </Button>
 
           {/* Timer Display */}
-          <div className="text-center mb-8">
+          <div className="text-center mb-6">
             <div className={cn(
-              "w-24 h-24 mx-auto mb-4 rounded-full flex items-center justify-center shadow-lg transition-all duration-1000",
+              "w-20 h-20 mx-auto mb-4 rounded-full flex items-center justify-center transition-all duration-500",
               session.isStreakMode
-                ? "bg-gradient-to-br from-orange-500 to-red-600 animate-wiggle"
+                ? "bg-primary/10"
                 : isBonusMode
-                  ? "bg-gradient-to-br from-orange-400 via-purple-500 to-violet-600"
-                  : "bg-gradient-to-br from-accent to-primary"
+                  ? "bg-purple-500/10"
+                  : "bg-muted"
             )}>
               {session.isStreakMode ? (
-                <Flame className="w-12 h-12 text-white" />
+                <Flame className="w-10 h-10 text-primary" />
               ) : isBonusMode ? (
-                <Flame className="w-12 h-12 text-white" />
+                <Flame className="w-10 h-10 text-purple-500" />
               ) : (
-                <CurrentIcon className="w-12 h-12 text-white" />
+                <CurrentIcon className={cn("w-10 h-10", currentStage.color)} />
               )}
             </div>
             
-            <h2 className="text-2xl font-bold text-foreground mb-2">
+            <h2 className="text-lg font-semibold text-foreground mb-1">
               {currentStage.label}
             </h2>
             
             <div className={cn(
-              "text-6xl font-bold mb-2 tabular-nums transition-colors duration-1000",
+              "text-5xl font-bold tracking-tight mb-1 tabular-nums transition-colors duration-500",
               session.isStreakMode 
-                ? "text-orange-600" 
+                ? "text-primary" 
                 : isBonusMode 
                   ? "text-purple-600"
                   : "text-foreground"
@@ -741,11 +744,11 @@ const Session = () => {
             </div>
 
             <div className={cn(
-              "text-sm mb-2 transition-colors duration-1000",
+              "text-sm mb-3 transition-colors duration-500",
               session.isStreakMode 
-                ? "text-orange-600/70" 
+                ? "text-primary/70" 
                 : isBonusMode
-                  ? "text-purple-600/70"
+                  ? "text-purple-500/70"
                   : "text-muted-foreground"
             )}>
               {goalText}
@@ -754,34 +757,34 @@ const Session = () => {
             <Progress 
               value={progress} 
               className={cn(
-                "max-w-xs mx-auto mb-4 transition-all duration-500",
-                session.isStreakMode && "bg-orange-200 [&>div]:bg-gradient-to-r [&>div]:from-orange-500 [&>div]:to-red-600",
-                isBonusMode && !session.isStreakMode && "bg-purple-200 [&>div]:bg-gradient-to-r [&>div]:from-orange-400 [&>div]:via-purple-500 [&>div]:to-violet-600"
+                "max-w-xs mx-auto mb-4 h-2",
+                session.isStreakMode && "[&>div]:bg-primary",
+                isBonusMode && !session.isStreakMode && "[&>div]:bg-purple-500"
               )}
             />
             
             {session.isPaused && (
-              <p className="text-muted-foreground">Sessão pausada</p>
+              <p className="text-sm text-muted-foreground">Sessão pausada</p>
             )}
           </div>
 
           {/* Controls */}
-          <div className="flex gap-3 mb-8">
+          <div className="flex gap-3 mb-6">
             {!session.isPaused ? (
               <Button
                 onClick={pauseSession}
                 variant="outline"
-                className="flex-1 h-14 text-lg"
+                className="flex-1 h-12 rounded-lg font-medium"
               >
-                <Pause className="w-5 h-5 mr-2" />
+                <Pause className="w-4 h-4 mr-2" />
                 Pausar
               </Button>
             ) : (
               <Button
                 onClick={resumeSession}
-                className="flex-1 h-14 text-lg bg-gradient-to-r from-primary to-accent"
+                className="flex-1 h-12 rounded-lg font-medium"
               >
-                <Play className="w-5 h-5 mr-2" />
+                <Play className="w-4 h-4 mr-2" />
                 Retomar
               </Button>
             )}
@@ -789,9 +792,9 @@ const Session = () => {
             <Button
               onClick={handleEnd}
               variant="destructive"
-              className="flex-1 h-14 text-lg"
+              className="flex-1 h-12 rounded-lg font-medium"
             >
-              <Square className="w-5 h-5 mr-2" />
+              <Square className="w-4 h-4 mr-2" />
               Finalizar
             </Button>
           </div>
@@ -812,7 +815,7 @@ const Session = () => {
                   <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
                     Mudar Etapa
                   </h3>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-2">
                     {STAGES.map((stage) => {
                       const Icon = stage.icon;
                       const isActive = stage.id === session.stage;
@@ -822,20 +825,20 @@ const Session = () => {
                           onClick={() => !isActive && changeStage(stage.id)}
                           disabled={isActive}
                           className={cn(
-                            "p-4 rounded-xl border-2 transition-all duration-200",
-                            "flex flex-col items-center gap-2",
+                            "p-3 rounded-lg border transition-colors",
+                            "flex flex-col items-center gap-1.5",
                             isActive 
-                              ? "bg-gradient-to-br from-accent to-primary border-transparent text-white shadow-lg" 
-                              : "bg-card border-border/20 hover:border-primary/50 hover:bg-accent/10"
+                              ? "bg-primary/10 border-primary/30" 
+                              : "bg-background border-border hover:border-primary/30 hover:bg-muted/50"
                           )}
                         >
                           <Icon className={cn(
-                            "w-6 h-6",
-                            isActive ? "text-white" : stage.color
+                            "w-5 h-5",
+                            isActive ? "text-primary" : stage.color
                           )} />
                           <span className={cn(
-                            "text-sm font-medium",
-                            isActive ? "text-white" : "text-foreground"
+                            "text-xs font-medium",
+                            isActive ? "text-primary" : "text-foreground"
                           )}>
                             {stage.label}
                           </span>
