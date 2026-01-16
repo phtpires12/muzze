@@ -1,10 +1,9 @@
 export interface OnboardingData {
-  // Phase 1: Amplify the Dream
-  dream_goal?: string;
-  
-  // Phase 2: Pain Diagnosis (now collects username/platform)
+  // Phase 1: Hook + Dream Outcome
   username?: string;
   preferred_platform?: string;
+  
+  // Phase 2: Pain Diagnosis
   sticking_points?: string[];
   months_trying?: number;
   current_post_count?: number;
