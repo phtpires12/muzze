@@ -10,6 +10,121 @@ const PRODUCT_PLAN_MAP: Record<string, 'pro' | 'studio'> = {
   'prod_offer_6f2pv1lxpkwlwv72vv3xgs': 'pro',
 };
 
+// FCM Notification helpers
+async function getAccessToken(): Promise<string> {
+  const serviceAccount = JSON.parse(Deno.env.get('Firebase_API_KEY') || '{}');
+  
+  const now = Math.floor(Date.now() / 1000);
+  const expiry = now + 3600;
+  
+  const header = { alg: 'RS256', typ: 'JWT' };
+  const payload = {
+    iss: serviceAccount.client_email,
+    sub: serviceAccount.client_email,
+    aud: 'https://oauth2.googleapis.com/token',
+    iat: now,
+    exp: expiry,
+    scope: 'https://www.googleapis.com/auth/firebase.messaging'
+  };
+  
+  const encodedHeader = btoa(JSON.stringify(header));
+  const encodedPayload = btoa(JSON.stringify(payload));
+  
+  const privateKey = serviceAccount.private_key;
+  const keyData = privateKey
+    .replace('-----BEGIN PRIVATE KEY-----', '')
+    .replace('-----END PRIVATE KEY-----', '')
+    .replace(/\s/g, '');
+  
+  const binaryKey = Uint8Array.from(atob(keyData), c => c.charCodeAt(0));
+  
+  const cryptoKey = await crypto.subtle.importKey(
+    'pkcs8',
+    binaryKey,
+    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  
+  const dataToSign = `${encodedHeader}.${encodedPayload}`;
+  const signature = await crypto.subtle.sign(
+    'RSASSA-PKCS1-v1_5',
+    cryptoKey,
+    new TextEncoder().encode(dataToSign)
+  );
+  
+  const encodedSignature = btoa(String.fromCharCode(...new Uint8Array(signature)))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '');
+  
+  const jwt = `${encodedHeader}.${encodedPayload}.${encodedSignature}`;
+  
+  const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+      assertion: jwt
+    })
+  });
+  
+  const tokenData = await tokenResponse.json();
+  return tokenData.access_token;
+}
+
+async function sendPaymentNotification(supabase: any, userId: string, title: string, body: string): Promise<void> {
+  try {
+    const accessToken = await getAccessToken();
+    
+    const { data: tokens } = await supabase
+      .from('device_tokens')
+      .select('token')
+      .eq('user_id', userId);
+
+    if (!tokens || tokens.length === 0) {
+      console.log(`No device tokens for user ${userId}`);
+      return;
+    }
+
+    const projectId = 'muzze-app';
+    
+    for (const { token } of tokens) {
+      await fetch(
+        `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            message: {
+              token,
+              notification: { title, body },
+              webpush: { fcm_options: { link: '/my-plan' } }
+            }
+          })
+        }
+      );
+    }
+
+    // Log notification
+    await supabase
+      .from('notification_logs')
+      .insert({
+        user_id: userId,
+        notification_type: 'payment_issue',
+        notification_date: new Date().toISOString().split('T')[0],
+        success: true
+      });
+
+    console.log(`Payment notification sent to user ${userId}`);
+  } catch (error) {
+    console.error('Error sending payment notification:', error);
+  }
+}
+
 interface ZoutiWebhookPayload {
   event?: string;
   type?: string;
@@ -116,6 +231,10 @@ Deno.serve(async (req) => {
         throw profileError;
       }
 
+      // Calculate expires_at (30 days from now)
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 30);
+
       // Inserir/atualizar subscription (upsert por transaction_id)
       const { error: subError } = await supabase
         .from('subscriptions')
@@ -128,6 +247,7 @@ Deno.serve(async (req) => {
           plan_type: planType,
           status: 'active',
           started_at: new Date().toISOString(),
+          expires_at: expiresAt.toISOString(),
           raw_payload: payload,
           updated_at: new Date().toISOString(),
         }, {
@@ -150,11 +270,28 @@ Deno.serve(async (req) => {
       // CANCELADO: Marcar cancelled_at mas manter acesso até expiração
       console.log('Processing cancellation for user:', userId);
 
+      // Get current subscription to preserve expires_at or set it
+      const { data: currentSub } = await supabase
+        .from('subscriptions')
+        .select('started_at, expires_at')
+        .eq('user_id', userId)
+        .eq('status', 'active')
+        .single();
+
+      // If no expires_at, calculate from started_at + 30 days
+      let expiresAt = currentSub?.expires_at;
+      if (!expiresAt && currentSub?.started_at) {
+        const startDate = new Date(currentSub.started_at);
+        startDate.setDate(startDate.getDate() + 30);
+        expiresAt = startDate.toISOString();
+      }
+
       const { error: subError } = await supabase
         .from('subscriptions')
         .update({
           status: 'cancelled',
           cancelled_at: new Date().toISOString(),
+          expires_at: expiresAt,
           updated_at: new Date().toISOString(),
         })
         .eq('user_id', userId)
@@ -167,7 +304,27 @@ Deno.serve(async (req) => {
       // Não downgrade imediato - usuário mantém acesso até fim do período
       console.log('Subscription cancelled, access maintained until expiration');
       return new Response(
-        JSON.stringify({ success: true, action: 'cancelled' }),
+        JSON.stringify({ success: true, action: 'cancelled', expires_at: expiresAt }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // PROBLEMA DE PAGAMENTO: Notificar usuário imediatamente
+    if (eventLower.includes('atrasad') || eventLower.includes('inadimpl') || 
+        eventLower.includes('fail') || eventLower.includes('expired') ||
+        eventLower.includes('overdue') || eventLower.includes('unpaid')) {
+      console.log('Processing payment issue for user:', userId);
+
+      // Send immediate push notification
+      await sendPaymentNotification(
+        supabase,
+        userId,
+        '❌ Problema no pagamento',
+        'Não conseguimos processar seu pagamento. Atualize seus dados para manter o acesso.'
+      );
+
+      return new Response(
+        JSON.stringify({ success: true, action: 'payment_issue_notified' }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
