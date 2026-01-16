@@ -138,17 +138,32 @@ export function TutorialOverlay() {
         />
       </svg>
 
-      {/* Highlight ring around target */}
+      {/* Highlight ring around target with glow effect */}
       {targetRect && (
-        <div
-          className="absolute pointer-events-none rounded-xl border-2 border-primary animate-pulse"
-          style={{
-            top: targetRect.top - 8,
-            left: targetRect.left - 8,
-            width: targetRect.width + 16,
-            height: targetRect.height + 16,
-          }}
-        />
+        <>
+          {/* Outer glow ring */}
+          <div
+            className="absolute pointer-events-none rounded-xl animate-[ping_1.5s_cubic-bezier(0,0,0.2,1)_infinite] opacity-30"
+            style={{
+              top: targetRect.top - 12,
+              left: targetRect.left - 12,
+              width: targetRect.width + 24,
+              height: targetRect.height + 24,
+              background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)))',
+            }}
+          />
+          {/* Inner highlight ring */}
+          <div
+            className="absolute pointer-events-none rounded-xl border-2 border-primary shadow-[0_0_20px_hsl(var(--primary)/0.5)]"
+            style={{
+              top: targetRect.top - 8,
+              left: targetRect.left - 8,
+              width: targetRect.width + 16,
+              height: targetRect.height + 16,
+              animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            }}
+          />
+        </>
       )}
 
       {/* Click blocker (except for highlighted area) */}
