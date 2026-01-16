@@ -176,7 +176,17 @@ export const SideNav = () => {
           <nav className="flex-1 p-2 space-y-1">
             {navigation.map(item => <Tooltip key={item.name}>
                 <TooltipTrigger asChild>
-                  <NavLink to={item.href} onClick={e => handleNavClick(e, item.href)} className={cn("flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200", "text-muted-foreground hover:text-foreground hover:bg-accent/10", effectiveCollapsed && "justify-center px-2")} activeClassName="text-primary bg-primary/10 hover:bg-primary/15">
+                  <NavLink 
+                    to={item.href} 
+                    onClick={e => handleNavClick(e, item.href)} 
+                    id={
+                      item.name === 'Calendário' ? 'tutorial-calendar' : 
+                      item.name === 'Estatísticas' ? 'tutorial-stats' : 
+                      undefined
+                    }
+                    className={cn("flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200", "text-muted-foreground hover:text-foreground hover:bg-accent/10", effectiveCollapsed && "justify-center px-2")} 
+                    activeClassName="text-primary bg-primary/10 hover:bg-primary/15"
+                  >
                     <item.icon className="w-5 h-5 shrink-0" />
                     {!effectiveCollapsed && <span className="text-sm font-medium">{item.name}</span>}
                   </NavLink>
