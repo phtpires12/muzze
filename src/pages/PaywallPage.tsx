@@ -2,12 +2,14 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Bell, Unlock, CreditCard, Check, ArrowLeft, Crown } from "lucide-react";
+import { Shield, Unlock, RefreshCw, Check, ArrowLeft, Crown } from "lucide-react";
 import muzzeLeafWhite from "@/assets/muzze-leaf-white.png";
 import { addDays, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { usePlanCapabilitiesOptional } from "@/contexts/PlanContext";
+
+const ZOUTI_CHECKOUT_URL = "https://pay.zouti.com.br/checkout?poi=prod_offer_6f2pv1lxpkwlwv72vv3xgs";
 
 // Logo Component with gradient background
 const MuzzeLogo = () => (
@@ -24,17 +26,17 @@ const MuzzeLogo = () => (
   </div>
 );
 
-// Bell notification component with glow effect
-const ReminderBell = () => (
+// Shield component for guarantee
+const GuaranteeShield = () => (
   <div className="flex flex-col items-center gap-4">
     <div className="relative w-24 h-24 mx-auto">
-      <div className="absolute inset-0 bg-gradient-to-br from-yellow-400/40 to-orange-400/40 rounded-3xl blur-xl animate-pulse" />
-      <div className="relative w-24 h-24 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-3xl flex items-center justify-center shadow-lg">
-        <Bell className="w-12 h-12 text-white" />
+      <div className="absolute inset-0 bg-gradient-to-br from-emerald-400/40 to-teal-400/40 rounded-3xl blur-xl animate-pulse" />
+      <div className="relative w-24 h-24 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-3xl flex items-center justify-center shadow-lg">
+        <Shield className="w-12 h-12 text-white" />
       </div>
     </div>
     <p className="text-sm text-muted-foreground text-center w-[85vw] max-w-sm">
-      Te mandaremos um lembrete antes do seu teste gratuito acabar.
+      Garantia incondicional de 7 dias. Cancele e receba reembolso integral.
     </p>
   </div>
 );
@@ -70,14 +72,18 @@ const PaywallPage = () => {
     }
   };
 
-  const handleStartTrial = () => {
-    trackEvent('paywall_start_trial_clicked', {
+  const handleSubscribe = () => {
+    trackEvent('paywall_subscribe_clicked', {
       selectedPlan,
       currentPlan: planCapabilities?.planType || 'unknown',
     });
     
-    // TODO: Implementar integração com Stripe
-    console.log('[PaywallPage] Start trial clicked - implement Stripe integration', { selectedPlan });
+    trackEvent('zouti_checkout_opened', {
+      selectedPlan,
+    });
+    
+    // Open Zouti checkout in new tab
+    window.open(ZOUTI_CHECKOUT_URL, '_blank');
   };
 
   const handleContinueFree = () => {
@@ -87,9 +93,9 @@ const PaywallPage = () => {
     navigate(-1);
   };
 
-  // Calculate trial end date
-  const trialEndDate = addDays(new Date(), 7);
-  const formattedDate = format(trialEndDate, "d 'de' MMMM 'de' yyyy", { locale: ptBR });
+  // Calculate guarantee end date
+  const guaranteeEndDate = addDays(new Date(), 7);
+  const formattedGuaranteeDate = format(guaranteeEndDate, "d 'de' MMMM", { locale: ptBR });
 
   // Animation loop for step 1
   useEffect(() => {
@@ -125,7 +131,7 @@ const PaywallPage = () => {
 
           {/* Main content */}
           <div className="min-h-[60vh] flex flex-col items-center justify-between py-8">
-            {/* Animated logo/bell section */}
+            {/* Animated logo/shield section */}
             <div className="flex-1 flex items-center justify-center">
               <div className="relative h-[180px] w-full flex items-center justify-center">
                 <div 
@@ -141,7 +147,7 @@ const PaywallPage = () => {
                     showLogo ? 'opacity-0' : 'opacity-100'
                   }`}
                 >
-                  <ReminderBell />
+                  <GuaranteeShield />
                 </div>
               </div>
             </div>
@@ -171,8 +177,8 @@ const PaywallPage = () => {
             {/* Bottom CTA section */}
             <div className="w-full space-y-4">
               <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                <Check className="w-4 h-4 text-primary" />
-                <span className="text-sm">Sem cobrança agora</span>
+                <Shield className="w-4 h-4 text-emerald-500" />
+                <span className="text-sm">Garantia de 7 dias</span>
               </div>
 
               <Button
@@ -180,11 +186,11 @@ const PaywallPage = () => {
                 size="lg"
                 className="w-full bg-gradient-to-r from-primary to-accent hover:opacity-90 text-lg py-6 rounded-lg"
               >
-                Teste por R$0,00
+                Ver planos Pro
               </Button>
 
               <p className="text-xs text-center text-muted-foreground">
-                Depois R$298,80 por ano (R$24,90/mês)
+                Cancele em até 7 dias e receba reembolso integral
               </p>
 
               <Button 
@@ -217,7 +223,7 @@ const PaywallPage = () => {
           </Button>
           <div>
             <h1 className="text-xl font-bold tracking-tight">Escolha seu plano</h1>
-            <p className="text-sm text-muted-foreground">7 dias grátis para testar</p>
+            <p className="text-sm text-muted-foreground">Garantia de 7 dias</p>
           </div>
         </div>
 
@@ -225,8 +231,11 @@ const PaywallPage = () => {
           {/* Title */}
           <div className="text-center">
             <h2 className="text-2xl font-bold tracking-tight">
-              Comece o seu teste de 7 dias gratuito
+              Assine o Muzze Pro
             </h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Acesso imediato a todos os recursos premium
+            </p>
           </div>
 
           {/* Timeline */}
@@ -243,38 +252,38 @@ const PaywallPage = () => {
                 <div className="flex-1 pb-4">
                   <p className="font-semibold">Hoje</p>
                   <p className="text-sm text-muted-foreground">
-                    Você desbloqueia todas as ferramentas do aplicativo.
+                    Acesso liberado a todas as ferramentas do aplicativo.
                   </p>
                 </div>
               </div>
 
-              {/* Step 2: In 7 days - Reminder */}
+              {/* Step 2: 7 days - Guarantee */}
               <div className="flex gap-4">
                 <div className="flex flex-col items-center">
-                  <div className="w-10 h-10 rounded-full bg-yellow-500 flex items-center justify-center shrink-0">
-                    <Bell className="w-5 h-5 text-white" />
+                  <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center shrink-0">
+                    <Shield className="w-5 h-5 text-white" />
                   </div>
                   <div className="w-0.5 flex-1 bg-border min-h-[24px]" />
                 </div>
                 <div className="flex-1 pb-4">
-                  <p className="font-semibold">Em 7 dias</p>
+                  <p className="font-semibold">Até {formattedGuaranteeDate}</p>
                   <p className="text-sm text-muted-foreground">
-                    Te enviaremos um lembrete de que seu teste está acabando.
+                    Garantia incondicional. Cancele e receba reembolso integral.
                   </p>
                 </div>
               </div>
 
-              {/* Step 3: Billing */}
+              {/* Step 3: Renewal */}
               <div className="flex gap-4">
                 <div className="flex flex-col items-center">
                   <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center shrink-0">
-                    <CreditCard className="w-5 h-5 text-muted-foreground" />
+                    <RefreshCw className="w-5 h-5 text-muted-foreground" />
                   </div>
                 </div>
                 <div className="flex-1">
-                  <p className="font-semibold">Cobrança inicia</p>
+                  <p className="font-semibold">Renovação automática</p>
                   <p className="text-sm text-muted-foreground">
-                    Você será cobrado no dia {formattedDate}, a não ser que cancele antes.
+                    Após o período de garantia, sua assinatura renova automaticamente.
                   </p>
                 </div>
               </div>
@@ -318,17 +327,21 @@ const PaywallPage = () => {
           {/* CTA */}
           <div className="space-y-3">
             <div className="flex items-center justify-center gap-2 text-muted-foreground">
-              <Check className="w-4 h-4 text-primary" />
-              <span className="text-sm">Sem cobrança agora</span>
+              <Shield className="w-4 h-4 text-emerald-500" />
+              <span className="text-sm">Garantia de reembolso em 7 dias</span>
             </div>
 
             <Button
-              onClick={handleStartTrial}
+              onClick={handleSubscribe}
               size="lg"
               className="w-full bg-gradient-to-r from-primary to-accent hover:opacity-90 text-lg py-6 rounded-lg"
             >
-              Começar meu teste gratuito
+              Assinar agora
             </Button>
+
+            <p className="text-xs text-center text-muted-foreground">
+              Protegido pelo Código de Defesa do Consumidor
+            </p>
 
             <Button 
               variant="ghost" 
