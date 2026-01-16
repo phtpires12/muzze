@@ -37,6 +37,26 @@
 
   <body>
     <div id="root"></div>
+    <script>
+      // Force cache clear on version mismatch - v2026.01.16.2
+      (function() {
+        const BUILD_VERSION = '2026.01.16.2';
+        const storedVersion = localStorage.getItem('muzze_build_version');
+        if (storedVersion !== BUILD_VERSION) {
+          console.log('[Cache] New version detected:', BUILD_VERSION);
+          localStorage.setItem('muzze_build_version', BUILD_VERSION);
+          if ('caches' in window) {
+            caches.keys().then(names => {
+              names.forEach(name => caches.delete(name));
+            });
+          }
+          if (storedVersion) {
+            // Only reload if this isn't first visit
+            window.location.reload(true);
+          }
+        }
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
