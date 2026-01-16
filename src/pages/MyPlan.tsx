@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { usePlanCapabilities } from "@/contexts/PlanContext";
 import { cn } from "@/lib/utils";
 import { PlanDebugCard } from "@/components/dev/PlanDebugCard";
+import { SubscriptionCard } from "@/components/subscription/SubscriptionCard";
 
 const MyPlan = () => {
   const navigate = useNavigate();
@@ -199,6 +200,11 @@ const MyPlan = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Subscription Management */}
+        {(planCapabilities.planType === 'pro' || planCapabilities.planType === 'studio') && (
+          <SubscriptionCard />
+        )}
 
         {/* Usage Stats */}
         <Card className="border border-border rounded-xl bg-background">
