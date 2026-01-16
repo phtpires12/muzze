@@ -210,6 +210,7 @@ export const AutoHideNav = () => {
                 key={item.name}
                 to={item.href}
                 onClick={(e) => handleNavClick(e, item.href)}
+                id={item.name === 'Calendário' ? 'tutorial-calendar' : undefined}
                 className="flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all duration-300 text-muted-foreground hover:text-foreground hover:bg-accent/10"
                 activeClassName="text-primary bg-primary/10"
               >
@@ -236,6 +237,7 @@ export const AutoHideNav = () => {
                 key={item.name}
                 to={item.href}
                 onClick={(e) => handleNavClick(e, item.href)}
+                id={item.name === 'Stats' ? 'tutorial-stats' : undefined}
                 className="flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all duration-300 text-muted-foreground hover:text-foreground hover:bg-accent/10"
                 activeClassName="text-primary bg-primary/10"
               >
