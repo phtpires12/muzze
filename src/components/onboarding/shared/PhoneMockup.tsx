@@ -7,6 +7,9 @@ interface PhoneMockupProps {
 }
 
 export const PhoneMockup = ({ screenImage, children, className = "" }: PhoneMockupProps) => {
+  // Extract height-related classes to apply properly
+  const hasHeightConstraint = className?.includes('max-h-') || className?.includes('h-');
+  
   return (
     <div className={`relative mx-auto ${className || 'w-[260px] sm:w-[300px]'}`}>
       {/* Screenshot layer - behind the frame */}
@@ -23,11 +26,11 @@ export const PhoneMockup = ({ screenImage, children, className = "" }: PhoneMock
           )}
         </div>
       )}
-      {/* iPhone frame - on top */}
+      {/* iPhone frame - on top, controls the size */}
       <img 
         src={iphoneMockupFrame} 
         alt="Phone frame" 
-        className="relative z-10 w-full h-auto pointer-events-none"
+        className={`relative z-10 pointer-events-none ${hasHeightConstraint ? 'w-auto h-full max-w-full' : 'w-full h-auto'}`}
       />
     </div>
   );
