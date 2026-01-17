@@ -1,3 +1,5 @@
+import { PhoneMockup } from "@/components/onboarding/PhoneMockup";
+
 interface HowWeHelpStepProps {
   description: string;
   screenImage: string;
@@ -20,11 +22,12 @@ export const HowWeHelpStep = ({
         <p className="text-gray-500 text-sm">Texto aqui (Fase 5)</p>
       </div>
 
-      {/* Área do mockup (centro) - placeholder */}
+      {/* iPhone Mockup com screenshot */}
       <div className="flex-1 flex items-center justify-center py-2 min-h-0">
-        <div className="w-[180px] sm:w-[260px] h-[360px] sm:h-[520px] bg-gray-200 dark:bg-gray-800 rounded-3xl flex items-center justify-center">
-          <p className="text-gray-500 text-xs">Mockup (Fase 3)</p>
-        </div>
+        <PhoneMockup 
+          screenImage={screenImage} 
+          className="w-[180px] sm:w-[260px] h-auto max-h-full"
+        />
       </div>
 
       {/* Área do botão (rodapé) - placeholder */}
