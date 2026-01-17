@@ -27,13 +27,14 @@ export const PhoneMockup = ({ screenImage, children, className = "" }: PhoneMock
       <div 
         className="absolute z-0 overflow-hidden"
         style={{
-          // Posicionamento calibrado para o frame específico do iPhone 14/15 Pro
-          top: '2.4%',
-          bottom: '2.4%',
-          left: '5.8%',
-          right: '5.8%',
-          // Border-radius proporcional que escala com o tamanho do componente
-          borderRadius: '8.5%',
+          // Posicionamento pixel-perfect calibrado para o frame iPhone 14/15 Pro
+          // Valores ajustados para encaixe exato na área de tela do PNG
+          top: '1.8%',
+          bottom: '1.8%',
+          left: '4.2%',
+          right: '4.2%',
+          // Border-radius proporcional à largura do container (~44px em escala original)
+          borderRadius: '10.5% / 5%',
         }}
       >
         {/* Conteúdo interno (imagem, vídeo ou children) */}
