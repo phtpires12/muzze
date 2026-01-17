@@ -33,7 +33,7 @@ export const PhoneMockup = ({
   screenVideo, 
   children, 
   className = "",
-  screenRadius = 38,
+  screenRadius = 36,
   screenBg = "#fff",
 }: PhoneMockupProps) => {
   const defaultSize = 'w-[260px] sm:w-[300px]';
