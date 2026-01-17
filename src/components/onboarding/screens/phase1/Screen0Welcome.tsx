@@ -10,7 +10,7 @@ interface Screen0WelcomeProps {
 
 export const Screen0Welcome = ({ onContinue, onLogin }: Screen0WelcomeProps) => {
   return (
-    <div className="flex flex-col items-center justify-between h-[100dvh] bg-violet-50 px-6 py-6 overflow-hidden">
+    <div className="flex flex-col items-center justify-between h-[100dvh] bg-violet-50 dark:bg-gray-950 px-6 py-6 overflow-hidden">
       {/* Logo da folha Muzze - topo */}
       <div className="pt-2 shrink-0">
         <img
@@ -30,10 +30,10 @@ export const Screen0Welcome = ({ onContinue, onLogin }: Screen0WelcomeProps) => 
 
       {/* Texto - cores explícitas para contraste */}
       <div className="text-center space-y-0.5 shrink-0">
-        <h1 className="text-xl sm:text-3xl font-bold text-gray-900">
+        <h1 className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white">
           Organize sua Criatividade
         </h1>
-        <p className="text-base sm:text-lg text-gray-600">
+        <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400">
           com um app pensado para
         </p>
         <p className="text-lg sm:text-xl font-semibold text-primary">
@@ -51,7 +51,7 @@ export const Screen0Welcome = ({ onContinue, onLogin }: Screen0WelcomeProps) => 
         </Button>
         <button
           onClick={onLogin}
-          className="w-full text-center text-gray-500 text-sm"
+          className="w-full text-center text-gray-500 dark:text-gray-400 text-sm"
         >
           Já tem uma conta? <span className="font-semibold text-primary">Entrar</span>
         </button>
