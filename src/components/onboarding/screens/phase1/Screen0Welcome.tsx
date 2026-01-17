@@ -28,12 +28,12 @@ export const Screen0Welcome = ({ onContinue, onLogin }: Screen0WelcomeProps) => 
         />
       </div>
 
-      {/* Texto */}
+      {/* Texto - cores explícitas para contraste */}
       <div className="text-center space-y-0.5 shrink-0">
-        <h1 className="text-xl sm:text-3xl font-bold text-foreground">
+        <h1 className="text-xl sm:text-3xl font-bold text-gray-900">
           Organize sua Criatividade
         </h1>
-        <p className="text-base sm:text-lg text-muted-foreground">
+        <p className="text-base sm:text-lg text-gray-600">
           com um app pensado para
         </p>
         <p className="text-lg sm:text-xl font-semibold text-primary">
@@ -51,7 +51,7 @@ export const Screen0Welcome = ({ onContinue, onLogin }: Screen0WelcomeProps) => 
         </Button>
         <button
           onClick={onLogin}
-          className="w-full text-center text-muted-foreground text-sm"
+          className="w-full text-center text-gray-500 text-sm"
         >
           Já tem uma conta? <span className="font-semibold text-primary">Entrar</span>
         </button>
