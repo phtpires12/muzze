@@ -28,15 +28,15 @@ export const Screen0Welcome = ({ onContinue, onLogin }: Screen0WelcomeProps) => 
         />
       </div>
 
-      {/* Texto - bloco compacto com hierarquia clara */}
-      <div className="text-center space-y-1 shrink-0">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white leading-tight">
+      {/* Texto - bloco ultra-compacto */}
+      <div className="flex flex-col items-center text-center gap-0 shrink-0">
+        <h1 className="text-4xl sm:text-5xl font-bold tracking-tight leading-[1.02] text-gray-900 dark:text-white">
           Organize sua Criatividade
         </h1>
-        <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400 leading-snug">
+        <p className="text-lg sm:text-xl text-muted-foreground leading-[1.10] mt-2">
           com um app pensado para
         </p>
-        <p className="text-xl sm:text-2xl font-semibold text-primary leading-snug">
+        <p className="text-2xl sm:text-3xl font-semibold text-primary leading-[1.05] mt-1">
           Criadores de Conteúdo
         </p>
       </div>
