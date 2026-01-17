@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { PhoneMockup } from "@/components/onboarding/shared/PhoneMockup";
+import { PhoneMockup } from "@/components/onboarding/PhoneMockup";
 import muzzeLeaf from "@/assets/muzze-leaf-gradient.png";
 import homePreview from "@/assets/home-preview-mobile.png";
 
