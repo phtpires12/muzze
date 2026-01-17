@@ -28,21 +28,21 @@ export const Screen0Welcome = ({ onContinue, onLogin }: Screen0WelcomeProps) => 
         />
       </div>
 
-      {/* Texto - bloco ultra-compacto */}
-      <div className="flex flex-col items-center text-center gap-0 shrink-0">
-        <h1 className="text-4xl sm:text-5xl font-bold tracking-tight leading-[1.02] text-gray-900 dark:text-white">
+      {/* Texto - cores explícitas para contraste */}
+      <div className="text-center space-y-0.5 shrink-0">
+        <h1 className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white">
           Organize sua Criatividade
         </h1>
-        <p className="text-lg sm:text-xl text-muted-foreground leading-[1.10] mt-2">
+        <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400">
           com um app pensado para
         </p>
-        <p className="text-2xl sm:text-3xl font-semibold text-primary leading-[1.05] mt-1">
+        <p className="text-lg sm:text-xl font-semibold text-primary">
           Criadores de Conteúdo
         </p>
       </div>
 
-      {/* Botões - mais próximos do texto */}
-      <div className="w-full max-w-xs space-y-3 shrink-0 pt-3 pb-safe">
+      {/* Botões */}
+      <div className="w-full max-w-xs space-y-3 shrink-0 pt-4 pb-safe">
         <Button
           onClick={onContinue}
           className="w-full h-12 sm:h-14 rounded-full text-base sm:text-lg font-semibold shadow-lg shadow-primary/25"

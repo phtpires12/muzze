@@ -38,9 +38,9 @@
   <body>
     <div id="root"></div>
     <script>
-      // Force cache clear on version mismatch - v2026.01.17.1
+      // Force cache clear on version mismatch - v2026.01.16.2
       (function() {
-        const BUILD_VERSION = '2026.01.17.1';
+        const BUILD_VERSION = '2026.01.16.2';
         const storedVersion = localStorage.getItem('muzze_build_version');
         if (storedVersion !== BUILD_VERSION) {
           console.log('[Cache] New version detected:', BUILD_VERSION);
