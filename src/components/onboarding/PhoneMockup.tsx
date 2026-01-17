@@ -11,8 +11,10 @@ interface PhoneMockupProps {
   children?: React.ReactNode;
   /** Additional CSS classes */
   className?: string;
-  /** Screen corner radius in pixels (default: 42) */
+  /** Screen corner radius in pixels (default: 38) */
   screenRadius?: number;
+  /** Screen background color (default: #fff) */
+  screenBg?: string;
 }
 
 /**
@@ -31,7 +33,8 @@ export const PhoneMockup = ({
   screenVideo, 
   children, 
   className = "",
-  screenRadius = 42,
+  screenRadius = 38,
+  screenBg = "#fff",
 }: PhoneMockupProps) => {
   const defaultSize = 'w-[260px] sm:w-[300px]';
   const hasCustomSize = className.includes('w-') || className.includes('h-') || className.includes('max-');
@@ -44,7 +47,7 @@ export const PhoneMockup = ({
     right: '6.2%',
   };
 
-  // Dark background color matching onboarding (--background in dark mode: 0 0% 7%)
+  // Dark background color for underlay (absorbs anti-aliasing from PNG)
   const darkBgColor = '#121212';
   
   return (
@@ -69,7 +72,7 @@ export const PhoneMockup = ({
         }}
       />
       
-      {/* LAYER 1: Screen container with dark bg + overflow hidden */}
+      {/* LAYER 1: Screen container with white bg + overflow hidden */}
       <div 
         className="absolute overflow-hidden"
         style={{
@@ -78,18 +81,16 @@ export const PhoneMockup = ({
           left: screenInset.left,
           right: screenInset.right,
           borderRadius: screenRadius,
-          backgroundColor: darkBgColor,
+          backgroundColor: screenBg,
           zIndex: 2,
-          // Inset shadow fallback to mask any residual anti-aliasing
-          boxShadow: `inset 0 0 0 3px ${darkBgColor}`,
         }}
       >
-        {/* Media with safety scale (1.04) to eliminate edge gaps from subpixel rounding */}
+        {/* Media with safety scale (1.06) to eliminate edge gaps from subpixel rounding */}
         {children ? (
           <div 
             className="absolute inset-0 w-full h-full"
             style={{ 
-              transform: 'scale(1.04)', 
+              transform: 'scale(1.06) translateZ(0)', 
               transformOrigin: 'center',
             }}
           >
@@ -104,7 +105,7 @@ export const PhoneMockup = ({
             playsInline
             className="absolute inset-0 w-full h-full object-cover"
             style={{ 
-              transform: 'scale(1.04)', 
+              transform: 'scale(1.06) translateZ(0)', 
               transformOrigin: 'center',
             }}
           />
@@ -114,13 +115,13 @@ export const PhoneMockup = ({
             alt="App preview" 
             className="absolute inset-0 w-full h-full object-cover"
             style={{ 
-              transform: 'scale(1.04)', 
+              transform: 'scale(1.06) translateZ(0)', 
               transformOrigin: 'center',
             }}
             draggable={false}
           />
         ) : (
-          // Empty screen fallback - shows dark bg
+          // Empty screen fallback - shows screen bg
           <div className="absolute inset-0 w-full h-full" />
         )}
       </div>
