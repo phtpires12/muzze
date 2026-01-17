@@ -10,7 +10,7 @@ import { OnboardingLayout } from "@/components/onboarding/shared/OnboardingLayou
 import { Button } from "@/components/ui/button";
 import { Shield } from "lucide-react";
 import { Screen0Welcome } from "@/components/onboarding/screens/phase1/Screen0Welcome";
-import { Screen1Methodology } from "@/components/onboarding/screens/phase1/Screen1Methodology";
+import { HowWeHelpSection } from "@/components/onboarding/screens/phase1/HowWeHelpSection";
 import { Screen2Username } from "@/components/onboarding/screens/phase1/Screen2Username";
 import { Screen3Platform } from "@/components/onboarding/screens/phase1/Screen3Platform";
 import { Screen4StickingPoints } from "@/components/onboarding/screens/phase2/Screen4StickingPoints";
@@ -211,7 +211,7 @@ const NewOnboarding = () => {
     // Phase 0: Hook + Dream Outcome
     if (phase === 0) {
       if (screen === 0) return <Screen0Welcome onContinue={handleContinue} onLogin={handleLogin} />;
-      if (screen === 1) return <Screen1Methodology onContinue={handleContinue} />;
+      if (screen === 1) return <HowWeHelpSection onComplete={handleContinue} />;
       if (screen === 2) {
         return (
           <Screen2Username
@@ -446,6 +446,24 @@ const NewOnboarding = () => {
           </div>
         )}
         <Screen0Welcome onContinue={handleContinue} onLogin={handleLogin} />
+      </>
+    );
+  }
+
+  // Mini-seção "Como vamos te ajudar" renderiza fora do OnboardingLayout
+  if (state.phase === 0 && state.screen === 1) {
+    return (
+      <>
+        {/* Developer Badge */}
+        {(isDeveloper || isAdmin) && (
+          <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-full">
+            <Shield className="w-4 h-4 text-primary" />
+            <span className="text-xs font-medium text-primary">
+              {isAdmin ? "Admin" : "Developer"}
+            </span>
+          </div>
+        )}
+        <HowWeHelpSection onComplete={handleContinue} />
       </>
     );
   }
