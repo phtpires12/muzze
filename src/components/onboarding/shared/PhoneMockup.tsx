@@ -8,7 +8,7 @@ interface PhoneMockupProps {
 
 export const PhoneMockup = ({ screenImage, children, className = "" }: PhoneMockupProps) => {
   return (
-    <div className={`relative mx-auto w-[260px] sm:w-[300px] ${className}`}>
+    <div className={`relative mx-auto ${className || 'w-[260px] sm:w-[300px]'}`}>
       {/* Screenshot layer - behind the frame */}
       {(screenImage || children) && (
         <div className="absolute inset-[2.5%] top-[1.5%] bottom-[1.5%] overflow-hidden rounded-[2.5rem]">
