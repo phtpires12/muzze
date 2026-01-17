@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { PhoneMockup } from "@/components/onboarding/shared/PhoneMockup";
-import muzzeLogo from "@/assets/muzze-logo.png";
+import muzzeLeaf from "@/assets/muzze-leaf-gradient.png";
+import homePreview from "@/assets/home-preview-mobile.png";
 
 interface Screen0WelcomeProps {
   onContinue: () => void;
@@ -9,48 +10,48 @@ interface Screen0WelcomeProps {
 
 export const Screen0Welcome = ({ onContinue, onLogin }: Screen0WelcomeProps) => {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-120px)] px-4 animate-fade-in">
-      {/* Logo at top */}
-      <div className="mb-6">
+    <div className="flex flex-col items-center justify-between min-h-screen bg-violet-50 px-6 py-10 safe-area-inset-bottom">
+      {/* Logo da folha Muzze - topo */}
+      <div className="pt-2">
         <img
-          src={muzzeLogo}
-          alt="Muzze Logo"
-          className="w-16 h-16 sm:w-20 sm:h-20 object-contain"
+          src={muzzeLeaf}
+          alt="Muzze"
+          className="w-12 h-12 sm:w-14 sm:h-14 object-contain"
         />
       </div>
 
-      {/* Phone Mockup */}
-      <div className="mb-8">
-        <PhoneMockup />
+      {/* iPhone Mockup com screenshot da home */}
+      <div className="flex-1 flex items-center justify-center py-6">
+        <PhoneMockup screenImage={homePreview} />
       </div>
 
-      {/* Text content */}
-      <div className="text-center space-y-2 mb-8">
-        <h1 className="text-3xl sm:text-4xl font-bold text-foreground">
-          Bem-vindo à Muzze.
+      {/* Texto */}
+      <div className="text-center space-y-1 mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+          Organize sua Criatividade
         </h1>
-        <p className="text-lg sm:text-xl text-muted-foreground">
-          O app que organiza sua criatividade.
+        <p className="text-lg text-muted-foreground">
+          com um app pensado para
+        </p>
+        <p className="text-xl font-semibold text-primary">
+          Criadores de Conteúdo
         </p>
       </div>
 
-      {/* Buttons */}
-      <div className="w-full max-w-sm space-y-3">
+      {/* Botões */}
+      <div className="w-full max-w-xs space-y-4 pb-4">
         <Button
-          size="lg"
           onClick={onContinue}
-          className="w-full h-14 text-lg font-semibold"
+          className="w-full h-14 rounded-full text-lg font-semibold shadow-lg shadow-primary/25"
         >
           Começar
         </Button>
-        <Button
-          variant="ghost"
-          size="sm"
+        <button
           onClick={onLogin}
-          className="w-full text-muted-foreground hover:text-foreground"
+          className="w-full text-center text-muted-foreground text-sm"
         >
-          Já tem uma conta? Entre!
-        </Button>
+          Já tem uma conta? <span className="font-semibold text-primary">Entrar</span>
+        </button>
       </div>
     </div>
   );
