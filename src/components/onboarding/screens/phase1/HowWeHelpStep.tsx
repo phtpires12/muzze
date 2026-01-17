@@ -1,4 +1,5 @@
 import { PhoneMockup } from "@/components/onboarding/PhoneMockup";
+import { StepDots } from "@/components/onboarding/shared/StepDots";
 
 interface HowWeHelpStepProps {
   description: string;
@@ -17,9 +18,15 @@ export const HowWeHelpStep = ({
 }: HowWeHelpStepProps) => {
   return (
     <div className="flex flex-col items-center justify-between h-[100dvh] bg-violet-50 dark:bg-gray-950 px-6 py-6 overflow-hidden">
-      {/* Área do texto (topo) - placeholder */}
-      <div className="shrink-0 pt-4">
-        <p className="text-gray-500 text-sm">Texto aqui (Fase 5)</p>
+      {/* Área do texto (topo) */}
+      <div className="shrink-0 pt-4 text-center space-y-3">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+          Como vamos te ajudar?
+        </h1>
+        <p className="text-base text-gray-600 dark:text-gray-400 max-w-xs mx-auto leading-relaxed">
+          {description}
+        </p>
+        <StepDots currentStep={currentStep} totalSteps={totalSteps} />
       </div>
 
       {/* iPhone Mockup com screenshot */}
