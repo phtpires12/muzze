@@ -1,5 +1,6 @@
 import { PhoneMockup } from "@/components/onboarding/PhoneMockup";
 import { StepDots } from "@/components/onboarding/shared/StepDots";
+import { Button } from "@/components/ui/button";
 
 interface HowWeHelpStepProps {
   description: string;
@@ -37,11 +38,14 @@ export const HowWeHelpStep = ({
         />
       </div>
 
-      {/* Área do botão (rodapé) - placeholder */}
+      {/* Botão Continuar */}
       <div className="w-full max-w-xs shrink-0 pb-safe">
-        <div className="w-full h-12 bg-gray-300 dark:bg-gray-700 rounded-full flex items-center justify-center">
-          <p className="text-gray-500 text-xs">Botão (Fase 6)</p>
-        </div>
+        <Button
+          onClick={onContinue}
+          className="w-full h-12 sm:h-14 rounded-full text-base sm:text-lg font-semibold shadow-lg shadow-primary/25"
+        >
+          Continuar
+        </Button>
       </div>
     </div>
   );
