@@ -7,31 +7,52 @@ interface PhoneMockupProps {
 }
 
 export const PhoneMockup = ({ screenImage, children, className = "" }: PhoneMockupProps) => {
-  // Extract height-related classes to apply properly
-  const hasHeightConstraint = className?.includes('max-h-') || className?.includes('h-');
+  // Dimensão padrão se nenhuma for passada via className
+  const defaultSize = 'w-[260px] sm:w-[300px]';
+  const hasCustomSize = className.includes('w-') || className.includes('h-') || className.includes('max-');
   
   return (
-    <div className={`relative mx-auto ${className || 'w-[260px] sm:w-[300px]'}`}>
-      {/* Screenshot layer - behind the frame */}
-      {(screenImage || children) && (
-        <div className="absolute inset-[2.5%] top-[1.5%] bottom-[1.5%] overflow-hidden rounded-[2.5rem]">
-          {children || (
-            screenImage && (
-              <img 
-                src={screenImage} 
-                alt="App preview" 
-                className="w-full h-full object-cover object-top"
-              />
-            )
-          )}
-        </div>
-      )}
-      {/* iPhone frame - on top, controls the size */}
+    // Container principal - define o tamanho do componente
+    <div className={`relative mx-auto ${hasCustomSize ? className : `${defaultSize} ${className}`}`}>
+      
+      {/* Frame do iPhone - elemento estrutural base que define o tamanho */}
       <img 
         src={iphoneMockupFrame} 
-        alt="Phone frame" 
-        className={`relative z-10 pointer-events-none ${hasHeightConstraint ? 'w-auto h-full max-w-full' : 'w-full h-auto'}`}
+        alt="iPhone frame" 
+        className="relative z-10 w-full h-full object-contain pointer-events-none select-none"
+        draggable={false}
       />
+      
+      {/* Container da tela - posicionado precisamente sobre a área de tela do frame */}
+      <div 
+        className="absolute z-0 overflow-hidden"
+        style={{
+          // Posicionamento calibrado para o frame específico do iPhone 14/15 Pro
+          top: '2.4%',
+          bottom: '2.4%',
+          left: '5.8%',
+          right: '5.8%',
+          // Border-radius proporcional que escala com o tamanho do componente
+          borderRadius: '8.5%',
+        }}
+      >
+        {/* Conteúdo interno (imagem, vídeo ou children) */}
+        {children ? (
+          <div className="absolute inset-0 w-full h-full">
+            {children}
+          </div>
+        ) : (
+          screenImage && (
+            <img 
+              src={screenImage} 
+              alt="App preview" 
+              className="absolute inset-0 w-full h-full object-cover object-top"
+              draggable={false}
+            />
+          )
+        )}
+      </div>
+      
     </div>
   );
 };
