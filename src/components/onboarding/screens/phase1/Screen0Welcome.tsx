@@ -29,7 +29,7 @@ export const Screen0Welcome = ({
         <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400">
           com um app pensado para
         </p>
-        <p className="text-xl sm:text-2xl font-semibold text-primary">
+        <p className="text-center space-y-2 sm:space-y-1shrink-0">
           Criadores de Conteúdo
         </p>
       </div>
