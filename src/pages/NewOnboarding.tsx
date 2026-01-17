@@ -432,6 +432,24 @@ const NewOnboarding = () => {
     (state.phase === 4 && state.screen === 1) ||
     (state.phase === 5 && state.screen === 1); // Snapshot - botão Continuar
 
+  // Tela de Welcome renderiza fora do OnboardingLayout para controle total do layout
+  if (state.phase === 0 && state.screen === 0) {
+    return (
+      <>
+        {/* Developer Badge */}
+        {(isDeveloper || isAdmin) && (
+          <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-full">
+            <Shield className="w-4 h-4 text-primary" />
+            <span className="text-xs font-medium text-primary">
+              {isAdmin ? "Admin" : "Developer"}
+            </span>
+          </div>
+        )}
+        <Screen0Welcome onContinue={handleContinue} onLogin={handleLogin} />
+      </>
+    );
+  }
+
   return (
     <OnboardingLayout
       showBack={showBack}
