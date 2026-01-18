@@ -8,6 +8,7 @@ import screenshotOfensiva from "@/assets/onboarding/screenshot-ofensiva.png";
 
 interface HowWeHelpSectionProps {
   onComplete: () => void;
+  onBack?: () => void;
 }
 
 const STEPS = [
@@ -25,7 +26,7 @@ const STEPS = [
   },
 ];
 
-export const HowWeHelpSection = ({ onComplete }: HowWeHelpSectionProps) => {
+export const HowWeHelpSection = ({ onComplete, onBack }: HowWeHelpSectionProps) => {
   const [currentStep, setCurrentStep] = useState(0);
 
   const handleContinue = () => {
@@ -34,6 +35,14 @@ export const HowWeHelpSection = ({ onComplete }: HowWeHelpSectionProps) => {
     } else {
       // Último step: avançar para próxima tela do onboarding
       onComplete();
+    }
+  };
+
+  const handleBack = () => {
+    if (currentStep > 0) {
+      setCurrentStep((prev) => prev - 1);
+    } else if (onBack) {
+      onBack();
     }
   };
 
@@ -46,6 +55,8 @@ export const HowWeHelpSection = ({ onComplete }: HowWeHelpSectionProps) => {
       currentStep={currentStep}
       totalSteps={STEPS.length}
       onContinue={handleContinue}
+      onBack={handleBack}
+      canGoBack={currentStep > 0 || !!onBack}
     />
   );
 };
