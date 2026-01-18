@@ -20,7 +20,7 @@ export const HowWeHelpStep = ({
   return (
     <div className="flex flex-col items-center justify-between h-[100dvh] bg-violet-50 dark:bg-gray-950 px-6 py-6 overflow-hidden">
       {/* Área do texto (topo) */}
-      <div className="shrink-0 pt-4 text-center space-y-3">
+      <div className="shrink-0 pt-12 sm:pt-16 text-center space-y-3">
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
           Como vamos te ajudar?
         </h1>
