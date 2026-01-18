@@ -44,7 +44,7 @@ const variants = {
 
 export const HowWeHelpSection = ({ onComplete, onBack }: HowWeHelpSectionProps) => {
   const [currentStep, setCurrentStep] = useState(0);
-  const directionRef = useRef(1); // 1 = forward, -1 = backward
+  const directionRef = useRef(1);
 
   const handleContinue = () => {
     directionRef.current = 1;
@@ -64,6 +64,16 @@ export const HowWeHelpSection = ({ onComplete, onBack }: HowWeHelpSectionProps) 
     }
   };
 
+  const handleDragEnd = (_: any, info: { offset: { x: number }; velocity: { x: number } }) => {
+    const swipeThreshold = 50;
+    const velocityThreshold = 300;
+    
+    // Apenas swipe para direita (voltar) - swipe para esquerda é ignorado
+    if (info.offset.x > swipeThreshold || info.velocity.x > velocityThreshold) {
+      handleBack();
+    }
+  };
+
   const step = STEPS[currentStep];
 
   return (
@@ -76,6 +86,10 @@ export const HowWeHelpSection = ({ onComplete, onBack }: HowWeHelpSectionProps) 
           initial="enter"
           animate="center"
           exit="exit"
+          drag="x"
+          dragConstraints={{ left: 0, right: 0 }}
+          dragElastic={0.2}
+          onDragEnd={handleDragEnd}
           transition={{
             x: { type: "tween", duration: 0.15, ease: "easeOut" },
             opacity: { duration: 0.12 },
