@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { HowWeHelpStep } from "./HowWeHelpStep";
 
 // Screenshots das telas do app
@@ -26,19 +27,36 @@ const STEPS = [
   },
 ];
 
+const variants = {
+  enter: (direction: number) => ({
+    x: direction > 0 ? 100 : -100,
+    opacity: 0,
+  }),
+  center: {
+    x: 0,
+    opacity: 1,
+  },
+  exit: (direction: number) => ({
+    x: direction > 0 ? -100 : 100,
+    opacity: 0,
+  }),
+};
+
 export const HowWeHelpSection = ({ onComplete, onBack }: HowWeHelpSectionProps) => {
   const [currentStep, setCurrentStep] = useState(0);
+  const directionRef = useRef(1); // 1 = forward, -1 = backward
 
   const handleContinue = () => {
+    directionRef.current = 1;
     if (currentStep < STEPS.length - 1) {
       setCurrentStep((prev) => prev + 1);
     } else {
-      // Último step: avançar para próxima tela do onboarding
       onComplete();
     }
   };
 
   const handleBack = () => {
+    directionRef.current = -1;
     if (currentStep > 0) {
       setCurrentStep((prev) => prev - 1);
     } else if (onBack) {
@@ -49,14 +67,32 @@ export const HowWeHelpSection = ({ onComplete, onBack }: HowWeHelpSectionProps) 
   const step = STEPS[currentStep];
 
   return (
-    <HowWeHelpStep
-      description={step.description}
-      screenImage={step.screenImage}
-      currentStep={currentStep}
-      totalSteps={STEPS.length}
-      onContinue={handleContinue}
-      onBack={handleBack}
-      canGoBack={currentStep > 0 || !!onBack}
-    />
+    <div className="relative h-[100dvh] overflow-hidden">
+      <AnimatePresence mode="wait" custom={directionRef.current}>
+        <motion.div
+          key={currentStep}
+          custom={directionRef.current}
+          variants={variants}
+          initial="enter"
+          animate="center"
+          exit="exit"
+          transition={{
+            x: { type: "spring", stiffness: 300, damping: 30 },
+            opacity: { duration: 0.2 },
+          }}
+          className="absolute inset-0"
+        >
+          <HowWeHelpStep
+            description={step.description}
+            screenImage={step.screenImage}
+            currentStep={currentStep}
+            totalSteps={STEPS.length}
+            onContinue={handleContinue}
+            onBack={handleBack}
+            canGoBack={currentStep > 0 || !!onBack}
+          />
+        </motion.div>
+      </AnimatePresence>
+    </div>
   );
 };
