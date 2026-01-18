@@ -1,3 +1,4 @@
+import { motion } from "framer-motion";
 import { PhoneMockup } from "@/components/onboarding/PhoneMockup";
 import { StepDots } from "@/components/onboarding/shared/StepDots";
 import { Button } from "@/components/ui/button";
@@ -46,12 +47,21 @@ export const HowWeHelpStep = ({
       </div>
 
       {/* iPhone Mockup com screenshot */}
-      <div className="flex-1 flex items-center justify-center py-2 min-h-0">
+      <motion.div 
+        className="flex-1 flex items-center justify-center py-2 min-h-0"
+        initial={{ scale: 0.92, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ 
+          duration: 0.25, 
+          ease: "easeOut",
+          delay: 0.05
+        }}
+      >
         <PhoneMockup 
           screenImage={screenImage} 
           className="w-[180px] sm:w-[260px] h-auto max-h-full"
         />
-      </div>
+      </motion.div>
 
       {/* Botão Continuar */}
       <div className="w-full max-w-xs shrink-0 pb-safe">

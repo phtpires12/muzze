@@ -29,7 +29,7 @@ const STEPS = [
 
 const variants = {
   enter: (direction: number) => ({
-    x: direction > 0 ? 100 : -100,
+    x: direction > 0 ? 40 : -40,
     opacity: 0,
   }),
   center: {
@@ -37,7 +37,7 @@ const variants = {
     opacity: 1,
   },
   exit: (direction: number) => ({
-    x: direction > 0 ? -100 : 100,
+    x: direction > 0 ? -40 : 40,
     opacity: 0,
   }),
 };
@@ -77,8 +77,8 @@ export const HowWeHelpSection = ({ onComplete, onBack }: HowWeHelpSectionProps) 
           animate="center"
           exit="exit"
           transition={{
-            x: { type: "spring", stiffness: 300, damping: 30 },
-            opacity: { duration: 0.2 },
+            x: { type: "tween", duration: 0.15, ease: "easeOut" },
+            opacity: { duration: 0.12 },
           }}
           className="absolute inset-0"
         >
