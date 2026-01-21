@@ -13,6 +13,9 @@ import { GlobalCelebrations } from "@/components/GlobalCelebrations";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { setupGlobalErrorHandlers } from "@/lib/error-logger";
 import { PWAUpdatePrompt } from "@/components/PWAUpdatePrompt";
+import { UpdateOverlay } from "@/components/UpdateOverlay";
+import { useVersionCheck } from "@/hooks/useVersionCheck";
+import { usePWAUpdate } from "@/hooks/usePWAUpdate";
 import Onboarding from "./pages/NewOnboarding";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
@@ -178,6 +181,12 @@ const router = createBrowserRouter([
 ]);
 
 const App = () => {
+  const { isUpdating } = useVersionCheck();
+  const { needRefresh } = usePWAUpdate();
+
+  // Mostrar overlay quando está atualizando (version check ou PWA)
+  const showUpdateOverlay = isUpdating || needRefresh;
+
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
@@ -188,6 +197,7 @@ const App = () => {
                   <Toaster />
                   <Sonner />
                   <PWAUpdatePrompt />
+                  <UpdateOverlay isVisible={showUpdateOverlay} />
                   <RouterProvider router={router} />
                 </TooltipProvider>
               </CelebrationContextProvider>

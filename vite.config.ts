@@ -57,7 +57,23 @@ export default defineConfig(({ mode }) => ({
         skipWaiting: true,
         clientsClaim: true,
         cleanupOutdatedCaches: true,
+        // Navigation preload for faster page loads
+        navigationPreload: true,
         runtimeCaching: [
+          // HTML files - sempre buscar do servidor primeiro
+          {
+            urlPattern: /\.html$/,
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "html-cache",
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60, // 1 hora
+              },
+              networkTimeoutSeconds: 3,
+            }
+          },
+          // Supabase API
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
             handler: "NetworkFirst",
@@ -65,9 +81,15 @@ export default defineConfig(({ mode }) => ({
               cacheName: "supabase-cache",
               expiration: {
                 maxEntries: 50,
-                maxAgeSeconds: 60 * 60 * 24 // 24 hours
-              }
+                maxAgeSeconds: 60 * 60, // 1 hora (reduzido de 24h)
+              },
+              networkTimeoutSeconds: 5,
             }
+          },
+          // Edge functions - nunca cachear
+          {
+            urlPattern: /^https:\/\/.*\.supabase\.co\/functions\/.*/i,
+            handler: "NetworkOnly",
           }
         ]
       }
