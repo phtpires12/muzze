@@ -11,7 +11,7 @@ export function usePWAUpdate() {
   } = useRegisterSW({
     onRegisteredSW(swUrl, registration) {
       console.log('[PWA] SW registered:', swUrl);
-      // Check for updates every 15 seconds (mais frequente)
+      // Check for updates every 15 seconds
       if (registration) {
         setInterval(() => {
           registration.update();
@@ -23,13 +23,13 @@ export function usePWAUpdate() {
     },
   });
 
-  // Auto-update quando detectar nova versão
+  // Auto-update when new version is detected
   useEffect(() => {
     if (needRefresh && !autoUpdateTriggeredRef.current) {
       autoUpdateTriggeredRef.current = true;
       console.log('[PWA] New version detected, auto-updating...');
       
-      // Pequeno delay para mostrar o overlay
+      // Small delay to show the overlay
       setTimeout(() => {
         updateServiceWorker(true);
       }, 500);
