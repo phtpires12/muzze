@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.send-subscription-notifications]
 verify_jwt = false
+
+[functions.app-version]
+verify_jwt = false
