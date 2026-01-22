@@ -13,6 +13,7 @@ import { Screen0Welcome } from "@/components/onboarding/screens/phase1/Screen0We
 import { HowWeHelpSection } from "@/components/onboarding/screens/phase1/HowWeHelpSection";
 import { Screen2Username } from "@/components/onboarding/screens/phase1/Screen2Username";
 import { Screen3Platform } from "@/components/onboarding/screens/phase1/Screen3Platform";
+import { Screen4StartQuestionnaire } from "@/components/onboarding/screens/phase1/Screen4StartQuestionnaire";
 import { Screen4StickingPoints } from "@/components/onboarding/screens/phase2/Screen4StickingPoints";
 import { Screen5MonthsTrying } from "@/components/onboarding/screens/phase2/Screen5MonthsTrying";
 import { Screen6CurrentPosts } from "@/components/onboarding/screens/phase2/Screen6CurrentPosts";
@@ -145,6 +146,7 @@ const NewOnboarding = () => {
       if (screen === 1) return true;
       if (screen === 2) return !!data.username?.trim();
       if (screen === 3) return (data.preferred_platform?.length ?? 0) > 0;
+      if (screen === 4) return true; // StartQuestionnaire - transition screen
     }
 
     // Phase 1 (Pain Diagnosis)
@@ -230,6 +232,9 @@ const NewOnboarding = () => {
             onChange={(value) => updateData({ preferred_platform: value.join(",") })}
           />
         );
+      }
+      if (screen === 4) {
+        return <Screen4StartQuestionnaire onContinue={handleContinue} />;
       }
     }
 
