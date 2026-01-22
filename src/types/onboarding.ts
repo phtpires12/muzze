@@ -55,7 +55,7 @@ export const ONBOARDING_PHASES = {
   SIGNUP_PAYWALL: 5,
 } as const;
 
-export const SCREENS_PER_PHASE = [5, 5, 5, 5, 2, 6];
+export const SCREENS_PER_PHASE = [4, 5, 5, 5, 2, 6];
 
 export const STICKING_POINTS = [
   "Não sei o que postar",

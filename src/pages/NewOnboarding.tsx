@@ -142,11 +142,10 @@ const NewOnboarding = () => {
 
     // Phase 0 (Hook + Dream Outcome)
     if (phase === 0) {
-      if (screen === 0) return true;
-      if (screen === 1) return true;
-      if (screen === 2) return !!data.username?.trim();
-      if (screen === 3) return (data.preferred_platform?.length ?? 0) > 0;
-      if (screen === 4) return true; // StartQuestionnaire - transition screen
+      if (screen === 0) return true; // Welcome
+      if (screen === 1) return true; // HowWeHelp
+      if (screen === 2) return true; // StartQuestionnaire - transition
+      if (screen === 3) return !!data.username?.trim(); // Username
     }
 
     // Phase 1 (Pain Diagnosis)
@@ -214,27 +213,14 @@ const NewOnboarding = () => {
     if (phase === 0) {
       if (screen === 0) return <Screen0Welcome onContinue={handleContinue} onLogin={handleLogin} />;
       if (screen === 1) return <HowWeHelpSection onComplete={handleContinue} />;
-      if (screen === 2) {
+      if (screen === 2) return <Screen4StartQuestionnaire onContinue={handleContinue} />;
+      if (screen === 3) {
         return (
           <Screen2Username
             value={state.data.username || ""}
             onChange={(value) => updateData({ username: value })}
           />
         );
-      }
-      if (screen === 3) {
-        const platforms = state.data.preferred_platform
-          ? state.data.preferred_platform.split(",")
-          : [];
-        return (
-          <Screen3Platform
-            value={platforms}
-            onChange={(value) => updateData({ preferred_platform: value.join(",") })}
-          />
-        );
-      }
-      if (screen === 4) {
-        return <Screen4StartQuestionnaire onContinue={handleContinue} />;
       }
     }
 
@@ -425,12 +411,12 @@ const NewOnboarding = () => {
     );
   };
 
-  const showProgress = state.phase > 0 || state.screen > 1;
+  const showProgress = state.phase > 0 || state.screen > 2;
   // Mostrar botão de voltar em todas as telas exceto a primeira
   // Esconde botão voltar na primeira tela, no Paywall e no Install (navegação interna)
   const showBack = !(state.phase === 0 && state.screen === 0) && !(state.phase === 5 && state.screen === 4) && !(state.phase === 5 && state.screen === 5);
   const showContinueButton =
-    (state.phase === 0 && (state.screen === 2 || state.screen === 3)) ||
+    (state.phase === 0 && state.screen === 3) || // Username only - StartQuestionnaire has its own CTA
     (state.phase === 1 && state.screen >= 0 && state.screen <= 4) ||
     (state.phase === 2 && state.screen >= 0 && state.screen <= 4) ||
     (state.phase === 3 && state.screen >= 0 && state.screen <= 4) ||
@@ -469,6 +455,24 @@ const NewOnboarding = () => {
           </div>
         )}
         <HowWeHelpSection onComplete={handleContinue} />
+      </>
+    );
+  }
+
+  // StartQuestionnaire também renderiza fora do OnboardingLayout (tela de transição)
+  if (state.phase === 0 && state.screen === 2) {
+    return (
+      <>
+        {/* Developer Badge */}
+        {(isDeveloper || isAdmin) && (
+          <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-full">
+            <Shield className="w-4 h-4 text-primary" />
+            <span className="text-xs font-medium text-primary">
+              {isAdmin ? "Admin" : "Developer"}
+            </span>
+          </div>
+        )}
+        <Screen4StartQuestionnaire onContinue={handleContinue} />
       </>
     );
   }
