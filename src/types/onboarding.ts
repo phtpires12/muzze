@@ -1,6 +1,7 @@
 export interface OnboardingData {
   // Phase 1: Hook + Dream Outcome
   username?: string;
+  content_goal?: string;
   preferred_platform?: string;
   
   // Phase 2: Pain Diagnosis
@@ -55,7 +56,40 @@ export const ONBOARDING_PHASES = {
   SIGNUP_PAYWALL: 5,
 } as const;
 
-export const SCREENS_PER_PHASE = [4, 5, 5, 5, 2, 6];
+export const SCREENS_PER_PHASE = [5, 5, 5, 5, 2, 6];
+
+export const CONTENT_GOALS = [
+  {
+    id: "charge_more",
+    emoji: "💰",
+    label: "Cobrar muito mais caro",
+    description: "Ser tão valorizado que você pode cobrar o preço que quiser"
+  },
+  {
+    id: "speaking",
+    emoji: "🎤",
+    label: "Ser convidado pra palestrar",
+    description: "Ser reconhecido como autoridade e estar nos maiores palcos"
+  },
+  {
+    id: "millions",
+    emoji: "📈",
+    label: "Ter milhões de seguidores",
+    description: "Construir uma audiência grande que te acompanha"
+  },
+  {
+    id: "waiting_list",
+    emoji: "🚀",
+    label: "Ter fila de espera",
+    description: "Que as pessoas briguem pra trabalhar com você"
+  },
+  {
+    id: "reference",
+    emoji: "✨",
+    label: "Ser referência no seu nicho",
+    description: "Quando falarem do seu tema, pensarem em você primeiro"
+  }
+] as const;
 
 export const STICKING_POINTS = [
   "Não sei o que postar",
