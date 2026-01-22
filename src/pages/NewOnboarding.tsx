@@ -214,14 +214,8 @@ const NewOnboarding = () => {
       if (screen === 0) return <Screen0Welcome onContinue={handleContinue} onLogin={handleLogin} />;
       if (screen === 1) return <HowWeHelpSection onComplete={handleContinue} />;
       if (screen === 2) return <Screen4StartQuestionnaire onContinue={handleContinue} />;
-      if (screen === 3) {
-        return (
-          <Screen2Username
-            value={state.data.username || ""}
-            onChange={(value) => updateData({ username: value })}
-          />
-        );
-      }
+      // Screen 3 (Username) renderiza fora do OnboardingLayout - tem layout próprio
+      if (screen === 3) return null;
     }
 
     // Phase 1: Pain Diagnosis
@@ -415,8 +409,8 @@ const NewOnboarding = () => {
   // Mostrar botão de voltar em todas as telas exceto a primeira
   // Esconde botão voltar na primeira tela, no Paywall e no Install (navegação interna)
   const showBack = !(state.phase === 0 && state.screen === 0) && !(state.phase === 5 && state.screen === 4) && !(state.phase === 5 && state.screen === 5);
+  // Username agora tem botão interno - removido do showContinueButton
   const showContinueButton =
-    (state.phase === 0 && state.screen === 3) || // Username only - StartQuestionnaire has its own CTA
     (state.phase === 1 && state.screen >= 0 && state.screen <= 4) ||
     (state.phase === 2 && state.screen >= 0 && state.screen <= 4) ||
     (state.phase === 3 && state.screen >= 0 && state.screen <= 4) ||
@@ -473,6 +467,30 @@ const NewOnboarding = () => {
           </div>
         )}
         <Screen4StartQuestionnaire onContinue={handleContinue} />
+      </>
+    );
+  }
+
+  // Username renderiza fora do OnboardingLayout - tem layout próprio com progress bar gradiente
+  if (state.phase === 0 && state.screen === 3) {
+    return (
+      <>
+        {/* Developer Badge */}
+        {(isDeveloper || isAdmin) && (
+          <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-full">
+            <Shield className="w-4 h-4 text-primary" />
+            <span className="text-xs font-medium text-primary">
+              {isAdmin ? "Admin" : "Developer"}
+            </span>
+          </div>
+        )}
+        <Screen2Username
+          value={state.data.username || ""}
+          onChange={(value) => updateData({ username: value })}
+          onContinue={handleContinue}
+          onBack={handleBack}
+          progress={getProgress()}
+        />
       </>
     );
   }
