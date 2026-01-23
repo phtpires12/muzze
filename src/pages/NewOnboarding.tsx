@@ -214,8 +214,8 @@ const NewOnboarding = () => {
     // Phase 0: Hook + Dream Outcome
     if (phase === 0) {
       if (screen === 0) return <Screen0Welcome onContinue={handleContinue} onLogin={handleLogin} />;
-      if (screen === 1) return <HowWeHelpSection onComplete={handleContinue} />;
-      if (screen === 2) return <Screen4StartQuestionnaire onContinue={handleContinue} />;
+      if (screen === 1) return <HowWeHelpSection onComplete={handleContinue} onBack={handleBack} />;
+      if (screen === 2) return <Screen4StartQuestionnaire onContinue={handleContinue} onBack={handleBack} />;
       // Screen 3 (Username) renderiza fora do OnboardingLayout - tem layout próprio
       if (screen === 3) return null;
       // Screen 4 (ContentGoal) renderiza fora do OnboardingLayout - tem layout próprio
@@ -395,7 +395,7 @@ const NewOnboarding = () => {
         return <Screen25Paywall onContinue={handlePaywallComplete} onBack={handleBack} />;
       }
       if (screen === 5) {
-        return <Screen26Install onContinue={handleComplete} />;
+        return <Screen26Install onContinue={handleComplete} onBack={handleBack} />;
       }
     }
 
@@ -410,9 +410,8 @@ const NewOnboarding = () => {
   };
 
   const showProgress = state.phase > 0 || state.screen > 2;
-  // Mostrar botão de voltar em todas as telas exceto a primeira
-  // Esconde botão voltar na primeira tela, no Paywall e no Install (navegação interna)
-  const showBack = !(state.phase === 0 && state.screen === 0) && !(state.phase === 5 && state.screen === 4) && !(state.phase === 5 && state.screen === 5);
+  // Mostrar botão de voltar em TODAS as telas exceto a primeira (Welcome)
+  const showBack = !(state.phase === 0 && state.screen === 0);
   // Username agora tem botão interno - removido do showContinueButton
   const showContinueButton =
     (state.phase === 1 && state.screen >= 0 && state.screen <= 4) ||
@@ -452,7 +451,7 @@ const NewOnboarding = () => {
             </span>
           </div>
         )}
-        <HowWeHelpSection onComplete={handleContinue} />
+        <HowWeHelpSection onComplete={handleContinue} onBack={handleBack} />
       </>
     );
   }
@@ -470,7 +469,7 @@ const NewOnboarding = () => {
             </span>
           </div>
         )}
-        <Screen4StartQuestionnaire onContinue={handleContinue} />
+        <Screen4StartQuestionnaire onContinue={handleContinue} onBack={handleBack} />
       </>
     );
   }
