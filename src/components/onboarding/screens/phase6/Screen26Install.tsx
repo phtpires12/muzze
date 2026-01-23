@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Download, Smartphone, Wifi, Bell, Zap } from "lucide-react";
+import { Download, Smartphone, Wifi, Bell, Zap, ChevronLeft } from "lucide-react";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -9,9 +9,10 @@ interface BeforeInstallPromptEvent extends Event {
 
 interface Screen26InstallProps {
   onContinue: () => void;
+  onBack?: () => void;
 }
 
-export const Screen26Install = ({ onContinue }: Screen26InstallProps) => {
+export const Screen26Install = ({ onContinue, onBack }: Screen26InstallProps) => {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
@@ -81,7 +82,16 @@ export const Screen26Install = ({ onContinue }: Screen26InstallProps) => {
   }
 
   return (
-    <div className="text-center space-y-6 py-4">
+    <div className="relative text-center space-y-6 py-4">
+      {/* Botão de voltar */}
+      {onBack && (
+        <button
+          onClick={onBack}
+          className="absolute top-0 left-0 p-2 rounded-full hover:bg-muted transition-colors z-10"
+        >
+          <ChevronLeft className="w-6 h-6" />
+        </button>
+      )}
       <img 
         src="/muzze-logo-install.png" 
         alt="Muzze" 

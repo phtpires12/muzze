@@ -1,13 +1,23 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Cog, Brain, Flame } from "lucide-react";
+import { ArrowRight, Cog, Brain, Flame, ChevronLeft } from "lucide-react";
 
 interface Screen4StartQuestionnaireProps {
   onContinue: () => void;
+  onBack?: () => void;
 }
 
-export const Screen4StartQuestionnaire = ({ onContinue }: Screen4StartQuestionnaireProps) => {
+export const Screen4StartQuestionnaire = ({ onContinue, onBack }: Screen4StartQuestionnaireProps) => {
   return (
-    <div className="flex flex-col items-center justify-between min-h-[70vh] w-full max-w-md mx-auto px-4 py-6">
+    <div className="relative flex flex-col items-center justify-between min-h-[70vh] w-full max-w-md mx-auto px-4 py-6">
+      {/* Botão de voltar */}
+      {onBack && (
+        <button
+          onClick={onBack}
+          className="absolute top-4 left-4 p-2 rounded-full hover:bg-muted transition-colors z-10"
+        >
+          <ChevronLeft className="w-6 h-6" />
+        </button>
+      )}
       {/* Cards Section */}
       <div className="w-full space-y-4 flex-1 flex flex-col justify-center">
         {/* Card: Sua evolução criativa */}
