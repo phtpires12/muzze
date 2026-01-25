@@ -1,167 +1,215 @@
 
-## Plano: Adicionar Botão de Voltar em Todas as Telas do Onboarding
+## Plano: Implementar Tela 8 do Questionario (O que mais te trava?)
 
-### Problema Identificado
+### Visao Geral
 
-Várias telas do onboarding não possuem botão de voltar, impedindo navegação livre. Telas afetadas:
-
-| Tela | Status Atual |
-|------|-------------|
-| Screen0Welcome | OK (primeira tela, não precisa) |
-| HowWeHelpSection | Parcial (tem botão interno, mas não volta à Welcome) |
-| Screen4StartQuestionnaire | **SEM botão voltar** |
-| Screen2Username | OK |
-| Screen5ContentGoal | OK |
-| Telas Phase 1-5 | Depende da lógica `showBack` no OnboardingLayout |
+Esta tela estabelece o padrao de design para todas as futuras telas de questionario com multipla escolha. Baseada no wireframe fornecido, seguira a estrutura visual da Screen5ContentGoal, mas com logica de **multi-select**.
 
 ---
 
-### Alterações Necessárias
+### 1. Criar Novo Componente QuestionnaireMultiSelect (Reutilizavel)
 
-#### 1. Adicionar Botão Voltar no HowWeHelpSection
+**Arquivo:** `src/components/onboarding/shared/QuestionnaireMultiSelect.tsx`
 
-**Arquivo:** `src/pages/NewOnboarding.tsx`
+Um componente reutilizavel para todas as telas de questionario com multipla escolha:
 
-Passar a prop `onBack={handleBack}` para que o usuário possa voltar à tela de Welcome:
-
-```tsx
-<HowWeHelpSection 
-  onComplete={handleContinue} 
-  onBack={handleBack}  // ADICIONAR
-/>
-```
-
-O componente `HowWeHelpSection` já aceita `onBack` e repassa para `HowWeHelpStep`, que já exibe o botão quando `canGoBack={currentStep > 0 || !!onBack}`.
-
----
-
-#### 2. Adicionar Botão Voltar na Screen4StartQuestionnaire
-
-**Arquivo:** `src/components/onboarding/screens/phase1/Screen4StartQuestionnaire.tsx`
-
-Atualizar a interface para receber `onBack`:
-
-```tsx
-interface Screen4StartQuestionnaireProps {
-  onContinue: () => void;
-  onBack?: () => void;  // ADICIONAR
+```typescript
+interface QuestionnaireMultiSelectProps {
+  options: { id: string; label: string; emoji?: string }[];
+  selected: string[];
+  onChange: (selected: string[]) => void;
 }
 ```
 
-Adicionar o botão no layout:
+**Caracteristicas visuais (baseadas no wireframe):**
 
-```tsx
-<div className="flex flex-col items-center justify-between min-h-[70vh] ...">
-  {/* Botão de voltar no topo */}
-  {onBack && (
-    <button
-      onClick={onBack}
-      className="absolute top-4 left-4 p-2 rounded-full hover:bg-muted transition-colors"
-    >
-      <ChevronLeft className="w-6 h-6" />
-    </button>
-  )}
-  
-  {/* Cards Section */}
-  ...
-</div>
-```
+| Estado | Background | Texto | Extras |
+|--------|-----------|-------|--------|
+| Nao selecionada | `bg-violet-200/60` | Escuro | - |
+| Selecionada | `bg-gradient-to-r from-pink-400 via-orange-400 to-yellow-300` | Branco | Emoji aleatorio do array |
 
-**Arquivo:** `src/pages/NewOnboarding.tsx`
-
-Passar a prop:
-
-```tsx
-<Screen4StartQuestionnaire 
-  onContinue={handleContinue} 
-  onBack={handleBack}  // ADICIONAR
-/>
-```
+**Emojis para itens selecionados:**
+- Array pre-definido: `["💪", "🎯", "🔥", "✨", "💎", "🚀", "⚡", "🌟"]`
+- Cada item selecionado recebe um emoji aleatorio (fixo por ID para consistencia)
 
 ---
 
-#### 3. Garantir Visibilidade do Botão no OnboardingLayout
+### 2. Criar Screen6StickingPoints (Nova Tela 8)
 
-**Arquivo:** `src/pages/NewOnboarding.tsx`
+**Arquivo:** `src/components/onboarding/screens/phase1/Screen6StickingPoints.tsx`
 
-A lógica atual de `showBack` já está quase correta:
+Esta tela substituira a atual `Screen4StickingPoints` da Phase 2 e sera parte da Phase 1 (nova Tela 8 do fluxo de 30 telas).
 
-```tsx
-const showBack = !(state.phase === 0 && state.screen === 0) 
-  && !(state.phase === 5 && state.screen === 4) 
-  && !(state.phase === 5 && state.screen === 5);
-```
-
-Isso significa que o botão de voltar aparece em todas as telas exceto:
-- Welcome (Phase 0, Screen 0) - correto
-- Paywall (Phase 5, Screen 4) - remover esta exceção
-- Install (Phase 5, Screen 5) - remover esta exceção
-
-**Nova lógica:**
-
-```tsx
-// Mostrar botão voltar em TODAS as telas exceto a primeira (Welcome)
-const showBack = !(state.phase === 0 && state.screen === 0);
-```
-
----
-
-#### 4. Adicionar Botão Voltar nas Telas de Paywall e Install
-
-**Arquivo:** `src/components/onboarding/screens/phase6/Screen25Paywall.tsx`
-
-Se não tiver, adicionar suporte a `onBack`:
-
-```tsx
-interface Screen25PaywallProps {
+**Props:**
+```typescript
+interface Screen6StickingPointsProps {
+  value: string[];
+  onChange: (value: string[]) => void;
   onContinue: () => void;
-  onBack?: () => void;  // Verificar se já existe
+  onBack: () => void;
+  progress: number;
+  username: string;
 }
 ```
 
-**Arquivo:** `src/components/onboarding/screens/phase6/Screen26Install.tsx`
+**Layout (seguindo Screen5ContentGoal):**
+```
++-----------------------------------------+
+|  <-  [============================]     |  <- Header: back + progress bar
++-----------------------------------------+
+|  Alem disso [First Name],               |  <- Subtitulo muted
+|  O que mais te trava pra criar?         |  <- Titulo bold
+|                                         |
+|  +-----------------------------------+  |
+|  |  Nao sei o que postar             |  |  <- Opcao nao selecionada
+|  +-----------------------------------+  |
+|                                         |
+|  +-----------------------------------+  |
+|  | :raising_hand: Nao consigo terminar o que   |  |  <- Opcao SELECIONADA
+|  |     comeco                        |  |     (gradiente + emoji + texto branco)
+|  +-----------------------------------+  |
+|                                         |
+|  +-----------------------------------+  |
+|  |  Tenho ideias mas nao executo     |  |
+|  +-----------------------------------+  |
+|                                         |
+|  +-----------------------------------+  |
+|  | :question: Nao sei por onde comecar      |  |  <- Opcao SELECIONADA
+|  +-----------------------------------+  |
+|                                         |
+|  +-----------------------------------+  |
+|  |  Me distraio facilmente           |  |
+|  +-----------------------------------+  |
+|                                         |
+|  +-----------------------------------+  |
+|  | :gem_stone: Perfeccionismo me paralisa    |  |  <- Opcao SELECIONADA
+|  +-----------------------------------+  |
+|                                         |
+|  +-----------------------------------+  |
+|  |         Continuar                 |  |  <- So aparece apos selecao
+|  +-----------------------------------+  |
++-----------------------------------------+
+```
 
-Adicionar suporte a `onBack`:
+**Comportamento:**
+1. Todas opcoes comecam nao selecionadas (fundo lilas claro)
+2. Clicar em uma opcao a seleciona (toggle)
+3. Multiplas opcoes podem estar selecionadas
+4. Opcoes selecionadas recebem gradiente + emoji aleatorio + texto branco
+5. Botao "Continuar" aparece quando pelo menos 1 opcao esta selecionada
+6. Clicar novamente em uma opcao selecionada a desseleciona
 
-```tsx
-interface Screen26InstallProps {
-  onContinue: () => void;
-  onBack?: () => void;  // ADICIONAR
+---
+
+### 3. Atualizar SCREENS_PER_PHASE
+
+**Arquivo:** `src/types/onboarding.ts`
+
+Incrementar Phase 0 para 6 telas:
+
+```typescript
+// De: [5, 5, 5, 5, 2, 6]
+// Para: [6, 5, 5, 5, 2, 6]
+export const SCREENS_PER_PHASE = [6, 5, 5, 5, 2, 6];
+```
+
+---
+
+### 4. Atualizar NewOnboarding.tsx
+
+**Arquivo:** `src/pages/NewOnboarding.tsx`
+
+**Adicionar import:**
+```typescript
+import { Screen6StickingPoints } from "@/components/onboarding/screens/phase1/Screen6StickingPoints";
+```
+
+**Adicionar renderizacao para Phase 0, Screen 5:**
+```typescript
+if (state.phase === 0 && state.screen === 5) {
+  return (
+    <>
+      {/* Developer Badge */}
+      ...
+      <Screen6StickingPoints
+        value={state.data.sticking_points || []}
+        onChange={(value) => updateData({ sticking_points: value })}
+        onContinue={handleContinue}
+        onBack={handleBack}
+        progress={getProgress()}
+        username={state.data.username || ""}
+      />
+    </>
+  );
+}
+```
+
+**Atualizar canContinue():**
+```typescript
+if (phase === 0) {
+  // ... existing screens 0-4 ...
+  if (screen === 5) return (data.sticking_points?.length ?? 0) > 0; // Nova validacao
 }
 ```
 
 ---
 
-### Resumo de Arquivos a Modificar
+### 5. Diagrama do Fluxo Atualizado (Phase 0)
 
-| Arquivo | Ação |
+```
+Screen 0: Welcome
+    |
+    v
+Screen 1: HowWeHelpSection (3 steps internos)
+    |
+    v
+Screen 2: StartQuestionnaire (transicao)
+    |
+    v
+Screen 3: Username (input) <-- Padrao para telas de input
+    |
+    v
+Screen 4: ContentGoal (single-select com toggle)
+    |
+    v
+Screen 5: StickingPoints (multi-select) <-- NOVA TELA 8
+    |
+    v
+Phase 1, Screen 0: ...
+```
+
+---
+
+### Arquivos a Criar/Modificar
+
+| Arquivo | Acao |
 |---------|------|
-| `src/pages/NewOnboarding.tsx` | Passar `onBack` para HowWeHelpSection e StartQuestionnaire; Simplificar lógica `showBack` |
-| `src/components/onboarding/screens/phase1/Screen4StartQuestionnaire.tsx` | Adicionar botão de voltar |
-| `src/components/onboarding/screens/phase6/Screen25Paywall.tsx` | Verificar/adicionar suporte a `onBack` |
-| `src/components/onboarding/screens/phase6/Screen26Install.tsx` | Adicionar suporte a `onBack` |
-
----
-
-### Resultado Esperado
-
-Após a implementação:
-- ✅ Todas as telas (exceto Welcome) terão botão de voltar
-- ✅ O usuário poderá navegar livremente pelo onboarding
-- ✅ Não será mais necessário completar todo o fluxo para retornar
+| `src/components/onboarding/shared/QuestionnaireMultiSelect.tsx` | **CRIAR** - Componente reutilizavel |
+| `src/components/onboarding/screens/phase1/Screen6StickingPoints.tsx` | **CRIAR** - Tela 8 do onboarding |
+| `src/types/onboarding.ts` | MODIFICAR - Atualizar SCREENS_PER_PHASE |
+| `src/pages/NewOnboarding.tsx` | MODIFICAR - Adicionar renderizacao e validacao |
 
 ---
 
 ### Secao Tecnica
 
-**Componentes que já têm botão de voltar:**
-- `Screen2Username` - ChevronLeft no header
-- `Screen5ContentGoal` - ChevronLeft no header  
-- `HowWeHelpStep` - Botão circular com ChevronLeft (posição absoluta top-12 left-4)
-- `OnboardingLayout` - ArrowLeft no header (texto "Voltar")
+**Geracao de emoji consistente por ID:**
+```typescript
+const getEmojiForId = (id: string): string => {
+  const emojis = ["💪", "🎯", "🔥", "✨", "💎", "🚀", "⚡", "🌟"];
+  // Gera um indice baseado no hash do ID para consistencia
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = id.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return emojis[Math.abs(hash) % emojis.length];
+};
+```
 
-**Padrão de estilo consistente para o botão:**
-- Posição: canto superior esquerdo (top-4 left-4 ou similar)
-- Ícone: `ChevronLeft` da biblioteca lucide-react
-- Aparência: circular, com hover state (`hover:bg-muted` ou `hover:bg-secondary`)
-- Tamanho do ícone: `w-6 h-6`
+**Animacoes Framer Motion:**
+- Transicao suave entre estados selecionado/nao-selecionado
+- Fade-in do emoji quando selecionado
+- Fade-in do botao Continuar
+
+**Reutilizacao futura:**
+Este componente `QuestionnaireMultiSelect` sera usado em todas as futuras telas de multi-select do questionario (ex: Screen7PreviousAttempts, etc).
