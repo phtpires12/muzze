@@ -13,6 +13,7 @@ import { Screen0Welcome } from "@/components/onboarding/screens/phase1/Screen0We
 import { HowWeHelpSection } from "@/components/onboarding/screens/phase1/HowWeHelpSection";
 import { Screen2Username } from "@/components/onboarding/screens/phase1/Screen2Username";
 import { Screen5ContentGoal } from "@/components/onboarding/screens/phase1/Screen5ContentGoal";
+import { Screen6StickingPoints } from "@/components/onboarding/screens/phase1/Screen6StickingPoints";
 import { Screen3Platform } from "@/components/onboarding/screens/phase1/Screen3Platform";
 import { Screen4StartQuestionnaire } from "@/components/onboarding/screens/phase1/Screen4StartQuestionnaire";
 import { Screen4StickingPoints } from "@/components/onboarding/screens/phase2/Screen4StickingPoints";
@@ -148,6 +149,7 @@ const NewOnboarding = () => {
       if (screen === 2) return true; // StartQuestionnaire - transition
       if (screen === 3) return !!data.username?.trim(); // Username
       if (screen === 4) return !!data.content_goal; // ContentGoal
+      if (screen === 5) return (data.sticking_points?.length ?? 0) > 0; // StickingPoints
     }
 
     // Phase 1 (Pain Diagnosis)
@@ -220,6 +222,8 @@ const NewOnboarding = () => {
       if (screen === 3) return null;
       // Screen 4 (ContentGoal) renderiza fora do OnboardingLayout - tem layout próprio
       if (screen === 4) return null;
+      // Screen 5 (StickingPoints) renderiza fora do OnboardingLayout - tem layout próprio
+      if (screen === 5) return null;
     }
 
     // Phase 1: Pain Diagnosis
@@ -514,6 +518,31 @@ const NewOnboarding = () => {
         <Screen5ContentGoal
           value={state.data.content_goal || ""}
           onChange={(value) => updateData({ content_goal: value })}
+          onContinue={handleContinue}
+          onBack={handleBack}
+          progress={getProgress()}
+          username={state.data.username || ""}
+        />
+      </>
+    );
+  }
+
+  // StickingPoints renderiza fora do OnboardingLayout - tem layout próprio com multi-select
+  if (state.phase === 0 && state.screen === 5) {
+    return (
+      <>
+        {/* Developer Badge */}
+        {(isDeveloper || isAdmin) && (
+          <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-full">
+            <Shield className="w-4 h-4 text-primary" />
+            <span className="text-xs font-medium text-primary">
+              {isAdmin ? "Admin" : "Developer"}
+            </span>
+          </div>
+        )}
+        <Screen6StickingPoints
+          value={state.data.sticking_points || []}
+          onChange={(value) => updateData({ sticking_points: value })}
           onContinue={handleContinue}
           onBack={handleBack}
           progress={getProgress()}
