@@ -1,85 +1,62 @@
 
 
-## Plano: Implementar Tela 9 do Onboarding (Diferencial + Rating)
+## Plano: Implementar Tela 10 do Onboarding (Meses Tentando)
 
 ### Visao Geral
 
-Esta tela apresenta uma comparacao visual entre "Outros Apps" e "Muzze", destacando os diferenciais do produto, seguida de um pedido de avaliacao na App Store. Layout baseado no wireframe fornecido com dois cards lado a lado (lilás vs gradiente).
+Esta tela é do tipo "questionário com input", seguindo exatamente o mesmo padrão visual da tela de nome (Screen2Username). O usuário informa há quantos meses tenta ser consistente na criação de conteúdo.
 
 ---
 
-### 1. Criar Componente Screen7Diferencial
+### 1. Criar Componente Screen8MonthsTrying
 
-**Arquivo:** `src/components/onboarding/screens/phase1/Screen7Diferencial.tsx`
+**Arquivo:** `src/components/onboarding/screens/phase1/Screen8MonthsTrying.tsx`
 
-**Props:**
+**Props (seguindo padrão de Screen2Username):**
 ```typescript
-interface Screen7DiferencialProps {
-  onContinue: () => void;  // Quando clica em "Avaliar"
-  onSkip: () => void;      // Quando clica em "Agora não"
+interface Screen8MonthsTryingProps {
+  value: number;
+  onChange: (value: number) => void;
+  onContinue: () => void;
   onBack: () => void;
   progress: number;
 }
 ```
 
-**Layout Visual (baseado no wireframe):**
+**Layout Visual (idêntico à tela de nome):**
 
 ```text
 +-----------------------------------------+
-|  <-                                     |  <- Back button
+|  <-  [============================]     |  <- Header: back + progress bar
 +-----------------------------------------+
 |                                         |
-|  Nos super te entendemos!               |  <- Subtitle (muted)
-|  E esse e o nosso diferencial!          |
+|  Há quanto tempo você tá                |  <- Título bold
+|  tentando criar?                        |
 |                                         |
-|  Somos o primeiro app                   |  <- Title (bold)
-|  pensado pra voce, criador.             |     "pensado pra voce, criador"
-|                                         |       em gradiente
-|  +----------------+  +----------------+ |
-|  | Em             |->| 🌿 muzze       | |
-|  | outros Apps:   |  |                | |
-|  |                |  | ✓ Voce usa um  | |
-|  | ✗ Voce gasta   |  |   sistema de   | |
-|  |   horas...     |  |   criacao      | |
-|  |                |  |   Plug-n-Play  | |
-|  | ✗ Nao querem   |  |                | |
-|  |   saber...     |  | ✓ Te pergunta- | |
-|  |                |  |   mos sobre... | |
-|  | ✗ Nao sabem    |  |                | |
-|  |   seus...      |  | ✓ Apoiamos...  | |
-|  |                |  |                | |
-|  | ✗ Te deixam    |  | ✓ Te entrega-  | |
-|  |   sozinho...   |  |   mos...       | |
-|  +----------------+  +----------------+ |
-|        (lilas)            (gradiente)   |
 |                                         |
-|  Nos avalie na app store e nos          |
-|  ajude a espalhar nossa missao!         |
 |                                         |
-|  +---------------------------------+    |
-|  |           Avaliar               |    |  <- Primary button (gradient-pill)
-|  +---------------------------------+    |
 |                                         |
-|         Agora nao (underline)           |  <- Secondary text button
++-----------------------------------------+
+|                                         |
+|  +-----------------------------------+  |
+|  |      Número de meses              |  |  <- Input centralizado
+|  +-----------------------------------+  |
+|                                         |
+|  Isso nos ajuda a entender o tamanho    |  <- Texto auxiliar muted
+|  do seu desafio.                        |
+|                                         |
+|  +-----------------------------------+  |
+|  |           Continuar               |  |  <- Botão pill (habilitado quando > 0)
+|  +-----------------------------------+  |
 +-----------------------------------------+
 ```
 
-**Comportamento:**
-1. "Avaliar" abre URL da App Store e avanca para proxima tela
-2. "Agora nao" apenas avanca para proxima tela (pula avaliacao)
-3. Seta curva entre os cards (SVG ou icone)
-
-**Estilizacao dos Cards:**
-
-| Card | Background | Texto | Icones |
-|------|-----------|-------|--------|
-| Outros Apps | `bg-violet-100/80` com borda `border-violet-200` | `text-gray-700` | ✗ em vermelho/cinza |
-| Muzze | `bg-gradient-to-br from-orange-400 to-pink-500` | `text-white` | ✓ em branco |
-
-**Elementos especificos:**
-- Logo Muzze (folha branca + texto "muzze") no header do card direito
-- Seta curva apontando do card esquerdo para o direito (ArrowRight ou SVG customizado)
-- Texto "pensado pra voce, criador" com gradiente aplicado via CSS
+**Elementos:**
+- Header com botão voltar + GradientProgressBar
+- Título na área superior
+- Input numérico centralizado no bottom
+- Texto auxiliar (muted-foreground)
+- Botão "Continuar" habilitado quando valor > 0
 
 ---
 
@@ -87,12 +64,12 @@ interface Screen7DiferencialProps {
 
 **Arquivo:** `src/types/onboarding.ts`
 
-Incrementar Phase 0 para 7 telas:
+Incrementar Phase 0 para 8 telas:
 
 ```typescript
-// De: [6, 5, 5, 5, 2, 6]
-// Para: [7, 5, 5, 5, 2, 6]
-export const SCREENS_PER_PHASE = [7, 5, 5, 5, 2, 6];
+// De: [7, 5, 5, 5, 2, 6]
+// Para: [8, 5, 5, 5, 2, 6]
+export const SCREENS_PER_PHASE = [8, 5, 5, 5, 2, 6];
 ```
 
 ---
@@ -103,20 +80,23 @@ export const SCREENS_PER_PHASE = [7, 5, 5, 5, 2, 6];
 
 **Adicionar import:**
 ```typescript
-import { Screen7Diferencial } from "@/components/onboarding/screens/phase1/Screen7Diferencial";
+import { Screen8MonthsTrying } from "@/components/onboarding/screens/phase1/Screen8MonthsTrying";
 ```
 
-**Adicionar renderizacao para Phase 0, Screen 6:**
+**Adicionar renderização para Phase 0, Screen 7:**
+
+Após o bloco de Screen 6 (Diferencial), adicionar:
+
 ```typescript
-// Apos o bloco de Screen 5 (StickingPoints)
-if (state.phase === 0 && state.screen === 6) {
+if (state.phase === 0 && state.screen === 7) {
   return (
     <>
       {/* Developer Badge */}
       ...
-      <Screen7Diferencial
-        onContinue={handleContinue}  // Apos "Avaliar"
-        onSkip={handleContinue}      // Apos "Agora nao"
+      <Screen8MonthsTrying
+        value={state.data.months_trying || 0}
+        onChange={(value) => updateData({ months_trying: value })}
+        onContinue={handleContinue}
         onBack={handleBack}
         progress={getProgress()}
       />
@@ -126,38 +106,21 @@ if (state.phase === 0 && state.screen === 6) {
 ```
 
 **Atualizar canContinue():**
+
 ```typescript
 if (phase === 0) {
-  // ... existing screens 0-5 ...
-  if (screen === 6) return false; // Botoes internos controlam navegacao
+  // ... existing screens 0-6 ...
+  if (screen === 7) return (data.months_trying ?? 0) > 0; // MonthsTrying
 }
 ```
 
----
+**Atualizar renderScreen():**
 
-### 4. Constantes para o Conteudo
-
-**Definir no componente:**
-
-```typescript
-const OTHER_APPS_CONS = [
-  'Voce gasta horas construindo "templates" e nem usa.',
-  'Nao querem saber se voce postou ou nao',
-  'Nao sabem seus objetivos, nem acompanham seu progresso',
-  'Te deixam sozinho, tentando achar um caminho.',
-];
-
-const MUZZE_PROS = [
-  'Voce usa um sistema de criacao Plug-n-Play',
-  'Te perguntamos sobre o status das suas criacoes',
-  'Apoiamos seus sonhos como criador de conteudo',
-  'Te entregamos o processo criativo das suas maiores referencias.',
-];
-```
+Adicionar `if (screen === 7) return null;` para que a tela renderize fora do OnboardingLayout.
 
 ---
 
-### 5. Diagrama do Fluxo Atualizado (Phase 0)
+### 4. Diagrama do Fluxo Atualizado (Phase 0)
 
 ```text
 Screen 0: Welcome
@@ -166,10 +129,10 @@ Screen 0: Welcome
 Screen 1: HowWeHelpSection (3 steps internos)
     |
     v
-Screen 2: StartQuestionnaire (transicao)
+Screen 2: StartQuestionnaire (transição)
     |
     v
-Screen 3: Username (input)
+Screen 3: Username (input) <-- Padrão para telas de input
     |
     v
 Screen 4: ContentGoal (single-select com toggle)
@@ -178,7 +141,10 @@ Screen 4: ContentGoal (single-select com toggle)
 Screen 5: StickingPoints (multi-select)
     |
     v
-Screen 6: Diferencial + Rating  <-- NOVA TELA 9
+Screen 6: Diferencial + Rating
+    |
+    v
+Screen 7: MonthsTrying (input numérico) <-- NOVA TELA 10
     |
     v
 Phase 1, Screen 0: ...
@@ -188,70 +154,87 @@ Phase 1, Screen 0: ...
 
 ### Arquivos a Criar/Modificar
 
-| Arquivo | Acao |
+| Arquivo | Ação |
 |---------|------|
-| `src/components/onboarding/screens/phase1/Screen7Diferencial.tsx` | **CRIAR** |
+| `src/components/onboarding/screens/phase1/Screen8MonthsTrying.tsx` | **CRIAR** |
 | `src/types/onboarding.ts` | MODIFICAR - Atualizar SCREENS_PER_PHASE |
-| `src/pages/NewOnboarding.tsx` | MODIFICAR - Adicionar renderizacao e validacao |
+| `src/pages/NewOnboarding.tsx` | MODIFICAR - Adicionar renderização e validação |
 
 ---
 
-### Secao Tecnica
+### Seção Técnica
 
-**Estilo do gradiente no texto "pensado pra voce, criador":**
-```css
-background: linear-gradient(to right, #ec4899, #f97316, #eab308);
--webkit-background-clip: text;
--webkit-text-fill-color: transparent;
-```
+**Estrutura do componente (baseada em Screen2Username):**
 
-**Estrutura dos Cards (usando flex):**
 ```typescript
-<div className="flex gap-2 relative">
-  {/* Card Outros Apps */}
-  <div className="flex-1 bg-violet-100/80 border border-violet-200 rounded-2xl p-4">
-    <h3 className="font-bold text-sm text-gray-800 mb-3">
-      Em<br/>outros Apps:
-    </h3>
-    <ul className="space-y-3">
-      {OTHER_APPS_CONS.map((item, i) => (
-        <li key={i} className="flex items-start gap-2 text-xs text-gray-600">
-          <X className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
-          <span>{item}</span>
-        </li>
-      ))}
-    </ul>
-  </div>
-  
-  {/* Seta no meio */}
-  <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
-    <ArrowRight className="w-6 h-6 text-gray-400" />
-  </div>
-  
-  {/* Card Muzze */}
-  <div className="flex-1 bg-gradient-to-br from-orange-400 to-pink-500 rounded-2xl p-4">
-    <div className="flex items-center gap-1.5 mb-3">
-      <img src={muzzeLeafWhite} className="w-5 h-5" />
-      <span className="text-white font-bold">muzze</span>
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { ChevronLeft } from "lucide-react";
+import { GradientProgressBar } from "@/components/onboarding/shared/GradientProgressBar";
+
+export const Screen8MonthsTrying = ({ 
+  value, 
+  onChange, 
+  onContinue, 
+  onBack, 
+  progress 
+}: Screen8MonthsTryingProps) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && value > 0) {
+      onContinue();
+    }
+  };
+
+  return (
+    <div className="min-h-[100dvh] bg-secondary/30 dark:bg-background flex flex-col">
+      {/* Header: Back + Progress */}
+      <div className="px-4 pt-4 sm:pt-6 flex items-center gap-3">
+        <button onClick={onBack} ...>
+          <ChevronLeft className="w-6 h-6" />
+        </button>
+        <GradientProgressBar progress={progress} />
+      </div>
+
+      {/* Content Area */}
+      <div className="flex-1 flex flex-col px-6 pt-12 sm:pt-16">
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+          Há quanto tempo você tá<br/>tentando criar?
+        </h1>
+      </div>
+
+      {/* Input + Helper + Button (bottom) */}
+      <div className="px-6 pb-8 space-y-4">
+        <Input
+          type="number"
+          min="0"
+          max="120"
+          placeholder="Número de meses"
+          value={value || ""}
+          onChange={(e) => onChange(parseInt(e.target.value) || 0)}
+          onKeyDown={handleKeyDown}
+          className="bg-secondary/50 border-secondary h-14 rounded-xl text-lg text-center"
+          autoFocus
+        />
+        <p className="text-sm text-muted-foreground text-center">
+          Isso nos ajuda a entender o tamanho do seu desafio.
+        </p>
+        <Button
+          onClick={onContinue}
+          disabled={value <= 0}
+          className="w-full h-14 rounded-full bg-primary ..."
+        >
+          Continuar
+        </Button>
+      </div>
     </div>
-    <ul className="space-y-3">
-      {MUZZE_PROS.map((item, i) => (
-        <li key={i} className="flex items-start gap-2 text-xs text-white">
-          <Check className="w-4 h-4 flex-shrink-0 mt-0.5" />
-          <span>{item}</span>
-        </li>
-      ))}
-    </ul>
-  </div>
-</div>
-```
-
-**URL da App Store (placeholder para producao):**
-```typescript
-const handleReview = () => {
-  // Em producao: URL real da App Store
-  window.open("https://apps.apple.com/app/muzze", "_blank");
-  onContinue();
+  );
 };
 ```
+
+**Validação do input:**
+- Tipo: `number`
+- Mínimo: `0`
+- Máximo: `120` (10 anos)
+- Placeholder centralizado: "Número de meses"
+- Botão habilitado quando `value > 0`
 
