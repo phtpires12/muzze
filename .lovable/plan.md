@@ -1,107 +1,181 @@
 
 
-## Plano: Implementar Tela 10 do Onboarding (Meses Tentando)
+## Plano: Implementar Tela 11 do Onboarding (Constancia + Sistema de Clusters)
 
-### Problema Identificado
+### Visao Geral
 
-O plano anterior foi aprovado, mas a implementação não foi executada. Os arquivos não foram modificados:
-- `Screen8MonthsTrying.tsx` não existe
-- `SCREENS_PER_PHASE` ainda é `[7, 5, 5, 5, 2, 6]`
-- `NewOnboarding.tsx` não tem a renderização da tela
+Esta tela introduz o **sistema de clusters comportamentais** que sera usado na Tela 20 para personalizar o plano do usuario. A tela segue o padrao visual de single-select (como Screen5ContentGoal) e adiciona logica de direcionamento para 3 versoes diferentes da Tela 12.
 
 ---
 
-### 1. Criar Componente Screen8MonthsTrying
+### 1. Atualizar OnboardingData com Campos de Cluster
 
-**Arquivo:** `src/components/onboarding/screens/phase1/Screen8MonthsTrying.tsx`
+**Arquivo:** `src/types/onboarding.ts`
 
-**Props:**
+Adicionar novos campos para suportar o sistema de clusters:
+
 ```typescript
-interface Screen8MonthsTryingProps {
-  value: number;
-  onChange: (value: number) => void;
-  onContinue: () => void;
-  onBack: () => void;
-  progress: number;
+export interface OnboardingData {
+  // ... campos existentes ...
+  
+  // Sistema de Clusters (novo)
+  posting_frequency?: string;           // ID da frequencia selecionada
+  consistency_cluster?: 1 | 2 | 3;      // Cluster derivado (1=Sem, 2=Em Construcao, 3=Alta)
+  screen12_variant?: 'hurt' | 'path' | 'machine';  // Variante da Tela 12
 }
 ```
 
-**Layout Visual (seguindo Screen2Username):**
+**Adicionar constante com opcoes:**
+
+```typescript
+export const POSTING_FREQUENCY_OPTIONS = [
+  {
+    id: "super_consistent",
+    label: "Sou super constante (pelo menos 3x na semana)",
+    cluster: 3 as const,
+    screen12Variant: "machine" as const,
+  },
+  {
+    id: "almost_consistent", 
+    label: "Quase constante (1x na semana)",
+    cluster: 2 as const,
+    screen12Variant: "path" as const,
+  },
+  {
+    id: "no_consistency",
+    label: "Nao tenho constancia (1x a 2x por mes)",
+    cluster: 1 as const,
+    screen12Variant: "hurt" as const,
+  },
+  {
+    id: "when_possible",
+    label: "Posto quando da",
+    cluster: 1 as const,
+    screen12Variant: "hurt" as const,
+  },
+] as const;
+```
+
+---
+
+### 2. Criar Componente Screen9Constancia
+
+**Arquivo:** `src/components/onboarding/screens/phase1/Screen9Constancia.tsx`
+
+**Props:**
+```typescript
+interface Screen9ConstanciaProps {
+  value: string;
+  onChange: (value: string, cluster: 1 | 2 | 3, variant: string) => void;
+  onContinue: () => void;
+  onBack: () => void;
+  progress: number;
+  username: string;
+}
+```
+
+**Layout Visual (seguindo Screen5ContentGoal):**
 
 ```text
 +-----------------------------------------+
 |  <-  [============================]     |  <- Header: back + progress bar
 +-----------------------------------------+
 |                                         |
-|  Há quanto tempo você tá                |  <- Título bold
-|  tentando criar?                        |
+|  Entendi, [First Name]                  |  <- Subtitle muted
+|  e de la pra ca...                      |
 |                                         |
-|                                         |
-+-----------------------------------------+
-|                                         |
-|  +-----------------------------------+  |
-|  |      Número de meses              |  |  <- Input numérico centralizado
-|  +-----------------------------------+  |
-|                                         |
-|  Isso nos ajuda a entender o tamanho    |  <- Texto auxiliar muted
-|  do seu desafio.                        |
+|  Quantos posts por semana               |  <- Titulo bold
+|  voce tem feito?                        |
 |                                         |
 |  +-----------------------------------+  |
-|  |           Continuar               |  |  <- Botão pill (habilitado quando > 0)
+|  |  Sou super constante              |  |  <- Opcao (cluster 3)
+|  |  (pelo menos 3x na semana)        |  |
+|  +-----------------------------------+  |
+|                                         |
+|  +-----------------------------------+  |
+|  |  Quase constante                  |  |  <- Opcao (cluster 2)
+|  |  (1x na semana)                   |  |
+|  +-----------------------------------+  |
+|                                         |
+|  +-----------------------------------+  |
+|  |  Nao tenho constancia             |  |  <- Opcao (cluster 1)
+|  |  (1x a 2x por mes)                |  |
+|  +-----------------------------------+  |
+|                                         |
+|  +-----------------------------------+  |
+|  |  Posto quando da                  |  |  <- Opcao (cluster 1)
+|  +-----------------------------------+  |
+|                                         |
+|  +-----------------------------------+  |
+|  |           Continuar               |  |  <- Aparece apos selecao
 |  +-----------------------------------+  |
 +-----------------------------------------+
 ```
 
-**Elementos:**
-- Header com botão voltar + GradientProgressBar
-- Título na área superior
-- Input numérico centralizado (type="number", min="0", max="120")
-- Placeholder: "Número de meses"
-- Texto auxiliar (muted-foreground)
-- Botão "Continuar" habilitado quando valor > 0
-- Enter key dispara onContinue se valor > 0
+**Comportamento:**
+1. Single-select (apenas uma opcao pode estar selecionada)
+2. Ao selecionar, aplica gradiente + texto branco
+3. onChange passa: `(id, cluster, screen12Variant)`
+4. Botao "Continuar" aparece apos selecao
+5. Armazena `posting_frequency`, `consistency_cluster` e `screen12_variant`
 
 ---
 
-### 2. Atualizar SCREENS_PER_PHASE
+### 3. Atualizar SCREENS_PER_PHASE
 
 **Arquivo:** `src/types/onboarding.ts`
 
-Incrementar Phase 0 para 8 telas:
+Incrementar Phase 0 para 9 telas:
 
 ```typescript
-// De: [7, 5, 5, 5, 2, 6]
-// Para: [8, 5, 5, 5, 2, 6]
-export const SCREENS_PER_PHASE = [8, 5, 5, 5, 2, 6];
+// De: [8, 5, 5, 5, 2, 6]
+// Para: [9, 5, 5, 5, 2, 6]
+export const SCREENS_PER_PHASE = [9, 5, 5, 5, 2, 6];
 ```
 
 ---
 
-### 3. Atualizar NewOnboarding.tsx
+### 4. Atualizar NewOnboarding.tsx
 
 **Arquivo:** `src/pages/NewOnboarding.tsx`
 
 **Adicionar import:**
 ```typescript
-import { Screen8MonthsTrying } from "@/components/onboarding/screens/phase1/Screen8MonthsTrying";
+import { Screen9Constancia } from "@/components/onboarding/screens/phase1/Screen9Constancia";
 ```
 
-**Adicionar renderização para Phase 0, Screen 7:**
+**Adicionar handler especial para onChange:**
+```typescript
+const handleConstanciaChange = (
+  value: string, 
+  cluster: 1 | 2 | 3, 
+  variant: 'hurt' | 'path' | 'machine'
+) => {
+  updateData({ 
+    posting_frequency: value,
+    consistency_cluster: cluster,
+    screen12_variant: variant,
+  });
+};
+```
 
-Após o bloco de Screen 6 (Diferencial), adicionar:
+**Adicionar renderizacao para Phase 0, Screen 8:**
+
+Apos o bloco de Screen 7 (MonthsTrying):
 
 ```typescript
-if (state.phase === 0 && state.screen === 7) {
+if (state.phase === 0 && state.screen === 8) {
   return (
     <>
       {/* Developer Badge */}
       ...
-      <Screen8MonthsTrying
-        value={state.data.months_trying || 0}
-        onChange={(value) => updateData({ months_trying: value })}
+      <Screen9Constancia
+        value={state.data.posting_frequency || ""}
+        onChange={handleConstanciaChange}
         onContinue={handleContinue}
         onBack={handleBack}
         progress={getProgress()}
+        username={state.data.username || ""}
       />
     </>
   );
@@ -110,162 +184,219 @@ if (state.phase === 0 && state.screen === 7) {
 
 **Atualizar canContinue():**
 
-Na seção `if (phase === 0)`, adicionar após screen 6:
-
 ```typescript
-if (screen === 7) return (data.months_trying ?? 0) > 0; // MonthsTrying
+if (phase === 0) {
+  // ... existing screens 0-7 ...
+  if (screen === 8) return !!data.posting_frequency; // Constancia
+}
 ```
 
 **Atualizar renderScreen():**
 
-Na seção `if (phase === 0)`, adicionar após screen 6:
-
 ```typescript
-if (screen === 7) return null; // MonthsTrying renderiza fora do OnboardingLayout
+if (screen === 8) return null; // Constancia renderiza fora do OnboardingLayout
 ```
 
 ---
 
-### Diagrama do Fluxo Atualizado (Phase 0)
+### 5. Sistema de Clusters - Logica de Personalizacao
+
+O sistema de clusters funcionara assim:
+
+| Selecao | Cluster | Variante Tela 12 | Objetivo do Cluster |
+|---------|---------|------------------|---------------------|
+| Super constante (3x+) | 3 | "machine" (Voce e uma maquina!) | Otimizar processo, evitar desgaste |
+| Quase constante (1x) | 2 | "path" (Caminho) | Organizar processo, aumentar frequencia |
+| Sem constancia (1-2x/mes) | 1 | "hurt" (Doeu ver isso?) | Reduzir pressao, comecar pequeno |
+| Posto quando da | 1 | "hurt" (Doeu ver isso?) | Reduzir pressao, comecar pequeno |
+
+**Na Tela 20, combinar com:**
+- `content_goal` (Desejo principal)
+- `sticking_points[0]` (Trava principal)
+- `daily_goal_minutes` (Tempo diario disponivel)
+- `creation_time` (Horario escolhido)
+
+---
+
+### 6. Diagrama do Fluxo Atualizado (Phase 0)
 
 ```text
 Screen 0: Welcome
     |
     v
-Screen 1: HowWeHelpSection (3 steps internos)
+Screen 1: HowWeHelpSection
     |
     v
-Screen 2: StartQuestionnaire (transição)
+Screen 2: StartQuestionnaire
     |
     v
-Screen 3: Username (input)
+Screen 3: Username
     |
     v
-Screen 4: ContentGoal (single-select com toggle)
+Screen 4: ContentGoal
     |
     v
-Screen 5: StickingPoints (multi-select)
+Screen 5: StickingPoints
     |
     v
-Screen 6: Diferencial + Rating (Tela 9)
+Screen 6: Diferencial
     |
     v
-Screen 7: MonthsTrying (input numérico) <-- NOVA TELA 10
+Screen 7: MonthsTrying
     |
     v
-Phase 1, Screen 0: ...
+Screen 8: Constancia (Tela 11)  <-- NOVA TELA
+    |
+    +---> cluster 1 (hurt) ------> Tela 12: "Doeu ver isso?"
+    |
+    +---> cluster 2 (path) ------> Tela 12: "Caminho"
+    |
+    +---> cluster 3 (machine) ---> Tela 12: "Voce e uma maquina!"
 ```
 
 ---
 
 ### Arquivos a Criar/Modificar
 
-| Arquivo | Ação |
+| Arquivo | Acao |
 |---------|------|
-| `src/components/onboarding/screens/phase1/Screen8MonthsTrying.tsx` | **CRIAR** |
-| `src/types/onboarding.ts` | MODIFICAR - Atualizar SCREENS_PER_PHASE para [8, 5, 5, 5, 2, 6] |
-| `src/pages/NewOnboarding.tsx` | MODIFICAR - Adicionar import, renderização e validação |
+| `src/components/onboarding/screens/phase1/Screen9Constancia.tsx` | **CRIAR** |
+| `src/types/onboarding.ts` | MODIFICAR - Adicionar campos de cluster + POSTING_FREQUENCY_OPTIONS + atualizar SCREENS_PER_PHASE |
+| `src/pages/NewOnboarding.tsx` | MODIFICAR - Adicionar import, handler, renderizacao e validacao |
 
 ---
 
-### Seção Técnica
+### Secao Tecnica
 
-**Estrutura do componente (baseada em Screen2Username):**
+**Estrutura do componente (baseada em Screen5ContentGoal):**
 
 ```typescript
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { ChevronLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { GradientProgressBar } from "@/components/onboarding/shared/GradientProgressBar";
-import { motion } from "framer-motion";
+import { POSTING_FREQUENCY_OPTIONS } from "@/types/onboarding";
+import { motion, AnimatePresence } from "framer-motion";
 
-interface Screen8MonthsTryingProps {
-  value: number;
-  onChange: (value: number) => void;
+interface Screen9ConstanciaProps {
+  value: string;
+  onChange: (value: string, cluster: 1 | 2 | 3, variant: 'hurt' | 'path' | 'machine') => void;
   onContinue: () => void;
   onBack: () => void;
   progress: number;
+  username: string;
 }
 
-export const Screen8MonthsTrying = ({ 
-  value, 
-  onChange, 
-  onContinue, 
-  onBack, 
-  progress 
-}: Screen8MonthsTryingProps) => {
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && value > 0) {
-      onContinue();
-    }
+export const Screen9Constancia = ({
+  value,
+  onChange,
+  onContinue,
+  onBack,
+  progress,
+  username,
+}: Screen9ConstanciaProps) => {
+  const firstName = username?.split(" ")[0] || "";
+
+  const handleOptionClick = (option: typeof POSTING_FREQUENCY_OPTIONS[number]) => {
+    onChange(option.id, option.cluster, option.screen12Variant);
   };
 
   return (
     <div className="min-h-[100dvh] bg-violet-50 dark:bg-background flex flex-col">
-      {/* Header: Back + Progress */}
+      {/* Header */}
       <div className="px-4 pt-12 sm:pt-16 flex items-center gap-3">
-        <button 
-          onClick={onBack}
-          className="p-2 -ml-2 rounded-full hover:bg-violet-100 dark:hover:bg-muted transition-colors"
-        >
-          <ChevronLeft className="w-6 h-6 text-gray-600 dark:text-gray-400" />
+        <button onClick={onBack} ...>
+          <ChevronLeft className="w-6 h-6" />
         </button>
         <GradientProgressBar progress={progress} />
       </div>
 
-      {/* Content Area */}
-      <div className="flex-1 flex flex-col px-6 pt-8">
-        <motion.h1 
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-2xl sm:text-3xl font-bold text-foreground"
-        >
-          Há quanto tempo você tá<br/>tentando criar?
-        </motion.h1>
+      {/* Content */}
+      <div className="flex-1 flex flex-col px-6 pt-6">
+        <p className="text-muted-foreground text-sm mb-1">
+          {firstName ? `Entendi, ${firstName}` : "Entendi"}
+          <br />e de la pra ca...
+        </p>
+        <h1 className="text-xl font-bold mb-6">
+          Quantos posts por semana voce tem feito?
+        </h1>
+
+        {/* Options */}
+        <div className="space-y-3">
+          {POSTING_FREQUENCY_OPTIONS.map((option) => {
+            const isSelected = value === option.id;
+            return (
+              <motion.button
+                key={option.id}
+                onClick={() => handleOptionClick(option)}
+                className={`w-full text-left rounded-2xl px-4 py-4 transition-all ${
+                  isSelected
+                    ? "bg-gradient-to-r from-pink-400 via-orange-400 to-yellow-300"
+                    : "bg-violet-200/60 hover:bg-violet-200/80"
+                }`}
+                whileTap={{ scale: 0.98 }}
+              >
+                <p className={`font-medium ${isSelected ? "text-white" : "text-foreground"}`}>
+                  {option.label}
+                </p>
+              </motion.button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Input + Helper + Button (bottom) */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="px-6 pb-8 space-y-4"
-      >
-        <Input
-          type="number"
-          inputMode="numeric"
-          min="0"
-          max="120"
-          placeholder="Número de meses"
-          value={value || ""}
-          onChange={(e) => onChange(parseInt(e.target.value) || 0)}
-          onKeyDown={handleKeyDown}
-          className="bg-violet-100/50 dark:bg-secondary/50 border-violet-200 dark:border-secondary h-14 rounded-xl text-lg text-center placeholder:text-muted-foreground"
-          autoFocus
-        />
-        <p className="text-sm text-muted-foreground text-center">
-          Isso nos ajuda a entender o tamanho do seu desafio.
-        </p>
-        <Button
-          onClick={onContinue}
-          disabled={value <= 0}
-          variant="gradient-pill"
-          size="lg"
-          className="w-full"
-        >
-          Continuar
-        </Button>
-      </motion.div>
+      {/* Continue Button */}
+      <AnimatePresence>
+        {value && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="px-6 pb-8 pt-4"
+          >
+            <Button
+              onClick={onContinue}
+              variant="gradient-pill"
+              size="lg"
+              className="w-full"
+            >
+              Continuar
+            </Button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
 ```
 
-**Validação do input:**
-- Tipo: `number` com `inputMode="numeric"` para teclado numérico em mobile
-- Mínimo: `0`
-- Máximo: `120` (10 anos)
-- Placeholder centralizado: "Número de meses"
-- Botão habilitado quando `value > 0`
-- Background consistente com outras telas: `bg-violet-50`
+**Tipagem do cluster derivado:**
+
+```typescript
+// Em onboarding.ts
+export type ConsistencyCluster = 1 | 2 | 3;
+export type Screen12Variant = 'hurt' | 'path' | 'machine';
+```
+
+**Uso futuro na Tela 20:**
+
+```typescript
+// Exemplo de como os dados serao combinados na Tela 20
+const generatePersonalizedPlan = (data: OnboardingData) => {
+  const cluster = data.consistency_cluster;
+  const goal = data.content_goal;
+  const mainBlock = data.sticking_points?.[0];
+  const dailyMinutes = data.daily_goal_minutes;
+  const creationTime = data.creation_time;
+
+  // Logica de personalizacao baseada no cluster
+  switch (cluster) {
+    case 1: // Sem Constancia
+      return { tone: "gentle", commitment: "small", focus: "habit_building" };
+    case 2: // Em Construcao
+      return { tone: "encouraging", commitment: "moderate", focus: "organization" };
+    case 3: // Alta Constancia
+      return { tone: "optimizing", commitment: "high", focus: "efficiency" };
+  }
+};
+```
 
