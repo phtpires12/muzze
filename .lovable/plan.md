@@ -1,309 +1,129 @@
 
-## Plano: Implementar Tela 12 do Onboarding (Doeu/Caminho/Maquina)
 
-### Visao Geral
+## Plano: Corrigir Layout da Tela 12 (Cluster Feedback)
 
-Esta tela exibe uma das 3 variantes baseadas no `screen12_variant` definido na Tela 11 (Constancia). Cada variante tem um tom diferente para conectar com o usuario baseado em seu nivel de consistencia:
-
-| Variante | Cluster | Titulo | Tom |
-|----------|---------|--------|-----|
-| `hurt` | 1 | "Uii! Doeu um pouco ver isso?" | Acolhedor, sem pressao |
-| `path` | 2 | "Que otimo!! Voce ja ta no caminho" | Encorajador |
-| `machine` | 3 | "Voce e uma maquina!" | Celebrativo, parceria |
+### Problema Principal
+A composicao triangular esta invertida. O codigo atual coloca 1 circulo em cima e 2 embaixo, mas o wireframe mostra 2 em cima e 1 embaixo centralizado.
 
 ---
 
-### 1. Criar Componente Screen10ClusterFeedback
+### 1. Corrigir Estrutura VARIANT_CONTENT
 
-**Arquivo:** `src/components/onboarding/screens/phase1/Screen10ClusterFeedback.tsx`
-
-**Props:**
-```typescript
-interface Screen10ClusterFeedbackProps {
-  variant: 'hurt' | 'path' | 'machine';
-  onContinue: () => void;
-  onBack: () => void;
-}
-```
-
-**Layout Visual (baseado no wireframe):**
-
-```text
-+-----------------------------------------+
-|  <-                                     |  <- Back button
-+-----------------------------------------+
-|                                         |
-|                                         |
-|              [Emoji Cluster]            |  <- 3 emojis em circulos
-|                  🤯                     |     roxos organizados
-|               👊    😵                  |     em triangulo
-|                                         |
-|                                         |
-|                                         |
-|   [Titulo em bold]                      |  <- Muda por variante
-|                                         |
-|   [Texto de apoio revelado]             |  <- Aparece com tap/delay
-|                                         |
-|                                         |
-|  +-----------------------------------+  |
-|  |           Continuar               |  |  <- Botao roxo solido
-|  +-----------------------------------+  |
-+-----------------------------------------+
-```
-
----
-
-### 2. Conteudo por Variante
-
-**Variante "hurt" (Cluster 1 - Sem Constancia):**
-```
-Titulo: "Uii! Doeu um pouco ver isso?"
-Texto: "Fica tranquilo, nos sabemos que voce esta dando o seu melhor!
-
-E estamos aqui pra ajudar criadores como voce, a nunca mais parar de criar."
-```
-
-**Variante "path" (Cluster 2 - Em Construcao):**
-```
-Titulo: "Que otimo!! Voce ja ta no caminho"
-Texto: "Vamos te ajudar a aumentar isso pra acelerar ainda mais seus resultados!"
-```
-
-**Variante "machine" (Cluster 3 - Alta Constancia):**
-```
-Titulo: "Voce e uma maquina!"
-Texto: "Ja da ate pra ensinar a galera a criar mais em...
-
-Conta com a gente pra produzir conteudo pra esse publico. 🤝"
-```
-
----
-
-### 3. Atualizar SCREENS_PER_PHASE
-
-**Arquivo:** `src/types/onboarding.ts`
-
-Incrementar Phase 0 para 10 telas:
+Adicionar emojis especificos para cada variacao:
 
 ```typescript
-// De: [9, 5, 5, 5, 2, 6]
-// Para: [10, 5, 5, 5, 2, 6]
-export const SCREENS_PER_PHASE = [10, 5, 5, 5, 2, 6];
-```
-
----
-
-### 4. Atualizar NewOnboarding.tsx
-
-**Arquivo:** `src/pages/NewOnboarding.tsx`
-
-**Adicionar import:**
-```typescript
-import { Screen10ClusterFeedback } from "@/components/onboarding/screens/phase1/Screen10ClusterFeedback";
-```
-
-**Adicionar renderizacao para Phase 0, Screen 9:**
-
-Apos o bloco de Screen 8 (Constancia):
-
-```typescript
-if (state.phase === 0 && state.screen === 9) {
-  return (
-    <>
-      {/* Developer Badge */}
-      ...
-      <Screen10ClusterFeedback
-        variant={state.data.screen12_variant || "hurt"}
-        onContinue={handleContinue}
-        onBack={handleBack}
-      />
-    </>
-  );
-}
-```
-
-**Atualizar canContinue():**
-
-```typescript
-if (phase === 0) {
-  // ... existing screens 0-8 ...
-  if (screen === 9) return false; // ClusterFeedback - botao interno
-}
-```
-
-**Atualizar renderScreen():**
-
-```typescript
-if (screen === 9) return null; // ClusterFeedback renderiza fora do OnboardingLayout
-```
-
----
-
-### 5. Diagrama do Fluxo Atualizado (Phase 0)
-
-```text
-Screen 0: Welcome
-    |
-    v
-Screen 1-7: ... (outras telas)
-    |
-    v
-Screen 8: Constancia (Tela 11)
-    |
-    +---> cluster 1 --------> Screen 9: "Doeu ver isso?" (hurt)
-    |
-    +---> cluster 2 --------> Screen 9: "Caminho" (path)
-    |
-    +---> cluster 3 --------> Screen 9: "Maquina!" (machine)
-    |
-    v
-Phase 1, Screen 0: ...
-```
-
----
-
-### Arquivos a Criar/Modificar
-
-| Arquivo | Acao |
-|---------|------|
-| `src/components/onboarding/screens/phase1/Screen10ClusterFeedback.tsx` | **CRIAR** |
-| `src/types/onboarding.ts` | MODIFICAR - Atualizar SCREENS_PER_PHASE para [10, 5, 5, 5, 2, 6] |
-| `src/pages/NewOnboarding.tsx` | MODIFICAR - Adicionar import, renderizacao e validacao |
-
----
-
-### Secao Tecnica
-
-**Estrutura do componente:**
-
-```typescript
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Screen12Variant } from "@/types/onboarding";
-
-interface Screen10ClusterFeedbackProps {
-  variant: Screen12Variant;
-  onContinue: () => void;
-  onBack: () => void;
-}
-
 const VARIANT_CONTENT = {
   hurt: {
     title: "Uii! Doeu um pouco ver isso?",
-    lines: [
-      "Fica tranquilo, nos sabemos que voce esta dando o seu melhor!",
-      "E estamos aqui pra ajudar criadores como voce, a nunca mais parar de criar.",
-    ],
-    emojis: ["🤯", "👊", "😵"],
+    lines: [...],
+    emojis: ["😵‍💫", "👊", "😵"], // Emojis especificos para hurt
   },
   path: {
     title: "Que otimo!! Voce ja ta no caminho",
-    lines: [
-      "Vamos te ajudar a aumentar isso pra acelerar ainda mais seus resultados!",
-    ],
-    emojis: ["🤯", "👊", "😵"],
+    lines: [...],
+    emojis: ["😵‍💫", "👊", "😵"], // Emojis especificos para path
   },
   machine: {
     title: "Voce e uma maquina!",
-    lines: [
-      "Ja da ate pra ensinar a galera a criar mais em...",
-      "Conta com a gente pra produzir conteudo pra esse publico. 🤝",
-    ],
-    emojis: ["🤯", "👊", "😵"],
+    lines: [...],
+    emojis: ["😵‍💫", "👊", "😵"], // Emojis especificos para machine
   },
-};
-
-export const Screen10ClusterFeedback = ({
-  variant,
-  onContinue,
-  onBack,
-}: Screen10ClusterFeedbackProps) => {
-  const [revealed, setRevealed] = useState(false);
-  const content = VARIANT_CONTENT[variant];
-
-  const handleTap = () => {
-    if (!revealed) {
-      setRevealed(true);
-    }
-  };
-
-  return (
-    <div 
-      className="min-h-[100dvh] bg-violet-50 flex flex-col"
-      onClick={handleTap}
-    >
-      {/* Header with back button */}
-      <div className="px-4 pt-12 sm:pt-16">
-        <button onClick={(e) => { e.stopPropagation(); onBack(); }} ...>
-          <ChevronLeft className="w-6 h-6" />
-        </button>
-      </div>
-
-      {/* Emoji Cluster - 3 emojis in purple circles */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6">
-        <motion.div className="relative w-48 h-48 mb-8">
-          {/* Emoji circles arranged in triangle pattern */}
-          {/* Top center emoji */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 ...">
-            <span className="text-3xl">🤯</span>
-          </div>
-          {/* Bottom left emoji */}
-          <div className="absolute bottom-0 left-0 ...">
-            <span className="text-3xl">👊</span>
-          </div>
-          {/* Bottom right emoji */}
-          <div className="absolute bottom-0 right-0 ...">
-            <span className="text-3xl">😵</span>
-          </div>
-        </motion.div>
-      </div>
-
-      {/* Text content at bottom */}
-      <div className="px-6 pb-8 space-y-4">
-        <h1 className="text-2xl font-bold text-foreground">
-          {content.title}
-        </h1>
-        
-        <AnimatePresence>
-          {revealed && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              className="space-y-2"
-            >
-              {content.lines.map((line, i) => (
-                <p key={i} className="text-muted-foreground">{line}</p>
-              ))}
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <Button
-          onClick={(e) => { e.stopPropagation(); onContinue(); }}
-          className="w-full bg-primary hover:bg-primary/90 rounded-full"
-          size="lg"
-        >
-          Continuar
-        </Button>
-      </div>
-    </div>
-  );
 };
 ```
 
-**Elementos visuais dos emojis (baseado no wireframe):**
-- 3 circulos roxos (`bg-violet-400`) organizados em triangulo
-- Emojis: 🤯 (exploding head), 👊 (fist bump), 😵 (dizzy face)
-- Animacao de entrada com scale + fade
+Remover a constante `EMOJIS` fixa (linha 36).
 
-**Interacao de revelacao:**
-- Titulo aparece imediatamente
-- Texto adicional aparece apos tap em qualquer lugar da tela
-- Botao "Continuar" sempre visivel (roxo solido, nao gradiente)
+---
 
-**Estilo do botao (baseado no wireframe):**
-- Background roxo solido (`bg-primary`)
-- Nao usa gradiente nesta tela (diferente das outras)
-- Rounded full (pill style)
+### 2. Corrigir Posicionamento dos Circulos
+
+**De (atual - triangulo normal):**
+```
+      ●        <- top-0 left-1/2
+    ●   ●      <- bottom-0 left-2 | bottom-0 right-2
+```
+
+**Para (correto - triangulo invertido):**
+```
+    ●   ●      <- top-0 left-4 | top-0 right-4
+      ●        <- bottom-0 left-1/2
+```
+
+**Codigo corrigido para os circulos:**
+
+```tsx
+{/* Container dos circulos - triangulo invertido */}
+<motion.div
+  className="relative w-44 h-36 mb-8"
+  initial={{ scale: 0.8, opacity: 0 }}
+  animate={{ scale: 1, opacity: 1 }}
+  transition={{ duration: 0.5, ease: "easeOut" }}
+>
+  {/* Circulo superior ESQUERDO */}
+  <motion.div
+    className="absolute top-0 left-0 w-20 h-20 bg-primary/70 rounded-full flex items-center justify-center"
+    initial={{ scale: 0 }}
+    animate={{ scale: 1 }}
+    transition={{ delay: 0.1, duration: 0.4, ease: "backOut" }}
+  >
+    <span className="text-3xl">{content.emojis[0]}</span>
+  </motion.div>
+
+  {/* Circulo superior DIREITO */}
+  <motion.div
+    className="absolute top-0 right-0 w-20 h-20 bg-primary/70 rounded-full flex items-center justify-center"
+    initial={{ scale: 0 }}
+    animate={{ scale: 1 }}
+    transition={{ delay: 0.2, duration: 0.4, ease: "backOut" }}
+  >
+    <span className="text-3xl">{content.emojis[1]}</span>
+  </motion.div>
+
+  {/* Circulo inferior CENTRALIZADO */}
+  <motion.div
+    className="absolute bottom-0 left-1/2 -translate-x-1/2 w-20 h-20 bg-primary/70 rounded-full flex items-center justify-center"
+    initial={{ scale: 0 }}
+    animate={{ scale: 1 }}
+    transition={{ delay: 0.3, duration: 0.4, ease: "backOut" }}
+  >
+    <span className="text-3xl">{content.emojis[2]}</span>
+  </motion.div>
+</motion.div>
+```
+
+---
+
+### 3. Ajustes de Estilo
+
+- Remover `shadow-lg` dos circulos (wireframe mostra flat, sem sombra forte)
+- Ajustar container de `w-48 h-40` para `w-44 h-36` para os circulos ficarem mais proximos
+- Manter `bg-primary/70` para cor roxa consistente
+
+---
+
+### Diagrama Visual da Correcao
+
+```
+ANTES (errado):           DEPOIS (correto):
+
+      🤯                      😵‍💫  👊
+                     -->         
+    👊    😵                    😵
+```
+
+---
+
+### Arquivo a Modificar
+
+| Arquivo | Acao |
+|---------|------|
+| `src/components/onboarding/screens/phase1/Screen10ClusterFeedback.tsx` | MODIFICAR - Inverter triangulo + emojis por variacao |
+
+---
+
+### Pergunta Importante
+
+Quais sao os emojis corretos para cada variacao? O codigo atual usa `["🤯", "👊", "😵"]` para todas. Voce mencionou `["😵‍💫", "👊", "😵"]` no exemplo - esses sao os emojis corretos? Ou cada variacao (hurt/path/machine) tem emojis diferentes?
+
+Se todos usam os mesmos emojis, posso manter como constante. Se cada variacao tem emojis unicos, preciso que voce confirme quais sao.
+
