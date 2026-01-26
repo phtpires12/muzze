@@ -1,123 +1,81 @@
 
-
-## Plano: Implementar Tela 11 do Onboarding (Constancia + Sistema de Clusters)
+## Plano: Implementar Tela 12 do Onboarding (Doeu/Caminho/Maquina)
 
 ### Visao Geral
 
-Esta tela introduz o **sistema de clusters comportamentais** que sera usado na Tela 20 para personalizar o plano do usuario. A tela segue o padrao visual de single-select (como Screen5ContentGoal) e adiciona logica de direcionamento para 3 versoes diferentes da Tela 12.
+Esta tela exibe uma das 3 variantes baseadas no `screen12_variant` definido na Tela 11 (Constancia). Cada variante tem um tom diferente para conectar com o usuario baseado em seu nivel de consistencia:
+
+| Variante | Cluster | Titulo | Tom |
+|----------|---------|--------|-----|
+| `hurt` | 1 | "Uii! Doeu um pouco ver isso?" | Acolhedor, sem pressao |
+| `path` | 2 | "Que otimo!! Voce ja ta no caminho" | Encorajador |
+| `machine` | 3 | "Voce e uma maquina!" | Celebrativo, parceria |
 
 ---
 
-### 1. Atualizar OnboardingData com Campos de Cluster
+### 1. Criar Componente Screen10ClusterFeedback
 
-**Arquivo:** `src/types/onboarding.ts`
-
-Adicionar novos campos para suportar o sistema de clusters:
-
-```typescript
-export interface OnboardingData {
-  // ... campos existentes ...
-  
-  // Sistema de Clusters (novo)
-  posting_frequency?: string;           // ID da frequencia selecionada
-  consistency_cluster?: 1 | 2 | 3;      // Cluster derivado (1=Sem, 2=Em Construcao, 3=Alta)
-  screen12_variant?: 'hurt' | 'path' | 'machine';  // Variante da Tela 12
-}
-```
-
-**Adicionar constante com opcoes:**
-
-```typescript
-export const POSTING_FREQUENCY_OPTIONS = [
-  {
-    id: "super_consistent",
-    label: "Sou super constante (pelo menos 3x na semana)",
-    cluster: 3 as const,
-    screen12Variant: "machine" as const,
-  },
-  {
-    id: "almost_consistent", 
-    label: "Quase constante (1x na semana)",
-    cluster: 2 as const,
-    screen12Variant: "path" as const,
-  },
-  {
-    id: "no_consistency",
-    label: "Nao tenho constancia (1x a 2x por mes)",
-    cluster: 1 as const,
-    screen12Variant: "hurt" as const,
-  },
-  {
-    id: "when_possible",
-    label: "Posto quando da",
-    cluster: 1 as const,
-    screen12Variant: "hurt" as const,
-  },
-] as const;
-```
-
----
-
-### 2. Criar Componente Screen9Constancia
-
-**Arquivo:** `src/components/onboarding/screens/phase1/Screen9Constancia.tsx`
+**Arquivo:** `src/components/onboarding/screens/phase1/Screen10ClusterFeedback.tsx`
 
 **Props:**
 ```typescript
-interface Screen9ConstanciaProps {
-  value: string;
-  onChange: (value: string, cluster: 1 | 2 | 3, variant: string) => void;
+interface Screen10ClusterFeedbackProps {
+  variant: 'hurt' | 'path' | 'machine';
   onContinue: () => void;
   onBack: () => void;
-  progress: number;
-  username: string;
 }
 ```
 
-**Layout Visual (seguindo Screen5ContentGoal):**
+**Layout Visual (baseado no wireframe):**
 
 ```text
 +-----------------------------------------+
-|  <-  [============================]     |  <- Header: back + progress bar
+|  <-                                     |  <- Back button
 +-----------------------------------------+
 |                                         |
-|  Entendi, [First Name]                  |  <- Subtitle muted
-|  e de la pra ca...                      |
 |                                         |
-|  Quantos posts por semana               |  <- Titulo bold
-|  voce tem feito?                        |
+|              [Emoji Cluster]            |  <- 3 emojis em circulos
+|                  🤯                     |     roxos organizados
+|               👊    😵                  |     em triangulo
 |                                         |
-|  +-----------------------------------+  |
-|  |  Sou super constante              |  |  <- Opcao (cluster 3)
-|  |  (pelo menos 3x na semana)        |  |
-|  +-----------------------------------+  |
 |                                         |
-|  +-----------------------------------+  |
-|  |  Quase constante                  |  |  <- Opcao (cluster 2)
-|  |  (1x na semana)                   |  |
-|  +-----------------------------------+  |
+|                                         |
+|   [Titulo em bold]                      |  <- Muda por variante
+|                                         |
+|   [Texto de apoio revelado]             |  <- Aparece com tap/delay
+|                                         |
 |                                         |
 |  +-----------------------------------+  |
-|  |  Nao tenho constancia             |  |  <- Opcao (cluster 1)
-|  |  (1x a 2x por mes)                |  |
-|  +-----------------------------------+  |
-|                                         |
-|  +-----------------------------------+  |
-|  |  Posto quando da                  |  |  <- Opcao (cluster 1)
-|  +-----------------------------------+  |
-|                                         |
-|  +-----------------------------------+  |
-|  |           Continuar               |  |  <- Aparece apos selecao
+|  |           Continuar               |  |  <- Botao roxo solido
 |  +-----------------------------------+  |
 +-----------------------------------------+
 ```
 
-**Comportamento:**
-1. Single-select (apenas uma opcao pode estar selecionada)
-2. Ao selecionar, aplica gradiente + texto branco
-3. onChange passa: `(id, cluster, screen12Variant)`
-4. Botao "Continuar" aparece apos selecao
-5. Armazena `posting_frequency`, `consistency_cluster` e `screen12_variant`
+---
+
+### 2. Conteudo por Variante
+
+**Variante "hurt" (Cluster 1 - Sem Constancia):**
+```
+Titulo: "Uii! Doeu um pouco ver isso?"
+Texto: "Fica tranquilo, nos sabemos que voce esta dando o seu melhor!
+
+E estamos aqui pra ajudar criadores como voce, a nunca mais parar de criar."
+```
+
+**Variante "path" (Cluster 2 - Em Construcao):**
+```
+Titulo: "Que otimo!! Voce ja ta no caminho"
+Texto: "Vamos te ajudar a aumentar isso pra acelerar ainda mais seus resultados!"
+```
+
+**Variante "machine" (Cluster 3 - Alta Constancia):**
+```
+Titulo: "Voce e uma maquina!"
+Texto: "Ja da ate pra ensinar a galera a criar mais em...
+
+Conta com a gente pra produzir conteudo pra esse publico. 🤝"
+```
 
 ---
 
@@ -125,12 +83,12 @@ interface Screen9ConstanciaProps {
 
 **Arquivo:** `src/types/onboarding.ts`
 
-Incrementar Phase 0 para 9 telas:
+Incrementar Phase 0 para 10 telas:
 
 ```typescript
-// De: [8, 5, 5, 5, 2, 6]
-// Para: [9, 5, 5, 5, 2, 6]
-export const SCREENS_PER_PHASE = [9, 5, 5, 5, 2, 6];
+// De: [9, 5, 5, 5, 2, 6]
+// Para: [10, 5, 5, 5, 2, 6]
+export const SCREENS_PER_PHASE = [10, 5, 5, 5, 2, 6];
 ```
 
 ---
@@ -141,41 +99,23 @@ export const SCREENS_PER_PHASE = [9, 5, 5, 5, 2, 6];
 
 **Adicionar import:**
 ```typescript
-import { Screen9Constancia } from "@/components/onboarding/screens/phase1/Screen9Constancia";
+import { Screen10ClusterFeedback } from "@/components/onboarding/screens/phase1/Screen10ClusterFeedback";
 ```
 
-**Adicionar handler especial para onChange:**
-```typescript
-const handleConstanciaChange = (
-  value: string, 
-  cluster: 1 | 2 | 3, 
-  variant: 'hurt' | 'path' | 'machine'
-) => {
-  updateData({ 
-    posting_frequency: value,
-    consistency_cluster: cluster,
-    screen12_variant: variant,
-  });
-};
-```
+**Adicionar renderizacao para Phase 0, Screen 9:**
 
-**Adicionar renderizacao para Phase 0, Screen 8:**
-
-Apos o bloco de Screen 7 (MonthsTrying):
+Apos o bloco de Screen 8 (Constancia):
 
 ```typescript
-if (state.phase === 0 && state.screen === 8) {
+if (state.phase === 0 && state.screen === 9) {
   return (
     <>
       {/* Developer Badge */}
       ...
-      <Screen9Constancia
-        value={state.data.posting_frequency || ""}
-        onChange={handleConstanciaChange}
+      <Screen10ClusterFeedback
+        variant={state.data.screen12_variant || "hurt"}
         onContinue={handleContinue}
         onBack={handleBack}
-        progress={getProgress()}
-        username={state.data.username || ""}
       />
     </>
   );
@@ -186,72 +126,38 @@ if (state.phase === 0 && state.screen === 8) {
 
 ```typescript
 if (phase === 0) {
-  // ... existing screens 0-7 ...
-  if (screen === 8) return !!data.posting_frequency; // Constancia
+  // ... existing screens 0-8 ...
+  if (screen === 9) return false; // ClusterFeedback - botao interno
 }
 ```
 
 **Atualizar renderScreen():**
 
 ```typescript
-if (screen === 8) return null; // Constancia renderiza fora do OnboardingLayout
+if (screen === 9) return null; // ClusterFeedback renderiza fora do OnboardingLayout
 ```
 
 ---
 
-### 5. Sistema de Clusters - Logica de Personalizacao
-
-O sistema de clusters funcionara assim:
-
-| Selecao | Cluster | Variante Tela 12 | Objetivo do Cluster |
-|---------|---------|------------------|---------------------|
-| Super constante (3x+) | 3 | "machine" (Voce e uma maquina!) | Otimizar processo, evitar desgaste |
-| Quase constante (1x) | 2 | "path" (Caminho) | Organizar processo, aumentar frequencia |
-| Sem constancia (1-2x/mes) | 1 | "hurt" (Doeu ver isso?) | Reduzir pressao, comecar pequeno |
-| Posto quando da | 1 | "hurt" (Doeu ver isso?) | Reduzir pressao, comecar pequeno |
-
-**Na Tela 20, combinar com:**
-- `content_goal` (Desejo principal)
-- `sticking_points[0]` (Trava principal)
-- `daily_goal_minutes` (Tempo diario disponivel)
-- `creation_time` (Horario escolhido)
-
----
-
-### 6. Diagrama do Fluxo Atualizado (Phase 0)
+### 5. Diagrama do Fluxo Atualizado (Phase 0)
 
 ```text
 Screen 0: Welcome
     |
     v
-Screen 1: HowWeHelpSection
+Screen 1-7: ... (outras telas)
     |
     v
-Screen 2: StartQuestionnaire
+Screen 8: Constancia (Tela 11)
+    |
+    +---> cluster 1 --------> Screen 9: "Doeu ver isso?" (hurt)
+    |
+    +---> cluster 2 --------> Screen 9: "Caminho" (path)
+    |
+    +---> cluster 3 --------> Screen 9: "Maquina!" (machine)
     |
     v
-Screen 3: Username
-    |
-    v
-Screen 4: ContentGoal
-    |
-    v
-Screen 5: StickingPoints
-    |
-    v
-Screen 6: Diferencial
-    |
-    v
-Screen 7: MonthsTrying
-    |
-    v
-Screen 8: Constancia (Tela 11)  <-- NOVA TELA
-    |
-    +---> cluster 1 (hurt) ------> Tela 12: "Doeu ver isso?"
-    |
-    +---> cluster 2 (path) ------> Tela 12: "Caminho"
-    |
-    +---> cluster 3 (machine) ---> Tela 12: "Voce e uma maquina!"
+Phase 1, Screen 0: ...
 ```
 
 ---
@@ -260,143 +166,144 @@ Screen 8: Constancia (Tela 11)  <-- NOVA TELA
 
 | Arquivo | Acao |
 |---------|------|
-| `src/components/onboarding/screens/phase1/Screen9Constancia.tsx` | **CRIAR** |
-| `src/types/onboarding.ts` | MODIFICAR - Adicionar campos de cluster + POSTING_FREQUENCY_OPTIONS + atualizar SCREENS_PER_PHASE |
-| `src/pages/NewOnboarding.tsx` | MODIFICAR - Adicionar import, handler, renderizacao e validacao |
+| `src/components/onboarding/screens/phase1/Screen10ClusterFeedback.tsx` | **CRIAR** |
+| `src/types/onboarding.ts` | MODIFICAR - Atualizar SCREENS_PER_PHASE para [10, 5, 5, 5, 2, 6] |
+| `src/pages/NewOnboarding.tsx` | MODIFICAR - Adicionar import, renderizacao e validacao |
 
 ---
 
 ### Secao Tecnica
 
-**Estrutura do componente (baseada em Screen5ContentGoal):**
+**Estrutura do componente:**
 
 ```typescript
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { GradientProgressBar } from "@/components/onboarding/shared/GradientProgressBar";
-import { POSTING_FREQUENCY_OPTIONS } from "@/types/onboarding";
-import { motion, AnimatePresence } from "framer-motion";
+import { Screen12Variant } from "@/types/onboarding";
 
-interface Screen9ConstanciaProps {
-  value: string;
-  onChange: (value: string, cluster: 1 | 2 | 3, variant: 'hurt' | 'path' | 'machine') => void;
+interface Screen10ClusterFeedbackProps {
+  variant: Screen12Variant;
   onContinue: () => void;
   onBack: () => void;
-  progress: number;
-  username: string;
 }
 
-export const Screen9Constancia = ({
-  value,
-  onChange,
+const VARIANT_CONTENT = {
+  hurt: {
+    title: "Uii! Doeu um pouco ver isso?",
+    lines: [
+      "Fica tranquilo, nos sabemos que voce esta dando o seu melhor!",
+      "E estamos aqui pra ajudar criadores como voce, a nunca mais parar de criar.",
+    ],
+    emojis: ["🤯", "👊", "😵"],
+  },
+  path: {
+    title: "Que otimo!! Voce ja ta no caminho",
+    lines: [
+      "Vamos te ajudar a aumentar isso pra acelerar ainda mais seus resultados!",
+    ],
+    emojis: ["🤯", "👊", "😵"],
+  },
+  machine: {
+    title: "Voce e uma maquina!",
+    lines: [
+      "Ja da ate pra ensinar a galera a criar mais em...",
+      "Conta com a gente pra produzir conteudo pra esse publico. 🤝",
+    ],
+    emojis: ["🤯", "👊", "😵"],
+  },
+};
+
+export const Screen10ClusterFeedback = ({
+  variant,
   onContinue,
   onBack,
-  progress,
-  username,
-}: Screen9ConstanciaProps) => {
-  const firstName = username?.split(" ")[0] || "";
+}: Screen10ClusterFeedbackProps) => {
+  const [revealed, setRevealed] = useState(false);
+  const content = VARIANT_CONTENT[variant];
 
-  const handleOptionClick = (option: typeof POSTING_FREQUENCY_OPTIONS[number]) => {
-    onChange(option.id, option.cluster, option.screen12Variant);
+  const handleTap = () => {
+    if (!revealed) {
+      setRevealed(true);
+    }
   };
 
   return (
-    <div className="min-h-[100dvh] bg-violet-50 dark:bg-background flex flex-col">
-      {/* Header */}
-      <div className="px-4 pt-12 sm:pt-16 flex items-center gap-3">
-        <button onClick={onBack} ...>
+    <div 
+      className="min-h-[100dvh] bg-violet-50 flex flex-col"
+      onClick={handleTap}
+    >
+      {/* Header with back button */}
+      <div className="px-4 pt-12 sm:pt-16">
+        <button onClick={(e) => { e.stopPropagation(); onBack(); }} ...>
           <ChevronLeft className="w-6 h-6" />
         </button>
-        <GradientProgressBar progress={progress} />
       </div>
 
-      {/* Content */}
-      <div className="flex-1 flex flex-col px-6 pt-6">
-        <p className="text-muted-foreground text-sm mb-1">
-          {firstName ? `Entendi, ${firstName}` : "Entendi"}
-          <br />e de la pra ca...
-        </p>
-        <h1 className="text-xl font-bold mb-6">
-          Quantos posts por semana voce tem feito?
+      {/* Emoji Cluster - 3 emojis in purple circles */}
+      <div className="flex-1 flex flex-col items-center justify-center px-6">
+        <motion.div className="relative w-48 h-48 mb-8">
+          {/* Emoji circles arranged in triangle pattern */}
+          {/* Top center emoji */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 ...">
+            <span className="text-3xl">🤯</span>
+          </div>
+          {/* Bottom left emoji */}
+          <div className="absolute bottom-0 left-0 ...">
+            <span className="text-3xl">👊</span>
+          </div>
+          {/* Bottom right emoji */}
+          <div className="absolute bottom-0 right-0 ...">
+            <span className="text-3xl">😵</span>
+          </div>
+        </motion.div>
+      </div>
+
+      {/* Text content at bottom */}
+      <div className="px-6 pb-8 space-y-4">
+        <h1 className="text-2xl font-bold text-foreground">
+          {content.title}
         </h1>
-
-        {/* Options */}
-        <div className="space-y-3">
-          {POSTING_FREQUENCY_OPTIONS.map((option) => {
-            const isSelected = value === option.id;
-            return (
-              <motion.button
-                key={option.id}
-                onClick={() => handleOptionClick(option)}
-                className={`w-full text-left rounded-2xl px-4 py-4 transition-all ${
-                  isSelected
-                    ? "bg-gradient-to-r from-pink-400 via-orange-400 to-yellow-300"
-                    : "bg-violet-200/60 hover:bg-violet-200/80"
-                }`}
-                whileTap={{ scale: 0.98 }}
-              >
-                <p className={`font-medium ${isSelected ? "text-white" : "text-foreground"}`}>
-                  {option.label}
-                </p>
-              </motion.button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Continue Button */}
-      <AnimatePresence>
-        {value && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            className="px-6 pb-8 pt-4"
-          >
-            <Button
-              onClick={onContinue}
-              variant="gradient-pill"
-              size="lg"
-              className="w-full"
+        
+        <AnimatePresence>
+          {revealed && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              className="space-y-2"
             >
-              Continuar
-            </Button>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              {content.lines.map((line, i) => (
+                <p key={i} className="text-muted-foreground">{line}</p>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <Button
+          onClick={(e) => { e.stopPropagation(); onContinue(); }}
+          className="w-full bg-primary hover:bg-primary/90 rounded-full"
+          size="lg"
+        >
+          Continuar
+        </Button>
+      </div>
     </div>
   );
 };
 ```
 
-**Tipagem do cluster derivado:**
+**Elementos visuais dos emojis (baseado no wireframe):**
+- 3 circulos roxos (`bg-violet-400`) organizados em triangulo
+- Emojis: 🤯 (exploding head), 👊 (fist bump), 😵 (dizzy face)
+- Animacao de entrada com scale + fade
 
-```typescript
-// Em onboarding.ts
-export type ConsistencyCluster = 1 | 2 | 3;
-export type Screen12Variant = 'hurt' | 'path' | 'machine';
-```
+**Interacao de revelacao:**
+- Titulo aparece imediatamente
+- Texto adicional aparece apos tap em qualquer lugar da tela
+- Botao "Continuar" sempre visivel (roxo solido, nao gradiente)
 
-**Uso futuro na Tela 20:**
-
-```typescript
-// Exemplo de como os dados serao combinados na Tela 20
-const generatePersonalizedPlan = (data: OnboardingData) => {
-  const cluster = data.consistency_cluster;
-  const goal = data.content_goal;
-  const mainBlock = data.sticking_points?.[0];
-  const dailyMinutes = data.daily_goal_minutes;
-  const creationTime = data.creation_time;
-
-  // Logica de personalizacao baseada no cluster
-  switch (cluster) {
-    case 1: // Sem Constancia
-      return { tone: "gentle", commitment: "small", focus: "habit_building" };
-    case 2: // Em Construcao
-      return { tone: "encouraging", commitment: "moderate", focus: "organization" };
-    case 3: // Alta Constancia
-      return { tone: "optimizing", commitment: "high", focus: "efficiency" };
-  }
-};
-```
-
+**Estilo do botao (baseado no wireframe):**
+- Background roxo solido (`bg-primary`)
+- Nao usa gradiente nesta tela (diferente das outras)
+- Rounded full (pill style)
