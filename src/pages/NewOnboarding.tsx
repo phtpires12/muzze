@@ -17,6 +17,7 @@ import { Screen6StickingPoints } from "@/components/onboarding/screens/phase1/Sc
 import { Screen7Diferencial } from "@/components/onboarding/screens/phase1/Screen7Diferencial";
 import { Screen8MonthsTrying } from "@/components/onboarding/screens/phase1/Screen8MonthsTrying";
 import { Screen9Constancia } from "@/components/onboarding/screens/phase1/Screen9Constancia";
+import { Screen10ClusterFeedback } from "@/components/onboarding/screens/phase1/Screen10ClusterFeedback";
 import { ConsistencyCluster, Screen12Variant } from "@/types/onboarding";
 import { Screen3Platform } from "@/components/onboarding/screens/phase1/Screen3Platform";
 import { Screen4StartQuestionnaire } from "@/components/onboarding/screens/phase1/Screen4StartQuestionnaire";
@@ -157,6 +158,7 @@ const NewOnboarding = () => {
       if (screen === 6) return false; // Diferencial - internal buttons handle navigation
       if (screen === 7) return (data.months_trying ?? 0) > 0; // MonthsTrying
       if (screen === 8) return !!data.posting_frequency; // Constancia
+      if (screen === 9) return false; // ClusterFeedback - internal button handles
     }
 
     // Phase 1 (Pain Diagnosis)
@@ -237,6 +239,8 @@ const NewOnboarding = () => {
       if (screen === 7) return null;
       // Screen 8 (Constancia) renderiza fora do OnboardingLayout - tem layout próprio
       if (screen === 8) return null;
+      // Screen 9 (ClusterFeedback) renderiza fora do OnboardingLayout - tem layout próprio
+      if (screen === 9) return null;
     }
 
     // Phase 1: Pain Diagnosis
@@ -645,6 +649,28 @@ const NewOnboarding = () => {
           onBack={handleBack}
           progress={getProgress()}
           username={state.data.username || ""}
+        />
+      </>
+    );
+  }
+
+  // ClusterFeedback renderiza fora do OnboardingLayout - tela de transição personalizada
+  if (state.phase === 0 && state.screen === 9) {
+    return (
+      <>
+        {/* Developer Badge */}
+        {(isDeveloper || isAdmin) && (
+          <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-full">
+            <Shield className="w-4 h-4 text-primary" />
+            <span className="text-xs font-medium text-primary">
+              {isAdmin ? "Admin" : "Developer"}
+            </span>
+          </div>
+        )}
+        <Screen10ClusterFeedback
+          variant={state.data.screen12_variant || "hurt"}
+          onContinue={handleContinue}
+          onBack={handleBack}
         />
       </>
     );
