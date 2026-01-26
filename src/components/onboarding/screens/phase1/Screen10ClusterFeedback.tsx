@@ -17,12 +17,14 @@ const VARIANT_CONTENT = {
       "Fica tranquilo, nós sabemos que você está dando o seu melhor!",
       "E estamos aqui pra ajudar criadores como você, a nunca mais parar de criar.",
     ],
+    emojis: ["😵‍💫", "👊", "😵"],
   },
   path: {
     title: "Que ótimo!! Você já tá no caminho",
     lines: [
       "Vamos te ajudar a aumentar isso pra acelerar ainda mais seus resultados!",
     ],
+    emojis: ["😵‍💫", "👊", "😵"],
   },
   machine: {
     title: "Você é uma máquina!",
@@ -30,10 +32,9 @@ const VARIANT_CONTENT = {
       "Já dá até pra ensinar a galera a criar mais em…",
       "Conta com a gente pra produzir conteúdo pra esse público. 🤝",
     ],
+    emojis: ["😵‍💫", "👊", "😵"],
   },
 };
-
-const EMOJIS = ["🤯", "👊", "😵"];
 
 export const Screen10ClusterFeedback = ({
   variant,
@@ -67,42 +68,42 @@ export const Screen10ClusterFeedback = ({
         </button>
       </div>
 
-      {/* Emoji Cluster - 3 emojis in purple circles arranged in triangle */}
+      {/* Emoji Cluster - 3 emojis in purple circles - inverted triangle */}
       <div className="flex-1 flex flex-col items-center justify-center px-6">
         <motion.div
-          className="relative w-48 h-40 mb-8"
+          className="relative w-44 h-36 mb-8"
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.5, ease: "easeOut" }}
         >
-          {/* Top center emoji */}
+          {/* Top left emoji */}
           <motion.div
-            className="absolute top-0 left-1/2 -translate-x-1/2 w-20 h-20 bg-primary/70 rounded-full flex items-center justify-center shadow-lg"
-            initial={{ scale: 0, y: 20 }}
-            animate={{ scale: 1, y: 0 }}
+            className="absolute top-0 left-0 w-20 h-20 bg-primary/70 rounded-full flex items-center justify-center"
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
             transition={{ delay: 0.1, duration: 0.4, ease: "backOut" }}
           >
-            <span className="text-3xl">{EMOJIS[0]}</span>
+            <span className="text-3xl">{content.emojis[0]}</span>
           </motion.div>
 
-          {/* Bottom left emoji */}
+          {/* Top right emoji */}
           <motion.div
-            className="absolute bottom-0 left-2 w-20 h-20 bg-primary/70 rounded-full flex items-center justify-center shadow-lg"
-            initial={{ scale: 0, x: 20 }}
-            animate={{ scale: 1, x: 0 }}
+            className="absolute top-0 right-0 w-20 h-20 bg-primary/70 rounded-full flex items-center justify-center"
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
             transition={{ delay: 0.2, duration: 0.4, ease: "backOut" }}
           >
-            <span className="text-3xl">{EMOJIS[1]}</span>
+            <span className="text-3xl">{content.emojis[1]}</span>
           </motion.div>
 
-          {/* Bottom right emoji */}
+          {/* Bottom center emoji */}
           <motion.div
-            className="absolute bottom-0 right-2 w-20 h-20 bg-primary/70 rounded-full flex items-center justify-center shadow-lg"
-            initial={{ scale: 0, x: -20 }}
-            animate={{ scale: 1, x: 0 }}
+            className="absolute bottom-0 left-1/2 -translate-x-1/2 w-20 h-20 bg-primary/70 rounded-full flex items-center justify-center"
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
             transition={{ delay: 0.3, duration: 0.4, ease: "backOut" }}
           >
-            <span className="text-3xl">{EMOJIS[2]}</span>
+            <span className="text-3xl">{content.emojis[2]}</span>
           </motion.div>
         </motion.div>
       </div>
