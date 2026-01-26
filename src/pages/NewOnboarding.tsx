@@ -15,6 +15,7 @@ import { Screen2Username } from "@/components/onboarding/screens/phase1/Screen2U
 import { Screen5ContentGoal } from "@/components/onboarding/screens/phase1/Screen5ContentGoal";
 import { Screen6StickingPoints } from "@/components/onboarding/screens/phase1/Screen6StickingPoints";
 import { Screen7Diferencial } from "@/components/onboarding/screens/phase1/Screen7Diferencial";
+import { Screen8MonthsTrying } from "@/components/onboarding/screens/phase1/Screen8MonthsTrying";
 import { Screen3Platform } from "@/components/onboarding/screens/phase1/Screen3Platform";
 import { Screen4StartQuestionnaire } from "@/components/onboarding/screens/phase1/Screen4StartQuestionnaire";
 import { Screen4StickingPoints } from "@/components/onboarding/screens/phase2/Screen4StickingPoints";
@@ -152,6 +153,7 @@ const NewOnboarding = () => {
       if (screen === 4) return !!data.content_goal; // ContentGoal
       if (screen === 5) return (data.sticking_points?.length ?? 0) > 0; // StickingPoints
       if (screen === 6) return false; // Diferencial - internal buttons handle navigation
+      if (screen === 7) return (data.months_trying ?? 0) > 0; // MonthsTrying
     }
 
     // Phase 1 (Pain Diagnosis)
@@ -228,6 +230,8 @@ const NewOnboarding = () => {
       if (screen === 5) return null;
       // Screen 6 (Diferencial) renderiza fora do OnboardingLayout - tem layout próprio
       if (screen === 6) return null;
+      // Screen 7 (MonthsTrying) renderiza fora do OnboardingLayout - tem layout próprio
+      if (screen === 7) return null;
     }
 
     // Phase 1: Pain Diagnosis
@@ -572,6 +576,30 @@ const NewOnboarding = () => {
         <Screen7Diferencial
           onContinue={handleContinue}
           onSkip={handleContinue}
+          onBack={handleBack}
+          progress={getProgress()}
+        />
+      </>
+    );
+  }
+
+  // MonthsTrying renderiza fora do OnboardingLayout - tem layout próprio com input numérico
+  if (state.phase === 0 && state.screen === 7) {
+    return (
+      <>
+        {/* Developer Badge */}
+        {(isDeveloper || isAdmin) && (
+          <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-full">
+            <Shield className="w-4 h-4 text-primary" />
+            <span className="text-xs font-medium text-primary">
+              {isAdmin ? "Admin" : "Developer"}
+            </span>
+          </div>
+        )}
+        <Screen8MonthsTrying
+          value={state.data.months_trying || 0}
+          onChange={(value) => updateData({ months_trying: value })}
+          onContinue={handleContinue}
           onBack={handleBack}
           progress={getProgress()}
         />

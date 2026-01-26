@@ -56,7 +56,7 @@ export const ONBOARDING_PHASES = {
   SIGNUP_PAYWALL: 5,
 } as const;
 
-export const SCREENS_PER_PHASE = [7, 5, 5, 5, 2, 6];
+export const SCREENS_PER_PHASE = [8, 5, 5, 5, 2, 6];
 
 export const CONTENT_GOALS = [
   {
