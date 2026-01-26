@@ -16,6 +16,8 @@ import { Screen5ContentGoal } from "@/components/onboarding/screens/phase1/Scree
 import { Screen6StickingPoints } from "@/components/onboarding/screens/phase1/Screen6StickingPoints";
 import { Screen7Diferencial } from "@/components/onboarding/screens/phase1/Screen7Diferencial";
 import { Screen8MonthsTrying } from "@/components/onboarding/screens/phase1/Screen8MonthsTrying";
+import { Screen9Constancia } from "@/components/onboarding/screens/phase1/Screen9Constancia";
+import { ConsistencyCluster, Screen12Variant } from "@/types/onboarding";
 import { Screen3Platform } from "@/components/onboarding/screens/phase1/Screen3Platform";
 import { Screen4StartQuestionnaire } from "@/components/onboarding/screens/phase1/Screen4StartQuestionnaire";
 import { Screen4StickingPoints } from "@/components/onboarding/screens/phase2/Screen4StickingPoints";
@@ -154,6 +156,7 @@ const NewOnboarding = () => {
       if (screen === 5) return (data.sticking_points?.length ?? 0) > 0; // StickingPoints
       if (screen === 6) return false; // Diferencial - internal buttons handle navigation
       if (screen === 7) return (data.months_trying ?? 0) > 0; // MonthsTrying
+      if (screen === 8) return !!data.posting_frequency; // Constancia
     }
 
     // Phase 1 (Pain Diagnosis)
@@ -232,6 +235,8 @@ const NewOnboarding = () => {
       if (screen === 6) return null;
       // Screen 7 (MonthsTrying) renderiza fora do OnboardingLayout - tem layout próprio
       if (screen === 7) return null;
+      // Screen 8 (Constancia) renderiza fora do OnboardingLayout - tem layout próprio
+      if (screen === 8) return null;
     }
 
     // Phase 1: Pain Diagnosis
@@ -602,6 +607,44 @@ const NewOnboarding = () => {
           onContinue={handleContinue}
           onBack={handleBack}
           progress={getProgress()}
+        />
+      </>
+    );
+  }
+
+  // Handler for Constancia screen - updates multiple cluster-related fields
+  const handleConstanciaChange = (
+    value: string,
+    cluster: ConsistencyCluster,
+    variant: Screen12Variant
+  ) => {
+    updateData({
+      posting_frequency: value,
+      consistency_cluster: cluster,
+      screen12_variant: variant,
+    });
+  };
+
+  // Constancia renderiza fora do OnboardingLayout - tem layout próprio com single-select
+  if (state.phase === 0 && state.screen === 8) {
+    return (
+      <>
+        {/* Developer Badge */}
+        {(isDeveloper || isAdmin) && (
+          <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-full">
+            <Shield className="w-4 h-4 text-primary" />
+            <span className="text-xs font-medium text-primary">
+              {isAdmin ? "Admin" : "Developer"}
+            </span>
+          </div>
+        )}
+        <Screen9Constancia
+          value={state.data.posting_frequency || ""}
+          onChange={handleConstanciaChange}
+          onContinue={handleContinue}
+          onBack={handleBack}
+          progress={getProgress()}
+          username={state.data.username || ""}
         />
       </>
     );
