@@ -1,200 +1,258 @@
 
 
-## Plano: Scroll Seletivo + Ajuste para iPhone 16 com Dynamic Island
+## Plano: Substituir Emojis CSS por Ilustracoes na Tela 12
 
 ### Objetivo
-Reestruturar a Tela 13 (BehavioralScience) para que:
-1. A imagem do cérebro fique **sempre fixa no topo** (não scrollável)
-2. Apenas os **cards de métodos científicos** sejam scrolláveis
-3. O botão "Continuar" fique **fixo no rodapé**
-4. As proporções se adaptem perfeitamente ao **iPhone 16 Pro com Dynamic Island**
+
+Substituir a estrutura de 3 circulos CSS com emojis de texto por 3 imagens ilustradas (uma para cada variante). As imagens ja contem o layout completo do cluster de emojis em circulos roxos, entao funcionarao como assets estaticos.
 
 ---
 
-### Estrutura Visual Proposta
+### 1. Copiar Imagens para Assets
 
-```text
-+------------------------------------------+
-|  <- (back button)                        |  FIXO (não scrolla)
-+------------------------------------------+
-|                                          |
-|   Aqui você Cria Conteúdo com base       |  FIXO
-|   na Ciência Comportamental.             |
-|                                          |
-|           [BRAIN IMAGE]                  |  FIXO
-|                                          |
-+------------------------------------------+
-|  +------------------------------------+  |
-|  | Método Pomodoro                    |  |  SCROLLÁVEL
-|  | Ciclos de 5-25 minutos...          |  |  (apenas esta área)
-|  +------------------------------------+  |
-|  +------------------------------------+  |
-|  | Hábitos Atômicos                   |  |
-|  | Micro-compromissos diários...      |  |
-|  +------------------------------------+  |
-|  +------------------------------------+  |
-|  | O Ato Criativo                     |  |
-|  | Criatividade surge quando há...    |  |
-|  +------------------------------------+  |
-+------------------------------------------+
-|  +------------------------------------+  |
-|  |           Continuar                |  |  FIXO (não scrolla)
-|  +------------------------------------+  |
-+------------------------------------------+
-   ^-- pb-safe para iPhone home indicator
+**Arquivos a criar:**
+
+| Origem | Destino |
+|--------|---------|
+| `user-uploads://Doeu_-_sem_padding.png` | `src/assets/onboarding/cluster-hurt.png` |
+| `user-uploads://Caminho_-_Sem_Padding.png` | `src/assets/onboarding/cluster-path.png` |
+| `user-uploads://Máquina_-_Sem_Padding.png` | `src/assets/onboarding/cluster-machine.png` |
+
+---
+
+### 2. Modificar Screen10ClusterFeedback.tsx
+
+**Mudancas principais:**
+
+1. **Adicionar imports das 3 imagens:**
+```typescript
+import clusterHurt from "@/assets/onboarding/cluster-hurt.png";
+import clusterPath from "@/assets/onboarding/cluster-path.png";
+import clusterMachine from "@/assets/onboarding/cluster-machine.png";
 ```
 
----
+2. **Criar mapeamento de imagens por variante:**
+```typescript
+const VARIANT_IMAGES = {
+  hurt: clusterHurt,
+  path: clusterPath,
+  machine: clusterMachine,
+};
+```
 
-### Modificações em Screen11BehavioralScience.tsx
+3. **Substituir a estrutura CSS por uma unica imagem:**
 
-**1. Container principal**
-- Usar `h-[100dvh]` (altura dinâmica da viewport)
-- Adicionar `overflow-hidden` para prevenir scroll no container pai
-- Estrutura em flex column com 3 seções distintas
-
-**2. Seção superior (FIXA)**
-- Botão voltar
-- Título em gradiente
-- Imagem do cérebro (light/dark)
-- Classe `shrink-0` para não comprimir
-
-**3. Seção central (SCROLLÁVEL)**
-- Usar `ScrollArea` do Radix UI (já disponível no projeto)
-- Ou simplesmente `overflow-y-auto` com `flex-1 min-h-0`
-- Contém apenas os 3 cards de métodos
-
-**4. Seção inferior (FIXA)**
-- Botão "Continuar"
-- Padding bottom com `pb-safe` para iPhone home indicator
-- Classe `shrink-0` para não comprimir
-
----
-
-### Código Proposto
-
+Remover:
 ```tsx
-import { ScrollArea } from "@/components/ui/scroll-area";
+{/* Emoji Cluster - 3 emojis in purple circles - inverted triangle */}
+<div className="flex-1 flex flex-col items-center justify-center px-6">
+  <motion.div className="relative w-44 h-36 mb-8" ...>
+    {/* Top left emoji */}
+    <motion.div className="absolute top-0 left-0 w-20 h-20 bg-primary/70 rounded-full...">
+      <span className="text-3xl">{content.emojis[0]}</span>
+    </motion.div>
+    {/* ... mais 2 emojis ... */}
+  </motion.div>
+</div>
+```
 
-export const Screen11BehavioralScience = ({
-  onContinue,
-  onBack,
-}: Screen11BehavioralScienceProps) => {
-  return (
-    <div className="h-[100dvh] bg-secondary/50 dark:bg-background flex flex-col overflow-hidden">
-      
-      {/* ===== SEÇÃO FIXA: Header + Título + Imagem ===== */}
-      <div className="shrink-0 px-6 pt-12 sm:pt-16">
-        {/* Back button */}
-        <button onClick={onBack} className="...">
-          <ChevronLeft className="w-6 h-6" />
-        </button>
-        
-        {/* Title */}
-        <motion.h1 className="text-2xl font-bold italic text-center bg-gradient-to-r from-purple-600 to-violet-500 bg-clip-text text-transparent mt-2 mb-4">
-          Aqui você Cria Conteúdo com base na Ciência Comportamental.
-        </motion.h1>
-        
-        {/* Brain illustration */}
-        <motion.div className="flex justify-center mb-4">
-          <img src={brainScienceLight} className="w-full max-w-[200px] dark:hidden" />
-          <img src={brainScienceDark} className="w-full max-w-[200px] hidden dark:block" />
-        </motion.div>
-      </div>
-      
-      {/* ===== SEÇÃO SCROLLÁVEL: Cards ===== */}
-      <ScrollArea className="flex-1 min-h-0 px-6">
-        <div className="space-y-3 pb-4">
-          {SCIENCE_METHODS.map((method, index) => (
-            <Card key={index} className="p-4">
-              <h3 className="font-semibold">{method.title}</h3>
-              <p className="text-sm text-muted-foreground">{method.description}</p>
-              {method.credibility && (
-                <p className="text-xs text-muted-foreground/70 italic">{method.credibility}</p>
-              )}
-            </Card>
-          ))}
-        </div>
-      </ScrollArea>
-      
-      {/* ===== SEÇÃO FIXA: Botão Continuar ===== */}
-      <div className="shrink-0 px-6 pt-4 pb-6 pb-safe">
-        <Button onClick={onContinue} variant="gradient-pill" size="lg" className="w-full">
-          Continuar
-        </Button>
-      </div>
-      
-    </div>
-  );
+Adicionar:
+```tsx
+{/* Emoji Cluster - Image illustration */}
+<div className="flex-1 flex flex-col items-center justify-center px-6">
+  <motion.div
+    initial={{ scale: 0.8, opacity: 0 }}
+    animate={{ scale: 1, opacity: 1 }}
+    transition={{ duration: 0.5, ease: "easeOut" }}
+    className="flex justify-center mb-8"
+  >
+    <img
+      src={VARIANT_IMAGES[variant]}
+      alt="Ilustração de emojis"
+      className="w-full max-w-[240px]"
+      draggable={false}
+    />
+  </motion.div>
+</div>
+```
+
+4. **Remover array de emojis do VARIANT_CONTENT** (nao mais necessario):
+```typescript
+const VARIANT_CONTENT = {
+  hurt: {
+    title: "Uii! Doeu um pouco ver isso?",
+    lines: [...],
+    // emojis: [...] <- REMOVER
+  },
+  // ...
 };
 ```
 
 ---
 
-### Ajustes Específicos para iPhone 16 Pro + Dynamic Island
+### 3. Layout Visual Atualizado
 
-| Aspecto | Solução |
-|---------|---------|
-| **Dynamic Island** | `pt-12 sm:pt-16` no header (já implementado) |
-| **Home Indicator** | `pb-safe` no container do botão |
-| **Altura da viewport** | `h-[100dvh]` (viewport dinâmica, exclui barras do browser) |
-| **Prevenção de scroll global** | `overflow-hidden` no container pai |
-| **Imagem menor** | Reduzir de `max-w-xs` para `max-w-[200px]` para dar mais espaço aos cards |
-
----
-
-### Diagrama de Comportamento
+Baseado no wireframe enviado:
 
 ```text
-iPhone 16 Pro (393 x 852 pontos)
-
-+-----------------+
-| Dynamic Island  |  <- pt-12/pt-16 compensa isso
-+-----------------+
-|   [Back] [Title]|
-|   [Brain Image] |  <- FIXO (não scrolla)
-+-----------------+
-|                 |
-| [Card 1]    ↑   |
-| [Card 2]  scroll|  <- APENAS esta área scrolla
-| [Card 3]    ↓   |
-|                 |
-+-----------------+
-| [Continuar]     |  <- FIXO
-+-----------------+
-| Home Indicator  |  <- pb-safe compensa isso
-+-----------------+
++------------------------------------------+
+|  <-                                      |  <- Back button
++------------------------------------------+
+|                                          |
+|                                          |
+|          [CLUSTER IMAGE]                 |  <- Imagem da ilustracao
+|          (centralizada)                  |     (varia por variant)
+|                                          |
+|                                          |
++------------------------------------------+
+|                                          |
+|  Uii! Doeu um pouco ver isso?            |  <- Titulo (bold)
+|                                          |
+|  Fica tranquilo, nos sabemos que         |  <- Texto revelado
+|  voce esta dando o seu melhor!           |     (tap to reveal)
+|  E estamos aqui pra ajudar...            |
+|                                          |
+|  +------------------------------------+  |
+|  |           Continuar                |  |  <- Botao roxo
+|  +------------------------------------+  |
++------------------------------------------+
 ```
 
 ---
 
-### Arquivos a Modificar
+### 4. Ajustes de Tamanho
 
-| Arquivo | Ação |
+| Aspecto | Valor |
+|---------|-------|
+| Tamanho da imagem | `max-w-[240px]` (ajustavel conforme teste) |
+| Margin bottom | `mb-8` (espaco entre imagem e texto) |
+
+---
+
+### 5. Arquivos a Criar/Modificar
+
+| Arquivo | Acao |
 |---------|------|
-| `src/components/onboarding/screens/phase1/Screen11BehavioralScience.tsx` | **MODIFICAR** - Reestruturar layout com scroll seletivo |
+| `src/assets/onboarding/cluster-hurt.png` | **CRIAR** (copiar imagem) |
+| `src/assets/onboarding/cluster-path.png` | **CRIAR** (copiar imagem) |
+| `src/assets/onboarding/cluster-machine.png` | **CRIAR** (copiar imagem) |
+| `src/components/onboarding/screens/phase1/Screen10ClusterFeedback.tsx` | **MODIFICAR** |
 
 ---
 
-### Seção Técnica
+### Secao Tecnica
 
-**Por que usar ScrollArea do Radix?**
-- Componente já disponível no projeto (`@/components/ui/scroll-area`)
-- Scrollbar customizável e consistente entre browsers
-- Melhor suporte a touch em dispositivos móveis
-- Padrão visual consistente com o resto do app
+**Codigo completo atualizado:**
 
-**Alternativa sem ScrollArea:**
 ```tsx
-<div className="flex-1 min-h-0 overflow-y-auto px-6">
-  {/* cards aqui */}
-</div>
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ChevronLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Screen12Variant } from "@/types/onboarding";
+
+// Import cluster images
+import clusterHurt from "@/assets/onboarding/cluster-hurt.png";
+import clusterPath from "@/assets/onboarding/cluster-path.png";
+import clusterMachine from "@/assets/onboarding/cluster-machine.png";
+
+interface Screen10ClusterFeedbackProps {
+  variant: Screen12Variant;
+  onContinue: () => void;
+  onBack: () => void;
+}
+
+const VARIANT_IMAGES = {
+  hurt: clusterHurt,
+  path: clusterPath,
+  machine: clusterMachine,
+};
+
+const VARIANT_CONTENT = {
+  hurt: {
+    title: "Uii! Doeu um pouco ver isso?",
+    lines: [
+      "Fica tranquilo, nos sabemos que voce esta dando o seu melhor!",
+      "E estamos aqui pra ajudar criadores como voce, a nunca mais parar de criar.",
+    ],
+  },
+  path: {
+    title: "Que otimo!! Voce ja ta no caminho",
+    lines: [
+      "Vamos te ajudar a aumentar isso pra acelerar ainda mais seus resultados!",
+    ],
+  },
+  machine: {
+    title: "Voce e uma maquina!",
+    lines: [
+      "Ja da ate pra ensinar a galera a criar mais em...",
+      "Conta com a gente pra produzir conteudo pra esse publico. 🤝",
+    ],
+  },
+};
+
+export const Screen10ClusterFeedback = ({
+  variant,
+  onContinue,
+  onBack,
+}: Screen10ClusterFeedbackProps) => {
+  const [revealed, setRevealed] = useState(false);
+  const content = VARIANT_CONTENT[variant];
+
+  const handleTap = () => {
+    if (!revealed) {
+      setRevealed(true);
+    }
+  };
+
+  return (
+    <div
+      className="min-h-[100dvh] bg-secondary/50 dark:bg-background flex flex-col overflow-hidden"
+      onClick={handleTap}
+    >
+      {/* Header with back button */}
+      <div className="px-4 pt-12 sm:pt-16">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onBack();
+          }}
+          className="w-10 h-10 flex items-center justify-center rounded-full bg-white/80 dark:bg-secondary/80 shadow-sm"
+        >
+          <ChevronLeft className="w-6 h-6 text-foreground" />
+        </button>
+      </div>
+
+      {/* Emoji Cluster - Image illustration */}
+      <div className="flex-1 flex flex-col items-center justify-center px-6">
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+          className="flex justify-center"
+        >
+          <img
+            src={VARIANT_IMAGES[variant]}
+            alt="Ilustracao de emojis"
+            className="w-full max-w-[240px]"
+            draggable={false}
+          />
+        </motion.div>
+      </div>
+
+      {/* Text content at bottom */}
+      <div className="px-6 pb-8 space-y-4">
+        {/* ... resto do codigo permanece igual ... */}
+      </div>
+    </div>
+  );
+};
 ```
 
-Ambas as abordagens funcionam. O ScrollArea oferece uma scrollbar mais elegante.
+**Vantagens desta abordagem:**
 
-**Redução do tamanho da imagem:**
-- De `max-w-xs` (320px) para `max-w-[200px]`
-- Isso deixa mais espaço vertical para os cards
-- A imagem ainda fica bem visível e legível
+1. **Consistencia visual** - As ilustracoes ficam identicas em todos os dispositivos
+2. **Simplicidade** - Menos codigo CSS para manter
+3. **Flexibilidade** - Facil trocar ilustracoes no futuro
+4. **Padrao do projeto** - Mesmo approach usado no cerebro (Tela 13) e no iPhone mockup
 
