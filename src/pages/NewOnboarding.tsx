@@ -154,31 +154,16 @@ const NewOnboarding = () => {
       if (screen === 9) return false; // ClusterFeedback - internal button handles
     }
 
-    // Phase 1 (Pain Diagnosis - 8 screens)
+    // Phase 1 (Pain Diagnosis - 3 screens)
     if (phase === 1) {
       if (screen === 0) return true; // BehavioralScience - transition screen
       if (screen === 1) return !!data.daily_available_time; // DailyTime
       if (screen === 2) return true; // CreationTime - always can continue (has default)
-      if (screen === 3) return (data.sticking_points?.length ?? 0) > 0;
-      if (screen === 4) return (data.months_trying ?? 0) > 0;
-      if (screen === 5) return (data.current_post_count ?? 0) >= 0;
-      if (screen === 6) return (data.previous_attempts?.length ?? 0) > 0;
-      if (screen === 7) {
-        return (
-          data.inconsistency_impact?.financial > 0 &&
-          data.inconsistency_impact?.emotional > 0 &&
-          data.inconsistency_impact?.professional > 0
-        );
-      }
     }
 
-    // Phase 2 (Confrontation + Opportunity)
+    // Phase 2 (Confrontation + Opportunity - 1 screen: DreamOutcome)
     if (phase === 2) {
-      if (screen === 0) return true;
-      if (screen === 1) return true;
-      if (screen === 2) return true;
-      if (screen === 3) return true;
-      if (screen === 4) {
+      if (screen === 0) {
         return (
           data.dream_outcome_importance?.posts_30_days > 0 &&
           data.dream_outcome_importance?.clarity > 0 &&
@@ -187,13 +172,12 @@ const NewOnboarding = () => {
       }
     }
 
-    // Phase 3 (Personalized Solution)
+    // Phase 3 (Personalized Solution - 4 screens)
     if (phase === 3) {
-      if (screen === 0) return true;
-      if (screen === 1) return true;
-      if (screen === 2) return true;
-      if (screen === 3) return true;
-      if (screen === 4) return !!data.commitment_level;
+      if (screen === 0) return true; // MinimalEffort
+      if (screen === 1) return true; // PersonalizedFeatures
+      if (screen === 2) return true; // UniquePositioning
+      if (screen === 3) return !!data.commitment_level; // CommitmentTest
     }
 
     // Phase 4 (Commitment + Configuration)
@@ -239,7 +223,7 @@ const NewOnboarding = () => {
       if (screen === 9) return null;
     }
 
-    // Phase 1: Pain Diagnosis (8 screens)
+    // Phase 1: Pain Diagnosis (3 screens)
     if (phase === 1) {
       // Screen 0: BehavioralScience renderiza fora do OnboardingLayout
       if (screen === 0) return null;
@@ -247,20 +231,11 @@ const NewOnboarding = () => {
       if (screen === 1) return null;
       // Screen 2: CreationTime renderiza fora do OnboardingLayout
       if (screen === 2) return null;
-      // Screens 3-7: Placeholders - telas antigas foram removidas
-      // Serão substituídas por novas telas progressivamente
-      if (screen >= 3 && screen <= 7) {
-        return null;
-      }
     }
 
-    // Phase 2: Confrontation + Opportunity
+    // Phase 2: Confrontation + Opportunity (1 screen: DreamOutcome)
     if (phase === 2) {
-      // Screens 0-3: Placeholders - telas antigas foram removidas
-      if (screen >= 0 && screen <= 3) {
-        return null;
-      }
-      if (screen === 4) {
+      if (screen === 0) {
         return (
           <Screen13DreamOutcome
             value={
@@ -276,20 +251,18 @@ const NewOnboarding = () => {
       }
     }
 
-    // Phase 3: Personalized Solution
+    // Phase 3: Personalized Solution (4 screens)
     if (phase === 3) {
-      // Screen 0: Placeholder - tela antiga foi removida
-      if (screen === 0) return null;
-      if (screen === 1) return <Screen15MinimalEffort />;
-      if (screen === 2) {
+      if (screen === 0) return <Screen15MinimalEffort />;
+      if (screen === 1) {
         return (
           <Screen16PersonalizedFeatures
             stickingPoints={state.data.sticking_points || []}
           />
         );
       }
-      if (screen === 3) return <Screen17UniquePositioning />;
-      if (screen === 4) {
+      if (screen === 2) return <Screen17UniquePositioning />;
+      if (screen === 3) {
         return (
           <Screen18CommitmentTest
             value={state.data.commitment_level || ""}
@@ -367,10 +340,9 @@ const NewOnboarding = () => {
   const showBack = !(state.phase === 0 && state.screen === 0);
   // Username agora tem botão interno - removido do showContinueButton
   const showContinueButton =
-    (state.phase === 1 && state.screen >= 2 && state.screen <= 6) ||
-    (state.phase === 2 && state.screen >= 0 && state.screen <= 4) ||
-    (state.phase === 3 && state.screen >= 0 && state.screen <= 4) ||
-    (state.phase === 4 && state.screen === 1) ||
+    (state.phase === 2 && state.screen === 0) || // DreamOutcome
+    (state.phase === 3 && state.screen >= 0 && state.screen <= 3) || // Phase 3 all screens
+    (state.phase === 4 && state.screen === 1) || // CreationTime
     (state.phase === 5 && state.screen === 1); // Snapshot - botão Continuar
 
   // Tela de Welcome renderiza fora do OnboardingLayout para controle total do layout
