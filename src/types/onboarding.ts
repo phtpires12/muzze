@@ -7,6 +7,7 @@ export interface OnboardingData {
   username?: string;
   content_goal?: string;
   preferred_platform?: string;
+  daily_available_time?: string;
   
   // Phase 2: Pain Diagnosis
   sticking_points?: string[];
@@ -65,7 +66,7 @@ export const ONBOARDING_PHASES = {
   SIGNUP_PAYWALL: 5,
 } as const;
 
-export const SCREENS_PER_PHASE = [10, 6, 5, 5, 2, 6];
+export const SCREENS_PER_PHASE = [10, 7, 5, 5, 2, 6];
 
 // Posting frequency options with cluster mapping
 // Cluster 1: No consistency - focus on reducing pressure, starting small
@@ -155,4 +156,11 @@ export const RESONATING_FEATURES = [
   "Gamificação e streaks",
   "Calendário editorial",
   "Shot list organizado",
+] as const;
+
+export const DAILY_TIME_OPTIONS = [
+  { id: "15_30_min", label: "15-30 minutos", emoji: "⏱️" },
+  { id: "30_60_min", label: "30-60 minutos", emoji: "⏱️" },
+  { id: "more_than_1h", label: "Mais de 1 hora", emoji: "⏱️" },
+  { id: "full_time", label: "Sou Creator Full-Time", emoji: "⏱️" },
 ] as const;
