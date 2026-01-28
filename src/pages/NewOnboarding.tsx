@@ -24,17 +24,7 @@ import { Screen13CreationTime } from "@/components/onboarding/screens/phase1/Scr
 import { ConsistencyCluster, Screen12Variant } from "@/types/onboarding";
 import { Screen3Platform } from "@/components/onboarding/screens/phase1/Screen3Platform";
 import { Screen4StartQuestionnaire } from "@/components/onboarding/screens/phase1/Screen4StartQuestionnaire";
-import { Screen13DreamOutcome } from "@/components/onboarding/screens/phase3/Screen13DreamOutcome";
-import { Screen15MinimalEffort } from "@/components/onboarding/screens/phase4/Screen15MinimalEffort";
-import { Screen16PersonalizedFeatures } from "@/components/onboarding/screens/phase4/Screen16PersonalizedFeatures";
-import { Screen17UniquePositioning } from "@/components/onboarding/screens/phase4/Screen17UniquePositioning";
-import { Screen18CommitmentTest } from "@/components/onboarding/screens/phase4/Screen18CommitmentTest";
-import { Screen19DailyGoal } from "@/components/onboarding/screens/phase5/Screen19DailyGoal";
-import { Screen20CreationTime } from "@/components/onboarding/screens/phase5/Screen20CreationTime";
 import { Screen21Signup } from "@/components/onboarding/screens/phase6/Screen21Signup";
-import { Screen22Snapshot } from "@/components/onboarding/screens/phase6/Screen22Snapshot";
-import { Screen23Notifications } from "@/components/onboarding/screens/phase6/Screen23Notifications";
-import { Screen24Review } from "@/components/onboarding/screens/phase6/Screen24Review";
 import { Screen25Paywall } from "@/components/onboarding/screens/phase6/Screen25Paywall";
 import { Screen26Install } from "@/components/onboarding/screens/phase6/Screen26Install";
 import { DesktopOnboarding } from "@/components/onboarding/DesktopOnboarding";
@@ -64,9 +54,9 @@ const NewOnboarding = () => {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) {
-        // Only redirect to auth if past the signup screen (phase 5, screen 0)
-        // Screen 0 of phase 5 IS the signup screen, so allow access
-        if (state.phase >= 5 && state.screen > 0) {
+        // Only redirect to auth if past the signup screen (phase 2, screen 0)
+        // Screen 0 of phase 2 IS the signup screen, so allow access
+        if (state.phase >= 2 && state.screen > 0) {
           navigate("/auth");
         }
       } else {
@@ -75,14 +65,6 @@ const NewOnboarding = () => {
     };
     checkAuth();
   }, [navigate, trackEvent, state.phase, state.screen, isMobile]);
-
-  // Auto-skip Screen24Review (Review/Rating) on non-mobile devices
-  // App Store review only makes sense on mobile
-  useEffect(() => {
-    if (state.phase === 5 && state.screen === 3 && !isMobile) {
-      nextScreen();
-    }
-  }, [state.phase, state.screen, isMobile, nextScreen]);
 
   // Desktop users get the minimal onboarding flow
   // Note: isMobile is undefined during initial render, so we wait for it
@@ -100,16 +82,6 @@ const NewOnboarding = () => {
 
   const handleLogin = () => {
     navigate("/auth");
-  };
-
-  const handleAcceptDefaultGoal = () => {
-    updateData({ daily_goal_minutes: 25 });
-    nextScreen();
-  };
-
-  const handleNotificationsAccept = async () => {
-    await requestPermission();
-    nextScreen();
   };
 
   const handleSignupSuccess = () => {
@@ -140,7 +112,7 @@ const NewOnboarding = () => {
 
     const { phase, screen, data } = state;
 
-    // Phase 0 (Hook + Dream Outcome)
+    // Phase 0 (Hook + Dream Outcome - 10 screens)
     if (phase === 0) {
       if (screen === 0) return true; // Welcome
       if (screen === 1) return true; // HowWeHelp
@@ -154,46 +126,18 @@ const NewOnboarding = () => {
       if (screen === 9) return false; // ClusterFeedback - internal button handles
     }
 
-    // Phase 1 (Pain Diagnosis - 3 screens)
+    // Phase 1 (Behavioral Science + Configuration - 3 screens)
     if (phase === 1) {
       if (screen === 0) return true; // BehavioralScience - transition screen
       if (screen === 1) return !!data.daily_available_time; // DailyTime
       if (screen === 2) return true; // CreationTime - always can continue (has default)
     }
 
-    // Phase 2 (Confrontation + Opportunity - 1 screen: DreamOutcome)
+    // Phase 2 (Signup + Paywall + Install - 3 screens)
     if (phase === 2) {
-      if (screen === 0) {
-        return (
-          data.dream_outcome_importance?.posts_30_days > 0 &&
-          data.dream_outcome_importance?.clarity > 0 &&
-          data.dream_outcome_importance?.consistent_identity > 0
-        );
-      }
-    }
-
-    // Phase 3 (Personalized Solution - 4 screens)
-    if (phase === 3) {
-      if (screen === 0) return true; // MinimalEffort
-      if (screen === 1) return true; // PersonalizedFeatures
-      if (screen === 2) return true; // UniquePositioning
-      if (screen === 3) return !!data.commitment_level; // CommitmentTest
-    }
-
-    // Phase 4 (Commitment + Configuration)
-    if (phase === 4) {
-      if (screen === 0) return (data.daily_goal_minutes ?? 0) > 0;
-      if (screen === 1) return !!data.creation_time;
-    }
-
-    // Phase 5 (Signup + Snapshot + Paywall + Install)
-    if (phase === 5) {
       if (screen === 0) return false; // Signup handled separately
-      if (screen === 1) return true; // Snapshot
-      if (screen === 2) return false; // Notifications (button handles)
-      if (screen === 3) return false; // Review (button handles)
-      if (screen === 4) return false; // Paywall (button handles)
-      if (screen === 5) return false; // Install (button handles completion)
+      if (screen === 1) return false; // Paywall (button handles)
+      if (screen === 2) return false; // Install (button handles completion)
     }
 
     return true;
@@ -202,125 +146,30 @@ const NewOnboarding = () => {
   const renderScreen = () => {
     const { phase, screen } = state;
 
-    // Phase 0: Hook + Dream Outcome
+    // Phase 0: Hook + Dream Outcome (10 screens)
     if (phase === 0) {
       if (screen === 0) return <Screen0Welcome onContinue={handleContinue} onLogin={handleLogin} />;
       if (screen === 1) return <HowWeHelpSection onComplete={handleContinue} onBack={handleBack} />;
       if (screen === 2) return <Screen4StartQuestionnaire onContinue={handleContinue} onBack={handleBack} />;
-      // Screen 3 (Username) renderiza fora do OnboardingLayout - tem layout próprio
-      if (screen === 3) return null;
-      // Screen 4 (ContentGoal) renderiza fora do OnboardingLayout - tem layout próprio
-      if (screen === 4) return null;
-      // Screen 5 (StickingPoints) renderiza fora do OnboardingLayout - tem layout próprio
-      if (screen === 5) return null;
-      // Screen 6 (Diferencial) renderiza fora do OnboardingLayout - tem layout próprio
-      if (screen === 6) return null;
-      // Screen 7 (MonthsTrying) renderiza fora do OnboardingLayout - tem layout próprio
-      if (screen === 7) return null;
-      // Screen 8 (Constancia) renderiza fora do OnboardingLayout - tem layout próprio
-      if (screen === 8) return null;
-      // Screen 9 (ClusterFeedback) renderiza fora do OnboardingLayout - tem layout próprio
-      if (screen === 9) return null;
+      // Screens 3-9 renderizam fora do OnboardingLayout - têm layout próprio
+      if (screen >= 3 && screen <= 9) return null;
     }
 
-    // Phase 1: Pain Diagnosis (3 screens)
+    // Phase 1: Behavioral Science + Configuration (3 screens)
     if (phase === 1) {
-      // Screen 0: BehavioralScience renderiza fora do OnboardingLayout
-      if (screen === 0) return null;
-      // Screen 1: DailyTime renderiza fora do OnboardingLayout
-      if (screen === 1) return null;
-      // Screen 2: CreationTime renderiza fora do OnboardingLayout
-      if (screen === 2) return null;
+      // All screens render outside OnboardingLayout
+      if (screen >= 0 && screen <= 2) return null;
     }
 
-    // Phase 2: Confrontation + Opportunity (1 screen: DreamOutcome)
+    // Phase 2: Signup + Paywall + Install (3 screens)
     if (phase === 2) {
-      if (screen === 0) {
-        return (
-          <Screen13DreamOutcome
-            value={
-              state.data.dream_outcome_importance || {
-                posts_30_days: 0,
-                clarity: 0,
-                consistent_identity: 0,
-              }
-            }
-            onChange={(value) => updateData({ dream_outcome_importance: value })}
-          />
-        );
-      }
-    }
-
-    // Phase 3: Personalized Solution (4 screens)
-    if (phase === 3) {
-      if (screen === 0) return <Screen15MinimalEffort />;
-      if (screen === 1) {
-        return (
-          <Screen16PersonalizedFeatures
-            stickingPoints={state.data.sticking_points || []}
-          />
-        );
-      }
-      if (screen === 2) return <Screen17UniquePositioning />;
-      if (screen === 3) {
-        return (
-          <Screen18CommitmentTest
-            value={state.data.commitment_level || ""}
-            onChange={(value) => updateData({ commitment_level: value })}
-          />
-        );
-      }
-    }
-
-    // Phase 4: Commitment + Configuration
-    if (phase === 4) {
-      if (screen === 0) {
-        return (
-          <Screen19DailyGoal
-            value={state.data.daily_goal_minutes || 25}
-            onChange={(value) => updateData({ daily_goal_minutes: value })}
-            onAcceptDefault={handleAcceptDefaultGoal}
-          />
-        );
-      }
-      if (screen === 1) {
-        return (
-          <Screen20CreationTime
-            value={state.data.creation_time || "09:00"}
-            onChange={(value) => updateData({ creation_time: value })}
-          />
-        );
-      }
-    }
-
-    // Phase 5: Signup + Snapshot + Paywall
-    if (phase === 5) {
-      const lostPosts = calculateLostPosts(
-        state.data.months_trying || 0,
-        state.data.current_post_count || 0
-      );
-
       if (screen === 0) {
         return <Screen21Signup onSuccess={handleSignupSuccess} />;
       }
       if (screen === 1) {
-        return <Screen22Snapshot data={state.data} lostPosts={lostPosts} />;
-      }
-      if (screen === 2) {
-        return (
-          <Screen23Notifications
-            onAccept={handleNotificationsAccept}
-            onSkip={nextScreen}
-          />
-        );
-      }
-      if (screen === 3) {
-        return <Screen24Review onSkip={nextScreen} />;
-      }
-      if (screen === 4) {
         return <Screen25Paywall onContinue={handlePaywallComplete} onBack={handleBack} />;
       }
-      if (screen === 5) {
+      if (screen === 2) {
         return <Screen26Install onContinue={handleComplete} onBack={handleBack} />;
       }
     }
@@ -338,12 +187,8 @@ const NewOnboarding = () => {
   const showProgress = state.phase > 0 || state.screen > 2;
   // Mostrar botão de voltar em TODAS as telas exceto a primeira (Welcome)
   const showBack = !(state.phase === 0 && state.screen === 0);
-  // Username agora tem botão interno - removido do showContinueButton
-  const showContinueButton =
-    (state.phase === 2 && state.screen === 0) || // DreamOutcome
-    (state.phase === 3 && state.screen >= 0 && state.screen <= 3) || // Phase 3 all screens
-    (state.phase === 4 && state.screen === 1) || // CreationTime
-    (state.phase === 5 && state.screen === 1); // Snapshot - botão Continuar
+  // No continue button needed - all screens handle their own navigation
+  const showContinueButton = false;
 
   // Tela de Welcome renderiza fora do OnboardingLayout para controle total do layout
   if (state.phase === 0 && state.screen === 0) {
