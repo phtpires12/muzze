@@ -18,6 +18,7 @@ import { Screen7Diferencial } from "@/components/onboarding/screens/phase1/Scree
 import { Screen8MonthsTrying } from "@/components/onboarding/screens/phase1/Screen8MonthsTrying";
 import { Screen9Constancia } from "@/components/onboarding/screens/phase1/Screen9Constancia";
 import { Screen10ClusterFeedback } from "@/components/onboarding/screens/phase1/Screen10ClusterFeedback";
+import { Screen11BehavioralScience } from "@/components/onboarding/screens/phase1/Screen11BehavioralScience";
 import { ConsistencyCluster, Screen12Variant } from "@/types/onboarding";
 import { Screen3Platform } from "@/components/onboarding/screens/phase1/Screen3Platform";
 import { Screen4StartQuestionnaire } from "@/components/onboarding/screens/phase1/Screen4StartQuestionnaire";
@@ -161,13 +162,14 @@ const NewOnboarding = () => {
       if (screen === 9) return false; // ClusterFeedback - internal button handles
     }
 
-    // Phase 1 (Pain Diagnosis)
+    // Phase 1 (Pain Diagnosis - 6 screens)
     if (phase === 1) {
-      if (screen === 0) return (data.sticking_points?.length ?? 0) > 0;
-      if (screen === 1) return (data.months_trying ?? 0) > 0;
-      if (screen === 2) return (data.current_post_count ?? 0) >= 0;
-      if (screen === 3) return (data.previous_attempts?.length ?? 0) > 0;
-      if (screen === 4) {
+      if (screen === 0) return true; // BehavioralScience - transition screen
+      if (screen === 1) return (data.sticking_points?.length ?? 0) > 0;
+      if (screen === 2) return (data.months_trying ?? 0) > 0;
+      if (screen === 3) return (data.current_post_count ?? 0) >= 0;
+      if (screen === 4) return (data.previous_attempts?.length ?? 0) > 0;
+      if (screen === 5) {
         return (
           data.inconsistency_impact?.financial > 0 &&
           data.inconsistency_impact?.emotional > 0 &&
@@ -243,9 +245,11 @@ const NewOnboarding = () => {
       if (screen === 9) return null;
     }
 
-    // Phase 1: Pain Diagnosis
+    // Phase 1: Pain Diagnosis (6 screens)
     if (phase === 1) {
-      if (screen === 0) {
+      // Screen 0: BehavioralScience renderiza fora do OnboardingLayout
+      if (screen === 0) return null;
+      if (screen === 1) {
         return (
           <Screen4StickingPoints
             value={state.data.sticking_points || []}
@@ -253,7 +257,7 @@ const NewOnboarding = () => {
           />
         );
       }
-      if (screen === 1) {
+      if (screen === 2) {
         return (
           <Screen5MonthsTrying
             value={state.data.months_trying || 0}
@@ -261,7 +265,7 @@ const NewOnboarding = () => {
           />
         );
       }
-      if (screen === 2) {
+      if (screen === 3) {
         return (
           <Screen6CurrentPosts
             value={state.data.current_post_count || 0}
@@ -269,7 +273,7 @@ const NewOnboarding = () => {
           />
         );
       }
-      if (screen === 3) {
+      if (screen === 4) {
         return (
           <Screen7PreviousAttempts
             value={state.data.previous_attempts || []}
@@ -277,7 +281,7 @@ const NewOnboarding = () => {
           />
         );
       }
-      if (screen === 4) {
+      if (screen === 5) {
         return (
           <Screen8ImpactScale
             value={
@@ -435,7 +439,7 @@ const NewOnboarding = () => {
   const showBack = !(state.phase === 0 && state.screen === 0);
   // Username agora tem botão interno - removido do showContinueButton
   const showContinueButton =
-    (state.phase === 1 && state.screen >= 0 && state.screen <= 4) ||
+    (state.phase === 1 && state.screen >= 1 && state.screen <= 5) ||
     (state.phase === 2 && state.screen >= 0 && state.screen <= 4) ||
     (state.phase === 3 && state.screen >= 0 && state.screen <= 4) ||
     (state.phase === 4 && state.screen === 1) ||
@@ -669,6 +673,27 @@ const NewOnboarding = () => {
         )}
         <Screen10ClusterFeedback
           variant={state.data.screen12_variant || "hurt"}
+          onContinue={handleContinue}
+          onBack={handleBack}
+        />
+      </>
+    );
+  }
+
+  // BehavioralScience renderiza fora do OnboardingLayout - tela educacional com imagem hero
+  if (state.phase === 1 && state.screen === 0) {
+    return (
+      <>
+        {/* Developer Badge */}
+        {(isDeveloper || isAdmin) && (
+          <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-full">
+            <Shield className="w-4 h-4 text-primary" />
+            <span className="text-xs font-medium text-primary">
+              {isAdmin ? "Admin" : "Developer"}
+            </span>
+          </div>
+        )}
+        <Screen11BehavioralScience
           onContinue={handleContinue}
           onBack={handleBack}
         />
