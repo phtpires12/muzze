@@ -8,6 +8,7 @@ export interface OnboardingData {
   content_goal?: string;
   preferred_platform?: string;
   daily_available_time?: string;
+  preferred_creation_time?: string; // Format "HH:MM"
   
   // Phase 2: Pain Diagnosis
   sticking_points?: string[];
@@ -66,7 +67,7 @@ export const ONBOARDING_PHASES = {
   SIGNUP_PAYWALL: 5,
 } as const;
 
-export const SCREENS_PER_PHASE = [10, 7, 5, 5, 2, 6];
+export const SCREENS_PER_PHASE = [10, 8, 5, 5, 2, 6];
 
 // Posting frequency options with cluster mapping
 // Cluster 1: No consistency - focus on reducing pressure, starting small
