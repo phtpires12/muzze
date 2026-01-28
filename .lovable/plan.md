@@ -1,10 +1,10 @@
 
 
-## Plano: Implementar Tela 14 - Tempo Diario de Criacao
+## Plano: Implementar Tela 15 - Horario para Criar
 
 ### Objetivo
 
-Criar uma nova tela de questionario (single-select) perguntando ao usuario quanto tempo por dia ele pode dedicar a criacao de conteudo. Esta tela segue o padrao visual ja estabelecido nas telas 9 (Constancia) e outras telas de questionario.
+Criar uma nova tela de input de horario (time picker) na Phase 1, onde o usuario seleciona seu melhor horario para criacao de conteudo. Esta tela usa um campo de input type="time" ao inves de opcoes pre-definidas.
 
 ---
 
@@ -13,24 +13,26 @@ Criar uma nova tela de questionario (single-select) perguntando ao usuario quant
 | Aspecto | Valor |
 |---------|-------|
 | **Fase** | 1 (Pain Diagnosis) |
-| **Screen Index** | 1 (apos BehavioralScience que e Screen 0) |
-| **Componente** | `Screen12DailyTime.tsx` |
-| **Campo de dados** | `daily_available_time: string` |
+| **Screen Index** | 2 (apos DailyTime que e Screen 1) |
+| **Componente** | `Screen13CreationTime.tsx` |
+| **Campo de dados** | `preferred_creation_time: string` |
 
-**Observacao:** A Tela 14 sera inserida na Phase 1, deslocando as telas existentes. O SCREENS_PER_PHASE de Phase 1 passara de `[6]` para `[7]`.
+**Observacao:** A Tela 15 sera inserida na Phase 1, deslocando as telas existentes (StickingPoints, MonthsTrying, etc). O SCREENS_PER_PHASE de Phase 1 passara de `[7]` para `[8]`.
 
 ---
 
 ### Copy da Tela
 
 ```text
-Titulo personalizado: "[First Name] no dia a dia, por quanto tempo voce pode criar?"
+Titulo: "[First Name], qual melhor horario pra voce criar?"
 
-Opcoes (single-select com emoji):
-- ⏱️ 15-30 minutos
-- ⏱️ 30-60 minutos
-- ⏱️ Mais de 1 hora  
-- ⏱️ Sou Creator Full-Time
+Subtitulo: "Escolha o momento do dia em que voce tem mais energia criativa."
+
+Dica (card inferior): 
+"💡 Dica:
+Escolha um horario em que voce geralmente esta livre e com energia. 
+Manha cedo funciona bem para muitos criadores, mas o importante e 
+ser consistente com o horario escolhido."
 ```
 
 ---
@@ -42,27 +44,29 @@ Opcoes (single-select com emoji):
 |  <- (back)  [====== Progress Bar ======] |
 +------------------------------------------+
 |                                          |
-|  [First Name] no dia a dia,              |
-|  por quanto tempo voce pode criar?       |  <- Titulo (bold)
+|  [First Name], qual melhor horario       |
+|  pra voce criar?                         |  <- Titulo (bold)
+|                                          |
+|  Escolha o momento do dia em que voce    |  <- Subtitulo
+|  tem mais energia criativa.              |
+|                                          |
++------------------------------------------+
+|                                          |
+|          +------------------+            |
+|          |    [ 09:00 ]     |            |  <- Input time
+|          +------------------+            |
 |                                          |
 +------------------------------------------+
 |  +------------------------------------+  |
-|  | ⏱️  15-30 minutos                  |  |  <- Opcao 1
+|  | 💡 Dica:                           |  |
+|  | Escolha um horario em que voce     |  |  <- Card dica
+|  | geralmente esta livre e com        |  |
+|  | energia...                         |  |
 |  +------------------------------------+  |
-|  +------------------------------------+  |
-|  | ⏱️  30-60 minutos                  |  |  <- Opcao 2
-|  +------------------------------------+  |
-|  +------------------------------------+  |
-|  | ⏱️  Mais de 1 hora                 |  |  <- Opcao 3
-|  +------------------------------------+  |
-|  +------------------------------------+  |
-|  | ⏱️  Sou Creator Full-Time          |  |  <- Opcao 4
-|  +------------------------------------+  |
-|                                          |
 +------------------------------------------+
 |  +------------------------------------+  |
-|  |           Continuar                |  |  <- Aparece apos selecao
-|  +------------------------------------+  |
+|  |           Continuar                |  |  <- Sempre visivel
+|  +------------------------------------+  |     (horario tem default)
 +------------------------------------------+
 ```
 
@@ -72,11 +76,11 @@ Opcoes (single-select com emoji):
 
 | Arquivo | Acao |
 |---------|------|
-| `src/components/onboarding/screens/phase1/Screen12DailyTime.tsx` | **CRIAR** - Novo componente de questionario |
-| `src/types/onboarding.ts` | **MODIFICAR** - Adicionar campo `daily_available_time` e constante `DAILY_TIME_OPTIONS` |
-| `src/pages/NewOnboarding.tsx` | **MODIFICAR** - Integrar nova tela na Phase 1 |
+| `src/components/onboarding/screens/phase1/Screen13CreationTime.tsx` | **CRIAR** - Novo componente com time input |
+| `src/types/onboarding.ts` | **MODIFICAR** - Adicionar campo `preferred_creation_time` e atualizar SCREENS_PER_PHASE |
+| `src/pages/NewOnboarding.tsx` | **MODIFICAR** - Integrar nova tela na Phase 1, Screen 2 e deslocar indices |
 
-**SCREENS_PER_PHASE**: Atualizar de `[10, 6, 5, 5, 2, 6]` para `[10, 7, 5, 5, 2, 6]`
+**SCREENS_PER_PHASE**: Atualizar de `[10, 7, 5, 5, 2, 6]` para `[10, 8, 5, 5, 2, 6]`
 
 ---
 
@@ -84,29 +88,22 @@ Opcoes (single-select com emoji):
 
 ```typescript
 // Adicionar em OnboardingData (src/types/onboarding.ts)
-daily_available_time?: string;
-
-// Nova constante
-export const DAILY_TIME_OPTIONS = [
-  { id: "15_30_min", label: "15-30 minutos", emoji: "⏱️" },
-  { id: "30_60_min", label: "30-60 minutos", emoji: "⏱️" },
-  { id: "more_than_1h", label: "Mais de 1 hora", emoji: "⏱️" },
-  { id: "full_time", label: "Sou Creator Full-Time", emoji: "⏱️" },
-] as const;
+preferred_creation_time?: string; // Formato "HH:MM"
 ```
 
 ---
 
-### Componente Screen12DailyTime.tsx
+### Componente Screen13CreationTime.tsx
 
 ```tsx
 import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card } from "@/components/ui/card";
 import { GradientProgressBar } from "@/components/onboarding/shared/GradientProgressBar";
-import { DAILY_TIME_OPTIONS } from "@/types/onboarding";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 
-interface Screen12DailyTimeProps {
+interface Screen13CreationTimeProps {
   value: string;
   onChange: (value: string) => void;
   onContinue: () => void;
@@ -115,14 +112,14 @@ interface Screen12DailyTimeProps {
   username: string;
 }
 
-export const Screen12DailyTime = ({
+export const Screen13CreationTime = ({
   value,
   onChange,
   onContinue,
   onBack,
   progress,
   username,
-}: Screen12DailyTimeProps) => {
+}: Screen13CreationTimeProps) => {
   const firstName = username?.split(" ")[0] || "";
 
   return (
@@ -144,69 +141,71 @@ export const Screen12DailyTime = ({
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
+          className="space-y-2 mb-8"
         >
-          <h1 className="text-xl font-bold text-foreground mb-6 leading-tight">
-            {firstName ? `${firstName} no dia a dia,` : "No dia a dia,"}<br />
-            por quanto tempo voce pode criar?
+          <h1 className="text-xl font-bold text-foreground leading-tight">
+            {firstName ? `${firstName}, qual melhor` : "Qual melhor"}<br />
+            horario pra voce criar?
           </h1>
+          <p className="text-muted-foreground text-sm">
+            Escolha o momento do dia em que voce tem mais energia criativa.
+          </p>
         </motion.div>
 
-        {/* Options */}
-        <div className="space-y-3 flex-1">
-          {DAILY_TIME_OPTIONS.map((option, index) => {
-            const isSelected = value === option.id;
+        {/* Time Input */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="flex justify-center mb-8"
+        >
+          <Input
+            type="time"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            className="text-2xl h-16 w-40 text-center font-medium 
+              bg-white dark:bg-secondary/50 border-2 border-violet-200 
+              dark:border-violet-800 rounded-2xl focus:border-primary 
+              focus:ring-primary"
+          />
+        </motion.div>
 
-            return (
-              <motion.button
-                key={option.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-                onClick={() => onChange(option.id)}
-                className={`w-full text-left rounded-2xl px-4 py-4 transition-all duration-300 ${
-                  isSelected
-                    ? "bg-gradient-to-r from-pink-400 via-orange-400 to-yellow-300"
-                    : "bg-violet-200/60 hover:bg-violet-200/80"
-                }`}
-                whileTap={{ scale: 0.98 }}
-              >
-                <div className="flex items-center gap-3">
-                  <span className="text-xl">{option.emoji}</span>
-                  <p
-                    className={`font-medium text-base ${
-                      isSelected ? "text-white" : "text-foreground"
-                    }`}
-                  >
-                    {option.label}
-                  </p>
-                </div>
-              </motion.button>
-            );
-          })}
-        </div>
+        {/* Tip Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="flex-1"
+        >
+          <Card className="p-4 bg-violet-100/50 dark:bg-violet-900/20 border-0">
+            <div className="space-y-2 text-sm">
+              <p className="font-semibold text-foreground">💡 Dica:</p>
+              <p className="text-muted-foreground leading-relaxed">
+                Escolha um horario em que voce geralmente esta livre e com energia. 
+                Manha cedo funciona bem para muitos criadores, mas o importante e 
+                ser consistente com o horario escolhido.
+              </p>
+            </div>
+          </Card>
+        </motion.div>
       </div>
 
-      {/* Continue Button */}
-      <AnimatePresence>
-        {value && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            transition={{ duration: 0.3 }}
-            className="px-6 pb-8 pt-4"
-          >
-            <Button
-              onClick={onContinue}
-              variant="gradient-pill"
-              size="lg"
-              className="w-full"
-            >
-              Continuar
-            </Button>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Continue Button - always visible since time has default value */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        className="px-6 pb-8 pt-4"
+      >
+        <Button
+          onClick={onContinue}
+          variant="gradient-pill"
+          size="lg"
+          className="w-full"
+        >
+          Continuar
+        </Button>
+      </motion.div>
     </div>
   );
 };
@@ -218,21 +217,22 @@ export const Screen12DailyTime = ({
 
 **1. Adicionar import:**
 ```tsx
-import { Screen12DailyTime } from "@/components/onboarding/screens/phase1/Screen12DailyTime";
+import { Screen13CreationTime } from "@/components/onboarding/screens/phase1/Screen13CreationTime";
 ```
 
-**2. Adicionar handler apos BehavioralScience (Phase 1, Screen 1):**
+**2. Adicionar bloco de renderizacao apos DailyTime (Phase 1, Screen 2):**
 ```tsx
-if (state.phase === 1 && state.screen === 1) {
+// CreationTime renderiza fora do OnboardingLayout - tem layout proprio com time input
+if (state.phase === 1 && state.screen === 2) {
   return (
     <>
       {/* Developer Badge */}
       {(isDeveloper || isAdmin) && (
         <div className="fixed top-4 right-4 z-50 ...">...</div>
       )}
-      <Screen12DailyTime
-        value={state.data.daily_available_time || ""}
-        onChange={(value) => updateData({ daily_available_time: value })}
+      <Screen13CreationTime
+        value={state.data.preferred_creation_time || "09:00"}
+        onChange={(value) => updateData({ preferred_creation_time: value })}
         onContinue={handleContinue}
         onBack={handleBack}
         progress={getProgress()}
@@ -244,17 +244,28 @@ if (state.phase === 1 && state.screen === 1) {
 ```
 
 **3. Atualizar renderScreen() para Phase 1:**
-- Screen 0: BehavioralScience (ja existe, renderiza fora)
-- Screen 1: DailyTime (nova, renderiza fora)
-- Screen 2-6: Telas existentes deslocadas (renumerar indices +1)
+- Screen 0: BehavioralScience (ja existe)
+- Screen 1: DailyTime (ja existe)
+- Screen 2: CreationTime (NOVA)
+- Screen 3-7: Telas existentes deslocadas (renumerar indices +1)
 
 **4. Atualizar canContinue() para Phase 1:**
 ```tsx
 if (phase === 1) {
   if (screen === 0) return true; // BehavioralScience
   if (screen === 1) return !!data.daily_available_time; // DailyTime
-  if (screen === 2) return (data.sticking_points?.length ?? 0) > 0;
-  // ... restante deslocado +1
+  if (screen === 2) return true; // CreationTime - sempre pode continuar (tem default)
+  if (screen === 3) return (data.sticking_points?.length ?? 0) > 0; // era screen 2
+  if (screen === 4) return (data.months_trying ?? 0) > 0; // era screen 3
+  if (screen === 5) return (data.current_post_count ?? 0) >= 0; // era screen 4
+  if (screen === 6) return (data.previous_attempts?.length ?? 0) > 0; // era screen 5
+  if (screen === 7) { // era screen 6
+    return (
+      data.inconsistency_impact?.financial > 0 &&
+      data.inconsistency_impact?.emotional > 0 &&
+      data.inconsistency_impact?.professional > 0
+    );
+  }
 }
 ```
 
@@ -264,8 +275,26 @@ if (phase === 1) {
 
 ```typescript
 // src/types/onboarding.ts
-export const SCREENS_PER_PHASE = [10, 7, 5, 5, 2, 6];
-//                                    ^ era 6, agora 7
+export const SCREENS_PER_PHASE = [10, 8, 5, 5, 2, 6];
+//                                    ^ era 7, agora 8
+```
+
+---
+
+### Atualizacao de OnboardingData
+
+```typescript
+// Adicionar novo campo em OnboardingData
+export interface OnboardingData {
+  // Phase 1: Hook + Dream Outcome
+  username?: string;
+  content_goal?: string;
+  preferred_platform?: string;
+  daily_available_time?: string;
+  preferred_creation_time?: string;  // NOVO - Formato "HH:MM"
+  
+  // ... resto permanece igual
+}
 ```
 
 ---
@@ -275,16 +304,21 @@ export const SCREENS_PER_PHASE = [10, 7, 5, 5, 2, 6];
 **Padrao Visual:**
 - Background: `bg-violet-50 dark:bg-background`
 - Header: Back button + GradientProgressBar
-- Opcoes: `bg-violet-200/60` (default), gradient rosa-laranja-amarelo (selecionado)
-- Animacoes: framer-motion com fade-in e stagger
-- Botao Continuar: `variant="gradient-pill"`, aparece apos selecao
+- Input time: Centralizado, fonte grande (text-2xl), borda roxa suave
+- Card de dica: `bg-violet-100/50` com emoji e texto explicativo
+- Botao Continuar: `variant="gradient-pill"`, sempre visivel (valor default "09:00")
 
 **Fluxo de Dados:**
-- Campo `daily_available_time` armazenado em `OnboardingData`
-- Sera usado na personalizacao do plano (Tela 20) junto com `consistency_cluster`
+- Campo `preferred_creation_time` armazenado em `OnboardingData`
+- Valor default: "09:00" (manha)
+- Sera usado para configurar lembretes e personalizacao do plano
 
-**Por que emoji ⏱️ em todas as opcoes?**
-- Mantem consistencia visual
-- O emoji de relogio reforça que a pergunta e sobre tempo
-- Padrao diferente do multi-select que usa emojis dinamicos
+**Diferencas do Screen20CreationTime (Phase 5):**
+- Screen13 usa o layout padronizado das telas de questionario (violet-50, progress bar, etc)
+- Screen20 usa o layout antigo com Cards e design diferente
+- Ambos salvam em campos diferentes para permitir revisao posterior
+
+**Por que o botao Continuar esta sempre visivel?**
+- O input type="time" tem um valor default ("09:00")
+- Nao faz sentido esconder o botao quando sempre ha um valor valido
 
