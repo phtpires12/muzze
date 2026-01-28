@@ -52,7 +52,7 @@ export const Screen11BehavioralScience = ({
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
-          className="text-2xl font-bold italic text-center bg-gradient-to-r from-purple-600 to-violet-500 bg-clip-text text-transparent mt-2 mb-4"
+          className="text-lg font-bold italic text-center bg-gradient-to-r from-purple-600 to-violet-500 bg-clip-text text-transparent mt-2 mb-4"
         >
           Aqui você Cria Conteúdo com base na Ciência Comportamental.
         </motion.h1>
@@ -68,14 +68,14 @@ export const Screen11BehavioralScience = ({
           <img
             src={brainScienceLight}
             alt="Cérebro com sistemas comportamentais"
-            className="w-full max-w-[200px] dark:hidden"
+            className="w-full max-w-[280px] dark:hidden"
             draggable={false}
           />
           {/* Dark mode image */}
           <img
             src={brainScienceDark}
             alt="Cérebro com sistemas comportamentais"
-            className="w-full max-w-[200px] hidden dark:block"
+            className="w-full max-w-[280px] hidden dark:block"
             draggable={false}
           />
         </motion.div>
