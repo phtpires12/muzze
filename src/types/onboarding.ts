@@ -3,14 +3,14 @@ export type ConsistencyCluster = 1 | 2 | 3;
 export type Screen12Variant = 'hurt' | 'path' | 'machine';
 
 export interface OnboardingData {
-  // Phase 1: Hook + Dream Outcome
+  // Phase 0: Hook + Dream Outcome
   username?: string;
   content_goal?: string;
   preferred_platform?: string;
   daily_available_time?: string;
   preferred_creation_time?: string; // Format "HH:MM"
   
-  // Phase 2: Pain Diagnosis
+  // Phase 0: Pain Diagnosis
   sticking_points?: string[];
   months_trying?: number;
   current_post_count?: number;
@@ -21,26 +21,24 @@ export interface OnboardingData {
     professional: number;
   };
   
-  // Phase 3: Confrontation + Opportunity
+  // Behavioral Clusters System (used for personalization)
+  posting_frequency?: string;           // ID of selected frequency option
+  consistency_cluster?: ConsistencyCluster;  // Derived cluster (1=None, 2=Building, 3=High)
+  screen12_variant?: Screen12Variant;   // Determines which variant of feedback screen to show
+  
+  // Phase 1: Configuration
+  daily_goal_minutes?: number;
+  creation_time?: string;
+  commitment_level?: string;
+  
+  // Legacy fields (may be removed in future)
   calculated_lost_posts?: number;
   dream_outcome_importance?: {
     posts_30_days: number;
     clarity: number;
     consistent_identity: number;
   };
-  
-  // Phase 4: Personalized Solution
   resonating_features?: string[];
-  
-  // Phase 5: Commitment + Configuration
-  daily_goal_minutes?: number;
-  creation_time?: string;
-  commitment_level?: string;
-  
-  // Behavioral Clusters System (used for personalization in Tela 20)
-  posting_frequency?: string;           // ID of selected frequency option
-  consistency_cluster?: ConsistencyCluster;  // Derived cluster (1=None, 2=Building, 3=High)
-  screen12_variant?: Screen12Variant;   // Determines which variant of Tela 12 to show
   
   // Metadata
   completed_at?: string;
@@ -59,15 +57,16 @@ export interface OnboardingState {
 }
 
 export const ONBOARDING_PHASES = {
-  HOOK_DREAM: 0,
-  PAIN_DIAGNOSIS: 1,
-  CONFRONTATION: 2,
-  SOLUTION: 3,
-  COMMITMENT: 4,
-  SIGNUP_PAYWALL: 5,
+  HOOK_DREAM: 0,        // Welcome, HowWeHelp, Questionnaire (10 screens)
+  CONFIGURATION: 1,     // BehavioralScience, DailyTime, CreationTime (3 screens)
+  SIGNUP_PAYWALL: 2,    // Signup, Paywall, Install (3 screens)
 } as const;
 
-export const SCREENS_PER_PHASE = [10, 3, 1, 4, 2, 6];
+// Simplified to 3 phases: [10, 3, 3]
+// Phase 0: 10 screens (Welcome through ClusterFeedback)
+// Phase 1: 3 screens (BehavioralScience, DailyTime, CreationTime)
+// Phase 2: 3 screens (Signup, Paywall, Install)
+export const SCREENS_PER_PHASE = [10, 3, 3];
 
 // Posting frequency options with cluster mapping
 // Cluster 1: No consistency - focus on reducing pressure, starting small
