@@ -24,17 +24,7 @@ import { Screen13CreationTime } from "@/components/onboarding/screens/phase1/Scr
 import { ConsistencyCluster, Screen12Variant } from "@/types/onboarding";
 import { Screen3Platform } from "@/components/onboarding/screens/phase1/Screen3Platform";
 import { Screen4StartQuestionnaire } from "@/components/onboarding/screens/phase1/Screen4StartQuestionnaire";
-import { Screen4StickingPoints } from "@/components/onboarding/screens/phase2/Screen4StickingPoints";
-import { Screen5MonthsTrying } from "@/components/onboarding/screens/phase2/Screen5MonthsTrying";
-import { Screen6CurrentPosts } from "@/components/onboarding/screens/phase2/Screen6CurrentPosts";
-import { Screen7PreviousAttempts } from "@/components/onboarding/screens/phase2/Screen7PreviousAttempts";
-import { Screen8ImpactScale } from "@/components/onboarding/screens/phase2/Screen8ImpactScale";
-import { Screen9LostPosts } from "@/components/onboarding/screens/phase3/Screen9LostPosts";
-import { Screen10TimeWasted } from "@/components/onboarding/screens/phase3/Screen10TimeWasted";
-import { Screen11AccumulatedImpact } from "@/components/onboarding/screens/phase3/Screen11AccumulatedImpact";
-import { Screen12Opportunity } from "@/components/onboarding/screens/phase3/Screen12Opportunity";
 import { Screen13DreamOutcome } from "@/components/onboarding/screens/phase3/Screen13DreamOutcome";
-import { Screen14TwentyFiveMinutes } from "@/components/onboarding/screens/phase4/Screen14TwentyFiveMinutes";
 import { Screen15MinimalEffort } from "@/components/onboarding/screens/phase4/Screen15MinimalEffort";
 import { Screen16PersonalizedFeatures } from "@/components/onboarding/screens/phase4/Screen16PersonalizedFeatures";
 import { Screen17UniquePositioning } from "@/components/onboarding/screens/phase4/Screen17UniquePositioning";
@@ -257,89 +247,18 @@ const NewOnboarding = () => {
       if (screen === 1) return null;
       // Screen 2: CreationTime renderiza fora do OnboardingLayout
       if (screen === 2) return null;
-      if (screen === 3) {
-        return (
-          <Screen4StickingPoints
-            value={state.data.sticking_points || []}
-            onChange={(value) => updateData({ sticking_points: value })}
-          />
-        );
-      }
-      if (screen === 4) {
-        return (
-          <Screen5MonthsTrying
-            value={state.data.months_trying || 0}
-            onChange={(value) => updateData({ months_trying: value })}
-          />
-        );
-      }
-      if (screen === 5) {
-        return (
-          <Screen6CurrentPosts
-            value={state.data.current_post_count || 0}
-            onChange={(value) => updateData({ current_post_count: value })}
-          />
-        );
-      }
-      if (screen === 6) {
-        return (
-          <Screen7PreviousAttempts
-            value={state.data.previous_attempts || []}
-            onChange={(value) => updateData({ previous_attempts: value })}
-          />
-        );
-      }
-      if (screen === 7) {
-        return (
-          <Screen8ImpactScale
-            value={
-              state.data.inconsistency_impact || {
-                financial: 0,
-                emotional: 0,
-                professional: 0,
-              }
-            }
-            onChange={(value) => updateData({ inconsistency_impact: value })}
-          />
-        );
+      // Screens 3-7: Placeholders - telas antigas foram removidas
+      // Serão substituídas por novas telas progressivamente
+      if (screen >= 3 && screen <= 7) {
+        return null;
       }
     }
 
     // Phase 2: Confrontation + Opportunity
     if (phase === 2) {
-      const lostPosts = calculateLostPosts(
-        state.data.months_trying || 0,
-        state.data.current_post_count || 0
-      );
-
-      if (screen === 0) {
-        return (
-          <Screen9LostPosts
-            monthsTrying={state.data.months_trying || 0}
-            currentPosts={state.data.current_post_count || 0}
-            lostPosts={lostPosts}
-          />
-        );
-      }
-      if (screen === 1) {
-        return <Screen10TimeWasted monthsTrying={state.data.months_trying || 0} />;
-      }
-      if (screen === 2) {
-        return (
-          <Screen11AccumulatedImpact
-            impact={
-              state.data.inconsistency_impact || {
-                financial: 1,
-                emotional: 1,
-                professional: 1,
-              }
-            }
-            monthsTrying={state.data.months_trying || 0}
-          />
-        );
-      }
-      if (screen === 3) {
-        return <Screen12Opportunity />;
+      // Screens 0-3: Placeholders - telas antigas foram removidas
+      if (screen >= 0 && screen <= 3) {
+        return null;
       }
       if (screen === 4) {
         return (
@@ -359,7 +278,8 @@ const NewOnboarding = () => {
 
     // Phase 3: Personalized Solution
     if (phase === 3) {
-      if (screen === 0) return <Screen14TwentyFiveMinutes />;
+      // Screen 0: Placeholder - tela antiga foi removida
+      if (screen === 0) return null;
       if (screen === 1) return <Screen15MinimalEffort />;
       if (screen === 2) {
         return (
