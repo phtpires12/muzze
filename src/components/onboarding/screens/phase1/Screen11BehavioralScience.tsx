@@ -2,7 +2,8 @@ import { motion } from "framer-motion";
 import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import brainScience from "@/assets/onboarding/brain-science.png";
+import brainScienceLight from "@/assets/onboarding/brain-science-light.png";
+import brainScienceDark from "@/assets/onboarding/brain-science-dark.png";
 
 interface Screen11BehavioralScienceProps {
   onContinue: () => void;
@@ -63,10 +64,18 @@ export const Screen11BehavioralScience = ({
           transition={{ duration: 0.5, delay: 0.1 }}
           className="flex justify-center mb-8"
         >
+          {/* Light mode image */}
           <img
-            src={brainScience}
+            src={brainScienceLight}
             alt="Cérebro com sistemas comportamentais"
-            className="w-full max-w-xs"
+            className="w-full max-w-xs dark:hidden"
+            draggable={false}
+          />
+          {/* Dark mode image */}
+          <img
+            src={brainScienceDark}
+            alt="Cérebro com sistemas comportamentais"
+            className="w-full max-w-xs hidden dark:block"
             draggable={false}
           />
         </motion.div>
