@@ -4,11 +4,22 @@ import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Screen12Variant } from "@/types/onboarding";
 
+// Import cluster images
+import clusterHurt from "@/assets/onboarding/cluster-hurt.png";
+import clusterPath from "@/assets/onboarding/cluster-path.png";
+import clusterMachine from "@/assets/onboarding/cluster-machine.png";
+
 interface Screen10ClusterFeedbackProps {
   variant: Screen12Variant;
   onContinue: () => void;
   onBack: () => void;
 }
+
+const VARIANT_IMAGES = {
+  hurt: clusterHurt,
+  path: clusterPath,
+  machine: clusterMachine,
+};
 
 const VARIANT_CONTENT = {
   hurt: {
@@ -17,14 +28,12 @@ const VARIANT_CONTENT = {
       "Fica tranquilo, nós sabemos que você está dando o seu melhor!",
       "E estamos aqui pra ajudar criadores como você, a nunca mais parar de criar.",
     ],
-    emojis: ["😵‍💫", "👊", "😵"],
   },
   path: {
     title: "Que ótimo!! Você já tá no caminho",
     lines: [
       "Vamos te ajudar a aumentar isso pra acelerar ainda mais seus resultados!",
     ],
-    emojis: ["😵‍💫", "👊", "😵"],
   },
   machine: {
     title: "Você é uma máquina!",
@@ -32,7 +41,6 @@ const VARIANT_CONTENT = {
       "Já dá até pra ensinar a galera a criar mais em…",
       "Conta com a gente pra produzir conteúdo pra esse público. 🤝",
     ],
-    emojis: ["😵‍💫", "👊", "😵"],
   },
 };
 
@@ -68,43 +76,20 @@ export const Screen10ClusterFeedback = ({
         </button>
       </div>
 
-      {/* Emoji Cluster - 3 emojis in purple circles - inverted triangle */}
+      {/* Emoji Cluster - Image illustration */}
       <div className="flex-1 flex flex-col items-center justify-center px-6">
         <motion.div
-          className="relative w-44 h-36 mb-8"
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.5, ease: "easeOut" }}
+          className="flex justify-center"
         >
-          {/* Top left emoji */}
-          <motion.div
-            className="absolute top-0 left-0 w-20 h-20 bg-primary/70 rounded-full flex items-center justify-center"
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.1, duration: 0.4, ease: "backOut" }}
-          >
-            <span className="text-3xl">{content.emojis[0]}</span>
-          </motion.div>
-
-          {/* Top right emoji */}
-          <motion.div
-            className="absolute top-0 right-0 w-20 h-20 bg-primary/70 rounded-full flex items-center justify-center"
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.2, duration: 0.4, ease: "backOut" }}
-          >
-            <span className="text-3xl">{content.emojis[1]}</span>
-          </motion.div>
-
-          {/* Bottom center emoji */}
-          <motion.div
-            className="absolute bottom-0 left-1/2 -translate-x-1/2 w-20 h-20 bg-primary/70 rounded-full flex items-center justify-center"
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.3, duration: 0.4, ease: "backOut" }}
-          >
-            <span className="text-3xl">{content.emojis[2]}</span>
-          </motion.div>
+          <img
+            src={VARIANT_IMAGES[variant]}
+            alt="Ilustração de emojis"
+            className="w-full max-w-[240px]"
+            draggable={false}
+          />
         </motion.div>
       </div>
 
