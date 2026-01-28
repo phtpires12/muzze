@@ -1,83 +1,125 @@
 
 
-## Plano: Excluir Telas Antigas do Onboarding (Batch 1)
+## Plano: Eliminar Telas Fantasmas do Onboarding
 
-### Objetivo
+### Problema Identificado
 
-Remover 10 componentes de telas antigas do onboarding que serao substituidos pelas novas telas que estamos construindo. Este e o primeiro batch - voce mencionou que tem mais telas para enviar depois.
+Após a exclusão dos arquivos de componentes, o sistema ainda navega para telas que não existem porque:
 
----
-
-### Telas a Excluir
-
-| # | Print | Componente | Caminho |
-|---|-------|------------|---------|
-| 1 | "O que mais te trava?" | Screen4StickingPoints | `phase2/Screen4StickingPoints.tsx` |
-| 2 | "Ha quanto tempo voce tenta?" | Screen5MonthsTrying | `phase2/Screen5MonthsTrying.tsx` |
-| 3 | "Quantos posts voce ja fez?" | Screen6CurrentPosts | `phase2/Screen6CurrentPosts.tsx` |
-| 4 | "O que voce ja tentou?" | Screen7PreviousAttempts | `phase2/Screen7PreviousAttempts.tsx` |
-| 5 | "Voce perdeu 90 oportunidades" | Screen9LostPosts | `phase3/Screen9LostPosts.tsx` |
-| 6 | "6 meses tentando sozinho" | Screen10TimeWasted | `phase3/Screen10TimeWasted.tsx` |
-| 7 | "O custo real da inconsistencia" | Screen11AccumulatedImpact | `phase3/Screen11AccumulatedImpact.tsx` |
-| 8 | "30 posts em 30 dias" | Screen12Opportunity | `phase3/Screen12Opportunity.tsx` |
-| 9 | "O quanto isso importa pra voce?" | Screen8ImpactScale | `phase2/Screen8ImpactScale.tsx` |
-| 10 | "A ciencia dos 25 minutos" | Screen14TwentyFiveMinutes | `phase4/Screen14TwentyFiveMinutes.tsx` |
+1. **SCREENS_PER_PHASE** ainda conta com essas telas: `[10, 8, 5, 5, 2, 6]`
+2. **renderScreen()** retorna `null` para índices 3-7 da Phase 1 e índices 0-3 da Phase 2
+3. **showContinueButton** exibe botões para essas telas vazias
+4. O **OnboardingLayout** envolve essas telas vazias e exibe "Fase X, Tela Y"
 
 ---
 
-### Arquivos a Excluir
+### Estrutura Atual do Fluxo
 
-**Phase 2 (5 arquivos):**
-```
-src/components/onboarding/screens/phase2/Screen4StickingPoints.tsx
-src/components/onboarding/screens/phase2/Screen5MonthsTrying.tsx
-src/components/onboarding/screens/phase2/Screen6CurrentPosts.tsx
-src/components/onboarding/screens/phase2/Screen7PreviousAttempts.tsx
-src/components/onboarding/screens/phase2/Screen8ImpactScale.tsx
-```
+| Phase | Telas Atuais | Telas Reais (Implementadas) |
+|-------|-------------|----------------------------|
+| 0 | 10 | 10 (Welcome, HowWeHelp, StartQuestionnaire, Username, ContentGoal, StickingPoints, Diferencial, MonthsTrying, Constancia, ClusterFeedback) |
+| 1 | 8 | **3** (BehavioralScience, DailyTime, CreationTime) - 5 são fantasmas |
+| 2 | 5 | **1** (Screen13DreamOutcome no índice 4) - 4 são fantasmas |
+| 3 | 5 | **4** (Screen15MinimalEffort, Screen16PersonalizedFeatures, Screen17UniquePositioning, Screen18CommitmentTest) - 1 é fantasma |
+| 4 | 2 | 2 (Screen19DailyGoal, Screen20CreationTime) |
+| 5 | 6 | 6 (Signup, Snapshot, Notifications, Review, Paywall, Install) |
 
-**Phase 3 (4 arquivos):**
-```
-src/components/onboarding/screens/phase3/Screen9LostPosts.tsx
-src/components/onboarding/screens/phase3/Screen10TimeWasted.tsx
-src/components/onboarding/screens/phase3/Screen11AccumulatedImpact.tsx
-src/components/onboarding/screens/phase3/Screen12Opportunity.tsx
-```
+---
 
-**Phase 4 (1 arquivo):**
-```
-src/components/onboarding/screens/phase4/Screen14TwentyFiveMinutes.tsx
+### Solução: Reorganizar o Fluxo
+
+Vamos reorganizar para que Phase 1 termine em CreationTime e pule direto para as telas reais:
+
+**Nova estrutura proposta:**
+
+```typescript
+SCREENS_PER_PHASE = [10, 3, 1, 4, 2, 6];
+// Phase 0: 10 telas (completas)
+// Phase 1: 3 telas (BehavioralScience, DailyTime, CreationTime)
+// Phase 2: 1 tela (DreamOutcome - era índice 4, agora índice 0)
+// Phase 3: 4 telas (MinimalEffort, PersonalizedFeatures, UniquePositioning, CommitmentTest)
+// Phase 4: 2 telas (DailyGoal, CreationTime)
+// Phase 5: 6 telas (Signup, Snapshot, Notifications, Review, Paywall, Install)
 ```
 
 ---
 
-### Impacto no NewOnboarding.tsx
+### Arquivos a Modificar
 
-Apos a exclusao, sera necessario:
-1. Remover os imports desses componentes
-2. Remover as referencias no `renderScreen()` para Phase 1 (screens 3-7) e outras phases
-3. Atualizar o `SCREENS_PER_PHASE` para refletir a nova contagem
-
-**Observacao:** Como estamos no meio da reconstrucao do onboarding, provavelmente teremos erros de compilacao ate substituirmos todas as telas. Posso remover tambem as referencias no NewOnboarding.tsx ou voce prefere fazer isso quando todas as novas telas estiverem prontas?
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/types/onboarding.ts` | Atualizar SCREENS_PER_PHASE para `[10, 3, 1, 4, 2, 6]` |
+| `src/pages/NewOnboarding.tsx` | Remover placeholders null, reorganizar índices, atualizar canContinue e showContinueButton |
 
 ---
 
-### Ordem de Execucao
+### Mudanças Detalhadas em NewOnboarding.tsx
 
-1. Excluir os 10 arquivos de componentes listados
-2. (Opcional) Remover imports e referencias no NewOnboarding.tsx
-3. (Opcional) Atualizar SCREENS_PER_PHASE
+**1. Remover placeholders de renderScreen():**
+- Phase 1: Remover linhas 250-254 (placeholders para screens 3-7)
+- Phase 2: Remover linhas 259-262 (placeholders para screens 0-3), mover DreamOutcome para screen 0
+- Phase 3: Remover placeholder para screen 0, ajustar índices (MinimalEffort vira 0, etc.)
+
+**2. Atualizar canContinue():**
+- Phase 1: Remover validações para screens 3-7
+- Phase 2: DreamOutcome passa a ser screen 0
+- Phase 3: Ajustar índices (MinimalEffort = 0, PersonalizedFeatures = 1, etc.)
+
+**3. Atualizar showContinueButton:**
+```typescript
+const showContinueButton =
+  (state.phase === 2 && state.screen === 0) || // DreamOutcome
+  (state.phase === 3 && state.screen >= 0 && state.screen <= 3) || // Phase 3
+  (state.phase === 4 && state.screen === 1) || // CreationTime
+  (state.phase === 5 && state.screen === 1); // Snapshot
+```
 
 ---
 
-### Secao Tecnica
+### Mapeamento de Índices Antigos para Novos
 
-**Por que excluir agora?**
-- Evita confusao entre telas antigas e novas
-- Limpa o codebase de componentes nao utilizados
-- Facilita a manutencao do fluxo de onboarding
+**Phase 1:**
+| Antigo | Novo | Tela |
+|--------|------|------|
+| 0 | 0 | BehavioralScience |
+| 1 | 1 | DailyTime |
+| 2 | 2 | CreationTime |
+| 3-7 | ❌ | Removidos |
 
-**Riscos:**
-- Erros de compilacao se NewOnboarding.tsx ainda referenciar esses componentes
-- Solucao: Remover referencias junto com os arquivos
+**Phase 2:**
+| Antigo | Novo | Tela |
+|--------|------|------|
+| 0-3 | ❌ | Removidos |
+| 4 | 0 | DreamOutcome |
+
+**Phase 3:**
+| Antigo | Novo | Tela |
+|--------|------|------|
+| 0 | ❌ | Removido |
+| 1 | 0 | MinimalEffort |
+| 2 | 1 | PersonalizedFeatures |
+| 3 | 2 | UniquePositioning |
+| 4 | 3 | CommitmentTest |
+
+**Phase 4 e 5:** Sem mudanças
+
+---
+
+### Seção Técnica
+
+**Por que essa abordagem?**
+- Elimina completamente as telas fantasmas
+- Mantém o fluxo navegável sem telas vazias
+- Não requer criar novas telas imediatamente
+- Permite adicionar telas novas no futuro nos lugares corretos
+
+**Risco:**
+- O progresso salvo de usuários em onboarding pode ficar inconsistente se eles estavam em telas que foram removidas
+- Solução: O hook `useOnboarding` já valida e ajusta phase/screen para valores válidos no carregamento
+
+**Ordem de execução:**
+1. Atualizar `SCREENS_PER_PHASE` em `src/types/onboarding.ts`
+2. Reorganizar `renderScreen()` em `NewOnboarding.tsx`
+3. Atualizar `canContinue()` com novos índices
+4. Atualizar `showContinueButton` com novos índices
 
