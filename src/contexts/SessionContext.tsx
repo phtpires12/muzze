@@ -1,7 +1,8 @@
 import { createContext, useContext, useState, ReactNode, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { getDailyGoalMinutesForLevel, getEffectiveLevel } from "@/lib/gamification";
+import { getDailyGoalMinutesForLevel, getEffectiveLevel, calculateXPWithStreakBonus, calculateLevelByXP, getLevelInfo } from "@/lib/gamification";
+import { getTodayKey, getYesterdayKey, getDayBoundsUTC } from "@/lib/timezone-utils";
 export type SessionStage = "idea" | "ideation" | "script" | "review" | "record" | "edit";
 
 export interface TimerState {
@@ -40,6 +41,7 @@ interface SessionContextValue {
   setContentId: (id: string | null) => void;
   saveStageTime: () => Promise<void>;
   validateSessionFreshness: () => boolean;
+  autoEndSession: () => Promise<void>; // Novo: encerramento automático com verificação de streak
   
   // Backward compatibility
   muzzeSession: MuzzeSessionType;
@@ -56,8 +58,9 @@ const SessionContext = createContext<SessionContextValue | undefined>(undefined)
 // Constantes de proteção
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
 const MAX_STAGE_SECONDS = 1800; // 30 minutos máximo por save
-const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutos de inatividade = encerrar sessão
+const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutos de inatividade = encerrar sessão (era 30)
 const BACKGROUND_PAUSE_MS = 2 * 60 * 1000; // 2 minutos em background = pausar
+const MAX_SESSION_DURATION_MS = 4 * 60 * 60 * 1000; // 4 horas = limite máximo absoluto de sessão
 
 // Meta padrão (nível 4+) - será sobrescrita ao iniciar sessão com base no nível real
 const DEFAULT_STREAK_GOAL_MINUTES = 25;
@@ -276,6 +279,186 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
     saveStageTimeRef.current = saveStageTime;
   }, [saveStageTime]);
 
+  // NOVA FUNÇÃO: autoEndSession - encerramento automático COM verificação de streak
+  // Esta função consulta o BANCO para verificar se a meta diária foi atingida
+  // e atualiza o streak corretamente (mesmo que o timer local esteja desatualizado)
+  const autoEndSession = useCallback(async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.log('[autoEndSession] Usuário não autenticado, apenas resetando timer');
+        stageStartRef.current = null;
+        setTimer(defaultTimerState);
+        localStorage.removeItem('muzze_global_timer');
+        return;
+      }
+
+      // 1. Salvar tempo da etapa atual (se houver)
+      if (stageElapsedRef.current > 0 && stageStartRef.current) {
+        await saveStageTime();
+      }
+
+      // 2. Buscar profile para obter timezone e nível
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('timezone, xp_points, highest_level')
+        .eq('user_id', user.id)
+        .single();
+
+      const timezone = profile?.timezone || 'America/Sao_Paulo';
+      const effectiveLevel = getEffectiveLevel(profile?.xp_points || 0, profile?.highest_level || 1);
+      const streakGoalMinutes = getDailyGoalMinutesForLevel(effectiveLevel);
+
+      // 3. Calcular minutos criados hoje DIRETAMENTE DO BANCO (fonte de verdade)
+      const todayKey = getTodayKey(timezone);
+      const { startUTC, endUTC } = getDayBoundsUTC(todayKey, timezone);
+
+      const { data: todaySessions } = await supabase
+        .from('stage_times')
+        .select('duration_seconds')
+        .eq('user_id', user.id)
+        .gte('started_at', startUTC.toISOString())
+        .lte('started_at', endUTC.toISOString());
+
+      const creativeMinutesToday = (todaySessions || []).reduce(
+        (sum, session) => sum + (session.duration_seconds || 0) / 60,
+        0
+      );
+
+      console.log(`[autoEndSession] Minutos criativos hoje (DB): ${creativeMinutesToday.toFixed(2)}min, Meta: ${streakGoalMinutes}min`);
+
+      // 4. Se atingiu a meta, verificar e atualizar streak
+      if (creativeMinutesToday >= streakGoalMinutes) {
+        console.log('[autoEndSession] Meta atingida! Verificando streak...');
+        
+        const yesterdayKey = getYesterdayKey(timezone);
+        
+        // Buscar streak atual
+        const { data: streak } = await supabase
+          .from('streaks')
+          .select('*')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (!streak) {
+          // Criar novo streak
+          await supabase.from('streaks').insert({
+            user_id: user.id,
+            current_streak: 1,
+            longest_streak: 1,
+            last_event_date: todayKey,
+          });
+          console.log('[autoEndSession] Novo streak criado: 1 dia');
+          toastRef.current({
+            title: "🔥 Ofensiva salva!",
+            description: "Sua sessão foi encerrada automaticamente. Ofensiva: 1 dia!",
+          });
+        } else if (streak.last_event_date !== todayKey) {
+          // Atualizar streak se ainda não foi contado hoje
+          let newStreak: number;
+          if (streak.last_event_date === yesterdayKey) {
+            newStreak = (streak.current_streak || 0) + 1;
+          } else {
+            newStreak = 1; // Gap - reset
+          }
+
+          const newLongest = Math.max(streak.longest_streak || 0, newStreak);
+
+          await supabase
+            .from('streaks')
+            .update({
+              current_streak: newStreak,
+              longest_streak: newLongest,
+              last_event_date: todayKey,
+            })
+            .eq('user_id', user.id);
+
+          console.log(`[autoEndSession] Streak atualizado: ${streak.current_streak} -> ${newStreak}`);
+          toastRef.current({
+            title: "🔥 Ofensiva salva!",
+            description: `Sessão encerrada automaticamente. Ofensiva: ${newStreak} dia${newStreak > 1 ? 's' : ''}!`,
+          });
+        } else {
+          // Já contado hoje
+          console.log('[autoEndSession] Streak já contado hoje');
+          toastRef.current({
+            title: "Sessão encerrada",
+            description: "Sua sessão foi salva automaticamente.",
+          });
+        }
+
+        // Calcular e salvar XP
+        const totalMinutes = Math.floor(creativeMinutesToday);
+        const { data: currentStreak } = await supabase
+          .from('streaks')
+          .select('current_streak')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        const streakDays = currentStreak?.current_streak || 0;
+        const { totalXP } = calculateXPWithStreakBonus(totalMinutes, streakDays);
+
+        // Atualizar XP no perfil
+        const newXP = (profile?.xp_points || 0) + totalXP;
+        const newLevel = calculateLevelByXP(newXP);
+        const updates: any = { xp_points: newXP };
+        if (newLevel > (profile?.highest_level || 1)) {
+          updates.highest_level = newLevel;
+        }
+
+        await supabase
+          .from('profiles')
+          .update(updates)
+          .eq('user_id', user.id);
+
+        // Dispatch level up event se subiu de nível
+        const previousLevel = calculateLevelByXP(profile?.xp_points || 0);
+        if (newLevel > previousLevel) {
+          const levelInfo = getLevelInfo(newLevel);
+          window.dispatchEvent(new CustomEvent('levelUp', { 
+            detail: { level: newLevel, levelInfo } 
+          }));
+        }
+      } else {
+        // Não atingiu a meta
+        console.log('[autoEndSession] Meta não atingida, sessão salva sem streak');
+        toastRef.current({
+          title: "Sessão encerrada",
+          description: `Sessão salva. Faltam ${Math.ceil(streakGoalMinutes - creativeMinutesToday)}min para a ofensiva de hoje.`,
+        });
+      }
+
+      // 5. Analytics
+      await supabase.from('analytics_events').insert({
+        user_id: user.id,
+        event: 'session_auto_ended',
+        payload: { 
+          creativeMinutesToday,
+          streakGoalMinutes,
+          reason: 'auto_end',
+        }
+      });
+
+      // 6. Reset timer
+      stageStartRef.current = null;
+      setTimer(defaultTimerState);
+      localStorage.removeItem('muzze_global_timer');
+      console.log('[autoEndSession] Timer resetado');
+    } catch (error) {
+      console.error('[autoEndSession] Erro:', error);
+      // Em caso de erro, ainda reseta o timer para evitar loops
+      stageStartRef.current = null;
+      setTimer(defaultTimerState);
+      localStorage.removeItem('muzze_global_timer');
+    }
+  }, [saveStageTime]);
+
+  // Ref estável para autoEndSession
+  const autoEndSessionRef = useRef<() => Promise<void>>(autoEndSession);
+  useEffect(() => {
+    autoEndSessionRef.current = autoEndSession;
+  }, [autoEndSession]);
+
   // Verificar frescor e inatividade quando o app fica visível/invisível
   useEffect(() => {
     const handleVisibilityChange = async () => {
@@ -309,14 +492,9 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
           const hiddenDuration = Date.now() - hiddenSinceRef.current;
           
           if (hiddenDuration > INACTIVITY_TIMEOUT_MS) {
-            // 30+ min em background = encerrar sessão
-            console.log(`[SessionContext] Aba inativa por ${Math.round(hiddenDuration / 60000)} min, encerrando sessão`);
-            setTimer(defaultTimerState);
-            localStorage.removeItem('muzze_global_timer');
-            toast({
-              title: "Sessão encerrada automaticamente",
-              description: "Você ficou ausente por mais de 30 minutos.",
-            });
+            // 15+ min em background = encerrar sessão COM VERIFICAÇÃO DE STREAK
+            console.log(`[SessionContext] Aba inativa por ${Math.round(hiddenDuration / 60000)} min, encerrando sessão com autoEndSession`);
+            await autoEndSessionRef.current();
           } else if (hiddenDuration > BACKGROUND_PAUSE_MS) {
             // 2+ min em background = pausar
             console.log(`[SessionContext] Aba inativa por ${Math.round(hiddenDuration / 60000)} min, pausando timer`);
@@ -370,21 +548,25 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
           return;
         }
         
-        // VERIFICAR INATIVIDADE REAL (30 min sem interação = encerrar)
+        // VERIFICAR INATIVIDADE REAL (15 min sem interação = encerrar)
         const timeSinceLastInteraction = Date.now() - lastRealInteractionRef.current;
         if (timeSinceLastInteraction > INACTIVITY_TIMEOUT_MS) {
-          console.log(`[SessionContext] Inatividade detectada (${Math.round(timeSinceLastInteraction / 60000)} min), encerrando sessão`);
+          console.log(`[SessionContext] Inatividade detectada (${Math.round(timeSinceLastInteraction / 60000)} min), encerrando sessão com autoEndSession`);
           
-          // Salvar antes de encerrar (usando ref estável)
-          saveStageTimeRef.current();
-          
-          setTimer(defaultTimerState);
-          localStorage.removeItem('muzze_global_timer');
-          toastRef.current({
-            title: "Sessão encerrada",
-            description: "Inatividade detectada por mais de 30 minutos.",
-          });
+          // Usar autoEndSession para garantir verificação de streak
+          autoEndSessionRef.current();
           return;
+        }
+
+        // VERIFICAR LIMITE MÁXIMO DE SESSÃO (4 horas)
+        const currentTimer = timerRef.current;
+        if (currentTimer.startedAt) {
+          const sessionDuration = Date.now() - new Date(currentTimer.startedAt).getTime();
+          if (sessionDuration > MAX_SESSION_DURATION_MS) {
+            console.log(`[SessionContext] Sessão atingiu limite máximo de 4 horas, encerrando com autoEndSession`);
+            autoEndSessionRef.current();
+            return;
+          }
         }
 
         setTimer(prev => {
@@ -730,6 +912,7 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
         setContentId,
         saveStageTime,
         validateSessionFreshness,
+        autoEndSession, // NOVO: encerramento automático com verificação de streak
         muzzeSession,
         setMuzzeSession,
         resetMuzzeSession,
