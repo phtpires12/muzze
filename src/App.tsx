@@ -14,7 +14,6 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import { setupGlobalErrorHandlers } from "@/lib/error-logger";
 import { PWAUpdatePrompt } from "@/components/PWAUpdatePrompt";
 import { UpdateOverlay } from "@/components/UpdateOverlay";
-import { useVersionCheck } from "@/hooks/useVersionCheck";
 import { usePWAUpdate } from "@/hooks/usePWAUpdate";
 import Onboarding from "./pages/NewOnboarding";
 import Auth from "./pages/Auth";
@@ -181,11 +180,10 @@ const router = createBrowserRouter([
 ]);
 
 const App = () => {
-  const { isUpdating } = useVersionCheck();
   const { needRefresh } = usePWAUpdate();
 
-  // Mostrar overlay quando está atualizando (version check ou PWA)
-  const showUpdateOverlay = isUpdating || needRefresh;
+  // Mostrar overlay apenas quando PWA detecta nova versão
+  const showUpdateOverlay = needRefresh;
 
   return (
     <ErrorBoundary>

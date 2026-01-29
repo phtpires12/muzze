@@ -37,52 +37,6 @@
 
   <body>
     <div id="root"></div>
-    <script>
-      // Force cache clear on version mismatch - Auto-versioning system
-      (async function() {
-        const BUILD_VERSION = Date.now().toString();
-        const storedVersion = localStorage.getItem('muzze_build_version');
-        const lastClear = localStorage.getItem('muzze_last_cache_clear');
-        const now = Date.now();
-        
-        // Só limpar cache se passou mais de 5 minutos desde última limpeza
-        // E se há uma versão anterior armazenada
-        const shouldClear = storedVersion && 
-          storedVersion !== BUILD_VERSION && 
-          (!lastClear || now - parseInt(lastClear) > 5 * 60 * 1000);
-        
-        if (shouldClear) {
-          console.log('[Cache] New version detected, clearing caches...');
-          localStorage.setItem('muzze_build_version', BUILD_VERSION);
-          localStorage.setItem('muzze_last_cache_clear', now.toString());
-          
-          try {
-            // Limpar todos os caches
-            if ('caches' in window) {
-              const cacheNames = await caches.keys();
-              await Promise.all(cacheNames.map(name => caches.delete(name)));
-              console.log('[Cache] Caches cleared:', cacheNames.length);
-            }
-            
-            // Desregistrar service workers
-            if ('serviceWorker' in navigator) {
-              const registrations = await navigator.serviceWorker.getRegistrations();
-              await Promise.all(registrations.map(reg => reg.unregister()));
-              console.log('[Cache] Service workers unregistered:', registrations.length);
-            }
-            
-            // Recarregar após limpeza
-            window.location.reload();
-          } catch (error) {
-            console.error('[Cache] Error clearing:', error);
-            window.location.reload();
-          }
-        } else if (!storedVersion) {
-          // Primeira visita, apenas salvar versão
-          localStorage.setItem('muzze_build_version', BUILD_VERSION);
-        }
-      })();
-    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
