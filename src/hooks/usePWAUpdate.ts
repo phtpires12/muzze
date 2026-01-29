@@ -11,11 +11,11 @@ export function usePWAUpdate() {
   } = useRegisterSW({
     onRegisteredSW(swUrl, registration) {
       console.log('[PWA] SW registered:', swUrl);
-      // Check for updates every 15 seconds
+      // Check for updates every 60 seconds (less aggressive)
       if (registration) {
         setInterval(() => {
           registration.update();
-        }, 15 * 1000);
+        }, 60 * 1000);
       }
     },
     onRegisterError(error) {
