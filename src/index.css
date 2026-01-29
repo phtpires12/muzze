@@ -526,3 +526,20 @@
     overflow-wrap: anywhere;
   }
 }
+
+/* ========== Cross-Browser Dialog Positioning Fix ========== */
+/* Ensures Radix Dialog is centered correctly on all browsers (including Microsoft Edge) */
+
+[data-radix-dialog-overlay] {
+  position: fixed !important;
+  inset: 0 !important;
+}
+
+[data-radix-dialog-content] {
+  position: fixed !important;
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  -webkit-transform: translate(-50%, -50%) !important;
+  -ms-transform: translate(-50%, -50%) !important;
+}
