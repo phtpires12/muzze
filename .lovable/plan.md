@@ -1,149 +1,150 @@
 
 
-## Plano: Corrigir Sistema de Verificacao de Versao
+## Plano: Auditoria e Correção do Sistema de Ofensiva
 
-### Problema Identificado
+### Problemas Identificados
 
-O sistema de atualizacao forcada esta em loop infinito porque a edge function `app-version` gera um timestamp novo **a cada requisicao**, nao a cada deploy.
+Após análise completa do código, identifiquei **3 problemas críticos** que explicam por que a ofensiva não está sendo contabilizada:
 
-```typescript
-// O BUG - Linha 10 de app-version/index.ts
-const APP_VERSION = new Date().toISOString();
-// Isso e executado CADA VEZ que a funcao e chamada!
+---
+
+### Problema 1: Sessões Encerradas Automaticamente NÃO Atualizam Streak
+
+**Onde:** `src/contexts/SessionContext.tsx` (linhas 311-319 e 373-387)
+
+Quando o usuário fica inativo por 30+ minutos:
+- O sistema salva o tempo (`saveStageTimeRef.current()`) 
+- Reseta o timer (`setTimer(defaultTimerState)`)
+- **MAS NÃO CHAMA `updateStreak()`**
+
+Resultado: O tempo é gravado no banco, mas o streak nunca é verificado/atualizado.
+
+```text
+FLUXO ATUAL (PROBLEMA):
+  Inatividade 30min → saveStageTime() → resetTimer() → FIM
+                                                       ⬆ NÃO VERIFICA STREAK!
+
+FLUXO ESPERADO:
+  Inatividade 30min → saveStageTime() → updateStreak() → resetTimer() → FIM
 ```
 
-**Resultado:** A cada 60 segundos o app detecta uma "nova versao" e forca atualizacao.
+---
+
+### Problema 2: Encerramento Manual Depende de Timer Local (Não do Banco)
+
+**Onde:** `src/hooks/useSession.ts` (linhas 84-188)
+
+O `endSession()` calcula XP e minutos baseados em `timer.elapsedSeconds`, que pode estar zerado ou incorreto se:
+- O app foi recarregado durante a sessão
+- O timer foi pausado/retomado várias vezes
+- Houve problemas de sincronização
+
+Embora a função `updateStreak()` faça query ao banco para verificar minutos reais, ela recebe `totalMinutes` do timer local como parâmetro (que pode estar errado).
 
 ---
 
-### Por que isso acontece no preview e NAO afetara producao
+### Problema 3: Timeout de 30 Minutos é Muito Longo
 
-| Ambiente | Comportamento | Risco |
-|----------|--------------|-------|
-| Preview | Cada request = timestamp diferente = loop | Alto - inutilizavel |
-| Producao | Cada request = timestamp diferente = loop | Alto - mesmo problema |
+**Onde:** `src/contexts/SessionContext.tsx` (linha 59)
 
-O problema **afetara producao** sim! A edge function e a mesma. Precisa ser corrigido antes de publicar.
+```typescript
+const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutos
+```
+
+O usuário pode esquecer a sessão aberta por horas. Com timeout de 30 minutos, o tempo continua sendo contado mesmo quando o usuário está fazendo outras coisas (não criando conteúdo).
 
 ---
 
-### Solucao: Usar Build Timestamp Estatico
+### Solução Proposta
 
-Em vez de gerar timestamp dinamicamente na edge function, usaremos uma abordagem hibrida:
+#### Parte 1: Criar Função `autoEndSession()` que Atualiza Streak
 
-1. **Remover a edge function `app-version`** - ela e fundamentalmente falha
-2. **Usar o timestamp de build do Vite** - que ja esta definido em `vite.config.ts`
-3. **Simplificar para PWA-only updates** - o service worker ja detecta mudancas corretamente
+Nova função no SessionContext que:
+1. Salva o tempo restante da etapa atual
+2. Calcula os minutos do dia DIRETAMENTE do banco (não do timer local)
+3. Chama `updateStreak()` se o usuário atingiu a meta
+4. Reseta o timer
+
+#### Parte 2: Chamar `autoEndSession()` em Todos os Pontos de Encerramento Automático
+
+Atualizar:
+- Encerramento por inatividade (30 min sem interação)
+- Encerramento por background (30 min em outra aba)
+
+#### Parte 3: Reduzir Timeout de Inatividade
+
+Proposta: Reduzir de 30 para 10-15 minutos. Isso evita que sessões esquecidas acumulem tempo fantasma.
+
+| Constante | Valor Atual | Valor Proposto |
+|-----------|-------------|----------------|
+| `INACTIVITY_TIMEOUT_MS` | 30 min | 15 min |
+| `BACKGROUND_PAUSE_MS` | 2 min | 2 min (manter) |
+
+#### Parte 4: Adicionar Timeout Máximo Absoluto de Sessão
+
+Nova proteção: Uma sessão não pode durar mais de **4 horas** corridas. Após esse período, é encerrada automaticamente com salvamento de streak.
+
+```typescript
+const MAX_SESSION_DURATION_MS = 4 * 60 * 60 * 1000; // 4 horas máximo
+```
 
 ---
 
 ### Arquivos a Modificar
 
-| Arquivo | Acao |
-|---------|------|
-| `supabase/functions/app-version/index.ts` | Excluir (funcao fundamentalmente falha) |
-| `src/hooks/useVersionCheck.ts` | Excluir (depende da edge function) |
-| `src/App.tsx` | Remover import e uso do useVersionCheck |
-| `src/components/UpdateOverlay.tsx` | Manter (usado pelo PWA update) |
-| `src/hooks/usePWAUpdate.ts` | Atualizar para ser o unico mecanismo de update |
-| `index.html` | Remover script de cache clear (redundante e problematico) |
+| Arquivo | Mudança |
+|---------|---------|
+| `src/contexts/SessionContext.tsx` | Criar `autoEndSession()`, atualizar handlers de inatividade, adicionar timeout máximo |
+| `src/hooks/useSession.ts` | Expor `autoEndSession()` no hook |
 
 ---
 
-### Como o PWA Update Funciona (Mecanismo Correto)
-
-O `vite-plugin-pwa` ja implementa deteccao de versao corretamente:
-
-1. Cada build gera um novo service worker com hash unico
-2. O browser detecta mudanca no SW automaticamente
-3. `useRegisterSW` dispara `needRefresh` quando ha atualizacao
-4. O overlay aparece e atualiza automaticamente
+### Diagrama do Novo Fluxo
 
 ```text
-   BUILD 1                    BUILD 2
-┌─────────────┐           ┌─────────────┐
-│  sw.js      │           │  sw.js      │
-│  hash: abc  │    →      │  hash: xyz  │
-└─────────────┘           └─────────────┘
-       │                         │
-       └───────────┬─────────────┘
-                   ↓
-          Browser detecta mudanca
-                   ↓
-          needRefresh = true
-                   ↓
-          Overlay + Auto-reload
+ENCERRAMENTO MANUAL (usuario clica "Finalizar"):
+  endSession() → saveStageTime() → updateStreak(DB) → celebração → resetTimer()
+
+ENCERRAMENTO AUTOMÁTICO (inatividade/timeout):
+  autoEndSession() → saveStageTime() → updateStreak(DB) → toast → resetTimer()
+                                              ⬆
+                            MESMO FLUXO DE VERIFICAÇÃO DE STREAK!
 ```
 
 ---
 
-### Mudancas Detalhadas
+### Verificações Adicionais Recomendadas
 
-**1. src/App.tsx**
-- Remover import de `useVersionCheck`
-- Remover chamada `const { isUpdating } = useVersionCheck();`
-- Manter apenas `const { needRefresh } = usePWAUpdate();`
-- Simplificar `showUpdateOverlay = needRefresh`
+1. **Confirmar que o cron `check-streaks` está rodando:** Os logs estão vazios, o que pode indicar que não está sendo executado.
 
-**2. src/hooks/usePWAUpdate.ts**
-- Aumentar intervalo de check de 15s para 60s (menos agressivo)
-- Manter auto-update quando detecta nova versao
-
-**3. index.html**
-- Remover o script inline de cache clear (linhas 40-84)
-- O script usa `Date.now()` que muda a cada load, causando problemas similares
+2. **Verificar secret `CRON_SECRET`:** Necessário para o cron job funcionar.
 
 ---
 
-### Nova Arquitetura de Updates
+### Seção Técnica
 
-```text
-ANTES (3 sistemas conflitantes):
-┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
-│  index.html     │  │ useVersionCheck │  │  usePWAUpdate   │
-│  cache clear    │  │ edge function   │  │  service worker │
-└────────┬────────┘  └────────┬────────┘  └────────┬────────┘
-         │                    │                    │
-         └────────────┬───────┴────────────────────┘
-                      ↓
-              Conflitos e loops!
+**Por que o tempo está sendo gravado mas o streak não?**
 
-DEPOIS (1 sistema limpo):
-┌─────────────────────────────────────────────────────────┐
-│                    usePWAUpdate                          │
-│  • Usa service worker nativo do browser                  │
-│  • Hash de arquivos muda apenas em novos builds          │
-│  • Verifica a cada 60s se ha nova versao                 │
-│  • Auto-reload quando detecta mudanca                    │
-└─────────────────────────────────────────────────────────┘
+O sistema atual tem dois caminhos de encerramento:
+
+1. **Manual (`endSession()`):** Salva tempo → calcula XP → atualiza streak → celebração
+2. **Automático (inatividade):** Salva tempo → reseta timer (STREAK IGNORADO)
+
+O caminho automático "esquece" de verificar se o usuário atingiu a meta do dia.
+
+**Por que usar dados do banco e não do timer local?**
+
+O timer local pode ser resetado por:
+- Refresh da página
+- Fechar e reabrir o app
+- Política de "nunca restaurar sessões órfãs" (linha 99-109)
+
+Os dados em `stage_times` são a fonte de verdade. A função `updateStreak()` já faz essa verificação internamente, mas só é chamada no encerramento manual.
+
+**Constantes de timeout propostas:**
+
+```typescript
+const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000; // 15 min (era 30)
+const MAX_SESSION_DURATION_MS = 4 * 60 * 60 * 1000; // 4 horas máximo
 ```
-
----
-
-### Ordem de Execucao
-
-1. Excluir edge function `supabase/functions/app-version/`
-2. Excluir hook `src/hooks/useVersionCheck.ts`
-3. Atualizar `src/App.tsx` removendo useVersionCheck
-4. Atualizar `src/hooks/usePWAUpdate.ts` (intervalo 60s)
-5. Limpar script inline do `index.html`
-6. Manter `UpdateOverlay.tsx` (ainda usado pelo PWA)
-
----
-
-### Secao Tecnica
-
-**Por que a edge function nao pode ser "consertada"?**
-
-Edge functions Deno sao "cold start" - cada instancia pode ter um timestamp diferente. Mesmo salvando em variavel no topo do arquivo, multiplas instancias podem rodar simultaneamente. A unica forma de ter versao estavel seria:
-- Salvar em banco de dados (complexo, overhead)
-- Usar arquivo estatico (melhor, mas ja temos via PWA)
-
-**Por que o service worker funciona?**
-
-O Vite gera um arquivo `sw.js` com hash baseado no conteudo dos assets. Quando voce faz build, o hash muda. O browser compara automaticamente o SW atual com o novo e dispara evento de atualizacao.
-
-**Sobre o Preview:**
-
-No ambiente de preview da Lovable, cada mudanca de codigo gera um novo build. O PWA vai detectar isso normalmente, mas com intervalo de 60s (nao 15s), o que e muito menos intrusivo.
 
