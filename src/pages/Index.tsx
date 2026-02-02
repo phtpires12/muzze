@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { useProfileWithLevel } from "@/hooks/useProfileWithLevel";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { useSessionContext } from "@/contexts/SessionContext";
-import { useInProgressProjects } from "@/hooks/useInProgressProjects";
 import { useStreakValidator } from "@/hooks/useStreakValidator";
 import { useStreakAutoRecovery } from "@/hooks/useStreakAutoRecovery";
 import { useCelebration } from "@/contexts/CelebrationContext";
@@ -12,7 +11,6 @@ import { useLiveDailyProgress } from "@/hooks/useLiveDailyProgress";
 import { supabase } from "@/integrations/supabase/client";
 import { getLevelByXP, TROPHIES } from "@/lib/gamification";
 import { useGamification } from "@/hooks/useGamification";
-import { getWorkflow, getUserWorkflow } from "@/lib/workflows";
 import { getRandomQuote } from "@/lib/inspirational-quotes";
 
 import { Button } from "@/components/ui/button";
@@ -23,7 +21,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { ProfileSheet } from "@/components/ProfileSheet";
 import { FreePlanBanner } from "@/components/FreePlanBanner";
-import { Flame, Clock, Trophy, Lightbulb, Zap, Film, Mic, Scissors, AlertCircle, Lock, Sparkles, TrendingUp, Check } from "lucide-react";
+import { ContinuityCarousel } from "@/components/home/ContinuityCarousel";
+import { Flame, Clock, Trophy, Zap, Sparkles, Check, AlertCircle, Lock, Lightbulb, Film, Mic, Scissors } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
@@ -68,7 +67,7 @@ const Index = () => {
   const { trackEvent } = useAnalytics();
   const { muzzeSession, setMuzzeSession, resetMuzzeSession } = useSessionContext();
   const { stats } = useGamification();
-  const { mostRecentProject, loading: projectsLoading } = useInProgressProjects();
+  
   const { isShowingAnyCelebration } = useCelebration();
   const { 
     result: streakValidation, 
@@ -298,12 +297,6 @@ const Index = () => {
     navigate('/session');
   };
 
-  const handleContinueActivity = () => {
-    if (!mostRecentProject) return;
-    
-    trackEvent('continued_activity');
-    navigate(`/session?stage=${mostRecentProject.stage}&scriptId=${mostRecentProject.id}`);
-  };
 
 
   const handleOpenItem = () => {
@@ -495,97 +488,12 @@ const Index = () => {
         <FreePlanBanner />
       </div>
 
-      {/* Main Panel */}
+      {/* Main Panel - Continuity Carousel */}
       <div className="px-6 mt-6">
-        <Card 
-          className={cn(
-            "p-8 bg-card border border-border",
-            "shadow-sm hover:shadow-md transition-shadow",
-            "rounded-xl animate-fade-in"
-          )}
-        >
-          {projectsLoading ? (
-            // Skeleton enquanto carrega
-            <div className="animate-pulse space-y-4">
-              <div className="h-7 bg-secondary/50 rounded w-4/5"></div>
-              <div className="p-4 bg-secondary/30 rounded-2xl space-y-2">
-                <div className="h-5 bg-secondary/50 rounded w-3/4"></div>
-                <div className="h-4 bg-secondary/40 rounded w-1/2"></div>
-                <div className="h-3 bg-secondary/30 rounded w-2/3"></div>
-              </div>
-              <div className="h-12 bg-secondary/50 rounded-xl"></div>
-            </div>
-          ) : mostRecentProject ? (
-            // Com projeto em andamento: mostra ambas opções
-            <div className="space-y-4">
-              <h2 className="text-2xl font-bold text-foreground">
-                {profile?.username ? profile.username.split(' ')[0] + ", essa" : "Essa"} foi sua última atividade criativa
-              </h2>
-              
-              <div className="p-4 bg-secondary/50 rounded-2xl">
-                <h3 className="font-semibold text-foreground mb-2">
-                  📝 {mostRecentProject.title}
-                </h3>
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">
-                    Etapa: {mostRecentProject.stage === 'ideation' ? 'Ideação' : 
-                            mostRecentProject.stage === 'script' ? 'Roteiro em progresso' : 
-                            mostRecentProject.stage === 'record' ? 'Gravação pendente' : 
-                            mostRecentProject.stage === 'review' ? 'Revisão' :
-                            mostRecentProject.stage === 'edit' ? 'Edição pendente' : mostRecentProject.stage}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Última edição: {new Date(mostRecentProject.updatedAt).toLocaleString('pt-BR', { 
-                      day: '2-digit', 
-                      month: 'short', 
-                      hour: '2-digit', 
-                      minute: '2-digit' 
-                    })}
-                  </p>
-                </div>
-              </div>
-              
-              <Button
-                id="tutorial-start-session"
-                onClick={handleContinueActivity}
-                className="w-full bg-gradient-to-r from-primary to-accent hover:opacity-90 text-white shadow-lg h-12 rounded-xl font-semibold"
-              >
-                Continuar criando →
-              </Button>
-              
-              <button 
-                onClick={handleStartSession}
-                className="w-full text-center text-sm text-muted-foreground hover:text-primary transition-colors py-2"
-              >
-                ou iniciar nova sessão
-              </button>
-            </div>
-          ) : (
-            // Sem projeto: mostra apenas iniciar
-            <div className="space-y-4 text-center">
-              <h2 className="text-2xl font-bold text-foreground mb-2">
-                Bem-vindo de volta{profile?.username ? ", " + profile.username.split(' ')[0] : ""}
-              </h2>
-              
-              <Button
-                id="tutorial-start-session"
-                data-testid="cta-start-session"
-                onClick={handleStartSession}
-                className="w-full relative overflow-hidden group h-14 rounded-2xl font-semibold text-base shadow-[0_0_20px_hsl(var(--primary)/0.4),0_0_40px_hsl(var(--accent)/0.2)]"
-                style={{
-                  background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)))',
-                  boxShadow: '0 0 0 1px hsl(var(--accent)), inset 0 1px 0 hsl(var(--primary)/0.5)',
-                }}
-              >
-                <Zap className="w-5 h-5 mr-2" />
-                Iniciar sessão criativa
-              </Button>
-              <p className="text-xs text-muted-foreground">
-                Defina a etapa e comece a criar — o tempo trabalhado vale pontos e streak.
-              </p>
-            </div>
-          )}
-        </Card>
+        <ContinuityCarousel 
+          username={profile?.username || undefined}
+          onStartNewSession={handleStartSession}
+        />
       </div>
 
       {/* Progress Section - Seção alternada cinza */}
