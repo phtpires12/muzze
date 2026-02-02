@@ -20,8 +20,6 @@ import { DayContentModal } from "@/components/calendar/DayContentModal";
 import { MobileWeekAgendaView } from "@/components/calendar/MobileWeekAgendaView";
 import { PostConfirmationPopup } from "@/components/calendar/PostConfirmationPopup";
 import { useOverdueContent } from "@/hooks/useOverdueContent";
-import { useStuckContent } from "@/hooks/useStuckContent";
-import { StuckContentPopup } from "@/components/StuckContentPopup";
 import { PublishStatus } from "@/components/calendar/PublishStatusBadge";
 import { useWorkspaceContext } from "@/contexts/WorkspaceContext";
 import { usePlanCapabilitiesOptional } from "@/contexts/PlanContext";
@@ -91,13 +89,6 @@ const CalendarioEditorial = () => {
     refetch: refetchOverdue,
   } = useOverdueContent();
 
-  // Stuck content popup (content that hasn't been updated recently with approaching publish date)
-  const {
-    currentStuckScript,
-    isStuckPopupOpen,
-    setIsStuckPopupOpen,
-    pauseTemporarily,
-  } = useStuckContent();
 
   const handlePopupMarkAsPosted = async (scriptId: string) => {
     await markAsPosted(scriptId);
@@ -201,7 +192,6 @@ const CalendarioEditorial = () => {
   useEffect(() => {
     return () => {
       setIsPopupOpen(false);
-      setIsStuckPopupOpen(false);
       setModalOpen(false);
       setRescheduleModalOpen(false);
     };
@@ -884,16 +874,12 @@ const CalendarioEditorial = () => {
         ) : null}
       </div>
 
-      {/* Priorização de popups: apenas um por vez para evitar overlays acumulados */}
-      {/* Prioridade: Overdue > Stuck > DayContent modal */}
+      {/* Popups gerenciados */}
       {(() => {
         const hasOverduePopup = isPopupOpen && !!currentPopupScript;
-        const hasStuckPopup = isStuckPopupOpen && !!currentStuckScript;
         
-        // DayContent modal só aparece se não há popups prioritários
-        const shouldShowDayModal = modalOpen && !hasOverduePopup && !hasStuckPopup;
-        // Stuck popup só aparece se não há overdue popup
-        const shouldShowStuckPopup = hasStuckPopup && !hasOverduePopup;
+        // DayContent modal só aparece se não há popup de overdue
+        const shouldShowDayModal = modalOpen && !hasOverduePopup;
         
         return (
           <>
@@ -907,7 +893,7 @@ const CalendarioEditorial = () => {
               onRefresh={fetchScripts}
             />
 
-            {/* Popup for overdue content - maior prioridade */}
+            {/* Popup for overdue content */}
             <PostConfirmationPopup
               open={hasOverduePopup}
               onOpenChange={setIsPopupOpen}
@@ -916,14 +902,6 @@ const CalendarioEditorial = () => {
               onReschedule={handlePopupReschedule}
               onRemindLater={handlePopupRemindLater}
               onDelete={handlePopupDelete}
-            />
-
-            {/* Popup for stuck content - só aparece se não há overdue */}
-            <StuckContentPopup
-              open={shouldShowStuckPopup}
-              onOpenChange={setIsStuckPopupOpen}
-              script={currentStuckScript}
-              onPauseTemporarily={pauseTemporarily}
             />
           </>
         );
