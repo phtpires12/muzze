@@ -13,11 +13,14 @@ import {
   Scissors, 
   CheckCircle,
   Flame,
-  LucideIcon 
+  LucideIcon,
+  Maximize2,
+  X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useSoundEffects } from '@/hooks/useSoundEffects';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Tooltip,
   TooltipContent,
@@ -81,12 +84,24 @@ export const DraggableSessionTimer = ({
 }: DraggableSessionTimerProps) => {
   const isMobile = useIsMobile();
   const [showEndConfirmation, setShowEndConfirmation] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const { playSound, preloadSounds } = useSoundEffects(0.6);
 
   // Preload sounds on mount
   useEffect(() => {
     preloadSounds();
   }, [preloadSounds]);
+
+  // ESC key to close expanded mode
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isExpanded) {
+        setIsExpanded(false);
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [isExpanded]);
 
   const handlePause = useCallback(() => {
     playSound('pause');
@@ -101,6 +116,7 @@ export const DraggableSessionTimer = ({
   const handleConfirmEnd = useCallback(() => {
     playSound('complete');
     setShowEndConfirmation(false);
+    setIsExpanded(false); // Close expanded mode when ending session
     onStop();
   }, [playSound, onStop]);
 
@@ -330,6 +346,180 @@ export const DraggableSessionTimer = ({
   // Moved here to respect Rules of Hooks
   if (hidden || !permissionEnabled) return null;
 
+  // Confirmation Dialog - shared between all modes
+  const EndConfirmationDialog = (
+    <AlertDialog open={showEndConfirmation} onOpenChange={setShowEndConfirmation}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Encerrar sessão?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Ao encerrar, seu tempo será salvo e você será redirecionado para a tela inicial.
+            Tem certeza que deseja finalizar sua sessão criativa?
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Continuar trabalhando</AlertDialogCancel>
+          <AlertDialogAction onClick={handleConfirmEnd}>
+            Sim, encerrar
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+
+  // =====================================================
+  // EXPANDED FULLSCREEN MODE
+  // =====================================================
+  if (isExpanded) {
+    return (
+      <AnimatePresence>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          transition={{ duration: 0.2 }}
+          className={cn(
+            "fixed inset-0 z-[60] flex items-center justify-center",
+            isStreakMode 
+              ? "bg-gradient-to-br from-orange-600/98 via-red-600/98 to-orange-700/98"
+              : isBonusMode
+                ? "bg-gradient-to-br from-orange-500/98 via-purple-600/98 to-violet-700/98"
+                : "bg-background/98 backdrop-blur-xl"
+          )}
+        >
+          {/* Close button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn(
+              "absolute top-4 right-4 z-10",
+              isStreakMode || isBonusMode ? "text-white/80 hover:text-white hover:bg-white/10" : ""
+            )}
+            onClick={() => setIsExpanded(false)}
+          >
+            <X className="w-6 h-6" />
+          </Button>
+
+          {/* Expanded content */}
+          <div className="text-center space-y-8 px-8 max-w-2xl w-full">
+            {/* Large icon */}
+            <motion.div 
+              className={cn(
+                "mx-auto rounded-full flex items-center justify-center shadow-2xl",
+                isStreakMode
+                  ? "bg-orange-100/20 animate-wiggle"
+                  : isBonusMode
+                    ? "bg-white/20"
+                    : "bg-gradient-to-br from-accent to-primary",
+                isMobile ? "w-24 h-24" : "w-32 h-32"
+              )}
+              animate={isStreakMode ? { scale: [1, 1.05, 1] } : {}}
+              transition={{ duration: 2, repeat: Infinity }}
+            >
+              <Icon className={cn(
+                isStreakMode ? "text-orange-100" : isBonusMode ? "text-white" : "text-white",
+                isMobile ? "w-12 h-12" : "w-16 h-16"
+              )} />
+            </motion.div>
+
+            {/* Stage name - top */}
+            <p className={cn(
+              "font-medium uppercase tracking-widest",
+              isStreakMode || isBonusMode ? "text-white/60" : "text-muted-foreground",
+              isMobile ? "text-sm" : "text-base"
+            )}>
+              {stage}
+            </p>
+            
+            {/* Large timer display */}
+            <div>
+              <motion.div 
+                className={cn(
+                  "font-bold tabular-nums leading-none",
+                  isStreakMode ? "text-orange-100" : isBonusMode ? "text-white" : "text-foreground",
+                  isMobile ? "text-6xl" : "text-8xl"
+                )}
+                animate={isPaused ? { opacity: [1, 0.5, 1] } : {}}
+                transition={{ duration: 1, repeat: Infinity }}
+              >
+                {formatTime(elapsedSeconds)}
+              </motion.div>
+              
+              <p className={cn(
+                "mt-4",
+                isStreakMode ? "text-orange-100/80" : isBonusMode ? "text-purple-100/80" : "text-muted-foreground",
+                isMobile ? "text-lg" : "text-xl"
+              )}>
+                {goalText}
+              </p>
+            </div>
+
+            {/* Progress bar */}
+            <Progress 
+              value={(elapsedSeconds / displayedTarget) * 100} 
+              className={cn(
+                "w-full max-w-md mx-auto",
+                isStreakMode && "bg-orange-300/30 [&>div]:bg-gradient-to-r [&>div]:from-orange-400 [&>div]:to-red-500",
+                isBonusMode && "bg-purple-300/30 [&>div]:bg-gradient-to-r [&>div]:from-orange-400 [&>div]:to-purple-500",
+                isMobile ? "h-3" : "h-4"
+              )}
+            />
+
+            {/* Control buttons */}
+            <div className="flex justify-center gap-4">
+              {!isPaused ? (
+                <Button
+                  onClick={handlePause}
+                  variant={isStreakMode || isBonusMode ? "secondary" : "outline"}
+                  size="lg"
+                  className={cn(
+                    isMobile ? "px-6 py-6 text-base" : "px-8 py-7 text-lg"
+                  )}
+                >
+                  <Pause className={cn(isMobile ? "w-5 h-5 mr-2" : "w-6 h-6 mr-3")} />
+                  Pausar
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleResume}
+                  variant={isStreakMode || isBonusMode ? "secondary" : "default"}
+                  size="lg"
+                  className={cn(
+                    isMobile ? "px-6 py-6 text-base" : "px-8 py-7 text-lg"
+                  )}
+                >
+                  <Play className={cn(isMobile ? "w-5 h-5 mr-2" : "w-6 h-6 mr-3")} />
+                  Retomar
+                </Button>
+              )}
+              <Button
+                onClick={() => setShowEndConfirmation(true)}
+                variant={isStreakMode || isBonusMode ? "secondary" : "outline"}
+                size="lg"
+                className={cn(
+                  isMobile ? "px-6 py-6 text-base" : "px-8 py-7 text-lg"
+                )}
+              >
+                <Square className={cn(isMobile ? "w-5 h-5 mr-2" : "w-6 h-6 mr-3")} />
+                Finalizar
+              </Button>
+            </div>
+
+            {/* Hint to close */}
+            <p className={cn(
+              "text-sm",
+              isStreakMode || isBonusMode ? "text-white/40" : "text-muted-foreground/60"
+            )}>
+              {isMobile ? "Toque no X para minimizar" : "Pressione ESC ou clique no X para minimizar"}
+            </p>
+          </div>
+
+          {EndConfirmationDialog}
+        </motion.div>
+      </AnimatePresence>
+    );
+  }
+
   // Popup mode: centered, no dragging, no fixed positioning
   if (isPopup) {
     return (
@@ -344,13 +534,24 @@ export const DraggableSessionTimer = ({
         )}>
           {/* Timer Content */}
           <div className="p-6">
-            <div className="text-center mb-4">
+            <div className="flex items-center justify-between mb-4">
               <span className={cn(
                 "font-semibold text-sm transition-colors duration-1000",
                 isStreakMode ? "text-orange-100/80" : isBonusMode ? "text-purple-100/80" : "text-muted-foreground"
               )}>
                 {stage}
               </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "h-7 w-7",
+                  isStreakMode || isBonusMode ? "text-white/60 hover:text-white hover:bg-white/10" : ""
+                )}
+                onClick={() => setIsExpanded(true)}
+              >
+                <Maximize2 className="w-4 h-4" />
+              </Button>
             </div>
             
             <div className="flex flex-col items-center gap-6">
@@ -416,24 +617,7 @@ export const DraggableSessionTimer = ({
                 </Button>
               </div>
 
-              {/* Confirmation Dialog */}
-              <AlertDialog open={showEndConfirmation} onOpenChange={setShowEndConfirmation}>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Encerrar sessão?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Ao encerrar, seu tempo será salvo e você será redirecionado para a tela inicial.
-                      Tem certeza que deseja finalizar sua sessão criativa?
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Continuar trabalhando</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleConfirmEnd}>
-                      Sim, encerrar
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+              {EndConfirmationDialog}
 
               {/* Progress bar */}
               <Progress 
@@ -451,7 +635,9 @@ export const DraggableSessionTimer = ({
     );
   }
 
-  // Normal mode: draggable, fixed position
+  // =====================================================
+  // NORMAL DRAGGABLE MODE
+  // =====================================================
   return (
     <div
       ref={dragRef}
@@ -499,11 +685,40 @@ export const DraggableSessionTimer = ({
           )}>
             {stage}
           </span>
-          <GripVertical className={cn(
-            "transition-colors duration-1000",
-            isStreakMode ? "text-orange-100/60" : isBonusMode ? "text-purple-100/60" : "text-muted-foreground",
-            isMobile ? "w-3 h-3" : "w-4 h-4"
-          )} />
+          <div className="flex items-center gap-1">
+            {/* Expand button */}
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={cn(
+                      "transition-colors",
+                      isStreakMode || isBonusMode 
+                        ? "text-white/60 hover:text-white hover:bg-white/10" 
+                        : "text-muted-foreground hover:text-foreground",
+                      isMobile ? "h-5 w-5" : "h-6 w-6"
+                    )}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsExpanded(true);
+                    }}
+                  >
+                    <Maximize2 className={cn(isMobile ? "w-3 h-3" : "w-3.5 h-3.5")} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>Expandir timer</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <GripVertical className={cn(
+              "transition-colors duration-1000",
+              isStreakMode ? "text-orange-100/60" : isBonusMode ? "text-purple-100/60" : "text-muted-foreground",
+              isMobile ? "w-3 h-3" : "w-4 h-4"
+            )} />
+          </div>
         </div>
 
         {/* Timer Content - Layout compacto em mobile */}
@@ -603,24 +818,7 @@ export const DraggableSessionTimer = ({
               </div>
             </TooltipProvider>
 
-            {/* Confirmation Dialog */}
-            <AlertDialog open={showEndConfirmation} onOpenChange={setShowEndConfirmation}>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Encerrar sessão?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Ao encerrar, seu tempo será salvo e você será redirecionado para a tela inicial.
-                    Tem certeza que deseja finalizar sua sessão criativa?
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Continuar trabalhando</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleConfirmEnd}>
-                    Sim, encerrar
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            {EndConfirmationDialog}
           </div>
 
           {/* Progress bar - Mais fino em mobile */}
