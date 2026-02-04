@@ -81,8 +81,8 @@ export function TimerWindowActivator({
             Timer em Janela
           </h4>
           <p className="text-xs text-muted-foreground mt-1">
-            Clique para abrir o timer numa janela separada. 
-            Ela aparece quando você trocar de aba.
+            Clique para abrir a janela. Enquanto o timer estiver rodando, 
+            ao trocar de aba ela será trazida para frente.
           </p>
         </div>
         
@@ -92,7 +92,7 @@ export function TimerWindowActivator({
           className="w-full gap-2"
         >
           <ExternalLink className="w-4 h-4" />
-          Ativar Timer em Janela
+          Abrir Timer em Janela
         </Button>
       </div>
     </div>
