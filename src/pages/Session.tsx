@@ -373,7 +373,7 @@ const Session = () => {
       if (!isPausedRef.current && autoPopupEnabled) {
         openPortal();
       }
-    }, 150); // 150ms de delay para evitar race condition
+    }, 50); // 50ms de delay - reduzido para evitar bloqueio do navegador
 
     return () => clearTimeout(timeoutId);
   }, [isAppVisible, session.isActive, session.isPaused, openPortal, closePortal]);

@@ -42,7 +42,7 @@ export function useWindowPortal(options: UseWindowPortalOptions = {}) {
       const popup = window.open(
         '',
         'timer-popup',
-        `width=${width},height=${height},left=100,top=100,resizable=yes,scrollbars=no`
+        `width=${width},height=${height},left=100,top=100,resizable=yes,scrollbars=no,popup=yes,noopener=no`
       );
 
       if (!popup) {
