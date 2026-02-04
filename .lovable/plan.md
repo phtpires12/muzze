@@ -1,106 +1,123 @@
 
-## Contexto (o que está acontecendo de verdade)
-Pelos trechos atuais do código, o fluxo “permissão 1x” foi implementado corretamente no conceito (abrir por clique, focar automaticamente). O problema principal que faz o Chrome abrir como **guia** em vez de **janela popup** não é o delay da visibilidade — é que o `window.open()` no modo **user** está sendo executado **dentro de um `setTimeout`** no `useWindowPortal`.
-
-No Chrome, **qualquer `window.open()` que não aconteça imediatamente dentro do handler do clique** perde o “user gesture context” e vira:
-- bloqueado, ou
-- aberto como guia, ou
-- comportamento inconsistente.
-
-Hoje, mesmo com `reason: 'user'`, o `useWindowPortal` faz:
-- clique -> `openPortal({reason:'user'})`
-- `openPortal` -> `setTimeout(() => window.open(...), 50)`
-
-Isso quebra o requisito de gesto do usuário.
-
-Além disso, a tooltip está enganosa porque promete “aparece quando trocar de aba”, mas na prática o auto-focus só acontece quando:
-- `session.isActive === true`
-- `session.isPaused === false` (timer “rodando”)
-- `timer-popup-activated === true`
-- e existe uma janela já aberta (handle vivo)
-
-Então a percepção “só roda se o timer estiver rodando” é verdadeira para o auto-focus — e a UI precisa comunicar isso com clareza.
-
 ## Objetivo
-1) Garantir que **ao clicar** em “Ativar Timer em Janela” o timer abra como **janela popup** (não guia) no Chrome desktop.
-2) Ajustar a tooltip/copy para refletir o comportamento real:
-   - “quando você trocar de aba, essa janela será trazida para frente” (focus),
-   - e isso só acontece “enquanto o timer estiver rodando”.
-3) Manter o fluxo “auto” sem abrir nada (só focar se já existir), evitando criação de guias na saída de aba.
+Remover completamente (da versão web) a funcionalidade “Timer em Janela / Popup”, incluindo:
+- abertura/foco automático ao trocar de aba
+- CTA/tooltip de ativação
+- switch de configurações (“Timer Popup Automático”)
+- hooks/arquivos e chaves de localStorage associadas
+- modo `isPopup` no `DraggableSessionTimer` (já que ficará sem uso)
 
-## Mudanças propostas (alta confiança)
-### A) Tornar o `window.open()` 100% síncrono no clique (remover `setTimeout` no modo user)
-**Arquivo:** `src/hooks/useWindowPortal.tsx`
+Resultado esperado: o timer volta a existir somente “dentro” do web app (draggable + modo expandido/fullscreen), sem qualquer tentativa de abrir janela/guia externa.
 
-**O que mudar:**
-- No `openPortal({ reason: 'user' })`, chamar `window.open(...)` imediatamente, sem `setTimeout`.
-- Separar a parte “abrir janela” (síncrono) da parte “injetar estilos / criar container / setIsOpen(true)” (pode continuar síncrono logo em seguida; se precisar, usar `queueMicrotask`/`requestAnimationFrame` apenas para DOM setup, mas mantendo o `window.open` dentro do clique).
-  
-**Resultado esperado:**
-- Chrome passa a tratar como popup (muito mais consistente).
+---
 
-### B) Reavaliar o BroadcastChannel “close-all-popups” para não prejudicar a abertura
-**Arquivo:** `src/hooks/useWindowPortal.tsx`
+## O que será removido (inventário)
+### Arquivos criados especificamente para o popup (excluir)
+1) `src/hooks/useWindowPortal.tsx`
+2) `src/components/TimerWindowActivator.tsx`
+3) `src/hooks/useTimerPopupSettings.ts`
 
-**Problema atual:**
-- O hook envia `close-all-popups` antes de abrir, e ainda espera 50ms. Além de quebrar o gesto, esse “orquestrador” pode criar estados estranhos.
+Esses três ficam sem utilidade após a remoção e hoje são o núcleo/UX/config do recurso.
 
-**O que vamos fazer:**
-- Remover a necessidade de `close-all-popups` no fluxo normal.
-- Confiar primeiro no comportamento padrão do `window.open` com o mesmo `name` (`timer-popup`) que tende a reutilizar/focar a mesma janela.
-- Manter `close-orphan-popups` apenas se realmente for necessário; caso esteja atrapalhando, simplificar (preferência: estabilidade do popup no clique).
+### Pontos de integração a limpar (remover import/lógica/JSX)
+1) `src/pages/Session.tsx`
+   - Remover imports: `useWindowPortal`, `TimerWindowActivator`, e o `useAppVisibility` (confirmado que só era usado para isso nessa página).
+   - Remover toda a seção “Window portal system” (criação do portal, handlers, efeitos).
+   - Remover renderizações `<Portal> ... isPopup={true} ... </Portal>`
+   - Remover `<TimerWindowActivator ... />`
+   - Ajustar as condições `!isOpen && (...)` para sempre renderizar o timer interno (ou simplesmente remover a condição e renderizar direto).
 
-### C) Ajustar a cópia da tooltip para não prometer “abrir”
-**Arquivo:** `src/components/TimerWindowActivator.tsx`
+2) `src/pages/ShotListRecord.tsx`
+   - Remover imports: `useWindowPortal`, `TimerWindowActivator` (e manter `useAppVisibility` somente se existir uso adicional; caso só seja para popup aqui também, remover).
+   - Remover bloco de lógica de visibilidade que chama `openPortal({reason:'auto'})`.
+   - Remover `<Portal>...isPopup={true}...</Portal>` e `<TimerWindowActivator />`
+   - Remover condicionais baseadas em `isOpen` que escondiam o timer interno.
 
-**Novo texto sugerido (exemplo):**
-- Título: “Timer em Janela”
-- Descrição: “Clique uma vez para abrir a janela. Enquanto o timer estiver rodando, ao trocar de aba a janela será trazida para frente.”
+3) `src/pages/ShotListReview.tsx`
+   - Mesma limpeza de popup (imports, lógica e JSX).
 
-Isso alinha a expectativa com o comportamento real (focus, não “spawn”).
+4) `src/pages/Settings.tsx`
+   - Remover import do `useTimerPopupSettings`
+   - Remover o switch “Timer Popup Automático” (linhas ~98–112 no arquivo atual)
+   - Ajustar layout/spacing do card de preferências após remover esse item
 
-### D) Ajustar a lógica “só funciona rodando” (decisão de produto + pequena mudança)
-Hoje o auto-focus não roda se estiver pausado (isso faz sentido para não “incomodar” o usuário). Mas a UX está confusa.
+### Componente do timer: remover modo popup (limpeza para não “sobrar” feature morta)
+5) `src/components/DraggableSessionTimer.tsx`
+   - Remover prop `isPopup?: boolean`
+   - Remover o bloco inteiro `if (isPopup) { ... }` (renderização centralizada “popup mode”)
+   - Remover qualquer chamada `isPopup={true}` (já removidas nas páginas acima)
+   - Garantir que o modo “Expanded/Fullscreen” continue igual (ele é interno ao timer e não depende do popup)
 
-Vamos escolher uma das opções (recomendação: manter como está e apenas comunicar):
-1) **Manter regra atual** (auto-focus só quando rodando) + corrigir texto.
-2) Alternativa: permitir auto-focus mesmo pausado, mas isso pode ser irritante e não resolve a abertura.
+---
 
-Neste plano eu implemento a opção (1), que resolve a reclamação sem mudar a filosofia do timer.
+## Limpeza de dados do usuário (localStorage)
+Hoje existem chaves relacionadas ao recurso:
+- `timer-popup-activated`
+- `timer-auto-popup-enabled`
 
-## Onde mais checar (para garantir que não há “outro lugar” abrindo guia)
-Mesmo com o `auto` protegido, vamos verificar se há outro `window.open()` sendo acionado em páginas relacionadas:
+Como você pediu para “excluir esses dados”, faremos a limpeza de forma segura no web app:
+- Remover todas as leituras/escritas dessas chaves no código (ao remover os arquivos/hooks e efeitos isso já acontece).
+- Adicionar uma limpeza pontual em um ponto central da aplicação (ex: `App.tsx` ou `main.tsx`) para remover essas chaves na inicialização (apenas uma vez), para não ficar lixo persistido em usuários que já ativaram/configuraram.  
+  Observação: isso não afeta nenhum outro recurso do app.
+
+---
+
+## Sequência de implementação (para evitar quebrar build)
+1) Remover integrações nas páginas (Session / ShotListRecord / ShotListReview / Settings) primeiro:
+   - tirar imports e referências a `useWindowPortal`, `TimerWindowActivator`, `useTimerPopupSettings`
+   - remover JSX `<Portal>` e o CTA
+   - ajustar render do timer interno para sempre aparecer na página
+
+2) Atualizar `DraggableSessionTimer`:
+   - remover prop e bloco `isPopup`
+   - garantir TypeScript/props corretos em todos os lugares onde o timer é usado
+
+3) Remover arquivos agora órfãos:
+   - deletar `useWindowPortal.tsx`, `TimerWindowActivator.tsx`, `useTimerPopupSettings.ts`
+
+4) Adicionar limpeza das chaves do localStorage no bootstrap do app:
+   - removeItem das duas chaves ao iniciar
+
+5) Rodar um “check” mental/compilação (na prática, após implementar, o preview deve subir sem erros):
+   - garantir que não ficou nenhum import quebrado
+   - garantir que não existe mais `window.open` do timer em nenhum lugar
+   - confirmar que Settings compila sem o hook removido
+
+---
+
+## Critérios de aceite (testes end-to-end)
+1) Em `/session?stage=edit&scriptId=...`:
+   - não aparece mais card/tooltip “Timer em Janela”
+   - ao trocar de aba/minimizar, não abre nova guia nem janela
+   - timer continua funcionando normal no canto (draggable) e modo expandido continua funcionando
+
+2) Em `/shot-list/review?scriptId=...` e `/shot-list/record?scriptId=...`:
+   - mesma validação: nada abre ao trocar de aba
+   - timer continua presente e funcional
+
+3) Em `/settings`:
+   - não existe mais a opção “Timer Popup Automático”
+   - página renderiza sem buracos de layout
+
+---
+
+## Observações importantes (alinhamento com sua decisão)
+- Isso remove a feature do web app para não frustrar o usuário com comportamento inconsistente do navegador.
+- Mantém o timer e o modo expandido (fullscreen) dentro do próprio web app.
+- Quando você for retomar a ideia no app nativo para Mac, a implementação será outra (fora das limitações de popup do navegador) e não depende desse código.
+
+---
+
+## Lista consolidada de arquivos que serão alterados/removidos
+### Alterar
+- `src/pages/Session.tsx`
 - `src/pages/ShotListRecord.tsx`
 - `src/pages/ShotListReview.tsx`
-- (busca global por `window.open(`)
+- `src/pages/Settings.tsx`
+- `src/components/DraggableSessionTimer.tsx`
+- (um arquivo central para limpeza do localStorage, a definir após ver onde faz mais sentido: `src/App.tsx` ou `src/main.tsx`)
 
-Se existir algum `window.open` fora do `useWindowPortal`, ele pode ser o causador de guias.
-
-## Critérios de sucesso (testes E2E no Chrome desktop)
-1) Abrir `/session?...` e clicar “Ativar Timer em Janela”
-   - Deve abrir uma **janela** (popup) redimensionável/minimizável (não uma guia).
-2) Voltar para a aba principal, deixar o timer rodando e trocar de aba
-   - A janela do timer deve ser **focada** (trazida à frente), sem criar guia nova.
-3) Pausar o timer e trocar de aba
-   - Não deve focar/abrir nada (e a tooltip deve deixar isso claro).
-4) Fechar a janela manualmente e trocar de aba
-   - Não deve abrir guia nova; ao voltar, o CTA deve voltar a aparecer para reativar.
-
-## Risco/limite honesto (para decidir “não fazer”)
-Mesmo com a correção síncrona, existe um limite: se o usuário tiver configurações/extensões que forçam popups virarem abas, pode continuar abrindo como guia.  
-Por isso, após o ajuste síncrono, se ainda virar guia:
-- vamos considerar a feature “inconfiável no ambiente do usuário” e recomendar desativar o auto-popup (ou remover o recurso) até o app nativo para Mac.
-
-## Entregáveis (arquivos a alterar)
+### Remover
 - `src/hooks/useWindowPortal.tsx`
-  - Remover `setTimeout` do modo `reason: 'user'` e abrir popup de forma síncrona
-  - Simplificar/ajustar lógica de BroadcastChannel para não atrapalhar
 - `src/components/TimerWindowActivator.tsx`
-  - Ajustar texto para “focar ao trocar de aba” e “somente enquanto rodando”
-- (Opcional, se necessário) `src/pages/Session.tsx`, `ShotListRecord.tsx`, `ShotListReview.tsx`
-  - Apenas se encontrarmos algum `window.open` extra ou lógica duplicada fora do hook
-
-## Notas técnicas (por que isso deve resolver)
-- O único jeito confiável de forçar popup no Chrome é: `window.open()` acontecer **sincronamente** no clique.
-- Todo `setTimeout`, `await`, Promise, ou efeito assíncrono antes do `window.open` tende a quebrar o “user gesture”.
-- Portanto, reduzir delay (50ms/150ms) não resolve; remover o atraso no caminho do clique resolve.
+- `src/hooks/useTimerPopupSettings.ts`
