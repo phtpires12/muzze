@@ -9,7 +9,6 @@ import { useNavigate } from "react-router-dom";
 import { useTheme } from "next-themes";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useProfile } from "@/hooks/useProfile";
-import { useTimerPopupSettings } from "@/hooks/useTimerPopupSettings";
 import { useNavPosition } from "@/hooks/useNavPosition";
 import { useIsMobile } from "@/hooks/use-mobile";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
@@ -25,7 +24,6 @@ const Settings = () => {
     requestPermission, 
     removeToken 
   } = useNotifications();
-  const { autoPopupEnabled, setAutoPopup } = useTimerPopupSettings();
   const { navPosition, setNavPosition } = useNavPosition();
   const isMobile = useIsMobile();
   
@@ -92,22 +90,6 @@ const Settings = () => {
                   id="dark-mode"
                   checked={theme === "dark"}
                   onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
-                />
-              </div>
-
-              <div className="flex items-center justify-between py-1">
-                <div className="flex flex-col gap-0.5">
-                  <Label htmlFor="auto-popup" className="cursor-pointer text-sm font-medium">
-                    Timer Popup Automático
-                  </Label>
-                  <span className="text-xs text-muted-foreground">
-                    Abre o timer em janela separada ao sair do app
-                  </span>
-                </div>
-                <Switch
-                  id="auto-popup"
-                  checked={autoPopupEnabled}
-                  onCheckedChange={setAutoPopup}
                 />
               </div>
             </CardContent>

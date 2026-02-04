@@ -4,6 +4,10 @@ import { ThemeProvider } from "next-themes";
 import App from "./App.tsx";
 import "./index.css";
 
+// Cleanup legacy timer popup localStorage keys (feature removed)
+localStorage.removeItem('timer-popup-activated');
+localStorage.removeItem('timer-auto-popup-enabled');
+
 // Capturar evento de instalação PWA ANTES dos componentes montarem
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();

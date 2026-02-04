@@ -60,7 +60,6 @@ interface DraggableSessionTimerProps {
   onStop: () => void;
   progress: number;
   hidden?: boolean;
-  isPopup?: boolean; // When true, render as centered popup (no drag, no fixed position)
   dailyBaselineSeconds?: number; // Segundos criados ANTES desta sessão (snapshot imutável)
   permissionEnabled?: boolean; // When false, timer is not rendered (permission denied)
 }
@@ -78,7 +77,6 @@ export const DraggableSessionTimer = ({
   onStop,
   progress,
   hidden = false,
-  isPopup = false,
   dailyBaselineSeconds = 0,
   permissionEnabled = true,
 }: DraggableSessionTimerProps) => {
@@ -520,120 +518,6 @@ export const DraggableSessionTimer = ({
     );
   }
 
-  // Popup mode: centered, no dragging, no fixed positioning
-  if (isPopup) {
-    return (
-      <div className="w-full h-full flex items-center justify-center p-4">
-        <Card className={cn(
-          "backdrop-blur-md border-border/20 shadow-xl rounded-2xl transition-all duration-1000 w-full max-w-md",
-          isStreakMode 
-            ? "bg-gradient-to-br from-orange-500/95 via-red-500/95 to-orange-600/95 border-orange-500 animate-pulse"
-            : isBonusMode
-              ? "bg-gradient-to-br from-orange-400/90 via-purple-500/90 to-violet-600/90 border-purple-400"
-              : "bg-card/95"
-        )}>
-          {/* Timer Content */}
-          <div className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <span className={cn(
-                "font-semibold text-sm transition-colors duration-1000",
-                isStreakMode ? "text-orange-100/80" : isBonusMode ? "text-purple-100/80" : "text-muted-foreground"
-              )}>
-                {stage}
-              </span>
-              <Button
-                variant="ghost"
-                size="icon"
-                className={cn(
-                  "h-7 w-7",
-                  isStreakMode || isBonusMode ? "text-white/60 hover:text-white hover:bg-white/10" : ""
-                )}
-                onClick={() => setIsExpanded(true)}
-              >
-                <Maximize2 className="w-4 h-4" />
-              </Button>
-            </div>
-            
-            <div className="flex flex-col items-center gap-6">
-              {/* Icon */}
-              <div className={cn(
-                "rounded-full flex items-center justify-center shadow-lg transition-all duration-1000 w-20 h-20",
-                isStreakMode
-                  ? "bg-orange-100/20 animate-wiggle"
-                  : isBonusMode
-                    ? "bg-white/20"
-                    : "bg-gradient-to-br from-accent to-primary"
-              )}>
-                <Icon className={cn(
-                  "transition-colors duration-1000 w-10 h-10",
-                  isStreakMode ? "text-orange-100" : isBonusMode ? "text-white" : "text-white"
-                )} />
-              </div>
-              
-              {/* Time Display */}
-              <div className="text-center">
-                <div className={cn(
-                  "font-bold tabular-nums text-5xl transition-colors duration-1000",
-                  isStreakMode ? "text-orange-100" : isBonusMode ? "text-white" : "text-foreground"
-                )}>
-                  {formatTime(elapsedSeconds)}
-                </div>
-                <div className={cn(
-                  "mt-2 text-sm transition-colors duration-1000",
-                  isStreakMode ? "text-orange-100/70" : isBonusMode ? "text-purple-100/70" : "text-muted-foreground"
-                )}>
-                  {goalText}
-                </div>
-              </div>
-
-              {/* Controls */}
-              <div className="flex gap-3">
-                {!isPaused ? (
-                  <Button
-                    onClick={handlePause}
-                    variant={isStreakMode ? "secondary" : "outline"}
-                    size="lg"
-                  >
-                    <Pause className="w-5 h-5 mr-2" />
-                    Pausar
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={handleResume}
-                    variant={isStreakMode ? "secondary" : "default"}
-                    size="lg"
-                  >
-                    <Play className="w-5 h-5 mr-2" />
-                    Retomar
-                  </Button>
-                )}
-                <Button
-                  onClick={() => setShowEndConfirmation(true)}
-                  variant={isStreakMode ? "secondary" : "outline"}
-                  size="lg"
-                >
-                  <Square className="w-5 h-5 mr-2" />
-                  Finalizar
-                </Button>
-              </div>
-
-              {EndConfirmationDialog}
-
-              {/* Progress bar */}
-              <Progress 
-                value={(elapsedSeconds / displayedTarget) * 100} 
-                className={cn(
-                  "w-full h-2 transition-all duration-500",
-                  isStreakMode && "bg-orange-200 [&>div]:bg-gradient-to-r [&>div]:from-orange-500 [&>div]:to-red-600",
-                  isBonusMode && "bg-purple-200 [&>div]:bg-gradient-to-r [&>div]:from-orange-400 [&>div]:to-purple-500"
-                )}
-              />
-            </div>
-          </div>
-        </Card>
-      </div>
-    );
-  }
 
   // =====================================================
   // NORMAL DRAGGABLE MODE

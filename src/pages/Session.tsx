@@ -34,9 +34,6 @@ import { DraggableSessionTimer } from "@/components/DraggableSessionTimer";
 import { AutoHideNav } from "@/components/AutoHideNav";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useWindowPortal } from "@/hooks/useWindowPortal";
-import { useAppVisibility } from "@/hooks/useAppVisibility";
-import { TimerWindowActivator } from "@/components/TimerWindowActivator";
 import { DevToolsPanel } from "@/components/DevToolsPanel";
 import { TROPHIES } from "@/lib/gamification";
 import { CreativeStage } from "@/types/workspace";
@@ -71,7 +68,6 @@ const Session = () => {
   const [hasEndedSession, setHasEndedSession] = useState(false);
   const [showStreakHalo, setShowStreakHalo] = useState(false);
   const [streakCount, setStreakCount] = useState(0);
-  const isAppVisible = useAppVisibility();
   const { goalMinutes } = useProfileWithLevel();
   const { progress: dailyProgress } = useDailyGoalProgress({ goalMinutes });
   
@@ -328,50 +324,8 @@ const Session = () => {
     await handleEnd();
   };
 
-  // Window portal system - pops out timer when user leaves app
   const currentStage = STAGES.find(s => s.id === session.stage);
   const progress = (session.elapsedSeconds / (session.isStreakMode ? session.dailyGoalMinutes * 60 : 25 * 60)) * 100;
-
-  const { isOpen, openPortal, closePortal, Portal, hasOpenWindow } = useWindowPortal({
-    title: `Timer - ${currentStage?.label || "Sessão"}`,
-    width: 500,
-    height: 500,
-  });
-
-  // Handler for user-initiated popup activation (via button click)
-  const handleActivatePopup = () => {
-    openPortal({ reason: 'user' });
-  };
-
-  // Ref para estado atual do pause (evita race conditions com stale closures)
-  const isPausedRef = useRef(session.isPaused);
-  useEffect(() => {
-    isPausedRef.current = session.isPaused;
-  }, [session.isPaused]);
-
-  // Fechar popup quando timer é pausado
-  useEffect(() => {
-    if (session.isPaused && isOpen) {
-      closePortal();
-    }
-  }, [session.isPaused, isOpen, closePortal]);
-
-  // Handle visibility changes - only focus existing window, never create new
-  useEffect(() => {
-    if (!session.isActive) return;
-    
-    const autoPopupEnabled = localStorage.getItem('timer-auto-popup-enabled') !== 'false';
-    const popupActivated = localStorage.getItem('timer-popup-activated') === 'true';
-
-    // When user leaves the tab and popup was activated
-    if (!isAppVisible && !session.isPaused && autoPopupEnabled && popupActivated) {
-      // Auto mode: only focus existing window, never create new tab
-      openPortal({ reason: 'auto' });
-    }
-    // NOTE: We no longer close the popup when returning to the main tab
-    // This keeps the window handle alive for subsequent auto-focus
-  }, [isAppVisible, session.isActive, session.isPaused, openPortal]);
-
 
   // Se celebração está ativa, renderizar tela mínima para evitar flash
   if (isShowingAnyCelebration) {
@@ -512,50 +466,22 @@ const Session = () => {
           )}
         </div>
 
-        {/* Floating Draggable Timer (in-app) - Hidden when user leaves app or during celebrations */}
-        {!isOpen && (
-          <DraggableSessionTimer
-            stage={currentStage!.label}
-            icon={currentStage!.iconName}
-            elapsedSeconds={session.elapsedSeconds}
-            targetSeconds={session.targetSeconds}
-            isStreakMode={session.isStreakMode}
-            dailyGoalMinutes={session.dailyGoalMinutes}
-            isPaused={session.isPaused}
-            onPause={pauseSession}
-            onResume={resumeSession}
-            onStop={handleEnd}
-            progress={progress}
-            dailyBaselineSeconds={session.dailyBaselineSeconds}
-            permissionEnabled={canUseTimer}
-            hidden={isShowingAnyCelebration}
-          />
-        )}
-
-        <Portal>
-          <DraggableSessionTimer
-            stage={currentStage!.label}
-            icon={currentStage!.iconName}
-            elapsedSeconds={session.elapsedSeconds}
-            targetSeconds={session.targetSeconds}
-            isStreakMode={session.isStreakMode}
-            dailyGoalMinutes={session.dailyGoalMinutes}
-            isPaused={session.isPaused}
-            onPause={pauseSession}
-            onResume={resumeSession}
-            onStop={handleEnd}
-            progress={progress}
-            isPopup={true}
-            dailyBaselineSeconds={session.dailyBaselineSeconds}
-            permissionEnabled={canUseTimer}
-          />
-        </Portal>
-
-        {/* Timer Window Activator - prompts user to enable popup */}
-        <TimerWindowActivator
-          onActivate={handleActivatePopup}
-          hasOpenWindow={hasOpenWindow()}
-          isSessionActive={session.isActive}
+        {/* Floating Draggable Timer - Hidden during celebrations */}
+        <DraggableSessionTimer
+          stage={currentStage!.label}
+          icon={currentStage!.iconName}
+          elapsedSeconds={session.elapsedSeconds}
+          targetSeconds={session.targetSeconds}
+          isStreakMode={session.isStreakMode}
+          dailyGoalMinutes={session.dailyGoalMinutes}
+          isPaused={session.isPaused}
+          onPause={pauseSession}
+          onResume={resumeSession}
+          onStop={handleEnd}
+          progress={progress}
+          dailyBaselineSeconds={session.dailyBaselineSeconds}
+          permissionEnabled={canUseTimer}
+          hidden={isShowingAnyCelebration}
         />
 
         {/* Auto-hide Navigation */}
@@ -594,55 +520,26 @@ const Session = () => {
         </div>
       )}
 
-        {/* Floating Draggable Timer (in-app) - Hidden when user leaves app or during celebrations */}
-        {!isOpen && (
-          <DraggableSessionTimer
-            stage={currentStage.label}
-            icon={currentStage.iconName}
-            elapsedSeconds={session.elapsedSeconds}
-            targetSeconds={session.targetSeconds}
-            isStreakMode={session.isStreakMode}
-            dailyGoalMinutes={session.dailyGoalMinutes}
-            isPaused={session.isPaused}
-            onPause={pauseSession}
-            onResume={resumeSession}
-            onStop={handleEnd}
-            progress={progress}
-            dailyBaselineSeconds={session.dailyBaselineSeconds}
-            permissionEnabled={canUseTimer}
-            hidden={isShowingAnyCelebration}
-          />
-        )}
-
-        {/* Timer in External Popup Window */}
-        <Portal>
-          <DraggableSessionTimer
-            stage={currentStage.label}
-            icon={currentStage.iconName}
-            elapsedSeconds={session.elapsedSeconds}
-            targetSeconds={session.targetSeconds}
-            isStreakMode={session.isStreakMode}
-            dailyGoalMinutes={session.dailyGoalMinutes}
-            isPaused={session.isPaused}
-            onPause={pauseSession}
-            onResume={resumeSession}
-            onStop={handleEnd}
-            progress={progress}
-            isPopup={true}
-            dailyBaselineSeconds={session.dailyBaselineSeconds}
-            permissionEnabled={canUseTimer}
-          />
-        </Portal>
+        {/* Floating Draggable Timer - Hidden during celebrations */}
+        <DraggableSessionTimer
+          stage={currentStage.label}
+          icon={currentStage.iconName}
+          elapsedSeconds={session.elapsedSeconds}
+          targetSeconds={session.targetSeconds}
+          isStreakMode={session.isStreakMode}
+          dailyGoalMinutes={session.dailyGoalMinutes}
+          isPaused={session.isPaused}
+          onPause={pauseSession}
+          onResume={resumeSession}
+          onStop={handleEnd}
+          progress={progress}
+          dailyBaselineSeconds={session.dailyBaselineSeconds}
+          permissionEnabled={canUseTimer}
+          hidden={isShowingAnyCelebration}
+        />
 
         {/* Script Editor */}
         <ScriptEditor scriptId={scriptId} isReviewMode={session.stage === "review"} />
-
-        {/* Timer Window Activator - prompts user to enable popup */}
-        <TimerWindowActivator
-          onActivate={handleActivatePopup}
-          hasOpenWindow={hasOpenWindow()}
-          isSessionActive={session.isActive}
-        />
 
         {/* Auto-hide Navigation */}
         <AutoHideNav />
@@ -860,45 +757,23 @@ const Session = () => {
         </Card>
       </div>
 
-      {/* Floating Draggable Timer for edit stage (same as other stages) - Hidden during celebrations */}
-      {!isOpen && (
-        <DraggableSessionTimer
-          stage={currentStage.label}
-          icon={currentStage.iconName}
-          elapsedSeconds={session.elapsedSeconds}
-          targetSeconds={session.targetSeconds}
-          isStreakMode={session.isStreakMode}
-          dailyGoalMinutes={session.dailyGoalMinutes}
-          isPaused={session.isPaused}
-          onPause={pauseSession}
-          onResume={resumeSession}
-          onStop={handleEnd}
-          progress={progress}
-          dailyBaselineSeconds={session.dailyBaselineSeconds}
-          permissionEnabled={canUseTimer}
-          hidden={isShowingAnyCelebration}
-        />
-      )}
-
-      {/* Portal for popup window when user leaves app */}
-      <Portal>
-        <DraggableSessionTimer
-          stage={currentStage.label}
-          icon={currentStage.iconName}
-          elapsedSeconds={session.elapsedSeconds}
-          targetSeconds={session.targetSeconds}
-          isStreakMode={session.isStreakMode}
-          dailyGoalMinutes={session.dailyGoalMinutes}
-          isPaused={session.isPaused}
-          onPause={pauseSession}
-          onResume={resumeSession}
-          onStop={handleEnd}
-          progress={progress}
-          dailyBaselineSeconds={session.dailyBaselineSeconds}
-          permissionEnabled={canUseTimer}
-          isPopup={true}
-        />
-      </Portal>
+      {/* Floating Draggable Timer for edit stage - Hidden during celebrations */}
+      <DraggableSessionTimer
+        stage={currentStage.label}
+        icon={currentStage.iconName}
+        elapsedSeconds={session.elapsedSeconds}
+        targetSeconds={session.targetSeconds}
+        isStreakMode={session.isStreakMode}
+        dailyGoalMinutes={session.dailyGoalMinutes}
+        isPaused={session.isPaused}
+        onPause={pauseSession}
+        onResume={resumeSession}
+        onStop={handleEnd}
+        progress={progress}
+        dailyBaselineSeconds={session.dailyBaselineSeconds}
+        permissionEnabled={canUseTimer}
+        hidden={isShowingAnyCelebration}
+      />
 
       {/* Celebration Components rendered globally via GlobalCelebrations */}
 
@@ -908,13 +783,6 @@ const Session = () => {
         show={showStreakHalo} 
         streakCount={streakCount}
         onComplete={() => setShowStreakHalo(false)}
-      />
-      
-      {/* Timer Window Activator - prompts user to enable popup */}
-      <TimerWindowActivator
-        onActivate={handleActivatePopup}
-        hasOpenWindow={hasOpenWindow()}
-        isSessionActive={session.isActive}
       />
       
       {/* Auto-hide Navigation */}
