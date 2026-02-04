@@ -36,6 +36,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useWindowPortal } from "@/hooks/useWindowPortal";
 import { useAppVisibility } from "@/hooks/useAppVisibility";
+import { TimerWindowActivator } from "@/components/TimerWindowActivator";
 import { DevToolsPanel } from "@/components/DevToolsPanel";
 import { TROPHIES } from "@/lib/gamification";
 import { CreativeStage } from "@/types/workspace";
@@ -331,11 +332,16 @@ const Session = () => {
   const currentStage = STAGES.find(s => s.id === session.stage);
   const progress = (session.elapsedSeconds / (session.isStreakMode ? session.dailyGoalMinutes * 60 : 25 * 60)) * 100;
 
-  const { isOpen, openPortal, closePortal, Portal } = useWindowPortal({
+  const { isOpen, openPortal, closePortal, Portal, hasOpenWindow } = useWindowPortal({
     title: `Timer - ${currentStage?.label || "Sessão"}`,
     width: 500,
     height: 500,
   });
+
+  // Handler for user-initiated popup activation (via button click)
+  const handleActivatePopup = () => {
+    openPortal({ reason: 'user' });
+  };
 
   // Ref para estado atual do pause (evita race conditions com stale closures)
   const isPausedRef = useRef(session.isPaused);
@@ -350,33 +356,21 @@ const Session = () => {
     }
   }, [session.isPaused, isOpen, closePortal]);
 
-  // Open/close portal based on app visibility
+  // Handle visibility changes - only focus existing window, never create new
   useEffect(() => {
     if (!session.isActive) return;
     
     const autoPopupEnabled = localStorage.getItem('timer-auto-popup-enabled') !== 'false';
+    const popupActivated = localStorage.getItem('timer-popup-activated') === 'true';
 
-    // Fechar imediatamente quando usuário volta para o app
-    if (isAppVisible) {
-      closePortal();
-      return;
+    // When user leaves the tab and popup was activated
+    if (!isAppVisible && !session.isPaused && autoPopupEnabled && popupActivated) {
+      // Auto mode: only focus existing window, never create new tab
+      openPortal({ reason: 'auto' });
     }
-
-    // Se timer está pausado, NÃO abrir popup
-    if (session.isPaused) {
-      return;
-    }
-
-    // Delay para garantir que o estado está sincronizado antes de abrir
-    const timeoutId = setTimeout(() => {
-      // Double-check: verificar se ainda NÃO está pausado antes de abrir
-      if (!isPausedRef.current && autoPopupEnabled) {
-        openPortal();
-      }
-    }, 50); // 50ms de delay - reduzido para evitar bloqueio do navegador
-
-    return () => clearTimeout(timeoutId);
-  }, [isAppVisible, session.isActive, session.isPaused, openPortal, closePortal]);
+    // NOTE: We no longer close the popup when returning to the main tab
+    // This keeps the window handle alive for subsequent auto-focus
+  }, [isAppVisible, session.isActive, session.isPaused, openPortal]);
 
 
   // Se celebração está ativa, renderizar tela mínima para evitar flash
@@ -557,6 +551,13 @@ const Session = () => {
           />
         </Portal>
 
+        {/* Timer Window Activator - prompts user to enable popup */}
+        <TimerWindowActivator
+          onActivate={handleActivatePopup}
+          hasOpenWindow={hasOpenWindow()}
+          isSessionActive={session.isActive}
+        />
+
         {/* Auto-hide Navigation */}
         <AutoHideNav />
 
@@ -635,6 +636,13 @@ const Session = () => {
 
         {/* Script Editor */}
         <ScriptEditor scriptId={scriptId} isReviewMode={session.stage === "review"} />
+
+        {/* Timer Window Activator - prompts user to enable popup */}
+        <TimerWindowActivator
+          onActivate={handleActivatePopup}
+          hasOpenWindow={hasOpenWindow()}
+          isSessionActive={session.isActive}
+        />
 
         {/* Auto-hide Navigation */}
         <AutoHideNav />
@@ -900,6 +908,13 @@ const Session = () => {
         show={showStreakHalo} 
         streakCount={streakCount}
         onComplete={() => setShowStreakHalo(false)}
+      />
+      
+      {/* Timer Window Activator - prompts user to enable popup */}
+      <TimerWindowActivator
+        onActivate={handleActivatePopup}
+        hasOpenWindow={hasOpenWindow()}
+        isSessionActive={session.isActive}
       />
       
       {/* Auto-hide Navigation */}
