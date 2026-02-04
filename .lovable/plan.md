@@ -1,151 +1,26 @@
 
-## Plano: Timer Expandido (Modo Fullscreen)
+## Plano: Corrigir Comportamento do Popup do Timer
 
-### Resumo da Feature
+### Problema Identificado
 
-Adicionar um botao de expansao ao `DraggableSessionTimer` que permite ao usuario visualizar o timer em tela cheia. Ideal para gravar videos mostrando o tempo de criacao de conteudo ou para visualizacao focada durante sessoes longas.
+Após a implementação do modo expandido, quando o usuário sai da página principal (muda de aba/minimiza), o timer está abrindo em uma **nova aba do navegador** ao invés de uma **janela popup separada**.
 
----
+Isso acontece porque:
+1. O navegador está interpretando o `window.open` como abertura de aba (e não popup)
+2. Quando abre como aba, o timer com `isPopup=true` ocupa toda a tela preta
+3. A imagem mostra exatamente isso: timer centralizado em tela cheia preta
 
-### Localizacao do Botao
+### Causa Raiz
 
-Conforme sua sugestao na imagem, o botao ficara no header do timer (barra de arraste), entre o nome da etapa e o icone de arrastar:
+1. **Delay de 150ms** em `Session.tsx` pode fazer o navegador bloquear/converter o popup
+2. **Falta de parametros explicitos** no `window.open` para forçar comportamento de popup
+3. **Peso do componente** com animações pode atrasar a abertura
 
-```text
-┌─────────────────────────────────────────────────┐
-│  Edicao          [⛶]  ⋮⋮                        │  ← Botao de expandir aqui
-├─────────────────────────────────────────────────┤
-│  [icon]  1:19                    [⏸] [■]       │
-│          Falta: 21:29                          │
-│  ═══════════════════════                       │
-└─────────────────────────────────────────────────┘
-```
+### Solucao
 
----
-
-### Visual do Modo Expandido
-
-Quando expandido, o timer ocupara toda a tela com visual otimizado para video:
-
-```text
-┌─────────────────────────────────────────────────────────────┐
-│                                                   [✕]       │
-│                                                             │
-│                                                             │
-│                         [🔥]                                │
-│                                                             │
-│                       12:34                                 │
-│                  Falta: 12:26                               │
-│                                                             │
-│              ━━━━━━━━━━━━━━━━━━━━━━━                        │
-│                                                             │
-│                   [⏸ Pausar]  [■ Finalizar]                │
-│                                                             │
-│                        Edicao                               │
-└─────────────────────────────────────────────────────────────┘
-```
-
-**Caracteristicas:**
-- Fundo escuro com blur (`bg-background/95 backdrop-blur-xl`)
-- Timer em tamanho grande (fonte 6xl-8xl)
-- Icone da etapa ampliado (96x96px)
-- Botoes de controle maiores e com labels
-- Barra de progresso mais grossa e visivel
-- Botao de fechar (X) no canto superior direito
-- Mantém os modos visuais (normal, ofensiva, bonus)
-
----
-
-### Comportamento
-
-| Acao | Resultado |
-|------|-----------|
-| Clicar no botao de expandir | Timer vai para fullscreen |
-| Clicar no X ou pressionar ESC | Sai do fullscreen |
-| Pausar/Retomar | Funciona normalmente no fullscreen |
-| Finalizar sessao | Modal de confirmacao, depois fecha fullscreen |
-| Timer atinge modo ofensiva | Visual muda com animacoes (mesmo no fullscreen) |
-
----
-
-### Persistencia
-
-O estado expandido NAO sera persistido (sempre inicia minimizado). Isso porque:
-- E uma visualizacao temporaria para videos/focus
-- O usuario pode esquecer que estava expandido
-- Evita confusao ao reabrir o app
-
----
-
-### Implementacao Tecnica
-
-**Novo estado no componente:**
-```typescript
-const [isExpanded, setIsExpanded] = useState(false);
-```
-
-**Novo import:**
-```typescript
-import { Maximize2, Minimize2, X } from 'lucide-react';
-```
-
-**Estrutura do JSX:**
-```typescript
-// Se expandido, renderizar fullscreen
-if (isExpanded) {
-  return (
-    <div className="fixed inset-0 z-[60] bg-background/95 backdrop-blur-xl flex items-center justify-center">
-      {/* Botao fechar */}
-      <Button 
-        className="absolute top-4 right-4" 
-        onClick={() => setIsExpanded(false)}
-      >
-        <X />
-      </Button>
-      
-      {/* Conteudo expandido */}
-      <div className="text-center space-y-8">
-        {/* Icone grande */}
-        {/* Timer grande */}
-        {/* Meta/Bonus */}
-        {/* Barra de progresso */}
-        {/* Controles */}
-        {/* Nome da etapa */}
-      </div>
-    </div>
-  );
-}
-
-// Senao, renderizar normal (draggable)
-return (
-  <div className="fixed z-50" style={{...}}>
-    {/* Header com novo botao */}
-    <div className="flex items-center justify-between">
-      <span>{stage}</span>
-      <div className="flex items-center gap-1">
-        <Button onClick={() => setIsExpanded(true)}>
-          <Maximize2 />
-        </Button>
-        <GripVertical />
-      </div>
-    </div>
-    {/* ... resto do timer */}
-  </div>
-);
-```
-
-**Atalho de teclado (ESC para fechar):**
-```typescript
-useEffect(() => {
-  const handleEsc = (e: KeyboardEvent) => {
-    if (e.key === 'Escape' && isExpanded) {
-      setIsExpanded(false);
-    }
-  };
-  window.addEventListener('keydown', handleEsc);
-  return () => window.removeEventListener('keydown', handleEsc);
-}, [isExpanded]);
-```
+1. **Reduzir o delay** de 150ms para 50ms em `Session.tsx`
+2. **Adicionar `popup=yes`** nos features do `window.open` em `useWindowPortal.tsx`
+3. **Adicionar `noopener`** para melhor compatibilidade cross-browser
 
 ---
 
@@ -153,36 +28,65 @@ useEffect(() => {
 
 | Arquivo | Mudanca |
 |---------|---------|
-| `src/components/DraggableSessionTimer.tsx` | Adicionar estado `isExpanded`, botao de expandir, e renderizacao fullscreen |
+| `src/hooks/useWindowPortal.tsx` | Adicionar parametros `popup=yes` e `noopener` no `window.open` |
+| `src/pages/Session.tsx` | Reduzir delay de 150ms para 50ms |
 
 ---
 
-### Adaptacao Mobile vs Desktop
+### Secao Tecnica
 
-| Aspecto | Mobile | Desktop |
-|---------|--------|---------|
-| Tamanho do timer expandido | 5xl | 8xl |
-| Icone | 80px | 96px |
-| Botoes | Com labels curtos | Com labels completos |
-| Gesto para fechar | Tap no X | X ou ESC |
+**useWindowPortal.tsx - Modificacao no window.open (linha 42-46):**
+
+Antes:
+```typescript
+const popup = window.open(
+  '',
+  'timer-popup',
+  `width=${width},height=${height},left=100,top=100,resizable=yes,scrollbars=no`
+);
+```
+
+Depois:
+```typescript
+const popup = window.open(
+  '',
+  'timer-popup',
+  `width=${width},height=${height},left=100,top=100,resizable=yes,scrollbars=no,popup=yes,noopener=no`
+);
+```
+
+**Session.tsx - Reduzir delay (linha 371-376):**
+
+Antes:
+```typescript
+const timeoutId = setTimeout(() => {
+  if (!isPausedRef.current && autoPopupEnabled) {
+    openPortal();
+  }
+}, 150); // 150ms de delay
+```
+
+Depois:
+```typescript
+const timeoutId = setTimeout(() => {
+  if (!isPausedRef.current && autoPopupEnabled) {
+    openPortal();
+  }
+}, 50); // 50ms de delay - reduzido para evitar bloqueio do navegador
+```
 
 ---
 
-### Animacoes
+### Por que essas mudancas resolvem
 
-Usar `framer-motion` para transicao suave:
-- **Expandir:** `scale-in` + `fade-in` (200ms)
-- **Fechar:** `scale-out` + `fade-out` (200ms)
-
-O projeto ja usa framer-motion, entao aproveitamos os patterns existentes.
+1. **`popup=yes`**: Diz explicitamente ao navegador para abrir como popup, nao como aba
+2. **Delay reduzido**: Mantem a chamada dentro do "periodo de graca" do navegador para popups
+3. **Nao mexe no modo expandido**: A feature de fullscreen continua funcionando normalmente quando usuario clica no botao de expandir
 
 ---
 
-### Ordem de Implementacao
+### Impacto
 
-1. Adicionar estado `isExpanded` e imports de icones
-2. Adicionar botao de expandir no header (entre stage e GripVertical)
-3. Criar renderizacao condicional para modo expandido
-4. Implementar listener ESC para fechar
-5. Adicionar animacoes com framer-motion
-6. Testar em todas as paginas onde o timer aparece (Session, ShotListRecord, ShotListReview)
+- O popup volta a abrir como janela separada pequena (comportamento anterior)
+- O modo expandido (fullscreen) continua funcionando quando usuario clica no botao de maximizar
+- Nao ha conflito entre as duas features
