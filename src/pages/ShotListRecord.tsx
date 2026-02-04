@@ -19,8 +19,6 @@ import { DraggableSessionTimer } from "@/components/DraggableSessionTimer";
 import { AutoHideNav } from "@/components/AutoHideNav";
 import { useSession } from "@/hooks/useSession";
 import { useDailyGoalProgress } from "@/hooks/useDailyGoalProgress";
-import { useAppVisibility } from "@/hooks/useAppVisibility";
-import { useWindowPortal } from "@/hooks/useWindowPortal";
 import { useTimerPermission } from "@/hooks/useTimerPermission";
 import { useProfileWithLevel } from "@/hooks/useProfileWithLevel";
 import { cn } from "@/lib/utils";
@@ -31,7 +29,6 @@ import SessionSummary from "@/components/SessionSummary";
 import { StreakCelebration } from "@/components/StreakCelebration";
 import { TrophyCelebration } from "@/components/TrophyCelebration";
 import { extractPathFromUrl, generateSignedUrlsBatch } from "@/lib/storage-helpers";
-import { TimerWindowActivator } from "@/components/TimerWindowActivator";
 
 interface ContentSections {
   gancho?: string;
@@ -69,7 +66,6 @@ const ShotListRecord = () => {
     attachBeforeUnloadListener: false 
   });
   
-  const isAppVisible = useAppVisibility();
   const { goalMinutes } = useProfileWithLevel();
   const { progress: dailyProgress } = useDailyGoalProgress({ goalMinutes });
   
@@ -597,36 +593,10 @@ const ShotListRecord = () => {
     [shots]
   );
 
-  // Window portal system - pops out timer when user leaves app
+  // Calculate timer progress
   const progress = session.isStreakMode
     ? Math.min((session.elapsedSeconds / (session.dailyGoalMinutes * 60)) * 100, 100)
     : Math.min((session.elapsedSeconds / session.targetSeconds) * 100, 100);
-
-  const { isOpen, openPortal, closePortal, Portal, hasOpenWindow } = useWindowPortal({
-    title: "Timer - Gravação",
-    width: 500,
-    height: 500,
-  });
-
-  // Handler for user-initiated popup activation (via button click)
-  const handleActivatePopup = () => {
-    openPortal({ reason: 'user' });
-  };
-
-  // Handle visibility changes - only focus existing window, never create new
-  useEffect(() => {
-    if (!session.isActive) return;
-    
-    const autoPopupEnabled = localStorage.getItem('timer-auto-popup-enabled') !== 'false';
-    const popupActivated = localStorage.getItem('timer-popup-activated') === 'true';
-
-    // When user leaves the tab and popup was activated
-    if (!isAppVisible && !session.isPaused && autoPopupEnabled && popupActivated) {
-      // Auto mode: only focus existing window, never create new tab
-      openPortal({ reason: 'auto' });
-    }
-    // NOTE: We no longer close the popup when returning to the main tab
-  }, [isAppVisible, session.isPaused, session.isActive, openPortal]);
 
   // Handler para voltar à revisão (usado no Modo Frase-a-Frase)
   const handleBackToReview = async () => {
@@ -923,49 +893,25 @@ const ShotListRecord = () => {
           </div>
         </div>
 
-        {/* Unified Session Timer (in-app) - Hidden when user leaves app or during celebrations */}
-        {!isOpen && (
-          <DraggableSessionTimer
-            stage="Gravação"
-            icon={session.isStreakMode ? "Flame" : "Video"}
-            elapsedSeconds={session.elapsedSeconds}
-            targetSeconds={session.isStreakMode 
-              ? session.dailyGoalMinutes * 60 
-              : session.targetSeconds}
-            isPaused={session.isPaused}
-            isStreakMode={session.isStreakMode}
-            dailyGoalMinutes={session.dailyGoalMinutes}
-            onPause={pauseSession}
-            onResume={resumeSession}
-            onStop={handleEndSession}
-            progress={progress}
-            dailyBaselineSeconds={session.dailyBaselineSeconds}
-            permissionEnabled={canUseTimer}
-            hidden={isShowingAnyCelebration}
-          />
-        )}
-
-        {/* Timer in External Popup Window */}
-        <Portal>
-          <DraggableSessionTimer
-            stage="Gravação"
-            icon={session.isStreakMode ? "Flame" : "Video"}
-            elapsedSeconds={session.elapsedSeconds}
-            targetSeconds={session.isStreakMode 
-              ? session.dailyGoalMinutes * 60 
-              : session.targetSeconds}
-            isPaused={session.isPaused}
-            isStreakMode={session.isStreakMode}
-            dailyGoalMinutes={session.dailyGoalMinutes}
-            onPause={pauseSession}
-            onResume={resumeSession}
-            onStop={handleEndSession}
-            progress={progress}
-            isPopup={true}
-            dailyBaselineSeconds={session.dailyBaselineSeconds}
-            permissionEnabled={canUseTimer}
-          />
-        </Portal>
+        {/* Unified Session Timer - Hidden during celebrations */}
+        <DraggableSessionTimer
+          stage="Gravação"
+          icon={session.isStreakMode ? "Flame" : "Video"}
+          elapsedSeconds={session.elapsedSeconds}
+          targetSeconds={session.isStreakMode 
+            ? session.dailyGoalMinutes * 60 
+            : session.targetSeconds}
+          isPaused={session.isPaused}
+          isStreakMode={session.isStreakMode}
+          dailyGoalMinutes={session.dailyGoalMinutes}
+          onPause={pauseSession}
+          onResume={resumeSession}
+          onStop={handleEndSession}
+          progress={progress}
+          dailyBaselineSeconds={session.dailyBaselineSeconds}
+          permissionEnabled={canUseTimer}
+          hidden={isShowingAnyCelebration}
+        />
 
         {/* Desktop Progress */}
         <div className="hidden md:block bg-card p-6 rounded-lg border border-border mb-6">
@@ -1036,13 +982,6 @@ const ShotListRecord = () => {
           onClose={() => setGalleryOpenShotId(null)}
         />
       </div>
-
-      {/* Timer Window Activator - prompts user to enable popup */}
-      <TimerWindowActivator
-        onActivate={handleActivatePopup}
-        hasOpenWindow={hasOpenWindow()}
-        isSessionActive={session.isActive}
-      />
 
       {/* Auto-hide Navigation */}
       <AutoHideNav />
