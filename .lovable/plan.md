@@ -1,52 +1,151 @@
 
-## Plano: Sistema de Retomada com Carrossel Integrado
+## Plano: Timer Expandido (Modo Fullscreen)
 
-### Resumo da Mudanca
+### Resumo da Feature
 
-Transformar o card estatico de "ultima atividade criativa" na pagina inicial em um carrossel inteligente com barra de progresso que alterna automaticamente entre tres opcoes de continuidade:
-
-1. **Ultima atividade criativa** (existente)
-2. **Conteudo proximo de expirar** (data de publicacao mais proxima)
-3. **Conteudo paralisado ha mais tempo** (nao editado ha dias)
-
-O pop-up de "conteudo travado" (StuckContentPopup) sera desativado e substituido por esse sistema integrado.
+Adicionar um botao de expansao ao `DraggableSessionTimer` que permite ao usuario visualizar o timer em tela cheia. Ideal para gravar videos mostrando o tempo de criacao de conteudo ou para visualizacao focada durante sessoes longas.
 
 ---
 
-### Arquitetura Proposta
+### Localizacao do Botao
+
+Conforme sua sugestao na imagem, o botao ficara no header do timer (barra de arraste), entre o nome da etapa e o icone de arrastar:
 
 ```text
-┌─────────────────────────────────────────────────────────────┐
-│  Index.tsx (Pagina Inicial)                                 │
-│                                                             │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │  ContinuityCarousel (novo componente)               │   │
-│  │                                                     │   │
-│  │  ┌───────────────────────────────────────────────┐ │   │
-│  │  │  Barra de Progresso   ●●○  1/3                │ │   │
-│  │  └───────────────────────────────────────────────┘ │   │
-│  │                                                     │   │
-│  │  ┌───────────────────────────────────────────────┐ │   │
-│  │  │  Slide 1: Ultima atividade                    │ │   │
-│  │  │  Slide 2: Proximo de expirar                  │ │   │
-│  │  │  Slide 3: Paralisado ha mais tempo            │ │   │
-│  │  └───────────────────────────────────────────────┘ │   │
-│  │                                                     │   │
-│  │  [Continuar criando →]                             │   │
-│  │  ou iniciar nova sessao                            │   │
-│  └─────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────┐
+│  Edicao          [⛶]  ⋮⋮                        │  ← Botao de expandir aqui
+├─────────────────────────────────────────────────┤
+│  [icon]  1:19                    [⏸] [■]       │
+│          Falta: 21:29                          │
+│  ═══════════════════════                       │
+└─────────────────────────────────────────────────┘
 ```
 
 ---
 
-### Novos Arquivos
+### Visual do Modo Expandido
 
-| Arquivo | Descricao |
-|---------|-----------|
-| `src/hooks/useContinuityOptions.ts` | Hook que busca as 3 opcoes de continuidade do banco |
-| `src/components/home/ContinuityCarousel.tsx` | Componente do carrossel com barra de progresso |
-| `src/components/home/ContinuitySlide.tsx` | Componente de cada slide individual |
+Quando expandido, o timer ocupara toda a tela com visual otimizado para video:
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│                                                   [✕]       │
+│                                                             │
+│                                                             │
+│                         [🔥]                                │
+│                                                             │
+│                       12:34                                 │
+│                  Falta: 12:26                               │
+│                                                             │
+│              ━━━━━━━━━━━━━━━━━━━━━━━                        │
+│                                                             │
+│                   [⏸ Pausar]  [■ Finalizar]                │
+│                                                             │
+│                        Edicao                               │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Caracteristicas:**
+- Fundo escuro com blur (`bg-background/95 backdrop-blur-xl`)
+- Timer em tamanho grande (fonte 6xl-8xl)
+- Icone da etapa ampliado (96x96px)
+- Botoes de controle maiores e com labels
+- Barra de progresso mais grossa e visivel
+- Botao de fechar (X) no canto superior direito
+- Mantém os modos visuais (normal, ofensiva, bonus)
+
+---
+
+### Comportamento
+
+| Acao | Resultado |
+|------|-----------|
+| Clicar no botao de expandir | Timer vai para fullscreen |
+| Clicar no X ou pressionar ESC | Sai do fullscreen |
+| Pausar/Retomar | Funciona normalmente no fullscreen |
+| Finalizar sessao | Modal de confirmacao, depois fecha fullscreen |
+| Timer atinge modo ofensiva | Visual muda com animacoes (mesmo no fullscreen) |
+
+---
+
+### Persistencia
+
+O estado expandido NAO sera persistido (sempre inicia minimizado). Isso porque:
+- E uma visualizacao temporaria para videos/focus
+- O usuario pode esquecer que estava expandido
+- Evita confusao ao reabrir o app
+
+---
+
+### Implementacao Tecnica
+
+**Novo estado no componente:**
+```typescript
+const [isExpanded, setIsExpanded] = useState(false);
+```
+
+**Novo import:**
+```typescript
+import { Maximize2, Minimize2, X } from 'lucide-react';
+```
+
+**Estrutura do JSX:**
+```typescript
+// Se expandido, renderizar fullscreen
+if (isExpanded) {
+  return (
+    <div className="fixed inset-0 z-[60] bg-background/95 backdrop-blur-xl flex items-center justify-center">
+      {/* Botao fechar */}
+      <Button 
+        className="absolute top-4 right-4" 
+        onClick={() => setIsExpanded(false)}
+      >
+        <X />
+      </Button>
+      
+      {/* Conteudo expandido */}
+      <div className="text-center space-y-8">
+        {/* Icone grande */}
+        {/* Timer grande */}
+        {/* Meta/Bonus */}
+        {/* Barra de progresso */}
+        {/* Controles */}
+        {/* Nome da etapa */}
+      </div>
+    </div>
+  );
+}
+
+// Senao, renderizar normal (draggable)
+return (
+  <div className="fixed z-50" style={{...}}>
+    {/* Header com novo botao */}
+    <div className="flex items-center justify-between">
+      <span>{stage}</span>
+      <div className="flex items-center gap-1">
+        <Button onClick={() => setIsExpanded(true)}>
+          <Maximize2 />
+        </Button>
+        <GripVertical />
+      </div>
+    </div>
+    {/* ... resto do timer */}
+  </div>
+);
+```
+
+**Atalho de teclado (ESC para fechar):**
+```typescript
+useEffect(() => {
+  const handleEsc = (e: KeyboardEvent) => {
+    if (e.key === 'Escape' && isExpanded) {
+      setIsExpanded(false);
+    }
+  };
+  window.addEventListener('keydown', handleEsc);
+  return () => window.removeEventListener('keydown', handleEsc);
+}, [isExpanded]);
+```
 
 ---
 
@@ -54,188 +153,36 @@ O pop-up de "conteudo travado" (StuckContentPopup) sera desativado e substituido
 
 | Arquivo | Mudanca |
 |---------|---------|
-| `src/pages/Index.tsx` | Substituir card estatico pelo ContinuityCarousel |
-| `src/pages/Index.tsx` | Remover importacao/uso do StuckContentPopup |
+| `src/components/DraggableSessionTimer.tsx` | Adicionar estado `isExpanded`, botao de expandir, e renderizacao fullscreen |
 
 ---
 
-### Estrutura de Dados do Hook
+### Adaptacao Mobile vs Desktop
 
-O novo hook `useContinuityOptions` retornara:
-
-```typescript
-interface ContinuityOption {
-  id: string;
-  type: 'recent' | 'expiring' | 'stalled';
-  title: string;
-  stage: SessionStage;
-  subtitle: string;        // ex: "Etapa: Revisao"
-  metadata: string;        // ex: "Ultima edicao: 02 de fev., 11:05"
-  urgencyBadge?: {
-    label: string;         // "3 dias para publicar" ou "Parado ha 7 dias"
-    variant: 'warning' | 'urgent' | 'info';
-  };
-  scriptId: string;
-}
-
-interface UseContinuityOptionsReturn {
-  options: ContinuityOption[];
-  loading: boolean;
-  refetch: () => void;
-}
-```
-
-**Logica de busca:**
-
-1. **Ultima atividade (recent):** Script com `updated_at` mais recente nos ultimos 7 dias
-2. **Proximo de expirar (expiring):** Script com `publish_date` mais proximo (futuro) que ainda nao foi postado
-3. **Paralisado (stalled):** Script em status de rascunho com `updated_at` mais antigo (ordenado por dias sem atualizacao)
+| Aspecto | Mobile | Desktop |
+|---------|--------|---------|
+| Tamanho do timer expandido | 5xl | 8xl |
+| Icone | 80px | 96px |
+| Botoes | Com labels curtos | Com labels completos |
+| Gesto para fechar | Tap no X | X ou ESC |
 
 ---
 
-### Visual do Carrossel
+### Animacoes
 
-**Barra de progresso + indicadores:**
-- Barra horizontal que preenche em 4 segundos
-- Dots clicaveis para navegacao manual
-- Contador "1/3", "2/3", etc.
-- Pausa no hover/toque
+Usar `framer-motion` para transicao suave:
+- **Expandir:** `scale-in` + `fade-in` (200ms)
+- **Fechar:** `scale-out` + `fade-out` (200ms)
 
-**Cada slide mostra:**
-- Badge de contexto colorido (tipo da sugestao)
-- Titulo do conteudo (emoji + titulo)
-- Subtitulo (etapa atual)
-- Metadado (ultima edicao ou dias para publicar)
-
-**Transicao:**
-- Fade + slide horizontal suave (framer-motion)
-- Duracao: 300ms
-
----
-
-### Fluxo do Usuario
-
-```text
-Usuario abre o app
-        ↓
-useContinuityOptions busca 3 opcoes
-        ↓
-ContinuityCarousel renderiza
-        ↓
-   ┌────┴────┐
-   ↓         ↓
-Auto-play   Usuario clica dot
-(4s cada)   ou arrasta
-   ↓         ↓
-   └────┬────┘
-        ↓
-Slide muda com animacao
-        ↓
-Usuario clica "Continuar criando"
-        ↓
-Navega para /session com scriptId correto
-```
-
----
-
-### Logica de Prioridade
-
-Se houver apenas 1 ou 2 opcoes validas, o carrossel se adapta:
-- **1 opcao:** Sem carrossel, mostra card estatico (comportamento atual)
-- **2 opcoes:** Carrossel com 2 slides
-- **3 opcoes:** Carrossel completo
-
----
-
-### Badges de Contexto
-
-| Tipo | Badge | Cor |
-|------|-------|-----|
-| recent | "Ultima atividade" | Violeta (primary) |
-| expiring | "Publicar em X dias" | Laranja (warning) |
-| stalled | "Parado ha X dias" | Amarelo (caution) |
-
----
-
-### Secao Tecnica
-
-**useContinuityOptions.ts - Queries:**
-
-```typescript
-// 1. Ultima atividade
-const { data: recentScript } = await supabase
-  .from('scripts')
-  .select('id, title, status, updated_at')
-  .eq('user_id', userId)
-  .gte('updated_at', sevenDaysAgo)
-  .order('updated_at', { ascending: false })
-  .limit(1)
-  .single();
-
-// 2. Proximo de expirar
-const { data: expiringScript } = await supabase
-  .from('scripts')
-  .select('id, title, status, publish_date, updated_at')
-  .eq('user_id', userId)
-  .gte('publish_date', today)
-  .neq('publish_status', 'postado')
-  .order('publish_date', { ascending: true })
-  .limit(1)
-  .single();
-
-// 3. Paralisado ha mais tempo
-const { data: stalledScript } = await supabase
-  .from('scripts')
-  .select('id, title, status, updated_at')
-  .eq('user_id', userId)
-  .in('status', ['draft', 'draft_idea', 'review', 'recording', 'editing'])
-  .lt('updated_at', fourteenDaysAgo)
-  .order('updated_at', { ascending: true })
-  .limit(1)
-  .single();
-```
-
-**ContinuityCarousel.tsx - Autoplay:**
-
-```typescript
-const AUTOPLAY_INTERVAL = 4000; // 4 segundos
-const [currentIndex, setCurrentIndex] = useState(0);
-const [progress, setProgress] = useState(0);
-const [isPaused, setIsPaused] = useState(false);
-
-useEffect(() => {
-  if (options.length <= 1 || isPaused) return;
-  
-  const progressInterval = setInterval(() => {
-    setProgress(prev => Math.min(prev + (50 / AUTOPLAY_INTERVAL) * 100, 100));
-  }, 50);
-  
-  const transitionInterval = setInterval(() => {
-    setCurrentIndex(prev => (prev + 1) % options.length);
-    setProgress(0);
-  }, AUTOPLAY_INTERVAL);
-  
-  return () => {
-    clearInterval(progressInterval);
-    clearInterval(transitionInterval);
-  };
-}, [options.length, isPaused, currentIndex]);
-```
-
----
-
-### Impacto no StuckContentPopup
-
-O componente `StuckContentPopup` e o hook `useStuckContent` continuarao existindo no codigo, mas nao serao mais chamados na Index.tsx. Isso permite:
-- Rollback facil se necessario
-- Reutilizacao em outras partes do app no futuro
+O projeto ja usa framer-motion, entao aproveitamos os patterns existentes.
 
 ---
 
 ### Ordem de Implementacao
 
-1. Criar `src/hooks/useContinuityOptions.ts`
-2. Criar `src/components/home/ContinuitySlide.tsx`
-3. Criar `src/components/home/ContinuityCarousel.tsx`
-4. Modificar `src/pages/Index.tsx` para usar o novo carrossel
-5. Testar fluxo completo com diferentes cenarios de dados
+1. Adicionar estado `isExpanded` e imports de icones
+2. Adicionar botao de expandir no header (entre stage e GripVertical)
+3. Criar renderizacao condicional para modo expandido
+4. Implementar listener ESC para fechar
+5. Adicionar animacoes com framer-motion
+6. Testar em todas as paginas onde o timer aparece (Session, ShotListRecord, ShotListReview)
