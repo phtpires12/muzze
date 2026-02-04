@@ -1,10 +1,18 @@
-import { useState, useEffect, useRef, ReactNode } from 'react';
+import { useState, useEffect, useRef, ReactNode, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 
 interface UseWindowPortalOptions {
   width?: number;
   height?: number;
   title?: string;
+}
+
+interface OpenPortalOptions {
+  /**
+   * 'user' = user clicked a button (can create new window)
+   * 'auto' = triggered automatically (only focus existing window, never create new)
+   */
+  reason?: 'user' | 'auto';
 }
 
 export function useWindowPortal(options: UseWindowPortalOptions = {}) {
@@ -26,13 +34,42 @@ export function useWindowPortal(options: UseWindowPortalOptions = {}) {
     };
   }, []);
 
-  const openPortal = () => {
+  /**
+   * Check if there's currently an open popup window
+   */
+  const hasOpenWindow = useCallback(() => {
+    return windowRef.current !== null && !windowRef.current.closed;
+  }, []);
+
+  /**
+   * Focus the existing popup window (if it exists)
+   */
+  const focusWindow = useCallback(() => {
+    if (windowRef.current && !windowRef.current.closed) {
+      windowRef.current.focus();
+      return true;
+    }
+    return false;
+  }, []);
+
+  const openPortal = useCallback((opts: OpenPortalOptions = {}) => {
+    const { reason = 'user' } = opts;
+
     // If window already exists and is not closed, just focus it
     if (windowRef.current && !windowRef.current.closed) {
       windowRef.current.focus();
       return;
     }
 
+    // AUTO mode: only focus existing window, never create new one
+    // This prevents browser from opening a tab when triggered by visibility change
+    if (reason === 'auto') {
+      // No existing window = do nothing in auto mode
+      console.log('[useWindowPortal] Auto mode: no existing window, skipping open');
+      return;
+    }
+
+    // USER mode: user clicked a button, safe to create new window
     // Close any existing popups before opening new one
     channelRef.current?.postMessage({ type: 'close-all-popups' });
 
@@ -151,23 +188,23 @@ export function useWindowPortal(options: UseWindowPortalOptions = {}) {
       // Styles are copied synchronously, so we can render immediately
       setIsOpen(true);
     }, 50);
-  };
+  }, [width, height, title]);
 
-  const closePortal = () => {
+  const closePortal = useCallback(() => {
     if (windowRef.current && !windowRef.current.closed) {
       windowRef.current.close();
     }
     windowRef.current = null;
     containerRef.current = null;
     setIsOpen(false);
-  };
+  }, []);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       closePortal();
     };
-  }, []);
+  }, [closePortal]);
 
   // Portal component
   const Portal = ({ children }: { children: ReactNode }) => {
@@ -175,5 +212,12 @@ export function useWindowPortal(options: UseWindowPortalOptions = {}) {
     return createPortal(children, containerRef.current);
   };
 
-  return { isOpen, openPortal, closePortal, Portal };
+  return { 
+    isOpen, 
+    openPortal, 
+    closePortal, 
+    Portal,
+    hasOpenWindow,
+    focusWindow,
+  };
 }

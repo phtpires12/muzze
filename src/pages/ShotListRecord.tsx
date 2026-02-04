@@ -31,6 +31,7 @@ import SessionSummary from "@/components/SessionSummary";
 import { StreakCelebration } from "@/components/StreakCelebration";
 import { TrophyCelebration } from "@/components/TrophyCelebration";
 import { extractPathFromUrl, generateSignedUrlsBatch } from "@/lib/storage-helpers";
+import { TimerWindowActivator } from "@/components/TimerWindowActivator";
 
 interface ContentSections {
   gancho?: string;
@@ -601,24 +602,31 @@ const ShotListRecord = () => {
     ? Math.min((session.elapsedSeconds / (session.dailyGoalMinutes * 60)) * 100, 100)
     : Math.min((session.elapsedSeconds / session.targetSeconds) * 100, 100);
 
-  const { isOpen, openPortal, closePortal, Portal } = useWindowPortal({
+  const { isOpen, openPortal, closePortal, Portal, hasOpenWindow } = useWindowPortal({
     title: "Timer - Gravação",
     width: 500,
     height: 500,
   });
 
-  // Open/close portal based on app visibility
+  // Handler for user-initiated popup activation (via button click)
+  const handleActivatePopup = () => {
+    openPortal({ reason: 'user' });
+  };
+
+  // Handle visibility changes - only focus existing window, never create new
   useEffect(() => {
     if (!session.isActive) return;
     
     const autoPopupEnabled = localStorage.getItem('timer-auto-popup-enabled') !== 'false';
+    const popupActivated = localStorage.getItem('timer-popup-activated') === 'true';
 
-    if (!isAppVisible && !session.isPaused && autoPopupEnabled) {
-      openPortal();
-    } else if (isAppVisible) {
-      closePortal();
+    // When user leaves the tab and popup was activated
+    if (!isAppVisible && !session.isPaused && autoPopupEnabled && popupActivated) {
+      // Auto mode: only focus existing window, never create new tab
+      openPortal({ reason: 'auto' });
     }
-  }, [isAppVisible, session.isPaused, session.isActive]);
+    // NOTE: We no longer close the popup when returning to the main tab
+  }, [isAppVisible, session.isPaused, session.isActive, openPortal]);
 
   // Handler para voltar à revisão (usado no Modo Frase-a-Frase)
   const handleBackToReview = async () => {
@@ -1028,6 +1036,13 @@ const ShotListRecord = () => {
           onClose={() => setGalleryOpenShotId(null)}
         />
       </div>
+
+      {/* Timer Window Activator - prompts user to enable popup */}
+      <TimerWindowActivator
+        onActivate={handleActivatePopup}
+        hasOpenWindow={hasOpenWindow()}
+        isSessionActive={session.isActive}
+      />
 
       {/* Auto-hide Navigation */}
       <AutoHideNav />
