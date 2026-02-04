@@ -1,92 +1,107 @@
 
-## Plano: Corrigir Comportamento do Popup do Timer
+## Diagnóstico (o que mudou e por que ficou pior)
+Hoje o “timer em janela” é acionado quando o usuário troca de aba/minimiza (Page Visibility API). Esse disparo acontece dentro de um `useEffect` (ou seja: **não é um clique do usuário**).
 
-### Problema Identificado
+No Chrome desktop, quando `window.open()` acontece sem “user gesture” (clique/tecla), o navegador pode:
+- bloquear,
+- ou abrir como **nova guia** em vez de **janela popup**,
+- ou aplicar heurísticas inconsistentes.
 
-Após a implementação do modo expandido, quando o usuário sai da página principal (muda de aba/minimiza), o timer está abrindo em uma **nova aba do navegador** ao invés de uma **janela popup separada**.
+Então o problema não é “a velocidade” do delay (50ms vs 150ms). O problema é **quem está abrindo**: um efeito automático sem gesto do usuário. Reduzir o delay só fez a guia aparecer “mais rápido”, mas continua sendo guia.
 
-Isso acontece porque:
-1. O navegador está interpretando o `window.open` como abertura de aba (e não popup)
-2. Quando abre como aba, o timer com `isPopup=true` ocupa toda a tela preta
-3. A imagem mostra exatamente isso: timer centralizado em tela cheia preta
+## Objetivo do ajuste
+Garantir que o Draggable Timer volte ao comportamento “correto” no Chrome:
+- abrir como **janela** (popup), não guia,
+- permitir minimizar, colocar em tela cheia, fechar,
+- manter o novo modo fullscreen (expandir) **dentro do timer**, sem quebrar o sistema de janela.
 
-### Causa Raiz
+## Abordagem escolhida (sua preferência): “Pedir permissão 1x”
+Vamos implementar um fluxo de “ativação” em que o usuário clica **uma vez** em um botão para autorizar/abrir a janela.
+A partir daí:
+- quando o usuário sair da aba, nós **não criamos** uma nova janela do nada;
+- nós apenas **focamos a janela já aberta** (isso é permitido e consistente);
+- se o usuário fechar a janela manualmente, a automação para de funcionar até ele ativar de novo.
 
-1. **Delay de 150ms** em `Session.tsx` pode fazer o navegador bloquear/converter o popup
-2. **Falta de parametros explicitos** no `window.open` para forçar comportamento de popup
-3. **Peso do componente** com animações pode atrasar a abertura
+Isso é o único jeito confiável de garantir popup no Chrome, por limitações do navegador.
 
-### Solucao
+## Mudanças de comportamento (explicadas de forma clara)
+1) Enquanto o usuário estiver na aba principal, a janela do timer pode ficar aberta (o usuário pode minimizar/mandar para outro monitor).
+2) Ao sair da aba principal, o app “traz” o foco para a janela do timer (se ela existir).
+3) Ao voltar para a aba principal, o app não tenta fechar a janela automaticamente (para não perder a permissão/handle e não reabrir como guia).
 
-1. **Reduzir o delay** de 150ms para 50ms em `Session.tsx`
-2. **Adicionar `popup=yes`** nos features do `window.open` em `useWindowPortal.tsx`
-3. **Adicionar `noopener`** para melhor compatibilidade cross-browser
+## Implementação (o que vamos mudar no código)
 
----
+### 1) `useWindowPortal.tsx`: separar “abrir por clique” vs “abrir automático”
+Hoje `openPortal()` abre uma janela sempre que não existe. Vamos alterar para suportar dois modos:
 
-### Arquivos a Modificar
+- `openPortal({ reason: 'user' })`: abre a janela (chamado por clique em botão).
+- `openPortal({ reason: 'auto' })`: **não abre uma nova janela**. Se a janela já existe, apenas `focus()`. Se não existe, não faz nada.
 
-| Arquivo | Mudanca |
-|---------|---------|
-| `src/hooks/useWindowPortal.tsx` | Adicionar parametros `popup=yes` e `noopener` no `window.open` |
-| `src/pages/Session.tsx` | Reduzir delay de 150ms para 50ms |
+Isso impede que o `useEffect` (saída da aba) crie uma nova guia.
 
----
+Também vamos expor um helper do tipo:
+- `hasOpenWindow()` (true/false) para as páginas saberem se a janela está aberta.
 
-### Secao Tecnica
+### 2) `Session.tsx`, `ShotListRecord.tsx`, `ShotListReview.tsx`: adicionar o “botão de ativação”
+Em todas as telas onde existe autopopup hoje, vamos adicionar uma UI simples quando a sessão estiver ativa:
 
-**useWindowPortal.tsx - Modificacao no window.open (linha 42-46):**
+- Estado persistido em `localStorage`: `timer-popup-activated` (boolean)
+- Um botão pequeno próximo do timer (ou em um local discreto fixo) com texto tipo:
+  - “Ativar Timer em Janela”
+  - subtexto: “Clique uma vez para permitir. Depois ele aparece quando você sair da aba.”
 
-Antes:
-```typescript
-const popup = window.open(
-  '',
-  'timer-popup',
-  `width=${width},height=${height},left=100,top=100,resizable=yes,scrollbars=no`
-);
-```
+Ao clicar:
+- chamamos `openPortal({ reason: 'user' })` (gera a janela como popup),
+- marcamos `timer-popup-activated=true`,
+- mostramos um toast explicando “Pode minimizar essa janela; ela vai servir como timer flutuante”.
 
-Depois:
-```typescript
-const popup = window.open(
-  '',
-  'timer-popup',
-  `width=${width},height=${height},left=100,top=100,resizable=yes,scrollbars=no,popup=yes,noopener=no`
-);
-```
+### 3) Lógica de visibilidade: não criar janela no automático
+Nos efeitos que hoje fazem:
+- “se saiu da aba -> `openPortal()`”
 
-**Session.tsx - Reduzir delay (linha 371-376):**
+Vamos mudar para:
+- se saiu da aba:
+  - se `timer-popup-activated=true`: `openPortal({ reason: 'auto' })` (foca apenas se já existir)
+  - senão: não abre nada
 
-Antes:
-```typescript
-const timeoutId = setTimeout(() => {
-  if (!isPausedRef.current && autoPopupEnabled) {
-    openPortal();
-  }
-}, 150); // 150ms de delay
-```
+Ao voltar para a aba:
+- em vez de `closePortal()` sempre, vamos **parar de fechar automaticamente** (para manter a janela “autorizada” viva).
+- (Opcional) podemos só “desfocar” a janela se existir, mas sem fechar.
 
-Depois:
-```typescript
-const timeoutId = setTimeout(() => {
-  if (!isPausedRef.current && autoPopupEnabled) {
-    openPortal();
-  }
-}, 50); // 50ms de delay - reduzido para evitar bloqueio do navegador
-```
+### 4) Mensagens/feedback para reduzir confusão
+- Se o usuário nunca ativou: ao sair da aba não acontece nada (por design).
+- Se ele ativou, mas fechou a janela: ao voltar para a aba principal mostramos um toast:
+  - “A janela do timer foi fechada. Clique em ‘Ativar Timer em Janela’ para abrir novamente.”
 
----
+## Arquivos que serão modificados
+- `src/hooks/useWindowPortal.tsx`
+  - adicionar modo `reason: 'user' | 'auto'`
+  - não abrir janela em modo auto quando não existe handle
+  - expor `hasOpenWindow()`
+- `src/pages/Session.tsx`
+  - adicionar botão “Ativar Timer em Janela”
+  - ajustar `useEffect` de visibilidade para não abrir popup automaticamente
+  - remover/ajustar `closePortal()` ao voltar visível (para não matar a permissão)
+- `src/pages/ShotListRecord.tsx`
+  - mesma lógica/UX do Session
+- `src/pages/ShotListReview.tsx`
+  - mesma lógica/UX do Session
 
-### Por que essas mudancas resolvem
+## Riscos e como vamos tratar
+- “Mas antes abria sozinho”: no Chrome isso é instável e vira guia. Com a ativação 1x fica confiável.
+- Usuário fecha a janela sem querer: o sistema detecta “sem janela” e pede reativação.
+- Expansão fullscreen do timer: continua funcionando, pois é dentro do componente e independe de abrir janela vs guia.
 
-1. **`popup=yes`**: Diz explicitamente ao navegador para abrir como popup, nao como aba
-2. **Delay reduzido**: Mantem a chamada dentro do "periodo de graca" do navegador para popups
-3. **Nao mexe no modo expandido**: A feature de fullscreen continua funcionando normalmente quando usuario clica no botao de expandir
+## Checklist de testes (end-to-end)
+1) Em `/session?...`, clicar “Ativar Timer em Janela” e confirmar que abre **janela** (não guia).
+2) Minimizar a janela; voltar para a aba principal e continuar trabalhando.
+3) Trocar de aba: confirmar que a janela do timer é focada/mostrada (sem criar nova guia).
+4) Fechar a janela manualmente e trocar de aba: confirmar que **não abre guia**; ao voltar, aparece toast pedindo reativação.
+5) Testar também em:
+   - `/shot-list/record?scriptId=...`
+   - `/shot-list/review?scriptId=...`
 
----
-
-### Impacto
-
-- O popup volta a abrir como janela separada pequena (comportamento anterior)
-- O modo expandido (fullscreen) continua funcionando quando usuario clica no botao de maximizar
-- Nao ha conflito entre as duas features
+## Resultado esperado
+- Zero “timer abrindo como guia” (porque o automático não cria mais janela).
+- Popup consistente no Chrome desktop após ativação 1x.
+- O modo fullscreen novo continua disponível pelo botão de expandir no timer.
