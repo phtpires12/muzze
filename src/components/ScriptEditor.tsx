@@ -54,6 +54,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
   const { timer, setMuzzeSession } = useSessionContext();
   const { saveCurrentStageTime, endSession } = useSession();
   const { activeWorkspace } = useWorkspaceContext();
+  const { profile } = useProfileContext();
   const { triggerFullCelebration } = useCelebration();
   const [title, setTitle] = useState("Novo Roteiro");
   const [content, setContent] = useState({
