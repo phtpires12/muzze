@@ -409,7 +409,7 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
           {/* Action Buttons */}
           <div className="flex flex-col gap-3 pt-4">
             <Button
-              onClick={handleRoteirizar}
+              onClick={handleAdvanceToNextStage}
               disabled={saving}
               className="w-full bg-primary hover:bg-primary/90"
               size="lg"
@@ -417,9 +417,9 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
               {saving ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               ) : (
-                <FileText className="h-4 w-4 mr-2" />
+                <nextStageButton.icon className="h-4 w-4 mr-2" />
               )}
-              Roteirizar essa ideia
+              {nextStageButton.label}
             </Button>
             <Button
               variant="outline"
