@@ -22,7 +22,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { ProfileSheet } from "@/components/ProfileSheet";
 import { FreePlanBanner } from "@/components/FreePlanBanner";
 import { ContinuityCarousel } from "@/components/home/ContinuityCarousel";
-import { Flame, Clock, Trophy, Zap, Sparkles, Check, AlertCircle, Lock, Lightbulb, Film, Mic, Scissors } from "lucide-react";
+import { Flame, Clock, Trophy, Zap, Workflow, Check, AlertCircle, Lock, Lightbulb, Film, Mic, Scissors } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
@@ -553,17 +553,17 @@ const Index = () => {
             </button>
 
             <button 
-              onClick={() => navigate('/novidades')}
+              onClick={() => navigate('/workflows')}
               className="p-4 bg-card rounded-xl border border-border text-center hover:shadow-md transition-all"
             >
               <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-accent flex items-center justify-center">
-                <Sparkles className="w-6 h-6 text-accent-foreground" />
+                <Workflow className="w-6 h-6 text-accent-foreground" />
               </div>
               <div className="text-sm font-semibold text-foreground">
-                Em breve
+                Workflow
               </div>
               <div className="text-xs text-muted-foreground">
-                Novidades
+                Seu método
               </div>
             </button>
           </div>

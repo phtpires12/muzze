@@ -25,7 +25,7 @@ import { supabase } from "@/integrations/supabase/client";
 setupGlobalErrorHandlers();
 import Index from "./pages/Index";
 import Stats from "./pages/Stats";
-import Novidades from "./pages/Novidades";
+import Workflows from "./pages/Workflows";
 import CalendarioEditorial from "./pages/CalendarioEditorial";
 import Session from "./pages/Session";
 import ShotList from "./pages/ShotList";
@@ -151,7 +151,7 @@ const router = createBrowserRouter([
       { path: "/onboarding", element: <Onboarding /> },
       { path: "/install", element: <Install /> },
       { path: "/", element: <ProtectedRoute><Layout><Index /></Layout></ProtectedRoute> },
-      { path: "/novidades", element: <ProtectedRoute><Layout><Novidades /></Layout></ProtectedRoute> },
+      { path: "/workflows", element: <ProtectedRoute><Layout><Workflows /></Layout></ProtectedRoute> },
       { path: "/calendario", element: <ProtectedRoute><Layout><CalendarioEditorial /></Layout></ProtectedRoute> },
       { path: "/session", element: <ProtectedRoute><Session /></ProtectedRoute> },
       { path: "/shot-list/review", element: <ProtectedRoute><ShotListReview /></ProtectedRoute> },

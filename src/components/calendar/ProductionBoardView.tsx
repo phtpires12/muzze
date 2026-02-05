@@ -9,14 +9,15 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { 
-  PRODUCTION_COLUMNS, 
   getProductionColumnForStatus, 
   getStatusForProductionColumn, 
-  ProductionColumnId 
+  ProductionColumnId,
+  getOrderedProductionColumns,
 } from "@/lib/kanban-columns";
 import { ProductionKanbanColumn } from "./ProductionKanbanColumn";
 import { ProductionKanbanCard } from "./ProductionKanbanCard";
 import { useLongPressSensors, triggerHapticFeedback } from "@/hooks/useLongPressSensors";
+import { useWorkflowTemplate } from "@/hooks/useWorkflowTemplate";
 
 interface Script {
   id: string;
@@ -44,6 +45,9 @@ export function ProductionBoardView({
   onUpdateStatus,
 }: ProductionBoardViewProps) {
   const { toast } = useToast();
+  const { stages } = useWorkflowTemplate();
+  const orderedColumns = getOrderedProductionColumns(stages);
+  
   // Filtrar scripts que não estão completos E não foram postados
   const productionScripts = scripts.filter(s => 
     s.status !== 'completed' && 
@@ -114,7 +118,7 @@ export function ProductionBoardView({
 
       toast({
         title: "Status atualizado",
-        description: `Movido para ${PRODUCTION_COLUMNS.find(c => c.id === targetColumnId)?.label}`,
+        description: `Movido para ${orderedColumns.find(c => c.id === targetColumnId)?.label}`,
       });
     } catch (error) {
       setLocalScripts(previousLocalScripts);
@@ -134,7 +138,7 @@ export function ProductionBoardView({
       onDragEnd={handleDragEnd}
     >
       <div className="flex gap-4 overflow-x-auto pb-4 min-h-[400px]">
-        {PRODUCTION_COLUMNS.map(column => {
+        {orderedColumns.map(column => {
           const columnScripts = localScripts.filter(
             s => getProductionColumnForStatus(s.status) === column.id
           );
