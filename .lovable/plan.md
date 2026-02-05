@@ -1,97 +1,166 @@
 
+# Plano: Redesign da Shotlist para Galeria Horizontal (Estilo Notion)
 
-# Plano: Vincular Arquivos de Vídeo a Cada Cena (Problema 3)
+## Visão Geral
 
-## Problema Atual
-
-Existe um painel global "Arquivos de Vídeo" (`VideoReferencesPanel`) que funciona como um pool de links:
-- Todos os vídeos ficam misturados em uma lista
-- Não há conexão entre um vídeo e a cena correspondente
-- O usuário perde a organização visual entre cena → take gravado
-
-**O ideal:** Cada cena da shotlist deve ter seu próprio espaço para adicionar o link do arquivo de vídeo correspondente.
+Transformar a shotlist de uma lista vertical para uma **galeria horizontal com scroll lateral**, onde cada cena é um card visual com thumbnail no topo e informações condensadas abaixo.
 
 ---
 
-## Solução
+## Estrutura Visual Proposta
 
-### 1. Adicionar campo `videoUrl` à interface `ShotItem`
+```text
+┌─────────────────────────────────────────────────────────────────────────┐
+│  [📋] Shotlist                                                          │
+│       12 cenas                                                    [▼]  │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌─────────────┐  │
+│  │  [IMAGEM]    │  │  [IMAGEM]    │  │              │  │             │  │
+│  │              │  │              │  │  (placeholder)│  │             │  │
+│  │              │  │              │  │              │  │             │  │
+│  ├──────────────┤  ├──────────────┤  ├──────────────┤  ├─────────────┤  │
+│  │ GANCHO       │  │ SETUP        │  │ 3            │  │ 4           │  │
+│  │ 1  Texto...  │  │ 2  Texto...  │  │ Texto...     │  │ Texto...    │  │
+│  │ 📍 Locação   │  │              │  │              │  │ 📍 Estúdio  │  │
+│  │ 🎬 Add vídeo │  │ 🎬 Add vídeo │  │ 🎬 Add vídeo │  │ 🎬 Abrir ▸  │  │
+│  └──────────────┘  └──────────────┘  └──────────────┘  └─────────────┘  │
+│                                                                    ──▸  │
+│                        (scroll horizontal)                              │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Mudanças Principais
+
+### 1. Atualizar Interface `ShotItem`
+
+Adicionar campos que faltam para suportar a galeria:
 
 ```typescript
 export interface ShotItem {
   id: string;
-  description: string;
-  imageUrl?: string;
-  location?: string;
-  isComplex?: boolean;
+  description: string;      // scriptSegment (trecho do roteiro)
+  scene?: string;           // descrição técnica da cena
+  imageUrl?: string;        // thumbnail de referência
+  location?: string;        // locação
+  sectionName?: string;     // seção (Gancho, Setup, etc.)
+  videoUrl?: string;        // link do take
   isCompleted?: boolean;
-  sectionName?: string;
-  videoUrl?: string;  // ← Novo campo para o link do take
   order: number;
 }
 ```
 
-### 2. Modificar cada card de cena no `ShotlistPanel`
+### 2. Layout da Galeria Horizontal
 
-Adicionar dentro de cada cena:
-- Input compacto para colar link do vídeo (Google Drive, Dropbox, etc.)
-- Ícone indicando o tipo de serviço (Drive, Dropbox, YouTube)
-- Botões para abrir link e remover
+Substituir a lista vertical por um container com scroll horizontal:
 
-**UI por cena:**
-```
-┌─────────────────────────────────────────────────┐
-│ 1  │ Texto do roteiro aqui...                   │
-│    │                                             │
-│    │ 🎬 Colar link do vídeo...  [Abrir] [🗑️]   │
-└─────────────────────────────────────────────────┘
+```tsx
+<ScrollArea className="w-full" orientation="horizontal">
+  <div className="flex gap-4 pb-4">
+    {filteredShots.map((shot, index) => (
+      <ShotGalleryCard key={shot.id} shot={shot} index={index} />
+    ))}
+  </div>
+</ScrollArea>
 ```
 
-### 3. Remover o painel global `VideoReferencesPanel`
+### 3. Design do Card de Galeria
 
-Como cada cena terá seu próprio espaço, o painel global se torna redundante.
+Cada card terá:
 
-### 4. Atualizar o mapeamento em `EditingWorkspace.tsx`
+| Elemento | Descrição |
+|----------|-----------|
+| **Thumbnail** | Aspect ratio 16:9, imagem de referência ou placeholder cinza |
+| **Seção** | Badge colorido (ex: "GANCHO" em roxo) - se existir |
+| **Número + Texto** | Índice e trecho do roteiro (2-3 linhas) |
+| **Descrição** | Descrição técnica da cena - se preenchida |
+| **Locação** | Badge com ícone MapPin - se preenchida |
+| **Botão Vídeo** | "Adicionar vídeo" ou "Abrir ▸" com ícone do serviço |
 
-Mapear o campo `videoUrl` do shot_list armazenado no banco:
-```typescript
-videoUrl: shotData.videoUrl || undefined,
+### 4. Dimensões do Card
+
+- **Largura fixa**: `w-72` (288px) no desktop, `w-64` (256px) no mobile
+- **Altura da thumbnail**: `aspect-video` (16:9)
+- **Altura total**: Auto, baseada no conteúdo
+
+### 5. Placeholder para Imagens Ausentes
+
+Card sem imagem mostra um placeholder visual discreto:
+
+```tsx
+<div className="aspect-video bg-muted/30 border border-dashed border-border rounded-lg" />
 ```
 
-### 5. Propagar alterações para o banco
+### 6. Remover Elementos Obsoletos
 
-Quando o usuário adicionar/remover um link de vídeo:
-1. Atualizar o estado local
-2. Chamar `onShotsChange` para persistir no banco
+- Remover filtros "Ordem", "Locação", "Complexas" (não fazem sentido na galeria)
+- Remover botão de estrelinha (complexidade)
+- Manter apenas o header com título + contagem
 
 ---
 
-## Mudanças de Arquivo
+## Arquivos a Modificar
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/components/editing/ShotlistPanel.tsx` | Adicionar input de vídeo em cada cena + lógica de update |
-| `src/pages/EditingWorkspace.tsx` | Mapear `videoUrl`, remover `VideoReferencesPanel`, atualizar `onShotsChange` |
+| `src/components/editing/ShotlistPanel.tsx` | Reescrever para layout de galeria horizontal com cards |
+| `src/pages/EditingWorkspace.tsx` | Mapear campo `scene` do shot_list |
 
 ---
 
-## Visual Final
+## Detalhes Técnicos
+
+### Scroll Horizontal
+
+Usar `ScrollArea` do Radix UI com orientação horizontal:
+
+```tsx
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+
+<ScrollArea className="w-full whitespace-nowrap">
+  <div className="flex gap-4">
+    {/* cards */}
+  </div>
+  <ScrollBar orientation="horizontal" />
+</ScrollArea>
+```
+
+### Responsividade
+
+- **Desktop**: Cards `w-72`, scroll horizontal livre
+- **Mobile**: Cards `w-64`, galeria ocupa 100% da largura
+
+### Estado do Vídeo
+
+O botão muda baseado no `videoUrl`:
+- **Sem vídeo**: "Adicionar vídeo" (input aparece ao clicar)
+- **Com vídeo**: Ícone do serviço + "Abrir" (abre em nova aba)
+
+---
+
+## Resultado Esperado
 
 **Antes:**
-- Painel global separado com lista de vídeos
+- Lista vertical dentro de card colapsível
+- Botões de filtro que não agregam valor
+- Espaço desperdiçado na tela
 
 **Depois:**
-- Cada cena da shotlist tem um campo inline para seu vídeo
-- Ícone do serviço (Drive, Dropbox) aparece quando há link
-- Botões de ação (abrir, copiar, remover) ao lado
+- Galeria horizontal estilo Notion
+- Thumbnails visuais destacadas
+- Informações condensadas por cena
+- Uso eficiente do espaço da tela
 
 ---
 
 ## Critérios de Aceite
 
-- [ ] Cada cena exibe um campo para adicionar link de vídeo
-- [ ] Painel global "Arquivos de Vídeo" é removido
-- [ ] Links adicionados são persistidos no banco por cena
-- [ ] Ícone indica o tipo de serviço (Drive, Dropbox, YouTube)
-- [ ] Botão "Abrir" abre o link em nova aba
-
+- [ ] Galeria exibe cards lado a lado com scroll horizontal
+- [ ] Thumbnail (ou placeholder) aparece no topo de cada card
+- [ ] Seção (Gancho, Setup) aparece como badge colorido
+- [ ] Trecho do roteiro é exibido com 2-3 linhas máximo
+- [ ] Locação aparece apenas quando preenchida
+- [ ] Botão "Adicionar vídeo" funciona e persiste no banco
+- [ ] Layout responsivo funciona no mobile
