@@ -1,112 +1,94 @@
 
-# Plano: Corrigir Erro "VideoReferencesPanel is not defined"
 
-## Problema
+# Plano: Corrigir Imagens Quebradas e Shift+Enter no ShotListRecord
 
-O arquivo `EditingWorkspace.tsx` ainda contém referências ao `VideoReferencesPanel` que deveria ter sido removido:
+## Problema 1: Imagem de Referência Não Carrega
 
-- **Linha 12**: Import do componente
-- **Linhas 117-141**: Handlers de video references (`saveVideoReferences`, `handleAddVideoRef`, `handleRemoveVideoRef`)
-- **Linhas 293-297**: JSX usando `<VideoReferencesPanel>`
-
-## Solução
-
-### 1. Remover import na linha 12
+### Diagnóstico
+No arquivo `src/components/shotlist/ShotListTable.tsx` (linha 226), o código tenta buscar a URL resolvida usando uma variável global inexistente:
 
 ```typescript
-// REMOVER ESTA LINHA:
-import { VideoReferencesPanel, VideoReference } from "@/components/editing/VideoReferencesPanel";
+const resolvedUrl = (window as any).__resolvedUrls?.get(path);
 ```
 
-### 2. Atualizar interface ScriptData (linhas 20-27)
+No entanto, a prop `resolvedUrls` é passada corretamente para o componente mas **não está sendo usada**. Esta é a fonte do bug - a imagem sempre mostra o `path` bruto (que não é uma URL válida) em vez da signed URL resolvida.
 
-Remover `video_references`:
+### Solução
+Corrigir a linha 226 para usar a prop `resolvedUrls` que já é passada corretamente:
 
 ```typescript
-interface ScriptData {
-  id: string;
-  title: string;
-  shot_list: any[] | null;  // Mudado de string[] para any[]
-  music_reference: MusicReference | null;
-  editing_notes: string | null;
+// ANTES (errado):
+const resolvedUrl = (window as any).__resolvedUrls?.get(path);
+
+// DEPOIS (correto):
+const resolvedUrl = resolvedUrls.get(path);
+```
+
+### Arquivo a Modificar
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/components/shotlist/ShotListTable.tsx` | Linha 226: substituir `(window as any).__resolvedUrls?.get(path)` por `resolvedUrls.get(path)` |
+
+---
+
+## Problema 2: Shift+Enter Não Funciona para Quebrar Linha
+
+### Diagnóstico
+O TipTap com StarterKit deveria suportar `Shift+Enter` para inserir um `hardBreak` (quebra de linha sem novo parágrafo) por padrão. No entanto, o comportamento atual está criando um novo parágrafo em vez de uma quebra de linha.
+
+O problema é que o StarterKit **inclui a extensão HardBreak por padrão**, mas pode haver conflito com outras extensões (GlobalDragHandle, AutoJoiner, NotionListKeymap) que estão interceptando o evento de teclado.
+
+### Solução
+Adicionar configuração explícita do `HardBreak` no StarterKit com shortcut garantido:
+
+```typescript
+StarterKit.configure({
+  // ... outras configs
+  hardBreak: {
+    keepMarks: true,  // Mantém formatação após quebra de linha
+  },
+}),
+```
+
+Além disso, criar um handler de teclado customizado para garantir que Shift+Enter sempre funcione:
+
+```typescript
+editorProps: {
+  handleKeyDown: (view, event) => {
+    // Garantir que Shift+Enter insere hardBreak
+    if (event.key === 'Enter' && event.shiftKey) {
+      view.dispatch(
+        view.state.tr.replaceSelectionWith(
+          view.state.schema.nodes.hardBreak.create()
+        )
+      );
+      return true;
+    }
+    return false;
+  },
 }
 ```
 
-### 3. Remover handlers não utilizados (linhas 117-141)
-
-Remover completamente:
-- `saveVideoReferences`
-- `handleAddVideoRef`
-- `handleRemoveVideoRef`
-
-### 4. Remover JSX do VideoReferencesPanel (linhas 292-297)
-
-Remover completamente o bloco `<VideoReferencesPanel ... />`
-
-### 5. Corrigir mapeamento de shots (linhas 109-114)
-
-Atualizar para extrair `scriptSegment` corretamente:
-
-```typescript
-const shots: ShotItem[] = (script?.shot_list || []).map((item: any, index: number) => {
-  const shotData = typeof item === 'string' ? JSON.parse(item) : item;
-  return {
-    id: shotData.id || `shot-${index}`,
-    description: shotData.scriptSegment || '',
-    scene: shotData.scene || undefined,
-    imageUrl: shotData.shotImageUrls?.[0] || undefined,
-    location: shotData.location || undefined,
-    sectionName: shotData.sectionName || undefined,
-    videoUrl: shotData.videoUrl || undefined,
-    isCompleted: shotData.isCompleted || false,
-    order: index,
-  };
-});
-```
-
-### 6. Adicionar handler para atualizar shots
-
-```typescript
-const handleShotsChange = useCallback(async (updatedShots: ShotItem[]) => {
-  if (!scriptId || !script?.shot_list) return;
-  
-  const updatedShotList = script.shot_list.map((item: any, index: number) => {
-    const shotData = typeof item === 'string' ? JSON.parse(item) : item;
-    const updatedShot = updatedShots.find(s => s.id === shotData.id || s.id === `shot-${index}`);
-    return {
-      ...shotData,
-      videoUrl: updatedShot?.videoUrl || undefined,
-    };
-  });
-
-  await supabase
-    .from('scripts')
-    .update({ shot_list: updatedShotList })
-    .eq('id', scriptId);
-
-  setScript(prev => prev ? { ...prev, shot_list: updatedShotList } : null);
-}, [scriptId, script?.shot_list]);
-```
-
-### 7. Atualizar ShotlistPanel no JSX
-
-```tsx
-<ShotlistPanel 
-  shots={shots} 
-  scriptId={script.id}
-  onShotsChange={handleShotsChange}
-/>
-```
-
-## Arquivos a Modificar
-
+### Arquivo a Modificar
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/pages/EditingWorkspace.tsx` | Remover VideoReferencesPanel, corrigir mapeamento, adicionar handler |
+| `src/components/ui/rich-text-editor.tsx` | Adicionar `handleKeyDown` no `editorProps` para interceptar Shift+Enter |
 
-## Resultado Esperado
+---
 
-- Erro "VideoReferencesPanel is not defined" corrigido
-- Página de edição carrega normalmente
-- Galeria horizontal de shots funcional
-- Links de vídeo salvos por cena
+## Resumo das Mudanças
+
+| Problema | Arquivo | Correção |
+|----------|---------|----------|
+| Imagem quebrada | `ShotListTable.tsx` | Usar prop `resolvedUrls` em vez de `window.__resolvedUrls` |
+| Shift+Enter | `rich-text-editor.tsx` | Adicionar handler de teclado para garantir hardBreak |
+
+---
+
+## Critérios de Aceite
+
+- [ ] Imagens de referência carregam corretamente no ShotListRecord
+- [ ] Imagens aparecem como thumbnail na galeria de edição
+- [ ] Shift+Enter cria quebra de linha (não novo parágrafo)
+- [ ] Botão mobile "Nova linha" continua funcionando
+
