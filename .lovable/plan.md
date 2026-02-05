@@ -1,221 +1,291 @@
 
+# Plano Expandido: Sistema Híbrido de Workflows (Global + Por Conteúdo)
 
-# Plano: Sistema de Templates de Workflow
+## Visão Geral
 
-## Resumo
-
-Substituir a página "Em breve / Novidades" por uma funcionalidade real: **Templates de Workflow** que permitem ao usuário escolher diferentes ordens para as etapas de criação de conteúdo.
-
----
-
-## Templates Confirmados
-
-| ID | Nome | Etapas | Descrição |
-|----|------|--------|-----------|
-| `classic` | Clássico | Ideação → Roteiro → Revisão → Gravação → Edição | "O fluxo completo de produção" |
-| `freestyle` | Freestyle | Ideação → Gravação → Edição | "Pra quem improvisa na hora" |
-| `minimalist` | Minimalista | Ideação → Edição | "Ideal para edits e montagens" |
+Implementar um sistema de **duas camadas** para workflows:
+1. **Workflow Global** (já implementado): Define o padrão do usuário, afeta novos conteúdos
+2. **Workflow por Conteúdo** (nova funcionalidade): Permite alterar o workflow de um conteúdo específico
 
 ---
 
-## Arquitetura
-
-### Novos Arquivos a Criar
-
-1. **`src/lib/workflow-templates.ts`** - Definições dos templates
-2. **`src/hooks/useWorkflowTemplate.ts`** - Hook centralizado para gerenciar template ativo
-3. **`src/pages/Workflows.tsx`** - Nova página com carrossel de seleção (substitui `Novidades.tsx`)
-4. **`src/components/workflows/WorkflowCard.tsx`** - Card individual para cada template no carrossel
-
-### Arquivos a Modificar
-
-1. **`src/App.tsx`** - Trocar rota `/novidades` por `/workflows`
-2. **`src/pages/Index.tsx`** - Atualizar botão "Em breve" para "Workflow"
-3. **`src/lib/kanban-columns.ts`** - Adicionar função para ordenar colunas dinamicamente
-4. **`src/components/calendar/ProductionBoardView.tsx`** - Usar colunas ordenadas pelo template ativo
-
-### Arquivos a Deletar
-
-1. **`src/pages/Novidades.tsx`** - Será substituído por `Workflows.tsx`
-2. **`src/lib/workflows.ts`** - Arquivo legado com sistema antigo de workflows
-
----
-
-## Detalhes Técnicos
-
-### 1. Estrutura do Template (`src/lib/workflow-templates.ts`)
-
-```typescript
-import { CreativeStage } from "@/types/workspace";
-
-export type WorkflowTemplateId = 'classic' | 'freestyle' | 'minimalist';
-
-export interface WorkflowTemplate {
-  id: WorkflowTemplateId;
-  name: string;
-  description: string;
-  stages: CreativeStage[];
-  icon: string;
-  gradient: string;
-}
-
-export const WORKFLOW_TEMPLATES: Record<WorkflowTemplateId, WorkflowTemplate> = {
-  classic: {
-    id: 'classic',
-    name: 'Clássico',
-    description: 'O fluxo completo de produção',
-    stages: ['ideation', 'script', 'review', 'recording', 'editing'],
-    icon: '🎬',
-    gradient: 'from-blue-500 to-cyan-500',
-  },
-  freestyle: {
-    id: 'freestyle',
-    name: 'Freestyle',
-    description: 'Pra quem improvisa na hora',
-    stages: ['ideation', 'recording', 'editing'],
-    icon: '🎤',
-    gradient: 'from-orange-500 to-yellow-500',
-  },
-  minimalist: {
-    id: 'minimalist',
-    name: 'Minimalista',
-    description: 'Ideal para edits e montagens',
-    stages: ['ideation', 'editing'],
-    icon: '✂️',
-    gradient: 'from-purple-500 to-pink-500',
-  },
-};
-
-export const DEFAULT_TEMPLATE_ID: WorkflowTemplateId = 'classic';
-```
-
-### 2. Hook Centralizado (`src/hooks/useWorkflowTemplate.ts`)
-
-```typescript
-// Responsabilidades:
-// - Carregar template ativo do profile.current_workflow
-// - Métodos: nextStage(), prevStage(), isFirstStage(), isLastStage()
-// - Método setTemplate() para salvar no banco
-// - Retornar colunas ordenadas para o Kanban
-```
-
-### 3. Persistência
-
-O campo `profiles.current_workflow` já existe no banco de dados. Vamos usá-lo para salvar o ID do template selecionado (`'classic'`, `'freestyle'`, `'minimalist'`).
-
-### 4. Nova Página com Carrossel (`src/pages/Workflows.tsx`)
-
-A página usará o componente `Carousel` existente (Embla Carousel) para exibir os 3 templates em formato de carrossel horizontal com:
-- Cards visuais com ícone, nome e descrição
-- Indicador visual do template ativo (borda ou badge)
-- Dots de navegação abaixo do carrossel
-- Botão "Ativar" em cada card (ou clique no card)
-
-### 5. Kanban Dinâmico
-
-O `ProductionBoardView.tsx` passará a renderizar apenas as colunas do template ativo, na ordem definida.
-
-Exemplo para template "Minimalista":
-- Só mostra: Ideação → Edição
-- Oculta: Roteiro, Revisão, Gravação
-
----
-
-## Fluxo de Dados
+## Como as Duas Abordagens Coexistem
 
 ```text
-┌─────────────────────────────────────────────────────────────────┐
-│  profiles.current_workflow (banco de dados)                     │
-│  Valor: 'classic' | 'freestyle' | 'minimalist'                  │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-                             ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  useWorkflowTemplate()                                           │
-│  - Lê do ProfileContext                                         │
-│  - Retorna template ativo, stages[], métodos de navegação       │
-└───────┬─────────────────────────────────────────┬───────────────┘
-        │                                         │
-        ▼                                         ▼
-┌───────────────────┐                    ┌────────────────────────┐
-│  Kanban Board     │                    │  Navegação Session     │
-│  (colunas dinâm.) │                    │  (próxima/anterior)    │
-└───────────────────┘                    └────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│  HIERARQUIA DE WORKFLOWS                                            │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  1. WORKFLOW GLOBAL (profile.current_workflow)                      │
+│     └── Define o padrão para NOVOS conteúdos                        │
+│     └── Determina colunas visíveis no Kanban                        │
+│                                                                      │
+│  2. WORKFLOW DO CONTEÚDO (script.workflow_template)                 │
+│     └── Pode ser diferente do global                                │
+│     └── Quando definido, sobrescreve o global para aquele conteúdo  │
+│     └── Permite migrar conteúdos sem mudar o workflow do sistema    │
+│                                                                      │
+│  EXEMPLO PRÁTICO:                                                   │
+│  ────────────────                                                   │
+│  Usuário usa "Clássico" como padrão (roteiro → revisão → gravação)  │
+│  Mas tem um vídeo específico que quer fazer no estilo "Freestyle"   │
+│  → Ele muda só aquele conteúdo para Freestyle                       │
+│  → O Kanban continua mostrando todas as colunas do Clássico         │
+│  → Aquele vídeo específico pula de Ideação direto para Gravação     │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Mudanças Necessárias
+
+### 1. Banco de Dados
+
+```sql
+-- Adicionar campo workflow_template na tabela scripts
+ALTER TABLE scripts 
+ADD COLUMN workflow_template text DEFAULT NULL;
+
+-- NULL = usa workflow global do usuário
+-- 'classic' | 'freestyle' | 'minimalist' = workflow específico
+```
+
+### 2. Nova UI: Seletor de Workflow por Conteúdo
+
+Adicionar um seletor na tela de **IdeaDetail** (onde o usuário desenvolve a ideia):
+
+```text
+┌─────────────────────────────────────────────────────────────────────┐
+│  Desenvolver Ideia                                    ○ Salvo       │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  Título                                                             │
+│  ┌─────────────────────────────────────────────────────────────┐   │
+│  │ Meu vídeo sobre produtividade                               │   │
+│  └─────────────────────────────────────────────────────────────┘   │
+│                                                                      │
+│  Tipo de Conteúdo                   Workflow                        │
+│  ┌──────────────────────┐           ┌──────────────────────┐       │
+│  │ YouTube          ▼   │           │ 🎬 Clássico      ▼   │       │
+│  └──────────────────────┘           └──────────────────────┘       │
+│                                     (Herdado do sistema)            │
+│                                                                      │
+│  Ideia Central                                                      │
+│  ┌─────────────────────────────────────────────────────────────┐   │
+│  │ ...                                                         │   │
+│  └─────────────────────────────────────────────────────────────┘   │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### 3. Lógica de "Próximo Passo"
+
+O hook `useWorkflowTemplate` será expandido para aceitar um `scriptId` opcional:
+
+```typescript
+// Uso atual (workflow global)
+const { stages, nextStage } = useWorkflowTemplate();
+
+// Uso novo (workflow do conteúdo, com fallback para global)
+const { stages, nextStage } = useWorkflowTemplate({ scriptId: 'abc123' });
+```
+
+Se o script tem `workflow_template` definido, usa ele. Senão, usa o global.
+
+---
+
+## Repensando a Coluna "Outras Etapas"
+
+Com o workflow por conteúdo, a coluna "Outras Etapas" ganha um novo propósito:
+
+```text
+┌─────────────────────────────────────────────────────────────────────┐
+│  CENÁRIO: Usuário no workflow "Minimalista" (Ideação → Edição)      │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  ┌───────────┐   ┌───────────┐   ┌───────────────────────────┐     │
+│  │  Ideação  │   │  Edição   │   │  ⚠️ Outras Etapas (2)     │     │
+│  │  (5)      │   │  (2)      │   │                           │     │
+│  │           │   │           │   │  ┌─────────────────────┐  │     │
+│  │  ...      │   │  ...      │   │  │ Vídeo X             │  │     │
+│  │           │   │           │   │  │ 📝 Roteiro          │  │     │
+│  │           │   │           │   │  │ Workflow: Clássico  │  │ ← NOVO    │
+│  │           │   │           │   │  │ [Trocar Workflow]   │  │     │
+│  │           │   │           │   │  └─────────────────────┘  │     │
+│  └───────────┘   └───────────┘   └───────────────────────────┘     │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+**Ações disponíveis no card órfão:**
+1. **Arrastar** para uma coluna do workflow atual → muda o status manualmente
+2. **Botão "Trocar Workflow"** → abre modal para mudar o workflow daquele conteúdo
+3. Se trocar para um workflow compatível, o card sai da coluna "Outras Etapas"
+
+---
+
+## Soluções Complementares Inteligentes
+
+### A) Migração em Lote
+
+Quando o usuário troca o workflow global, oferecer opção de migrar conteúdos existentes:
+
+```text
+┌─────────────────────────────────────────────────────────────────────┐
+│  ✨ Workflow alterado para "Freestyle"                              │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  Você tem 3 conteúdos em etapas que não existem neste workflow.    │
+│                                                                      │
+│  O que deseja fazer?                                                │
+│                                                                      │
+│  ┌───────────────────────────────────────────────────────────────┐ │
+│  │  ○ Manter workflows individuais (cada um continua no seu)    │ │
+│  │  ○ Migrar todos para Freestyle (mover para etapas válidas)   │ │
+│  └───────────────────────────────────────────────────────────────┘ │
+│                                                                      │
+│                                         [Cancelar]  [Confirmar]     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### B) Indicador Visual no Kanban
+
+Cards com workflow diferente do global mostram um badge sutil:
+
+```text
+┌───────────────────────────┐
+│  📹 Vídeo de Música       │
+│  🎤 Freestyle             │  ← Badge indicando workflow diferente
+│  12 Jan · Reels           │
+└───────────────────────────┘
+```
+
+### C) Filtro por Workflow no Kanban
+
+Adicionar um filtro opcional:
+
+```text
+Filtrar por workflow: [Todos ▼] [Clássico] [Freestyle] [Minimalista]
+```
+
+---
+
+## Arquivos a Modificar/Criar
+
+### Banco de Dados
+| Mudança | Descrição |
+|---------|-----------|
+| **Migração 1** | Atualizar constraint de `profiles.current_workflow` |
+| **Migração 2** | Adicionar campo `scripts.workflow_template` |
+
+### Novos Arquivos
+| Arquivo | Descrição |
+|---------|-----------|
+| `src/components/workflows/WorkflowSelector.tsx` | Dropdown para selecionar workflow (reutilizável) |
+| `src/components/calendar/OrphanColumn.tsx` | Coluna especial para conteúdos órfãos |
+| `src/components/workflows/WorkflowMigrationModal.tsx` | Modal para migração em lote |
+
+### Arquivos a Modificar
+| Arquivo | Mudança |
+|---------|---------|
+| `src/hooks/useWorkflowTemplate.ts` | Aceitar `scriptId` opcional para workflow por conteúdo |
+| `src/components/brainstorm/IdeaDetail.tsx` | Adicionar seletor de workflow |
+| `src/pages/ContentView.tsx` | Mostrar workflow do conteúdo |
+| `src/components/calendar/ProductionBoardView.tsx` | Renderizar coluna "Outras Etapas" + badges de workflow |
+| `src/components/calendar/ProductionKanbanCard.tsx` | Mostrar badge de workflow quando diferente do global |
+| `src/pages/Workflows.tsx` | Adicionar modal de migração ao trocar workflow global |
+
+---
+
+## Fluxo de Dados Atualizado
+
+```text
+┌─────────────────────────────────────────────────────────────────────┐
+│                                                                      │
+│    WORKFLOW GLOBAL                    WORKFLOW DO CONTEÚDO          │
+│    (profiles.current_workflow)        (scripts.workflow_template)   │
+│              │                                   │                  │
+│              ▼                                   ▼                  │
+│    ┌──────────────────┐               ┌──────────────────┐         │
+│    │ Colunas visíveis │               │ Próximo passo    │         │
+│    │ no Kanban        │               │ daquele conteúdo │         │
+│    └──────────────────┘               └──────────────────┘         │
+│              │                                   │                  │
+│              │         ┌─────────────────────────┘                  │
+│              ▼         ▼                                            │
+│         ┌─────────────────────────┐                                 │
+│         │   useWorkflowTemplate   │                                 │
+│         │   (scriptId?: string)   │                                 │
+│         └─────────────────────────┘                                 │
+│                      │                                              │
+│     ┌────────────────┼────────────────┐                             │
+│     ▼                ▼                ▼                             │
+│  Session.tsx    IdeaDetail.tsx    Kanban.tsx                        │
+│  (navegação)    (exibição)        (colunas + órfãos)                │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
 ## Fases de Implementação
 
-### Fase 1: Infraestrutura (sem mudanças visuais)
-1. Criar `src/lib/workflow-templates.ts` com os 3 templates
-2. Criar `src/hooks/useWorkflowTemplate.ts`
-3. Adicionar helpers para colunas dinâmicas em `kanban-columns.ts`
+### Fase 1: Corrigir Erro + Infraestrutura (essencial)
+1. Migração SQL: atualizar constraint de `profiles.current_workflow`
+2. Migração SQL: adicionar campo `scripts.workflow_template`
+3. Atualizar hook `useWorkflowTemplate` para aceitar scriptId
 
-### Fase 2: Nova Página de Workflows
-1. Criar `src/pages/Workflows.tsx` com carrossel
-2. Criar `src/components/workflows/WorkflowCard.tsx`
-3. Atualizar rota em `App.tsx` (`/novidades` → `/workflows`)
-4. Atualizar botão na Home (`Index.tsx`)
-5. Deletar `src/pages/Novidades.tsx` e `src/lib/workflows.ts`
+### Fase 2: Coluna "Outras Etapas" (essencial)
+1. Criar componente `OrphanColumn.tsx`
+2. Modificar `ProductionBoardView.tsx` para detectar e renderizar órfãos
+3. Mostrar badge de etapa original em cards órfãos
 
-### Fase 3: Integração no Kanban
-1. Modificar `ProductionBoardView.tsx` para usar colunas do template ativo
+### Fase 3: Workflow por Conteúdo (nova feature)
+1. Criar `WorkflowSelector.tsx` (dropdown reutilizável)
+2. Adicionar seletor em `IdeaDetail.tsx`
+3. Atualizar navegação no Session.tsx para respeitar workflow do conteúdo
 
-### Fase 4 (Futura): Navegação Completa
-Esta fase será implementada depois, conforme necessidade:
-- Integrar hook no `Session.tsx` para navegação entre etapas
-- Integrar no `ContinuityCarousel` e outros componentes
-
----
-
-## UI do Carrossel
-
-```text
-┌─────────────────────────────────────────────────────────────────────┐
-│  Seu Workflow de Criação                                            │
-│  Escolha como você prefere produzir conteúdo                        │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                      │
-│  ┌────────────────────────────────────────────────────────────┐     │
-│  │                                                            │     │
-│  │   🎬                                                       │     │
-│  │   CLÁSSICO                                    ✓ ATIVO      │     │
-│  │                                                            │     │
-│  │   O fluxo completo de produção                             │     │
-│  │                                                            │     │
-│  │   ┌─────────┐ → ┌─────────┐ → ┌─────────┐                 │     │
-│  │   │ Ideação │   │ Roteiro │   │ Revisão │ → ...           │     │
-│  │   └─────────┘   └─────────┘   └─────────┘                 │     │
-│  │                                                            │     │
-│  └────────────────────────────────────────────────────────────┘     │
-│                                                                      │
-│                         ● ○ ○                                       │
-│                                                                      │
-├─────────────────────────────────────────────────────────────────────┤
-│  ⚡ O que muda?                                                      │
-│  A ordem das colunas no Kanban de Produção e o fluxo de "próximo    │
-│  passo" ao terminar cada etapa. Seu histórico permanece intacto.    │
-└─────────────────────────────────────────────────────────────────────┘
-```
+### Fase 4: Polish e UX (melhorias)
+1. Badge de workflow diferente nos cards do Kanban
+2. Modal de migração em lote ao trocar workflow global
+3. Filtro por workflow no Kanban (opcional)
 
 ---
 
 ## Critérios de Aceite
 
-1. Página `/workflows` exibe carrossel com 3 templates
-2. Usuário pode navegar entre templates com swipe ou dots
-3. Ao clicar em um template, ele é ativado e salvo no banco
-4. Template ativo tem indicador visual (badge/borda)
-5. Kanban de Produção mostra apenas as colunas do template ativo
-6. Botão na Home navega para `/workflows` (não mais `/novidades`)
-7. Arquivos legados removidos (`Novidades.tsx`, `workflows.ts`)
+### Fase 1
+- [ ] Usuário consegue ativar workflows sem erro
+- [ ] Campo `workflow_template` existe na tabela scripts
+
+### Fase 2
+- [ ] Coluna "Outras Etapas" aparece quando há conteúdos em etapas fora do workflow
+- [ ] Usuário pode arrastar de "Outras Etapas" para qualquer coluna válida
+- [ ] Coluna desaparece quando não há órfãos
+
+### Fase 3
+- [ ] Usuário pode selecionar workflow diferente para um conteúdo específico
+- [ ] Navegação "próximo passo" respeita o workflow do conteúdo
+- [ ] Conteúdo com workflow próprio sai da coluna "Outras Etapas"
+
+### Fase 4
+- [ ] Badge visual indica quando conteúdo tem workflow diferente do global
+- [ ] Modal de migração aparece ao trocar workflow global (se há órfãos)
 
 ---
 
-## Considerações
+## Considerações Técnicas
 
-- **Compatibilidade**: Projetos existentes continuam funcionando (mantêm seu `status` atual)
-- **Default**: Usuários sem template definido usam `'classic'`
-- **Extensibilidade**: Novos templates podem ser adicionados facilmente ao objeto `WORKFLOW_TEMPLATES`
+### Compatibilidade
+- Scripts existentes terão `workflow_template = NULL` (usam workflow global)
+- Nenhum dado é perdido ou alterado automaticamente
+
+### Performance
+- A detecção de órfãos é O(n) onde n = número de scripts
+- Cache do workflow é mantido no ProfileContext (já existe)
+
+### Extensibilidade
+- Novos templates podem ser adicionados sem migração de dados
+- O sistema é preparado para futuros filtros e visualizações
 
