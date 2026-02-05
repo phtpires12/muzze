@@ -494,11 +494,12 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
     await new Promise(resolve => setTimeout(resolve, 500));
     console.log('[DEBUG - ScriptEditor] Delay completado, prosseguindo com navegação');
     
-    // Navigate to next stage based on current mode
-    const nextStage = isReviewMode ? 'record' : 'review';
-    const nextLabel = isReviewMode ? 'Gravação' : 'Revisão';
+    // Navigate to next stage based on workflow template
+    const currentCreativeStage = isReviewMode ? 'review' : 'script';
+    const next = nextStage(currentCreativeStage);
     
-    console.log('[DEBUG - ScriptEditor] Next stage:', nextStage);
+    console.log('[DEBUG - ScriptEditor] Current stage:', currentCreativeStage);
+    console.log('[DEBUG - ScriptEditor] Next stage from workflow:', next);
     
     // Check if all sections are reviewed when in review mode
     if (isReviewMode) {
@@ -525,21 +526,40 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
       return;
     }
     
-    // Update status in database based on current mode
-    const newStatus = isReviewMode ? 'recording' : 'review';
+    if (!next) {
+      // Último estágio - não deveria acontecer, mas tratamos
+      toast({
+        title: "Fluxo concluído",
+        description: "Você já está na última etapa do workflow.",
+      });
+      return;
+    }
+    
+    // Update status in database based on next stage
     await supabase
       .from('scripts')
-      .update({ status: newStatus })
+      .update({ status: next })
       .eq('id', currentScriptId);
     
-    const url = `/session?stage=${nextStage}&scriptId=${currentScriptId}`;
+    // Get dynamic URL based on workflow
+    const url = getNextStageUrl(currentCreativeStage, currentTemplate, currentScriptId);
+    
+    if (!url) {
+      toast({
+        title: "Erro ao avançar",
+        description: "Não foi possível determinar o próximo estágio.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     console.log('[DEBUG - ScriptEditor] Navegando para:', url);
     navigate(url);
     
+    const nextLabel = getStageLabel(next);
     toast({
       title: `Avançando para ${nextLabel}`,
-      description: `Seu roteiro foi salvo. ${isReviewMode ? 'Prepare-se para gravar!' : 'Hora de revisar!'}`,
+      description: `Seu roteiro foi salvo. ${next === 'recording' ? 'Prepare-se para gravar!' : next === 'review' ? 'Hora de revisar!' : 'Próxima etapa!'}`,
     });
   };
 
