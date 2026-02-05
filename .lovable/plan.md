@@ -1,79 +1,107 @@
 
-# Plano: Corrigir Navegação para Editing Workspace
+## O que está acontecendo (causa raiz)
 
-## Problema Identificado
+O “Encerramento de sessão” está aparecendo porque a navegação **para `/editing-workspace` está sendo bloqueada** pelo hook `useNavigationBlocker`.
 
-Ao clicar em "Avançar para Edição" na página de gravação (`ShotListRecord`), o usuário está sendo redirecionado para a página de encerramento de sessão em vez do Editing Workspace.
+Hoje, o `useNavigationBlocker` (arquivo `src/hooks/useNavigationBlocker.ts`) bloqueia qualquer navegação durante uma sessão ativa, **exceto** para algumas rotas consideradas “seguras” (`SAFE_SESSION_PATHS`), como:
 
-### Causa Raiz
+- `/session`
+- `/shot-list/record`
+- `/shot-list/review`
+- `/profile`, etc.
 
-1. O código em `ShotListRecord.tsx` chama `getNextStageUrl('recording', currentTemplate, scriptId)` para obter a URL do próximo estágio
-2. Se essa função retorna `null` (o que pode acontecer se o `currentTemplate` não estiver carregado corretamente), o código usa um **fallback para `/session?stage=edit`**
-3. A página `/session` tenta redirecionar para `/editing-workspace`, mas há um delay entre a renderização e o redirecionamento, fazendo o usuário ver a UI de sessão
+Só que **`/editing-workspace` não está nessa lista**.
 
-### Evidência
+Resultado prático:
+1) Você clica “Avançar pra edição” em `/shot-list/record?...`
+2) O código tenta `navigate('/editing-workspace?scriptId=...')`
+3) O `useBlocker` intercepta e bloqueia (porque não é rota “segura”)
+4) A UI entende como “você está saindo da sessão”, abre o fluxo de confirmação/encerramento
+5) Você cai no encerramento (celebrações/resumo) em vez de ir para o workspace
 
-```typescript
-// ShotListRecord.tsx linhas 403-406 e 427-428
-const url = getNextStageUrl('recording', currentTemplate, scriptId!);
-navigate(url || `/session?stage=edit&scriptId=${scriptId}`);
-//             ↑ Este fallback vai para Session, não Editing Workspace
-```
-
----
-
-## Solução
-
-Trocar o fallback de `/session?stage=edit` para `/editing-workspace` diretamente, já que este é sempre o destino esperado quando saindo de `recording`.
-
-### Mudanças
-
-| Arquivo | Linha | De | Para |
-|---------|-------|-----|------|
-| `ShotListRecord.tsx` | ~405 | `url \|\| \`/session?stage=edit&scriptId=${scriptId}\`` | `url \|\| \`/editing-workspace?scriptId=${scriptId}\`` |
-| `ShotListRecord.tsx` | ~428 | `url \|\| \`/session?stage=edit&scriptId=${scriptId}\`` | `url \|\| \`/editing-workspace?scriptId=${scriptId}\`` |
+Isso explica exatamente o seu relato: aparece “progresso salvo / redirecionando…”, mas o redirecionamento nunca completa e você vai parar no encerramento.
 
 ---
 
-## Código Atualizado
+## Correção principal (crucial para destravar o teste)
 
-```typescript
-// Antes (linha 403-406)
-const url = getNextStageUrl('recording', currentTemplate, scriptId!);
-setTimeout(() => {
-  navigate(url || `/session?stage=edit&scriptId=${scriptId}`);
-}, 500);
+### 1) Tornar `/editing-workspace` uma rota “segura” de workflow
+**Arquivo:** `src/hooks/useNavigationBlocker.ts`  
+**Mudança:** adicionar `'/editing-workspace'` no array `SAFE_SESSION_PATHS`.
 
-// Depois
-const url = getNextStageUrl('recording', currentTemplate, scriptId!);
-setTimeout(() => {
-  navigate(url || `/editing-workspace?scriptId=${scriptId}`);
-}, 500);
-```
+Com isso, quando a sessão estiver ativa e você avançar de gravação → edição, a navegação não será bloqueada e não vai disparar o modal/fluxo de encerramento.
 
-```typescript
-// Antes (linha 427-428)
-const url = getNextStageUrl('recording', currentTemplate, scriptId!);
-navigate(url || `/session?stage=edit&scriptId=${scriptId}`);
-
-// Depois
-const url = getNextStageUrl('recording', currentTemplate, scriptId!);
-navigate(url || `/editing-workspace?scriptId=${scriptId}`);
-```
+Critério de aceite dessa etapa:
+- Clicar “Avançar pra edição” em `/shot-list/record?scriptId=...` leva diretamente para:
+  - `/editing-workspace?scriptId=...`
+- Sem modal de “Encerrar sessão?” e sem cair no resumo/celebração por causa dessa navegação.
 
 ---
 
-## Benefícios
+## Ajustes recomendados (para não haver outros “caminhos quebrados”)
 
-- Navegação direta para o Editing Workspace, sem passar pela página Session
-- Elimina o flash/delay de redirecionamento intermediário
-- Funciona mesmo se o `currentTemplate` não estiver carregado (fallback seguro)
+Esses ajustes não são obrigatórios para o botão “Avançar pra edição” funcionar, mas evitam outras rotas do app continuarem empurrando o usuário para `/session?stage=edit` ou voltarem errado para review:
+
+### 2) Corrigir “return URL” quando estágio atual é edit
+**Arquivo:** `src/components/AutoHideNav.tsx`  
+**Problema atual:** `getSessionReturnUrl()` para `stage === 'edit'` está devolvendo `/shot-list/review?...` ou `/session?stage=edit` (fluxo antigo).  
+**Correção:** se `contentId` existir, retornar:
+- `/editing-workspace?scriptId=${contentId}`
+senão:
+- `/editing-workspace` (ou manter `/session?stage=edit` apenas como fallback, mas ideal é padronizar no workspace)
+
+### 3) Atualizar pontos do app que ainda navegam para `/session?stage=edit`
+Pelo search atual, ainda existem referências em:
+- `src/components/BottomNav.tsx` (continueProject case "edit" e startSession("edit") -> `/session?stage=edit`)
+- `src/components/home/ContinuityCarousel.tsx` (quando stage === "editing")
+- possivelmente `src/components/SideNav.tsx` (aparece no search)
+
+**Objetivo:** quando o destino for “editing”, navegar para:
+- `/editing-workspace?scriptId=${scriptId}` (quando tiver scriptId)
+e evitar o `/session?stage=edit` como destino principal.
+
+Critérios de aceite desses ajustes:
+- “Continuar projeto” que esteja em edição leva para o Editing Workspace (com `scriptId`).
+- Home/Continuity (atalhos de retomar) também levam ao Editing Workspace.
+- Nenhum fluxo normal de edição depende de `/session?stage=edit` (pode existir como compatibilidade, mas não como caminho principal).
 
 ---
 
-## Critérios de Aceite
+## Instrumentação rápida (para confirmar que era o blocker)
+Enquanto implementamos, eu também vou adicionar logs pontuais (somente console/dev) para confirmar:
+- quando o blocker bloqueou
+- qual era `nextLocation.pathname`
+- se caiu no callback do modal por bloqueio
 
-- [ ] Clicar em "Avançar para Edição" leva diretamente ao Editing Workspace
-- [ ] O scriptId é passado corretamente na URL
-- [ ] Todos os painéis do Editing Workspace carregam normalmente
-- [ ] Funciona com qualquer workflow template (classic, freestyle, minimalist)
+(Respeitando o padrão do projeto: debug centralizado, sem vazar em tela para usuário final.)
+
+---
+
+## Sequência de implementação (bem direta)
+
+1) Editar `useNavigationBlocker.ts`: incluir `/editing-workspace` em `SAFE_SESSION_PATHS`.  
+2) Testar o fluxo exato que você está agora:
+   - rota atual: `/shot-list/record?scriptId=16df85c3-0d31-49bd-898b-05257544d7b2`
+   - clicar “Avançar pra edição”
+   - confirmar que chega em `/editing-workspace?scriptId=...` sem encerramento
+3) Se ok, aplicar ajustes de consistência:
+   - `AutoHideNav.tsx` return URL de edit
+   - `BottomNav.tsx`, `ContinuityCarousel.tsx`, `SideNav.tsx` para apontar para `/editing-workspace`
+4) Rodar um teste ponta-a-ponta:
+   - abrir conteúdo → shotlist → gravação → avançar → editar no workspace → marcar como editado
+
+---
+
+## Riscos/observações
+
+- Essa correção mexe na regra de bloqueio de navegação. O efeito desejado é: **não tratar o Editing Workspace como “sair da sessão”**, e sim como “continuar o workflow”.
+- Se existirem outras rotas novas de workflow no futuro, elas também devem entrar em `SAFE_SESSION_PATHS`, para não repetir esse bug.
+
+---
+
+## Definição de pronto (DoD)
+
+- [ ] “Avançar pra edição” nunca cai no encerramento por bloqueio de navegação
+- [ ] `/editing-workspace?scriptId=...` abre corretamente a página
+- [ ] O timer/sessão continuam ativos ao trocar de gravação → edição
+- [ ] Rotas secundárias (continuar projeto / atalhos) também levam para o workspace quando o estágio é edição
