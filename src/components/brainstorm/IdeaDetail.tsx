@@ -72,6 +72,9 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isInitialLoad = useRef(true);
 
+  // Workflow hook para navegação dinâmica
+  const { nextStage, getNextUrl } = useWorkflowTemplate({ scriptWorkflow: workflowTemplate });
+
   useEffect(() => {
     loadIdea();
   }, [scriptId]);
