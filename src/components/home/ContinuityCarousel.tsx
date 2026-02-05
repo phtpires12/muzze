@@ -70,7 +70,7 @@ export function ContinuityCarousel({ username, onStartNewSession }: ContinuityCa
     // Navegar com base no stage
     const stage = currentOption.stage;
     if (stage === "editing") {
-      navigate(`/session?stage=edit&scriptId=${currentOption.scriptId}`);
+      navigate(`/editing-workspace?scriptId=${currentOption.scriptId}`);
     } else if (stage === "review") {
       navigate(`/session?stage=review&scriptId=${currentOption.scriptId}`);
     } else if (stage === "recording") {
