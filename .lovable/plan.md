@@ -1,166 +1,112 @@
 
-# Plano: Redesign da Shotlist para Galeria Horizontal (Estilo Notion)
+# Plano: Corrigir Erro "VideoReferencesPanel is not defined"
 
-## Visão Geral
+## Problema
 
-Transformar a shotlist de uma lista vertical para uma **galeria horizontal com scroll lateral**, onde cada cena é um card visual com thumbnail no topo e informações condensadas abaixo.
+O arquivo `EditingWorkspace.tsx` ainda contém referências ao `VideoReferencesPanel` que deveria ter sido removido:
 
----
+- **Linha 12**: Import do componente
+- **Linhas 117-141**: Handlers de video references (`saveVideoReferences`, `handleAddVideoRef`, `handleRemoveVideoRef`)
+- **Linhas 293-297**: JSX usando `<VideoReferencesPanel>`
 
-## Estrutura Visual Proposta
+## Solução
 
-```text
-┌─────────────────────────────────────────────────────────────────────────┐
-│  [📋] Shotlist                                                          │
-│       12 cenas                                                    [▼]  │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌─────────────┐  │
-│  │  [IMAGEM]    │  │  [IMAGEM]    │  │              │  │             │  │
-│  │              │  │              │  │  (placeholder)│  │             │  │
-│  │              │  │              │  │              │  │             │  │
-│  ├──────────────┤  ├──────────────┤  ├──────────────┤  ├─────────────┤  │
-│  │ GANCHO       │  │ SETUP        │  │ 3            │  │ 4           │  │
-│  │ 1  Texto...  │  │ 2  Texto...  │  │ Texto...     │  │ Texto...    │  │
-│  │ 📍 Locação   │  │              │  │              │  │ 📍 Estúdio  │  │
-│  │ 🎬 Add vídeo │  │ 🎬 Add vídeo │  │ 🎬 Add vídeo │  │ 🎬 Abrir ▸  │  │
-│  └──────────────┘  └──────────────┘  └──────────────┘  └─────────────┘  │
-│                                                                    ──▸  │
-│                        (scroll horizontal)                              │
-└─────────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## Mudanças Principais
-
-### 1. Atualizar Interface `ShotItem`
-
-Adicionar campos que faltam para suportar a galeria:
+### 1. Remover import na linha 12
 
 ```typescript
-export interface ShotItem {
+// REMOVER ESTA LINHA:
+import { VideoReferencesPanel, VideoReference } from "@/components/editing/VideoReferencesPanel";
+```
+
+### 2. Atualizar interface ScriptData (linhas 20-27)
+
+Remover `video_references`:
+
+```typescript
+interface ScriptData {
   id: string;
-  description: string;      // scriptSegment (trecho do roteiro)
-  scene?: string;           // descrição técnica da cena
-  imageUrl?: string;        // thumbnail de referência
-  location?: string;        // locação
-  sectionName?: string;     // seção (Gancho, Setup, etc.)
-  videoUrl?: string;        // link do take
-  isCompleted?: boolean;
-  order: number;
+  title: string;
+  shot_list: any[] | null;  // Mudado de string[] para any[]
+  music_reference: MusicReference | null;
+  editing_notes: string | null;
 }
 ```
 
-### 2. Layout da Galeria Horizontal
+### 3. Remover handlers não utilizados (linhas 117-141)
 
-Substituir a lista vertical por um container com scroll horizontal:
+Remover completamente:
+- `saveVideoReferences`
+- `handleAddVideoRef`
+- `handleRemoveVideoRef`
 
-```tsx
-<ScrollArea className="w-full" orientation="horizontal">
-  <div className="flex gap-4 pb-4">
-    {filteredShots.map((shot, index) => (
-      <ShotGalleryCard key={shot.id} shot={shot} index={index} />
-    ))}
-  </div>
-</ScrollArea>
+### 4. Remover JSX do VideoReferencesPanel (linhas 292-297)
+
+Remover completamente o bloco `<VideoReferencesPanel ... />`
+
+### 5. Corrigir mapeamento de shots (linhas 109-114)
+
+Atualizar para extrair `scriptSegment` corretamente:
+
+```typescript
+const shots: ShotItem[] = (script?.shot_list || []).map((item: any, index: number) => {
+  const shotData = typeof item === 'string' ? JSON.parse(item) : item;
+  return {
+    id: shotData.id || `shot-${index}`,
+    description: shotData.scriptSegment || '',
+    scene: shotData.scene || undefined,
+    imageUrl: shotData.shotImageUrls?.[0] || undefined,
+    location: shotData.location || undefined,
+    sectionName: shotData.sectionName || undefined,
+    videoUrl: shotData.videoUrl || undefined,
+    isCompleted: shotData.isCompleted || false,
+    order: index,
+  };
+});
 ```
 
-### 3. Design do Card de Galeria
+### 6. Adicionar handler para atualizar shots
 
-Cada card terá:
+```typescript
+const handleShotsChange = useCallback(async (updatedShots: ShotItem[]) => {
+  if (!scriptId || !script?.shot_list) return;
+  
+  const updatedShotList = script.shot_list.map((item: any, index: number) => {
+    const shotData = typeof item === 'string' ? JSON.parse(item) : item;
+    const updatedShot = updatedShots.find(s => s.id === shotData.id || s.id === `shot-${index}`);
+    return {
+      ...shotData,
+      videoUrl: updatedShot?.videoUrl || undefined,
+    };
+  });
 
-| Elemento | Descrição |
-|----------|-----------|
-| **Thumbnail** | Aspect ratio 16:9, imagem de referência ou placeholder cinza |
-| **Seção** | Badge colorido (ex: "GANCHO" em roxo) - se existir |
-| **Número + Texto** | Índice e trecho do roteiro (2-3 linhas) |
-| **Descrição** | Descrição técnica da cena - se preenchida |
-| **Locação** | Badge com ícone MapPin - se preenchida |
-| **Botão Vídeo** | "Adicionar vídeo" ou "Abrir ▸" com ícone do serviço |
+  await supabase
+    .from('scripts')
+    .update({ shot_list: updatedShotList })
+    .eq('id', scriptId);
 
-### 4. Dimensões do Card
-
-- **Largura fixa**: `w-72` (288px) no desktop, `w-64` (256px) no mobile
-- **Altura da thumbnail**: `aspect-video` (16:9)
-- **Altura total**: Auto, baseada no conteúdo
-
-### 5. Placeholder para Imagens Ausentes
-
-Card sem imagem mostra um placeholder visual discreto:
-
-```tsx
-<div className="aspect-video bg-muted/30 border border-dashed border-border rounded-lg" />
+  setScript(prev => prev ? { ...prev, shot_list: updatedShotList } : null);
+}, [scriptId, script?.shot_list]);
 ```
 
-### 6. Remover Elementos Obsoletos
+### 7. Atualizar ShotlistPanel no JSX
 
-- Remover filtros "Ordem", "Locação", "Complexas" (não fazem sentido na galeria)
-- Remover botão de estrelinha (complexidade)
-- Manter apenas o header com título + contagem
-
----
+```tsx
+<ShotlistPanel 
+  shots={shots} 
+  scriptId={script.id}
+  onShotsChange={handleShotsChange}
+/>
+```
 
 ## Arquivos a Modificar
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/components/editing/ShotlistPanel.tsx` | Reescrever para layout de galeria horizontal com cards |
-| `src/pages/EditingWorkspace.tsx` | Mapear campo `scene` do shot_list |
-
----
-
-## Detalhes Técnicos
-
-### Scroll Horizontal
-
-Usar `ScrollArea` do Radix UI com orientação horizontal:
-
-```tsx
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-
-<ScrollArea className="w-full whitespace-nowrap">
-  <div className="flex gap-4">
-    {/* cards */}
-  </div>
-  <ScrollBar orientation="horizontal" />
-</ScrollArea>
-```
-
-### Responsividade
-
-- **Desktop**: Cards `w-72`, scroll horizontal livre
-- **Mobile**: Cards `w-64`, galeria ocupa 100% da largura
-
-### Estado do Vídeo
-
-O botão muda baseado no `videoUrl`:
-- **Sem vídeo**: "Adicionar vídeo" (input aparece ao clicar)
-- **Com vídeo**: Ícone do serviço + "Abrir" (abre em nova aba)
-
----
+| `src/pages/EditingWorkspace.tsx` | Remover VideoReferencesPanel, corrigir mapeamento, adicionar handler |
 
 ## Resultado Esperado
 
-**Antes:**
-- Lista vertical dentro de card colapsível
-- Botões de filtro que não agregam valor
-- Espaço desperdiçado na tela
-
-**Depois:**
-- Galeria horizontal estilo Notion
-- Thumbnails visuais destacadas
-- Informações condensadas por cena
-- Uso eficiente do espaço da tela
-
----
-
-## Critérios de Aceite
-
-- [ ] Galeria exibe cards lado a lado com scroll horizontal
-- [ ] Thumbnail (ou placeholder) aparece no topo de cada card
-- [ ] Seção (Gancho, Setup) aparece como badge colorido
-- [ ] Trecho do roteiro é exibido com 2-3 linhas máximo
-- [ ] Locação aparece apenas quando preenchida
-- [ ] Botão "Adicionar vídeo" funciona e persiste no banco
-- [ ] Layout responsivo funciona no mobile
+- Erro "VideoReferencesPanel is not defined" corrigido
+- Página de edição carrega normalmente
+- Galeria horizontal de shots funcional
+- Links de vídeo salvos por cena
