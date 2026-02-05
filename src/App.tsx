@@ -25,7 +25,7 @@ import { supabase } from "@/integrations/supabase/client";
 setupGlobalErrorHandlers();
 import Index from "./pages/Index";
 import Stats from "./pages/Stats";
-import Novidades from "./pages/Novidades";
+import Workflows from "./pages/Workflows";
 import CalendarioEditorial from "./pages/CalendarioEditorial";
 import Session from "./pages/Session";
 import ShotList from "./pages/ShotList";
