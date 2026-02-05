@@ -55,6 +55,10 @@ const ShotListRecord = () => {
   const [uploadingImages, setUploadingImages] = useState<Set<string>>(new Set());
   const [galleryOpenShotId, setGalleryOpenShotId] = useState<string | null>(null);
   
+  // Undo stack for structural changes (split, remove, reorder)
+  const [undoStack, setUndoStack] = useState<ShotItem[][]>([]);
+  const MAX_UNDO_HISTORY = 20;
+  
   // Workflow template state
   const [scriptWorkflow, setScriptWorkflow] = useState<WorkflowTemplateId | null>(null);
   const { nextStage, prevStage, currentTemplate, isStageIncluded } = useWorkflowTemplate({ scriptWorkflow });
