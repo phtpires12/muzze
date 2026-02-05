@@ -156,7 +156,7 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [title, contentType, centralIdea, referenceUrl, thumbnailUrl, loading, idea, autoSave]);
+  }, [title, contentType, centralIdea, referenceUrl, thumbnailUrl, workflowTemplate, loading, idea, autoSave]);
 
   const handleRoteirizar = async () => {
     // Save any pending changes first
