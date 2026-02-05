@@ -536,7 +536,6 @@ const ShotListReview = () => {
       navigate(`/shot-list/record?scriptId=${scriptId}`);
     }
   };
-  };
 
   // Calculate sync changes between current shots and script content
   const calculateSyncChanges = async () => {
