@@ -1,98 +1,108 @@
 
-# Plano: Corrigir Renderização da Etapa de Edição
+# Plano: Corrigir Exibição da Shotlist (Problema 1)
 
 ## Problema Identificado
 
-A página `Session.tsx` está **renderizando a UI antiga** (`EditingChecklist`) em vez de redirecionar para o novo `EditingWorkspace`. O problema é uma **condição de corrida** entre a renderização e o useEffect de redirecionamento.
+O JSON bruto está aparecendo porque o `EditingWorkspace.tsx` está mapeando incorretamente os dados do `shot_list`:
 
-### Estrutura Atual Problemática
-
-```text
-Session.tsx fluxo:
-┌─────────────────────────────────────────┐
-│ 1. Componente monta                     │
-│ 2. Renderiza UI (incluindo checklist)   │ ← UI antiga aparece aqui!
-│ 3. useEffect executa                    │
-│ 4. navigate() é chamado                 │ ← Tarde demais
-│ 5. Redirecionamento para workspace      │
-└─────────────────────────────────────────┘
+```typescript
+// Código atual (linha 109-114 do EditingWorkspace.tsx)
+const shots: ShotItem[] = (script?.shot_list || []).map((desc, index) => ({
+  id: `shot-${index}`,
+  description: desc,  // ← 'desc' é um objeto JSON, não uma string!
+  order: index,
+}));
 ```
 
-Comparação com outras etapas que **funcionam corretamente**:
+### Dados Reais no Banco
 
-| Stage   | Linha | Comportamento |
-|---------|-------|---------------|
-| `idea`  | 474   | Early return com `<IdeaDetail />` ou `<BrainstormWorkspace />` |
-| `record`| 462   | Early return com loading spinner enquanto busca scriptId |
-| `edit`  | 752   | **NÃO TEM early return** → renderiza `EditingChecklist` antes do redirect |
+O `shot_list` contém objetos com esta estrutura:
+```json
+{
+  "id": "acc819fe-1eb5-471a-b567-1a319a2fcf25",
+  "scriptSegment": "2026 vai ser o ano em que...",
+  "scene": "",
+  "location": "",
+  "sectionName": "Gancho",
+  "shotImagePaths": [],
+  "isCompleted": false
+}
+```
+
+O campo `scriptSegment` contém o texto limpo que o usuário quer ver.
 
 ---
 
 ## Solução
 
-Adicionar um **early return** para `stage === "edit"` **antes** da renderização final, mostrando um loading state enquanto o redirect acontece.
+### 1. Atualizar o tipo e mapeamento em `EditingWorkspace.tsx`
 
-### Mudança em `src/pages/Session.tsx`
-
-Após o bloco de `session.stage === "script" || session.stage === "review"` (linha 583), adicionar:
+Alterar a lógica de mapeamento para extrair corretamente os campos do objeto JSON:
 
 ```typescript
-// If stage is "edit", show loading while redirecting to Editing Workspace
-if (session.stage === "edit") {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center space-y-3">
-        <div className="w-12 h-12 rounded-full bg-muted animate-pulse mx-auto" />
-        <p className="text-sm text-muted-foreground">Abrindo mesa de edição...</p>
-      </div>
-    </div>
-  );
-}
+// Converter shot_list (JSON objects) para ShotItem
+const shots: ShotItem[] = (script?.shot_list || []).map((item: any, index: number) => {
+  // Se for string (formato antigo), parsear como JSON
+  const shotData = typeof item === 'string' ? JSON.parse(item) : item;
+  
+  return {
+    id: shotData.id || `shot-${index}`,
+    description: shotData.scriptSegment || '', // Texto limpo do roteiro
+    imageUrl: shotData.shotImageUrls?.[0] || undefined,
+    location: shotData.location || undefined,
+    isComplex: false, // Pode ser mapeado de outro campo futuramente
+    order: index,
+    sectionName: shotData.sectionName,
+    isCompleted: shotData.isCompleted || false,
+  };
+});
 ```
 
-Isso garante que:
-1. Quando `stage === "edit"`, a UI renderiza um loader imediato
-2. O useEffect (linhas 279-285) executa e faz o `navigate()` para `/editing-workspace`
-3. O usuário **nunca vê** a UI antiga do `EditingChecklist`
+### 2. Atualizar a interface `ShotItem` em `ShotlistPanel.tsx`
 
----
-
-## Código Final (apenas a adição)
-
-Inserir **após linha ~583** (depois do bloco de script/review):
+Adicionar campos opcionais que podem ser úteis:
 
 ```typescript
-// If stage is "edit", show loading while redirecting to Editing Workspace
-if (session.stage === "edit") {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center space-y-3">
-        <div className="w-12 h-12 rounded-full bg-muted animate-pulse mx-auto" />
-        <p className="text-sm text-muted-foreground">Abrindo mesa de edição...</p>
-      </div>
-    </div>
-  );
+export interface ShotItem {
+  id: string;
+  description: string;
+  imageUrl?: string;
+  location?: string;
+  isComplex?: boolean;
+  isCompleted?: boolean;
+  sectionName?: string;
+  order: number;
 }
 ```
 
 ---
 
-## Benefícios
+## Mudanças de Arquivo
 
-- **Elimina a renderização da UI antiga** durante o redirect
-- **Consistente** com o padrão usado para `record` e `idea`
-- **Experiência suave**: usuário vê "Abrindo mesa de edição..." por ~100ms antes de ir ao workspace
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/pages/EditingWorkspace.tsx` | Corrigir mapeamento para extrair `scriptSegment` |
+| `src/components/editing/ShotlistPanel.tsx` | Adicionar campos opcionais à interface |
 
 ---
 
-## Consideração Secundária
+## Resultado Esperado
 
-O componente `EditingChecklist` (linha 758) pode ser removido depois como cleanup, já que nunca mais será usado. Mas isso pode ser feito numa segunda etapa.
+**Antes:** 
+```
+{"id":"acc819fe-...","scriptSegment":"2026 vai ser o ano...","scene":"","shotImagePaths":...
+```
+
+**Depois:**
+```
+2026 vai ser o ano em que o processo de criação vai ser mais importante que a arte.
+```
 
 ---
 
 ## Critérios de Aceite
 
-- [ ] Navegar para `/session?stage=edit&scriptId=...` mostra loading por instante, depois vai para Editing Workspace
-- [ ] O `EditingChecklist` antigo nunca é exibido
-- [ ] O timer continua funcionando corretamente no Editing Workspace
+- [ ] Cada cena exibe apenas o texto do roteiro (`scriptSegment`)
+- [ ] IDs internos não aparecem para o usuário
+- [ ] Seção (Gancho, Setup, etc.) pode ser exibida como badge opcional
+- [ ] Dados de localização são preservados quando existem
