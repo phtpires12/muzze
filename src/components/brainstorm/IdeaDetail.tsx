@@ -63,6 +63,7 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
   const [centralIdea, setCentralIdea] = useState("");
   const [referenceUrl, setReferenceUrl] = useState("");
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
+  const [workflowTemplate, setWorkflowTemplate] = useState<WorkflowTemplateId | null>(null);
 
   // Auto-save state
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
