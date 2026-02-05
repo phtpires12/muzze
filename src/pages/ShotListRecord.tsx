@@ -54,6 +54,10 @@ const ShotListRecord = () => {
   const [saveTimeoutId, setSaveTimeoutId] = useState<NodeJS.Timeout | null>(null);
   const [uploadingImages, setUploadingImages] = useState<Set<string>>(new Set());
   const [galleryOpenShotId, setGalleryOpenShotId] = useState<string | null>(null);
+  
+  // Workflow template state
+  const [scriptWorkflow, setScriptWorkflow] = useState<WorkflowTemplateId | null>(null);
+  const { nextStage, prevStage, currentTemplate, isStageIncluded } = useWorkflowTemplate({ scriptWorkflow });
 
   // Unified Session System
   const {
