@@ -60,6 +60,19 @@ export default defineConfig(({ mode }) => ({
         // Navigation preload for faster page loads
         navigationPreload: true,
       runtimeCaching: [
+          // Navigations (SPA routes) - buscar do servidor primeiro para evitar app shell obsoleto
+          {
+            urlPattern: ({ request }) => request.mode === "navigate",
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "pages-cache",
+              networkTimeoutSeconds: 3,
+              expiration: {
+                maxEntries: 25,
+                maxAgeSeconds: 60 * 10, // 10 minutos
+              },
+            },
+          },
           // JS/CSS files - buscar do servidor primeiro para evitar cache obsoleto
           {
             urlPattern: /\.(js|css)$/,
