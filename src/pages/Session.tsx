@@ -205,6 +205,19 @@ const Session = () => {
   useEffect(() => {
     if (scriptIdParam) {
       setScriptId(scriptIdParam);
+      
+      // Load workflow_template for dynamic navigation
+      const loadWorkflow = async () => {
+        const { data } = await supabase
+          .from('scripts')
+          .select('workflow_template')
+          .eq('id', scriptIdParam)
+          .single();
+        if (data?.workflow_template) {
+          setScriptWorkflow(data.workflow_template as WorkflowTemplateId);
+        }
+      };
+      loadWorkflow();
     }
   }, [scriptIdParam]);
 
