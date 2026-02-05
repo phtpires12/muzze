@@ -1,200 +1,163 @@
 
-# Plano Expandido: Sistema Híbrido de Workflows (Global + Por Conteúdo)
+# Plano: Integrar useWorkflowTemplate na Navegação de Sessão
 
 ## Visão Geral
 
-Implementar um sistema de **duas camadas** para workflows:
-1. **Workflow Global** (já implementado): Define o padrão do usuário, afeta novos conteúdos
-2. **Workflow por Conteúdo** (nova funcionalidade): Permite alterar o workflow de um conteúdo específico
+Modificar todos os pontos de navegação entre etapas para usar o hook `useWorkflowTemplate`, respeitando o workflow do conteúdo específico (ou o global como fallback).
 
 ---
 
-## Como as Duas Abordagens Coexistem
+## Análise do Fluxo Atual (Hardcoded)
 
-```text
-┌─────────────────────────────────────────────────────────────────────┐
-│  HIERARQUIA DE WORKFLOWS                                            │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                      │
-│  1. WORKFLOW GLOBAL (profile.current_workflow)                      │
-│     └── Define o padrão para NOVOS conteúdos                        │
-│     └── Determina colunas visíveis no Kanban                        │
-│                                                                      │
-│  2. WORKFLOW DO CONTEÚDO (script.workflow_template)                 │
-│     └── Pode ser diferente do global                                │
-│     └── Quando definido, sobrescreve o global para aquele conteúdo  │
-│     └── Permite migrar conteúdos sem mudar o workflow do sistema    │
-│                                                                      │
-│  EXEMPLO PRÁTICO:                                                   │
-│  ────────────────                                                   │
-│  Usuário usa "Clássico" como padrão (roteiro → revisão → gravação)  │
-│  Mas tem um vídeo específico que quer fazer no estilo "Freestyle"   │
-│  → Ele muda só aquele conteúdo para Freestyle                       │
-│  → O Kanban continua mostrando todas as colunas do Clássico         │
-│  → Aquele vídeo específico pula de Ideação direto para Gravação     │
-│                                                                      │
-└─────────────────────────────────────────────────────────────────────┘
-```
+| Componente | Função | Navegação Atual |
+|------------|--------|-----------------|
+| IdeaDetail | `handleRoteirizar()` | idea → **script** (sempre) |
+| ScriptEditor | `handleNextStage()` | script → **review** / review → **record** |
+| ShotListReview | `handleAdvanceToRecord()` | review → **record** |
+| ShotListRecord | `handleAdvanceToEdit()` | record → **edit** |
+| Session.tsx | Back button (edit stage) | edit → **recording** |
+
+**Problema:** Se o usuário usa "Freestyle" (ideation → recording → editing), a navegação atual tenta ir para "script" que não existe nesse workflow.
 
 ---
 
-## Mudanças Necessárias
+## Mapeamento de Stages
 
-### 1. Banco de Dados
+O sistema usa dois formatos de stage que precisam ser mapeados:
 
-```sql
--- Adicionar campo workflow_template na tabela scripts
-ALTER TABLE scripts 
-ADD COLUMN workflow_template text DEFAULT NULL;
+| SessionStage (timer) | CreativeStage (workflow) |
+|----------------------|--------------------------|
+| `idea` | `ideation` |
+| `script` | `script` |
+| `review` | `review` |
+| `record` | `recording` |
+| `edit` | `editing` |
 
--- NULL = usa workflow global do usuário
--- 'classic' | 'freestyle' | 'minimalist' = workflow específico
+---
+
+## Pontos de Modificação
+
+### 1. IdeaDetail.tsx (Ideação → Próximo)
+
+**Atual:**
+```typescript
+const handleRoteirizar = async () => {
+  navigate(`/session?stage=script&scriptId=${scriptId}`);
+};
 ```
 
-### 2. Nova UI: Seletor de Workflow por Conteúdo
+**Novo:**
+```typescript
+import { useWorkflowTemplate } from "@/hooks/useWorkflowTemplate";
 
-Adicionar um seletor na tela de **IdeaDetail** (onde o usuário desenvolve a ideia):
+const { nextStage } = useWorkflowTemplate({ scriptWorkflow: workflowTemplate });
 
-```text
-┌─────────────────────────────────────────────────────────────────────┐
-│  Desenvolver Ideia                                    ○ Salvo       │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                      │
-│  Título                                                             │
-│  ┌─────────────────────────────────────────────────────────────┐   │
-│  │ Meu vídeo sobre produtividade                               │   │
-│  └─────────────────────────────────────────────────────────────┘   │
-│                                                                      │
-│  Tipo de Conteúdo                   Workflow                        │
-│  ┌──────────────────────┐           ┌──────────────────────┐       │
-│  │ YouTube          ▼   │           │ 🎬 Clássico      ▼   │       │
-│  └──────────────────────┘           └──────────────────────┘       │
-│                                     (Herdado do sistema)            │
-│                                                                      │
-│  Ideia Central                                                      │
-│  ┌─────────────────────────────────────────────────────────────┐   │
-│  │ ...                                                         │   │
-│  └─────────────────────────────────────────────────────────────┘   │
-│                                                                      │
-└─────────────────────────────────────────────────────────────────────┘
+const handleAdvanceToNextStage = async () => {
+  // Mapear ideation → próximo estágio do workflow
+  const next = nextStage('ideation'); // retorna 'script', 'recording', ou 'editing'
+  if (!next) return; // já está no último estágio
+  
+  // Mapear CreativeStage para SessionStage
+  const stageMap = { script: 'script', recording: 'record', editing: 'edit' };
+  const sessionStage = stageMap[next];
+  
+  navigate(`/session?stage=${sessionStage}&scriptId=${scriptId}`);
+};
 ```
 
-### 3. Lógica de "Próximo Passo"
+### 2. ScriptEditor.tsx (Script → Revisão ou Gravação)
 
-O hook `useWorkflowTemplate` será expandido para aceitar um `scriptId` opcional:
+**Atual:**
+```typescript
+const nextStage = isReviewMode ? 'record' : 'review';
+```
+
+**Novo:**
+- Importar `useWorkflowTemplate`
+- Buscar `workflow_template` do script carregado
+- Usar `nextStage()` para determinar próximo estágio dinamicamente
+
+### 3. ShotListReview.tsx (Revisão → Gravação)
+
+**Atual:**
+```typescript
+navigate(`/shot-list/record?scriptId=${scriptId}`);
+```
+
+**Novo:**
+- Verificar se 'recording' está no workflow
+- Se não estiver (ex: Minimalista), ir direto para 'editing'
+
+### 4. ShotListRecord.tsx (Gravação → Edição)
+
+**Atual:**
+```typescript
+navigate(`/session?stage=edit&scriptId=${scriptId}`);
+```
+
+**Novo:**
+- Verificar se 'editing' está no workflow (sempre estará nos templates atuais)
+- Navegar para edit
+
+### 5. Session.tsx - Botão "Voltar" (Edit → Recording)
+
+**Atual:**
+```typescript
+navigate(`/shot-list/record?scriptId=${scriptId}`);
+```
+
+**Novo:**
+- Usar `prevStage('editing')` para determinar estágio anterior
+- Se for 'recording', navegar para shot-list/record
+- Se for 'ideation' (Minimalista), navegar para session?stage=idea
+
+---
+
+## Arquivo useWorkflowTemplate.ts - Melhorias
+
+Adicionar helper para converter entre SessionStage e CreativeStage:
 
 ```typescript
-// Uso atual (workflow global)
-const { stages, nextStage } = useWorkflowTemplate();
+// Mapeamento bidirecional
+export const SESSION_TO_CREATIVE: Record<string, CreativeStage> = {
+  'idea': 'ideation',
+  'ideation': 'ideation',
+  'script': 'script',
+  'review': 'review',
+  'record': 'recording',
+  'edit': 'editing',
+};
 
-// Uso novo (workflow do conteúdo, com fallback para global)
-const { stages, nextStage } = useWorkflowTemplate({ scriptId: 'abc123' });
+export const CREATIVE_TO_SESSION: Record<CreativeStage, string> = {
+  'ideation': 'idea',
+  'script': 'script',
+  'review': 'review',
+  'recording': 'record',
+  'editing': 'edit',
+};
+
+// Helper para obter próxima URL de navegação
+export function getNextStageUrl(
+  currentStage: CreativeStage,
+  template: WorkflowTemplate,
+  scriptId: string
+): string | null {
+  const currentIndex = template.stages.indexOf(currentStage);
+  if (currentIndex === -1 || currentIndex >= template.stages.length - 1) {
+    return null;
+  }
+  
+  const nextCreativeStage = template.stages[currentIndex + 1];
+  const sessionStage = CREATIVE_TO_SESSION[nextCreativeStage];
+  
+  // Roteiro de gravação tem URL especial
+  if (nextCreativeStage === 'recording') {
+    return `/shot-list/record?scriptId=${scriptId}`;
+  }
+  
+  return `/session?stage=${sessionStage}&scriptId=${scriptId}`;
+}
 ```
-
-Se o script tem `workflow_template` definido, usa ele. Senão, usa o global.
-
----
-
-## Repensando a Coluna "Outras Etapas"
-
-Com o workflow por conteúdo, a coluna "Outras Etapas" ganha um novo propósito:
-
-```text
-┌─────────────────────────────────────────────────────────────────────┐
-│  CENÁRIO: Usuário no workflow "Minimalista" (Ideação → Edição)      │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                      │
-│  ┌───────────┐   ┌───────────┐   ┌───────────────────────────┐     │
-│  │  Ideação  │   │  Edição   │   │  ⚠️ Outras Etapas (2)     │     │
-│  │  (5)      │   │  (2)      │   │                           │     │
-│  │           │   │           │   │  ┌─────────────────────┐  │     │
-│  │  ...      │   │  ...      │   │  │ Vídeo X             │  │     │
-│  │           │   │           │   │  │ 📝 Roteiro          │  │     │
-│  │           │   │           │   │  │ Workflow: Clássico  │  │ ← NOVO    │
-│  │           │   │           │   │  │ [Trocar Workflow]   │  │     │
-│  │           │   │           │   │  └─────────────────────┘  │     │
-│  └───────────┘   └───────────┘   └───────────────────────────┘     │
-│                                                                      │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
-**Ações disponíveis no card órfão:**
-1. **Arrastar** para uma coluna do workflow atual → muda o status manualmente
-2. **Botão "Trocar Workflow"** → abre modal para mudar o workflow daquele conteúdo
-3. Se trocar para um workflow compatível, o card sai da coluna "Outras Etapas"
-
----
-
-## Soluções Complementares Inteligentes
-
-### A) Migração em Lote
-
-Quando o usuário troca o workflow global, oferecer opção de migrar conteúdos existentes:
-
-```text
-┌─────────────────────────────────────────────────────────────────────┐
-│  ✨ Workflow alterado para "Freestyle"                              │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                      │
-│  Você tem 3 conteúdos em etapas que não existem neste workflow.    │
-│                                                                      │
-│  O que deseja fazer?                                                │
-│                                                                      │
-│  ┌───────────────────────────────────────────────────────────────┐ │
-│  │  ○ Manter workflows individuais (cada um continua no seu)    │ │
-│  │  ○ Migrar todos para Freestyle (mover para etapas válidas)   │ │
-│  └───────────────────────────────────────────────────────────────┘ │
-│                                                                      │
-│                                         [Cancelar]  [Confirmar]     │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
-### B) Indicador Visual no Kanban
-
-Cards com workflow diferente do global mostram um badge sutil:
-
-```text
-┌───────────────────────────┐
-│  📹 Vídeo de Música       │
-│  🎤 Freestyle             │  ← Badge indicando workflow diferente
-│  12 Jan · Reels           │
-└───────────────────────────┘
-```
-
-### C) Filtro por Workflow no Kanban
-
-Adicionar um filtro opcional:
-
-```text
-Filtrar por workflow: [Todos ▼] [Clássico] [Freestyle] [Minimalista]
-```
-
----
-
-## Arquivos a Modificar/Criar
-
-### Banco de Dados
-| Mudança | Descrição |
-|---------|-----------|
-| **Migração 1** | Atualizar constraint de `profiles.current_workflow` |
-| **Migração 2** | Adicionar campo `scripts.workflow_template` |
-
-### Novos Arquivos
-| Arquivo | Descrição |
-|---------|-----------|
-| `src/components/workflows/WorkflowSelector.tsx` | Dropdown para selecionar workflow (reutilizável) |
-| `src/components/calendar/OrphanColumn.tsx` | Coluna especial para conteúdos órfãos |
-| `src/components/workflows/WorkflowMigrationModal.tsx` | Modal para migração em lote |
-
-### Arquivos a Modificar
-| Arquivo | Mudança |
-|---------|---------|
-| `src/hooks/useWorkflowTemplate.ts` | Aceitar `scriptId` opcional para workflow por conteúdo |
-| `src/components/brainstorm/IdeaDetail.tsx` | Adicionar seletor de workflow |
-| `src/pages/ContentView.tsx` | Mostrar workflow do conteúdo |
-| `src/components/calendar/ProductionBoardView.tsx` | Renderizar coluna "Outras Etapas" + badges de workflow |
-| `src/components/calendar/ProductionKanbanCard.tsx` | Mostrar badge de workflow quando diferente do global |
-| `src/pages/Workflows.tsx` | Adicionar modal de migração ao trocar workflow global |
 
 ---
 
@@ -202,90 +165,191 @@ Filtrar por workflow: [Todos ▼] [Clássico] [Freestyle] [Minimalista]
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────┐
+│  NAVEGAÇÃO COM WORKFLOW                                             │
+├─────────────────────────────────────────────────────────────────────┤
 │                                                                      │
-│    WORKFLOW GLOBAL                    WORKFLOW DO CONTEÚDO          │
-│    (profiles.current_workflow)        (scripts.workflow_template)   │
-│              │                                   │                  │
-│              ▼                                   ▼                  │
-│    ┌──────────────────┐               ┌──────────────────┐         │
-│    │ Colunas visíveis │               │ Próximo passo    │         │
-│    │ no Kanban        │               │ daquele conteúdo │         │
-│    └──────────────────┘               └──────────────────┘         │
-│              │                                   │                  │
-│              │         ┌─────────────────────────┘                  │
-│              ▼         ▼                                            │
-│         ┌─────────────────────────┐                                 │
-│         │   useWorkflowTemplate   │                                 │
-│         │   (scriptId?: string)   │                                 │
-│         └─────────────────────────┘                                 │
-│                      │                                              │
-│     ┌────────────────┼────────────────┐                             │
-│     ▼                ▼                ▼                             │
-│  Session.tsx    IdeaDetail.tsx    Kanban.tsx                        │
-│  (navegação)    (exibição)        (colunas + órfãos)                │
+│  1. Componente obtém workflow_template do script                    │
+│                                                                      │
+│  2. Passa para useWorkflowTemplate({ scriptWorkflow: ... })         │
+│                                                                      │
+│  3. Hook retorna:                                                   │
+│     - stages: ['ideation', 'recording', 'editing'] (Freestyle)      │
+│     - nextStage('ideation') → 'recording'                           │
+│     - prevStage('editing') → 'recording'                            │
+│                                                                      │
+│  4. Componente navega para a URL correta                            │
 │                                                                      │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
+## Cenários de Teste
+
+### Workflow Clássico (ideation → script → review → recording → editing)
+- ✅ IdeaDetail → Script
+- ✅ Script → Review
+- ✅ Review → Recording
+- ✅ Recording → Editing
+- ✅ Editing ← Recording (back)
+
+### Workflow Freestyle (ideation → recording → editing)
+- ✅ IdeaDetail → Recording (PULA script e review)
+- ✅ Recording → Editing
+- ✅ Editing ← Recording (back)
+
+### Workflow Minimalista (ideation → editing)
+- ✅ IdeaDetail → Editing (PULA tudo)
+- ✅ Editing ← Ideation (back)
+
+---
+
+## Arquivos a Modificar
+
+| Arquivo | Mudanças |
+|---------|----------|
+| `src/hooks/useWorkflowTemplate.ts` | Adicionar helpers de mapeamento e `getNextStageUrl()` |
+| `src/components/brainstorm/IdeaDetail.tsx` | Usar workflow template para navegação dinâmica |
+| `src/components/ScriptEditor.tsx` | Buscar workflow do script e usar `nextStage()` |
+| `src/pages/ShotListReview.tsx` | Verificar se próximo estágio é recording ou editing |
+| `src/pages/ShotListRecord.tsx` | Verificar se próximo estágio é editing |
+| `src/pages/Session.tsx` | Atualizar botão "Voltar" no estágio de edição |
+
+---
+
+## Detalhes de Implementação
+
+### IdeaDetail.tsx
+
+```typescript
+// Antes
+const handleRoteirizar = async () => {
+  navigate(`/session?stage=script&scriptId=${scriptId}`);
+};
+
+// Depois
+const { nextStage, currentTemplate } = useWorkflowTemplate({ 
+  scriptWorkflow: workflowTemplate 
+});
+
+const handleAdvanceToNextStage = async () => {
+  const next = nextStage('ideation');
+  if (!next) {
+    toast({ title: "Erro", description: "Workflow inválido" });
+    return;
+  }
+  
+  // Atualizar status
+  await supabase.from("scripts").update({ status: next }).eq("id", scriptId);
+  
+  // Navegar
+  const url = getNextStageUrl('ideation', currentTemplate, scriptId);
+  navigate(url);
+};
+```
+
+### ScriptEditor.tsx
+
+```typescript
+// Antes
+const nextStage = isReviewMode ? 'record' : 'review';
+
+// Depois
+const [scriptWorkflow, setScriptWorkflow] = useState<WorkflowTemplateId | null>(null);
+const { nextStage: getNextStage, isStageIncluded } = useWorkflowTemplate({
+  scriptWorkflow
+});
+
+// No loadScript(), extrair workflow_template e setar
+
+const handleNextStage = async () => {
+  const currentCreative = isReviewMode ? 'review' : 'script';
+  const next = getNextStage(currentCreative);
+  
+  if (!next) {
+    // Último estágio - encerrar sessão
+    return;
+  }
+  
+  // ... resto da lógica
+};
+```
+
+### Session.tsx - Botão Voltar (Edit Stage)
+
+```typescript
+// Antes
+navigate(`/shot-list/record?scriptId=${scriptId}`);
+
+// Depois
+const { prevStage } = useWorkflowTemplate({ scriptWorkflow: scriptData?.workflow_template });
+
+const handleBackFromEdit = async () => {
+  const prev = prevStage('editing');
+  
+  if (prev === 'recording') {
+    navigate(`/shot-list/record?scriptId=${scriptId}`);
+  } else if (prev === 'ideation') {
+    navigate(`/session?stage=idea&scriptId=${scriptId}`);
+  } else {
+    // review ou script
+    navigate(`/session?stage=${prev}&scriptId=${scriptId}`);
+  }
+};
+```
+
+---
+
+## Considerações Especiais
+
+### 1. Label do Botão "Avançar"
+
+O texto do botão deve refletir o próximo estágio dinâmico:
+- "Roteirizar essa ideia" → "Avançar para Roteiro" ou "Avançar para Gravação"
+- Usar `getStageLabel(nextStage)` para obter o label correto
+
+### 2. Atualização de Status no Banco
+
+Ao avançar, o status do script deve ser atualizado para o próximo estágio:
+- `ideation` → `draft` (script) ou `recording` (freestyle/minimalista)
+- `script` → `review` ou `recording`
+- etc.
+
+### 3. Fallback para Workflow Global
+
+Se `script.workflow_template` for `null`, usar o workflow global do usuário.
+
+---
+
 ## Fases de Implementação
 
-### Fase 1: Corrigir Erro + Infraestrutura (essencial)
-1. Migração SQL: atualizar constraint de `profiles.current_workflow`
-2. Migração SQL: adicionar campo `scripts.workflow_template`
-3. Atualizar hook `useWorkflowTemplate` para aceitar scriptId
+### Fase 1: Helpers no Hook
+1. Adicionar mapeamentos SESSION_TO_CREATIVE e CREATIVE_TO_SESSION
+2. Adicionar helper `getNextStageUrl()`
+3. Garantir que `prevStage()` funciona corretamente
 
-### Fase 2: Coluna "Outras Etapas" (essencial)
-1. Criar componente `OrphanColumn.tsx`
-2. Modificar `ProductionBoardView.tsx` para detectar e renderizar órfãos
-3. Mostrar badge de etapa original em cards órfãos
+### Fase 2: IdeaDetail (ideation → next)
+1. Integrar hook com workflow do script
+2. Atualizar botão "Roteirizar" para navegação dinâmica
+3. Atualizar label do botão dinamicamente
 
-### Fase 3: Workflow por Conteúdo (nova feature)
-1. Criar `WorkflowSelector.tsx` (dropdown reutilizável)
-2. Adicionar seletor em `IdeaDetail.tsx`
-3. Atualizar navegação no Session.tsx para respeitar workflow do conteúdo
+### Fase 3: ScriptEditor (script/review → next)
+1. Carregar workflow_template do script
+2. Usar hook para determinar próximo estágio
+3. Atualizar label do botão "Avançar"
 
-### Fase 4: Polish e UX (melhorias)
-1. Badge de workflow diferente nos cards do Kanban
-2. Modal de migração em lote ao trocar workflow global
-3. Filtro por workflow no Kanban (opcional)
+### Fase 4: ShotList e Session (recording/editing)
+1. ShotListReview: verificar se vai para recording ou editing
+2. ShotListRecord: confirmar próximo é editing
+3. Session.tsx: botão voltar dinâmico
 
 ---
 
 ## Critérios de Aceite
 
-### Fase 1
-- [ ] Usuário consegue ativar workflows sem erro
-- [ ] Campo `workflow_template` existe na tabela scripts
-
-### Fase 2
-- [ ] Coluna "Outras Etapas" aparece quando há conteúdos em etapas fora do workflow
-- [ ] Usuário pode arrastar de "Outras Etapas" para qualquer coluna válida
-- [ ] Coluna desaparece quando não há órfãos
-
-### Fase 3
-- [ ] Usuário pode selecionar workflow diferente para um conteúdo específico
-- [ ] Navegação "próximo passo" respeita o workflow do conteúdo
-- [ ] Conteúdo com workflow próprio sai da coluna "Outras Etapas"
-
-### Fase 4
-- [ ] Badge visual indica quando conteúdo tem workflow diferente do global
-- [ ] Modal de migração aparece ao trocar workflow global (se há órfãos)
-
----
-
-## Considerações Técnicas
-
-### Compatibilidade
-- Scripts existentes terão `workflow_template = NULL` (usam workflow global)
-- Nenhum dado é perdido ou alterado automaticamente
-
-### Performance
-- A detecção de órfãos é O(n) onde n = número de scripts
-- Cache do workflow é mantido no ProfileContext (já existe)
-
-### Extensibilidade
-- Novos templates podem ser adicionados sem migração de dados
-- O sistema é preparado para futuros filtros e visualizações
-
+- [ ] IdeaDetail com Freestyle navega direto para Gravação
+- [ ] IdeaDetail com Minimalista navega direto para Edição
+- [ ] ScriptEditor respeita workflow ao determinar próximo estágio
+- [ ] Botão "Voltar" no edit stage retorna para estágio anterior correto
+- [ ] Labels dos botões refletem o próximo estágio dinâmico
+- [ ] Status do script é atualizado corretamente ao avançar
