@@ -73,6 +73,9 @@ const Session = () => {
   const { goalMinutes } = useProfileWithLevel();
   const { progress: dailyProgress } = useDailyGoalProgress({ goalMinutes });
   
+  // Workflow template state for dynamic navigation
+  const [scriptWorkflow, setScriptWorkflow] = useState<WorkflowTemplateId | null>(null);
+  const { prevStage, currentTemplate } = useWorkflowTemplate({ scriptWorkflow });
   // Map session stage to CreativeStage for permission check
   const stageMapping: Record<string, CreativeStage> = {
     'idea': 'ideation',
