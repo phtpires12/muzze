@@ -118,7 +118,7 @@ export function ProductionBoardView({
 
       toast({
         title: "Status atualizado",
-        description: `Movido para ${PRODUCTION_COLUMNS.find(c => c.id === targetColumnId)?.label}`,
+        description: `Movido para ${orderedColumns.find(c => c.id === targetColumnId)?.label}`,
       });
     } catch (error) {
       setLocalScripts(previousLocalScripts);
