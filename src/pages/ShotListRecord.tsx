@@ -255,13 +255,16 @@ const ShotListRecord = () => {
     try {
       const { data, error } = await supabase
         .from('scripts')
-        .select('title, shot_list, content')
+        .select('title, shot_list, content, workflow_template')
         .eq('id', scriptId)
         .single();
 
       if (error) throw error;
 
       setScriptTitle(data.title);
+      
+      // Load workflow template for dynamic navigation
+      setScriptWorkflow(data.workflow_template as WorkflowTemplateId | null);
       
       // Guardar conteúdo do roteiro para o Modo Frase-a-Frase
       if (data.content) {
