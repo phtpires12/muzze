@@ -162,21 +162,57 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
     };
   }, [title, contentType, centralIdea, referenceUrl, thumbnailUrl, workflowTemplate, loading, idea, autoSave]);
 
-  const handleRoteirizar = async () => {
+  const handleAdvanceToNextStage = async () => {
     // Save any pending changes first
     if (hasUnsavedChanges) {
       await autoSave();
     }
     
-    // Update status to 'draft' (script stage)
+    // Determinar próximo estágio baseado no workflow
+    const next = nextStage('ideation');
+    if (!next) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível determinar o próximo estágio do workflow.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Update status to the next stage
     await supabase
       .from("scripts")
-      .update({ status: "draft" })
+      .update({ status: next })
       .eq("id", scriptId);
     
-    // Navigate to script stage
-    navigate(`/session?stage=script&scriptId=${scriptId}`);
+    // Navigate to the next stage using dynamic URL
+    const url = getNextUrl('ideation', scriptId);
+    if (url) {
+      navigate(url);
+    } else {
+      // Fallback para script se algo der errado
+      navigate(`/session?stage=script&scriptId=${scriptId}`);
+    }
   };
+
+  // Helper para obter ícone e label do botão
+  const getNextStageButton = () => {
+    const next = nextStage('ideation');
+    if (!next) return { label: "Roteirizar essa ideia", icon: FileText };
+    
+    switch (next) {
+      case 'script':
+        return { label: "Roteirizar essa ideia", icon: FileText };
+      case 'recording':
+        return { label: "Ir para Gravação", icon: Video };
+      case 'editing':
+        return { label: "Ir para Edição", icon: Scissors };
+      default:
+        return { label: `Avançar para ${getStageLabel(next)}`, icon: FileText };
+    }
+  };
+
+  const nextStageButton = getNextStageButton();
 
   const handleDelete = async () => {
     setDeleting(true);
