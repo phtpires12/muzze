@@ -29,6 +29,8 @@ import SessionSummary from "@/components/SessionSummary";
 import { StreakCelebration } from "@/components/StreakCelebration";
 import { TrophyCelebration } from "@/components/TrophyCelebration";
 import { extractPathFromUrl, generateSignedUrlsBatch } from "@/lib/storage-helpers";
+import { useWorkflowTemplate, getNextStageUrl, getPrevStageUrl } from "@/hooks/useWorkflowTemplate";
+import { WorkflowTemplateId, getStageLabel } from "@/lib/workflow-templates";
 
 interface ContentSections {
   gancho?: string;
