@@ -9,14 +9,15 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { 
-  PRODUCTION_COLUMNS, 
   getProductionColumnForStatus, 
   getStatusForProductionColumn, 
-  ProductionColumnId 
+  ProductionColumnId,
+  getOrderedProductionColumns,
 } from "@/lib/kanban-columns";
 import { ProductionKanbanColumn } from "./ProductionKanbanColumn";
 import { ProductionKanbanCard } from "./ProductionKanbanCard";
 import { useLongPressSensors, triggerHapticFeedback } from "@/hooks/useLongPressSensors";
+import { useWorkflowTemplate } from "@/hooks/useWorkflowTemplate";
 
 interface Script {
   id: string;

@@ -1,13 +1,23 @@
+import { CreativeStage } from "@/types/workspace";
+
 // === KANBAN DE PRODUÇÃO (baseado em status) ===
 export const PRODUCTION_COLUMNS = [
-  { id: 'ideation', label: 'Ideação', status: 'draft_idea', color: 'bg-zinc-400' },
-  { id: 'script', label: 'Roteiro', status: 'draft', color: 'bg-purple-500' },
-  { id: 'review', label: 'Revisão', status: 'review', color: 'bg-blue-400' },
-  { id: 'recording', label: 'Gravação', status: 'recording', color: 'bg-orange-500' },
-  { id: 'editing', label: 'Edição', status: 'editing', color: 'bg-cyan-500' },
+  { id: 'ideation' as CreativeStage, label: 'Ideação', status: 'draft_idea', color: 'bg-zinc-400' },
+  { id: 'script' as CreativeStage, label: 'Roteiro', status: 'draft', color: 'bg-purple-500' },
+  { id: 'review' as CreativeStage, label: 'Revisão', status: 'review', color: 'bg-blue-400' },
+  { id: 'recording' as CreativeStage, label: 'Gravação', status: 'recording', color: 'bg-orange-500' },
+  { id: 'editing' as CreativeStage, label: 'Edição', status: 'editing', color: 'bg-cyan-500' },
 ] as const;
 
-export type ProductionColumnId = typeof PRODUCTION_COLUMNS[number]['id'];
+export type ProductionColumn = typeof PRODUCTION_COLUMNS[number];
+export type ProductionColumnId = ProductionColumn['id'];
+
+// === HELPER: OBTER COLUNAS ORDENADAS POR TEMPLATE ===
+export function getOrderedProductionColumns(stages: CreativeStage[]): ProductionColumn[] {
+  return stages
+    .map(stage => PRODUCTION_COLUMNS.find(col => col.id === stage))
+    .filter((col): col is ProductionColumn => col !== undefined);
+}
 
 // === KANBAN DE PUBLICAÇÃO (baseado em publish_status) ===
 export const PUBLICATION_COLUMNS = [
