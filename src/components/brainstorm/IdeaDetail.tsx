@@ -79,7 +79,7 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
     try {
       const { data, error } = await supabase
         .from("scripts")
-        .select("id, title, content_type, central_idea, reference_url, status, publish_date, thumbnail_url")
+        .select("id, title, content_type, central_idea, reference_url, status, publish_date, thumbnail_url, workflow_template")
         .eq("id", scriptId)
         .single();
 
