@@ -588,7 +588,7 @@ const Session = () => {
               ? "bg-purple-500/5 border-purple-500/30"
               : "bg-background border-border"
         )}>
-          {/* Back to Recording Button - top left */}
+          {/* Back to Previous Stage Button - top left */}
           <Button
             variant="ghost"
             size="sm"
@@ -598,26 +598,42 @@ const Session = () => {
                 return;
               }
               await saveCurrentStageTime();
+              
+              // Determine previous stage based on workflow
+              const prev = prevStage('editing');
+              const prevStatus = prev || 'recording';
+              
               const { error } = await supabase
                 .from('scripts')
-                .update({ status: 'recording' })
+                .update({ status: prevStatus })
                 .eq('id', scriptId);
               if (error) {
-                console.error('Erro ao atualizar status para recording:', error);
+                console.error(`Erro ao atualizar status para ${prevStatus}:`, error);
               }
               
-              // Verificar qual modo de gravação foi usado anteriormente
-              const recordingMode = localStorage.getItem(`recording-mode-${scriptId}`);
-              
-              // Navegar para shot-list/record - o componente decide qual modo renderizar
-              // baseado em isShotListEmpty (teleprompter ou shot list tradicional)
-              navigate(`/shot-list/record?scriptId=${scriptId}`);
+              // Navigate to previous stage
+              const url = getPrevStageUrl('editing', currentTemplate, scriptId);
+              navigate(url || `/shot-list/record?scriptId=${scriptId}`);
             }}
             className="absolute top-2 left-4 gap-2 text-muted-foreground hover:text-foreground hover:bg-red-500/10"
           >
             <ChevronLeft className="w-4 h-4" />
-            <Video className="w-4 h-4 text-red-500" />
-            <span className="text-xs">Gravação</span>
+            {prevStage('editing') === 'recording' ? (
+              <>
+                <Video className="w-4 h-4 text-red-500" />
+                <span className="text-xs">Gravação</span>
+              </>
+            ) : prevStage('editing') === 'ideation' ? (
+              <>
+                <Lightbulb className="w-4 h-4 text-yellow-500" />
+                <span className="text-xs">Ideação</span>
+              </>
+            ) : (
+              <>
+                <Video className="w-4 h-4 text-red-500" />
+                <span className="text-xs">{prevStage('editing') ? getStageLabel(prevStage('editing')!) : 'Gravação'}</span>
+              </>
+            )}
           </Button>
 
           {/* Timer Display */}
