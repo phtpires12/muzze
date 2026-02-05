@@ -142,6 +142,7 @@ export const BrainstormWorkspace = () => {
         title: "",
         status: "draft_idea",
         workspace_id: activeWorkspace.id,
+        workflow_template: profile?.current_workflow || 'classic',
       } as any)
       .select("id, title, content_type, central_idea, reference_url, status, publish_date")
       .single() as any;

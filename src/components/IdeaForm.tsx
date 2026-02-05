@@ -126,6 +126,7 @@ export const IdeaForm = ({ scriptId }: IdeaFormProps) => {
         user_id: user.id,
         publish_date: publishDate,
         workspace_id: activeWorkspace?.id,
+        workflow_template: profile?.current_workflow || 'classic',
       };
 
       let savedScriptId = currentScriptId;

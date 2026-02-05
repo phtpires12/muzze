@@ -30,6 +30,7 @@ import { useNavigationBlocker } from "@/hooks/useNavigationBlocker";
 import { useSessionContext } from "@/contexts/SessionContext";
 import { useSession } from "@/hooks/useSession";
 import { useWorkspaceContext } from "@/contexts/WorkspaceContext";
+import { useProfileContext } from "@/contexts/ProfileContext";
 import { useCelebration } from "@/contexts/CelebrationContext";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";

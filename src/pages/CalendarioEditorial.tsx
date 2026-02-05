@@ -376,6 +376,7 @@ const CalendarioEditorial = () => {
           status: "draft_idea",
           publish_date: publishDate,
           workspace_id: activeWorkspace?.id,
+          workflow_template: profile?.current_workflow || 'classic',
         })
         .select("id")
         .single();
