@@ -37,6 +37,8 @@ import { useToast } from "@/hooks/use-toast";
 import { DevToolsPanel } from "@/components/DevToolsPanel";
 import { TROPHIES } from "@/lib/gamification";
 import { CreativeStage } from "@/types/workspace";
+import { useWorkflowTemplate, getPrevStageUrl, CREATIVE_TO_SESSION } from "@/hooks/useWorkflowTemplate";
+import { WorkflowTemplateId, getStageLabel } from "@/lib/workflow-templates";
 
 const STAGES: { 
   id: SessionStage; 
