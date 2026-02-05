@@ -12,11 +12,52 @@ export const PRODUCTION_COLUMNS = [
 export type ProductionColumn = typeof PRODUCTION_COLUMNS[number];
 export type ProductionColumnId = ProductionColumn['id'];
 
+// === COLUNA ESPECIAL PARA CONTEÚDOS ÓRFÃOS ===
+export const ORPHAN_COLUMN = {
+  id: 'orphan' as const,
+  label: 'Outras Etapas',
+  status: null,
+  color: 'bg-amber-500',
+  isSpecial: true,
+};
+
+export type OrphanColumn = typeof ORPHAN_COLUMN;
+
 // === HELPER: OBTER COLUNAS ORDENADAS POR TEMPLATE ===
 export function getOrderedProductionColumns(stages: CreativeStage[]): ProductionColumn[] {
   return stages
     .map(stage => PRODUCTION_COLUMNS.find(col => col.id === stage))
     .filter((col): col is ProductionColumn => col !== undefined);
+}
+
+// === HELPER: DETECTAR SCRIPTS ÓRFÃOS ===
+export interface OrphanableScript {
+  id: string;
+  status: string | null;
+  workflow_template?: string | null;
+}
+
+/**
+ * Identifica scripts que estão em etapas que não existem no workflow ativo.
+ * Por exemplo, se o usuário usa "Minimalista" (Ideação → Edição), 
+ * scripts em "Roteiro", "Revisão" ou "Gravação" são órfãos.
+ */
+export function getOrphanScripts<T extends OrphanableScript>(
+  scripts: T[], 
+  activeStages: CreativeStage[]
+): T[] {
+  return scripts.filter(script => {
+    const scriptStage = getProductionColumnForStatus(script.status);
+    return !activeStages.includes(scriptStage);
+  });
+}
+
+/**
+ * Retorna o label da etapa original de um script órfão (para exibir no badge)
+ */
+export function getOrphanOriginalStageLabel(status: string | null): string {
+  const column = PRODUCTION_COLUMNS.find(col => col.status === status);
+  return column?.label || 'Desconhecido';
 }
 
 // === KANBAN DE PUBLICAÇÃO (baseado em publish_status) ===

@@ -42,6 +42,7 @@ interface Script {
   publish_status?: PublishStatus | null;
   published_at?: string | null;
   editing_progress?: string[] | null;
+  workflow_template?: string | null;
 }
 
 const CalendarioEditorial = () => {

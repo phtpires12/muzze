@@ -6,6 +6,8 @@ import { Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { EDITING_STEP_IDS } from "@/lib/kanban-columns";
+import { getWorkflowTemplate, WorkflowTemplateId } from "@/lib/workflow-templates";
+import { useWorkflowTemplate } from "@/hooks/useWorkflowTemplate";
 
 interface Script {
   id: string;
@@ -15,6 +17,7 @@ interface Script {
   thumbnail_url?: string | null;
   reference_url?: string | null;
   editing_progress?: string[] | null;
+  workflow_template?: string | null;
 }
 
 interface ProductionKanbanCardProps {
@@ -32,6 +35,8 @@ export function ProductionKanbanCard({
   onDelete,
   showEditingProgress = false 
 }: ProductionKanbanCardProps) {
+  const { globalTemplateId } = useWorkflowTemplate();
+  
   const {
     attributes,
     listeners,
@@ -55,6 +60,13 @@ export function ProductionKanbanCard({
 
   const progressCount = script.editing_progress?.length || 0;
   const totalSteps = EDITING_STEP_IDS.length;
+  
+  // Verificar se tem workflow diferente do global
+  const hasCustomWorkflow = script.workflow_template && 
+    script.workflow_template !== globalTemplateId;
+  const customWorkflowTemplate = hasCustomWorkflow 
+    ? getWorkflowTemplate(script.workflow_template as WorkflowTemplateId)
+    : null;
 
   return (
     <div
@@ -98,7 +110,7 @@ export function ProductionKanbanCard({
         {script.title || "Sem título"}
       </h4>
 
-      {/* Data + Tipo */}
+      {/* Data + Tipo + Workflow badge */}
       <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
         {script.publish_date && (
           <span>{format(parseISO(script.publish_date), "d MMM", { locale: ptBR })}</span>
@@ -106,6 +118,15 @@ export function ProductionKanbanCard({
         {script.content_type && (
           <Badge variant="outline" className="text-[10px] px-1.5 py-0">
             {script.content_type}
+          </Badge>
+        )}
+        {/* Badge de workflow customizado */}
+        {hasCustomWorkflow && customWorkflowTemplate && (
+          <Badge 
+            variant="secondary" 
+            className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary"
+          >
+            {customWorkflowTemplate.icon} {customWorkflowTemplate.name}
           </Badge>
         )}
       </div>

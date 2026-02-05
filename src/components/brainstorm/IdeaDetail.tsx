@@ -17,6 +17,8 @@ import { FileText, ExternalLink, Loader2, Check, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ThumbnailUploader } from "@/components/ThumbnailUploader";
+import { WorkflowSelector } from "@/components/workflows/WorkflowSelector";
+import { WorkflowTemplateId } from "@/lib/workflow-templates";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,6 +40,7 @@ interface Idea {
   status: string | null;
   publish_date: string | null;
   thumbnail_url: string | null;
+  workflow_template: string | null;
 }
 
 interface IdeaDetailProps {
@@ -60,6 +63,7 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
   const [centralIdea, setCentralIdea] = useState("");
   const [referenceUrl, setReferenceUrl] = useState("");
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
+  const [workflowTemplate, setWorkflowTemplate] = useState<WorkflowTemplateId | null>(null);
 
   // Auto-save state
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -75,7 +79,7 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
     try {
       const { data, error } = await supabase
         .from("scripts")
-        .select("id, title, content_type, central_idea, reference_url, status, publish_date, thumbnail_url")
+        .select("id, title, content_type, central_idea, reference_url, status, publish_date, thumbnail_url, workflow_template")
         .eq("id", scriptId)
         .single();
 
@@ -88,6 +92,7 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
         setCentralIdea(data.central_idea || "");
         setReferenceUrl(data.reference_url || "");
         setThumbnailUrl(data.thumbnail_url);
+        setWorkflowTemplate(data.workflow_template as WorkflowTemplateId | null);
         isInitialLoad.current = false;
       }
     } catch (error) {
@@ -114,6 +119,7 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
           central_idea: centralIdea || null,
           reference_url: referenceUrl || null,
           thumbnail_url: thumbnailUrl,
+          workflow_template: workflowTemplate,
         })
         .eq("id", scriptId);
 
@@ -126,7 +132,7 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
     } finally {
       setSaving(false);
     }
-  }, [title, contentType, centralIdea, referenceUrl, thumbnailUrl, scriptId]);
+  }, [title, contentType, centralIdea, referenceUrl, thumbnailUrl, workflowTemplate, scriptId]);
 
   // Debounced auto-save effect
   useEffect(() => {
@@ -150,7 +156,7 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [title, contentType, centralIdea, referenceUrl, thumbnailUrl, loading, idea, autoSave]);
+  }, [title, contentType, centralIdea, referenceUrl, thumbnailUrl, workflowTemplate, loading, idea, autoSave]);
 
   const handleRoteirizar = async () => {
     // Save any pending changes first
@@ -287,21 +293,38 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
             />
           </div>
 
-          {/* Content Type */}
-          <div className="space-y-2">
-            <Label htmlFor="content-type">Tipo de Conteúdo</Label>
-            <Select value={contentType} onValueChange={setContentType}>
-              <SelectTrigger className="bg-background/50">
-                <SelectValue placeholder="Selecione o tipo" />
-              </SelectTrigger>
-              <SelectContent>
-                {CONTENT_TYPES.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {type}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* Content Type e Workflow em grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Content Type */}
+            <div className="space-y-2">
+              <Label htmlFor="content-type">Tipo de Conteúdo</Label>
+              <Select value={contentType} onValueChange={setContentType}>
+                <SelectTrigger className="bg-background/50">
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CONTENT_TYPES.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Workflow */}
+            <div className="space-y-2">
+              <Label>Workflow</Label>
+              <WorkflowSelector
+                value={workflowTemplate}
+                onChange={(value) => {
+                  setWorkflowTemplate(value);
+                  setHasUnsavedChanges(true);
+                }}
+                showInheritOption={true}
+                className="bg-background/50"
+              />
+            </div>
           </div>
 
           {/* Central Idea */}

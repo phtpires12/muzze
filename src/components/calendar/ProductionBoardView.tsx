@@ -13,9 +13,13 @@ import {
   getStatusForProductionColumn, 
   ProductionColumnId,
   getOrderedProductionColumns,
+  getOrphanScripts,
+  ORPHAN_COLUMN,
+  PRODUCTION_COLUMNS,
 } from "@/lib/kanban-columns";
 import { ProductionKanbanColumn } from "./ProductionKanbanColumn";
 import { ProductionKanbanCard } from "./ProductionKanbanCard";
+import { OrphanColumn } from "./OrphanColumn";
 import { useLongPressSensors, triggerHapticFeedback } from "@/hooks/useLongPressSensors";
 import { useWorkflowTemplate } from "@/hooks/useWorkflowTemplate";
 
@@ -29,6 +33,7 @@ interface Script {
   reference_url?: string | null;
   editing_progress?: string[] | null;
   publish_status?: string | null;
+  workflow_template?: string | null;
 }
 
 interface ProductionBoardViewProps {
@@ -45,7 +50,7 @@ export function ProductionBoardView({
   onUpdateStatus,
 }: ProductionBoardViewProps) {
   const { toast } = useToast();
-  const { stages } = useWorkflowTemplate();
+  const { stages, currentTemplate } = useWorkflowTemplate();
   const orderedColumns = getOrderedProductionColumns(stages);
   
   // Filtrar scripts que não estão completos E não foram postados
@@ -55,6 +60,10 @@ export function ProductionBoardView({
   );
   const [localScripts, setLocalScripts] = useState<Script[]>(productionScripts);
   const [activeId, setActiveId] = useState<string | null>(null);
+
+  // Detectar scripts órfãos (em etapas que não existem no workflow atual)
+  const orphanScripts = getOrphanScripts(localScripts, stages);
+  const hasOrphans = orphanScripts.length > 0;
 
   // Sincronizar localScripts quando scripts mudar externamente
   useEffect(() => {
@@ -83,21 +92,35 @@ export function ProductionBoardView({
 
     if (!over) return;
 
-    const sourceColumnId = active.data.current?.columnId as ProductionColumnId | undefined;
+    const sourceColumnId = active.data.current?.columnId as ProductionColumnId | 'orphan' | undefined;
 
-    let targetColumnId: ProductionColumnId | undefined;
+    let targetColumnId: ProductionColumnId | 'orphan' | undefined;
 
     if (over.data.current?.type === "column") {
-      targetColumnId = over.data.current.columnId as ProductionColumnId;
+      targetColumnId = over.data.current.columnId as ProductionColumnId | 'orphan';
     } else if (over.data.current?.type === "card") {
-      targetColumnId = over.data.current.columnId as ProductionColumnId;
+      targetColumnId = over.data.current.columnId as ProductionColumnId | 'orphan';
     }
 
     if (!targetColumnId) return;
     if (sourceColumnId === targetColumnId) return;
+    
+    // Não permitir arrastar PARA a coluna de órfãos
+    if (targetColumnId === 'orphan') {
+      toast({
+        title: "Movimento não permitido",
+        description: "Não é possível mover conteúdos para 'Outras Etapas'.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     const scriptId = active.id as string;
     const newStatus = getStatusForProductionColumn(targetColumnId);
+    
+    // Encontrar o label da coluna de destino
+    const targetColumn = orderedColumns.find(c => c.id === targetColumnId) || 
+      PRODUCTION_COLUMNS.find(c => c.id === targetColumnId);
 
     const previousLocalScripts = [...localScripts];
 
@@ -118,7 +141,7 @@ export function ProductionBoardView({
 
       toast({
         title: "Status atualizado",
-        description: `Movido para ${orderedColumns.find(c => c.id === targetColumnId)?.label}`,
+        description: `Movido para ${targetColumn?.label || targetColumnId}`,
       });
     } catch (error) {
       setLocalScripts(previousLocalScripts);
@@ -138,6 +161,7 @@ export function ProductionBoardView({
       onDragEnd={handleDragEnd}
     >
       <div className="flex gap-4 overflow-x-auto pb-4 min-h-[400px]">
+        {/* Colunas do workflow atual */}
         {orderedColumns.map(column => {
           const columnScripts = localScripts.filter(
             s => getProductionColumnForStatus(s.status) === column.id
@@ -153,6 +177,16 @@ export function ProductionBoardView({
             />
           );
         })}
+        
+        {/* Coluna de órfãos (aparece apenas se houver conteúdos em etapas fora do workflow) */}
+        {hasOrphans && (
+          <OrphanColumn
+            scripts={orphanScripts}
+            onViewScript={onViewScript}
+            onDeleteScript={onDeleteScript}
+            currentWorkflowName={currentTemplate.name}
+          />
+        )}
       </div>
 
       <DragOverlay>
