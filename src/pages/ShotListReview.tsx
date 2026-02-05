@@ -505,17 +505,37 @@ const ShotListReview = () => {
     ? Math.min((session.elapsedSeconds / (session.dailyGoalMinutes * 60)) * 100, 100)
     : Math.min((session.elapsedSeconds / session.targetSeconds) * 100, 100);
 
-  const handleAdvanceToRecord = async () => {
+  const handleAdvanceToNextStage = async () => {
     await handleSave();
     await saveCurrentStageTime();
     
-    // Update status to 'recording'
+    // Determine next stage based on workflow
+    const next = nextStage('review');
+    
+    if (!next) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível determinar o próximo estágio.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Update status
     await supabase
       .from('scripts')
-      .update({ status: 'recording' })
+      .update({ status: next })
       .eq('id', scriptId);
     
-    navigate(`/shot-list/record?scriptId=${scriptId}`);
+    // Navigate to the next stage
+    const url = getNextStageUrl('review', currentTemplate, scriptId!);
+    if (url) {
+      navigate(url);
+    } else {
+      // Fallback
+      navigate(`/shot-list/record?scriptId=${scriptId}`);
+    }
+  };
   };
 
   // Calculate sync changes between current shots and script content
