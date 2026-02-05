@@ -51,6 +51,11 @@ export function getNextStageUrl(
     return `/shot-list/record?scriptId=${scriptId}`;
   }
   
+  // Edição agora vai para o novo Editing Workspace
+  if (nextCreativeStage === 'editing') {
+    return `/editing-workspace?scriptId=${scriptId}`;
+  }
+  
   return `/session?stage=${sessionStage}&scriptId=${scriptId}`;
 }
 
