@@ -1,169 +1,120 @@
 
-# Plano: Ctrl+Z para Desfazer Divisão de Takes
+# Plano: Garantir Atualização Automática do PWA (Eliminar Cache Obsoleto)
 
-## Contexto
+## Problema Identificado
 
-Atualmente, quando o usuário usa Shift+Enter para dividir um take, não há como desfazer essa ação. O usuário precisa manualmente reorganizar e editar os takes, o que é frustrante.
+O Service Worker do PWA está servindo arquivos antigos do cache. Mesmo com configurações como `skipWaiting: true`, o cache persistente pode causar:
+- JSON bruto aparecendo nos cards (layout antigo)
+- Funcionalidades corrigidas (Shift+Enter, imagens) não aparecendo
+- Necessidade de reinstalar o app para ver atualizações
 
-## Arquitetura da Solução
+## Causa Raiz
 
-Implementar um sistema de **Undo Stack** (pilha de desfazer) que guarda snapshots do estado dos shots antes de operações destrutivas:
+1. **Cache agressivo**: O Service Worker mantém arquivos JS/CSS em cache
+2. **Detecção lenta**: Verificação de updates a cada 60 segundos pode não ser suficiente
+3. **Sem forçar reload**: Quando nova versão é detectada, não força reload imediato
 
-```text
-┌─────────────────────────────────────────────────────────────┐
-│                    ShotListRecord                           │
-│                                                             │
-│  shots: ShotItem[]  ←───────────────────┐                   │
-│                                         │ restaurar         │
-│  undoStack: ShotItem[][]  ─────────────┘                    │
-│     └─ [snapshot1, snapshot2, ...]                          │
-│                                                             │
-│  splitShotAtCursor() {                                      │
-│    pushToUndoStack(shots);  // Salvar antes de dividir      │
-│    // ... lógica de divisão                                 │
-│  }                                                          │
-│                                                             │
-│  useEffect(() => {                                          │
-│    // Listener para Ctrl+Z                                  │
-│    if (undoStack.length > 0) {                              │
-│      setShots(undoStack.pop());                             │
-│    }                                                        │
-│  }, [keydown]);                                             │
-└─────────────────────────────────────────────────────────────┘
-```
+---
 
-## Mudanças Necessárias
+## Solução Técnica
 
-### 1. Adicionar estado do Undo Stack
+### 1. Verificação mais frequente de atualizações
+
+Reduzir intervalo de verificação e adicionar verificação ao focar na aba:
 
 ```typescript
-// Estado para guardar histórico de undo
-const [undoStack, setUndoStack] = useState<ShotItem[][]>([]);
-const MAX_UNDO_HISTORY = 20; // Limite para não consumir muita memória
-```
-
-### 2. Função helper para salvar no stack
-
-```typescript
-const pushToUndoStack = useCallback((currentShots: ShotItem[]) => {
-  setUndoStack(prev => {
-    // Clonar profundamente para evitar referências
-    const snapshot = JSON.parse(JSON.stringify(currentShots));
-    const newStack = [...prev, snapshot];
-    // Limitar tamanho do histórico
-    if (newStack.length > MAX_UNDO_HISTORY) {
-      return newStack.slice(-MAX_UNDO_HISTORY);
-    }
-    return newStack;
-  });
-}, []);
-```
-
-### 3. Modificar `splitShotAtCursor` para salvar antes de dividir
-
-```typescript
-const splitShotAtCursor = (shotId: string, cursorPosition: number) => {
-  setShots(currentShots => {
-    // Salvar estado atual antes da divisão
-    pushToUndoStack(currentShots);
+// usePWAUpdate.ts
+onRegisteredSW(swUrl, registration) {
+  if (registration) {
+    // Verificar a cada 30 segundos
+    setInterval(() => registration.update(), 30 * 1000);
     
-    // ... resto da lógica de divisão (já existente)
-  });
-};
+    // Verificar quando a aba ganha foco
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        registration.update();
+      }
+    });
+  }
+}
 ```
 
-### 4. Adicionar listener para Ctrl+Z
+### 2. Forçar atualização imediata sem overlay
+
+Quando nova versão é detectada, atualizar imediatamente sem esperar interação:
 
 ```typescript
 useEffect(() => {
-  const handleKeyDown = (e: KeyboardEvent) => {
-    // Ctrl+Z ou Cmd+Z (Mac)
-    if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
-      // Verificar se não estamos em um input/textarea comum
-      const target = e.target as HTMLElement;
-      const isInEditor = target.closest('.ProseMirror') || 
-                         target.tagName === 'INPUT' || 
-                         target.tagName === 'TEXTAREA';
-      
-      // Se estiver em um editor, deixar o TipTap lidar com undo local
-      if (isInEditor) return;
-      
-      // Undo global (desfazer divisão de take)
-      if (undoStack.length > 0) {
-        e.preventDefault();
-        
-        setUndoStack(prev => {
-          const newStack = [...prev];
-          const previousState = newStack.pop();
-          
-          if (previousState) {
-            setShots(previousState);
-            toast({
-              title: "Desfeito!",
-              description: "Divisão de take desfeita",
-            });
-          }
-          
-          return newStack;
-        });
-      }
-    }
-  };
-
-  window.addEventListener('keydown', handleKeyDown);
-  return () => window.removeEventListener('keydown', handleKeyDown);
-}, [undoStack.length]);
+  if (needRefresh && !autoUpdateTriggeredRef.current) {
+    autoUpdateTriggeredRef.current = true;
+    console.log('[PWA] New version detected, forcing immediate update...');
+    updateServiceWorker(true); // Sem delay
+  }
+}, [needRefresh, updateServiceWorker]);
 ```
 
-### 5. (Opcional) Estender para outras operações destrutivas
+### 3. Adicionar indicador de versão visível no app
 
-Também podemos salvar estado antes de:
-- Remover um shot (`removeShot`)
-- Reordenar shots (`handleDragEnd`)
+Mostrar versão atual na tela para debug fácil:
 
 ```typescript
-const removeShot = (id: string) => {
-  pushToUndoStack(shots);
-  setShots(shots.filter(s => s.id !== id));
-};
+// No Settings ou DevTools, já existe BuildInfo
+// Adicionar log no console para fácil verificação
+console.log(`[Muzze] Build: ${getShortBuildId()}`);
+```
 
-const handleDragEnd = (event: DragEndEvent) => {
-  const { active, over } = event;
-  if (over && active.id !== over.id) {
-    pushToUndoStack(shots); // Salvar antes de reordenar
-    setShots((items) => {
-      const oldIndex = items.findIndex(item => item.id === active.id);
-      const newIndex = items.findIndex(item => item.id === over.id);
-      return arrayMove(items, oldIndex, newIndex);
-    });
+### 4. Invalidar cache de navegação
+
+Adicionar estratégia NetworkFirst para todos os arquivos JS/CSS principais:
+
+```typescript
+// vite.config.ts - workbox.runtimeCaching
+{
+  urlPattern: /\.(js|css)$/,
+  handler: "NetworkFirst",
+  options: {
+    cacheName: "assets-cache",
+    expiration: {
+      maxAgeSeconds: 60 * 60 * 2, // 2 horas
+    },
+    networkTimeoutSeconds: 3,
   }
-};
+}
 ```
 
 ---
 
-## Resumo das Alterações
+## Arquivos a Modificar
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/pages/ShotListRecord.tsx` | Adicionar `undoStack` state, `pushToUndoStack` helper, listener Ctrl+Z, salvar estado antes de `splitShotAtCursor` |
+| `src/hooks/usePWAUpdate.ts` | Verificar mais frequente, update no focus, forçar reload imediato |
+| `src/main.tsx` | Log da versão atual no console |
+| `vite.config.ts` | NetworkFirst para JS/CSS |
 
 ---
 
-## Comportamento Esperado
+## Resultado Esperado
 
-- **Ctrl+Z fora de inputs**: Desfaz última divisão de take (restaura estado anterior)
-- **Ctrl+Z dentro do editor**: TipTap lida com undo local (desfaz digitação)
-- **Feedback visual**: Toast "Desfeito!" confirma a ação
-- **Limite de 20 snapshots**: Evita consumo excessivo de memória
+- Updates são detectados em até 30 segundos (vs 60s atual)
+- Quando aba ganha foco, verifica updates imediatamente
+- Nova versão atualiza automaticamente sem intervenção do usuário
+- Log no console permite verificar qual versão está rodando
+- Cache de JS/CSS busca do servidor primeiro (NetworkFirst)
 
 ---
 
-## Critérios de Aceite
+## Ação Imediata para Você
 
-- [ ] Ctrl+Z desfaz divisão de take criada por Shift+Enter
-- [ ] Take original é restaurado com texto completo
-- [ ] Take novo é removido
-- [ ] Toast confirma que ação foi desfeita
-- [ ] Undo funciona múltiplas vezes (pilha de histórico)
-- [ ] Undo dentro do editor de texto não interfere (TipTap lida localmente)
+Enquanto implemento as melhorias, faça isso para forçar a atualização agora:
+
+**No Safari/Chrome (desktop):**
+1. Abra DevTools (F12 ou Cmd+Option+I)
+2. Vá em Application → Service Workers
+3. Clique "Unregister" em todos
+4. Faça hard refresh: Cmd+Shift+R (Mac) ou Ctrl+Shift+R (Windows)
+
+**No PWA instalado (iOS/Android):**
+1. Feche completamente o app (swipe up)
+2. Reabra o app
+3. Se persistir: desinstale e reinstale
