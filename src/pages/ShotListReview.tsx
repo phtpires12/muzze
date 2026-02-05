@@ -25,6 +25,8 @@ import { TrophyCelebration } from "@/components/TrophyCelebration";
 import { ImageGalleryModal } from "@/components/shotlist/ImageGalleryModal";
 import { generateShotListFromContent, normalizeText } from "@/lib/shotlist-generator";
 import { extractPathFromUrl, generateSignedUrlsBatch } from "@/lib/storage-helpers";
+import { useWorkflowTemplate, getNextStageUrl } from "@/hooks/useWorkflowTemplate";
+import { WorkflowTemplateId, getStageLabel } from "@/lib/workflow-templates";
 
 const ShotListReview = () => {
   const navigate = useNavigate();
