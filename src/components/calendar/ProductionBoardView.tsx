@@ -138,7 +138,7 @@ export function ProductionBoardView({
       onDragEnd={handleDragEnd}
     >
       <div className="flex gap-4 overflow-x-auto pb-4 min-h-[400px]">
-        {PRODUCTION_COLUMNS.map(column => {
+        {orderedColumns.map(column => {
           const columnScripts = localScripts.filter(
             s => getProductionColumnForStatus(s.status) === column.id
           );
