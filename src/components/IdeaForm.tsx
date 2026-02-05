@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useWorkspaceContext } from "@/contexts/WorkspaceContext";
 import { usePlanCapabilitiesOptional } from "@/contexts/PlanContext";
+import { useProfileContext } from "@/contexts/ProfileContext";
 import { Paywall } from "@/components/Paywall";
 import { getDayKey, isDateInCurrentWeek } from "@/lib/timezone-utils";
 import { ArrowRight } from "lucide-react";
