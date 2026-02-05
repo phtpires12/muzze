@@ -368,6 +368,10 @@ const ShotListRecord = () => {
       return;
     }
     
+    // Determine next stage based on workflow
+    const next = nextStage('recording');
+    const nextStatus = next || 'editing';
+    
     // Se há mudanças não salvas, salvar primeiro
     if (autoSaveStatus === 'unsaved') {
       setAutoSaveStatus('saving');
@@ -383,21 +387,22 @@ const ShotListRecord = () => {
         setAutoSaveStatus('saved');
         toast({
           title: "Progresso salvo!",
-          description: "Avançando para a etapa de edição...",
+          description: `Avançando para a etapa de ${getStageLabel(nextStatus)}...`,
         });
         
         // Salvar tempo da sessão
         await saveCurrentStageTime();
         
-        // Update status to 'editing'
+        // Update status
         await supabase
           .from('scripts')
-          .update({ status: 'editing' })
+          .update({ status: nextStatus })
           .eq('id', scriptId);
         
-        // Pequeno delay para feedback visual
+        // Navigate to next stage
+        const url = getNextStageUrl('recording', currentTemplate, scriptId!);
         setTimeout(() => {
-          navigate(`/session?stage=edit&scriptId=${scriptId}`);
+          navigate(url || `/session?stage=edit&scriptId=${scriptId}`);
         }, 500);
         
       } catch (error) {
@@ -409,18 +414,19 @@ const ShotListRecord = () => {
         });
         setAutoSaveStatus('unsaved');
       }
-      } else {
-        // Já está salvo, salvar tempo e avançar
-        await saveCurrentStageTime();
-        
-        // Update status to 'editing'
-        await supabase
-          .from('scripts')
-          .update({ status: 'editing' })
-          .eq('id', scriptId);
-        
-        navigate(`/session?stage=edit&scriptId=${scriptId}`);
-      }
+    } else {
+      // Já está salvo, salvar tempo e avançar
+      await saveCurrentStageTime();
+      
+      // Update status
+      await supabase
+        .from('scripts')
+        .update({ status: nextStatus })
+        .eq('id', scriptId);
+      
+      const url = getNextStageUrl('recording', currentTemplate, scriptId!);
+      navigate(url || `/session?stage=edit&scriptId=${scriptId}`);
+    }
   };
 
   // SaveStatusIndicator Component
