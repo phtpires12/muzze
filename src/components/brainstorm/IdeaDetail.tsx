@@ -293,21 +293,38 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
             />
           </div>
 
-          {/* Content Type */}
-          <div className="space-y-2">
-            <Label htmlFor="content-type">Tipo de Conteúdo</Label>
-            <Select value={contentType} onValueChange={setContentType}>
-              <SelectTrigger className="bg-background/50">
-                <SelectValue placeholder="Selecione o tipo" />
-              </SelectTrigger>
-              <SelectContent>
-                {CONTENT_TYPES.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {type}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* Content Type e Workflow em grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Content Type */}
+            <div className="space-y-2">
+              <Label htmlFor="content-type">Tipo de Conteúdo</Label>
+              <Select value={contentType} onValueChange={setContentType}>
+                <SelectTrigger className="bg-background/50">
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CONTENT_TYPES.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Workflow */}
+            <div className="space-y-2">
+              <Label>Workflow</Label>
+              <WorkflowSelector
+                value={workflowTemplate}
+                onChange={(value) => {
+                  setWorkflowTemplate(value);
+                  setHasUnsavedChanges(true);
+                }}
+                showInheritOption={true}
+                className="bg-background/50"
+              />
+            </div>
           </div>
 
           {/* Central Idea */}
