@@ -55,6 +55,10 @@ const ShotListRecord = () => {
   const [uploadingImages, setUploadingImages] = useState<Set<string>>(new Set());
   const [galleryOpenShotId, setGalleryOpenShotId] = useState<string | null>(null);
   
+  // Undo stack for structural changes (split, remove, reorder)
+  const [undoStack, setUndoStack] = useState<ShotItem[][]>([]);
+  const MAX_UNDO_HISTORY = 20;
+  
   // Workflow template state
   const [scriptWorkflow, setScriptWorkflow] = useState<WorkflowTemplateId | null>(null);
   const { nextStage, prevStage, currentTemplate, isStageIncluded } = useWorkflowTemplate({ scriptWorkflow });
@@ -465,22 +469,183 @@ const ShotListRecord = () => {
     );
   };
 
+  // Helper to save state to undo stack before destructive operations
+  const pushToUndoStack = useCallback((currentShots: ShotItem[]) => {
+    setUndoStack(prev => {
+      // Deep clone to avoid references
+      const snapshot = JSON.parse(JSON.stringify(currentShots));
+      const newStack = [...prev, snapshot];
+      // Limit history size
+      if (newStack.length > MAX_UNDO_HISTORY) {
+        return newStack.slice(-MAX_UNDO_HISTORY);
+      }
+      return newStack;
+    });
+  }, []);
+
+  // Global Ctrl+Z listener for undoing structural changes
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+Z or Cmd+Z (Mac)
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        // Check if we're inside an editor or input
+        const target = e.target as HTMLElement;
+        const isInEditor = target.closest('.ProseMirror') || 
+                           target.tagName === 'INPUT' || 
+                           target.tagName === 'TEXTAREA';
+        
+        // If inside editor, let TipTap handle local undo
+        if (isInEditor) return;
+        
+        // Global undo (undo split/remove/reorder)
+        if (undoStack.length > 0) {
+          e.preventDefault();
+          
+          setUndoStack(prev => {
+            const newStack = [...prev];
+            const previousState = newStack.pop();
+            
+            if (previousState) {
+              setShots(previousState);
+              toast({
+                title: "Desfeito!",
+                description: "Ação desfeita com sucesso",
+              });
+            }
+            
+            return newStack;
+          });
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [undoStack.length, toast]);
+
+  // Helper to split HTML at text position (preserving HTML structure)
+  const splitHtmlAtTextPosition = (html: string, textPosition: number): { before: string; after: string } => {
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+    
+    const walker = document.createTreeWalker(tempDiv, NodeFilter.SHOW_TEXT, null);
+    let charCount = 0;
+    let splitNode: Text | null = null;
+    let splitOffset = 0;
+    
+    while (walker.nextNode()) {
+      const textNode = walker.currentNode as Text;
+      const nodeLength = textNode.textContent?.length || 0;
+      
+      if (charCount + nodeLength >= textPosition) {
+        splitNode = textNode;
+        splitOffset = textPosition - charCount;
+        break;
+      }
+      charCount += nodeLength;
+    }
+    
+    if (!splitNode) {
+      return { before: html, after: '' };
+    }
+    
+    // Split the text node at the exact position
+    const afterTextNode = splitNode.splitText(splitOffset);
+    
+    // Get the "before" HTML (everything up to the split point)
+    const beforeHtml = tempDiv.innerHTML;
+    
+    // For "after": collect all text from the split point onwards
+    const afterDiv = document.createElement('div');
+    let currentNode: Node | null = afterTextNode;
+    
+    // Clone remaining content from split point
+    while (currentNode) {
+      afterDiv.appendChild(currentNode.cloneNode(true));
+      currentNode = currentNode.nextSibling;
+    }
+    
+    // Also get remaining siblings of parent elements
+    let parent = afterTextNode.parentNode;
+    while (parent && parent !== tempDiv) {
+      let sibling = parent.nextSibling;
+      while (sibling) {
+        afterDiv.appendChild(sibling.cloneNode(true));
+        sibling = sibling.nextSibling;
+      }
+      parent = parent.parentNode;
+    }
+    
+    let afterHtml = afterDiv.innerHTML.trim();
+    
+    // Wrap in <p> if needed for consistency
+    if (afterHtml && !afterHtml.startsWith('<p>') && !afterHtml.startsWith('<')) {
+      afterHtml = `<p>${afterHtml}</p>`;
+    }
+    
+    // Clean up the "before" HTML by removing the after content
+    // Re-create from scratch for clean split
+    const cleanBeforeDiv = document.createElement('div');
+    cleanBeforeDiv.innerHTML = html;
+    
+    const cleanWalker = document.createTreeWalker(cleanBeforeDiv, NodeFilter.SHOW_TEXT, null);
+    let cleanCharCount = 0;
+    
+    while (cleanWalker.nextNode()) {
+      const textNode = cleanWalker.currentNode as Text;
+      const nodeLength = textNode.textContent?.length || 0;
+      
+      if (cleanCharCount + nodeLength >= textPosition) {
+        // Truncate this node and remove everything after
+        const truncateAt = textPosition - cleanCharCount;
+        textNode.textContent = textNode.textContent?.substring(0, truncateAt) || '';
+        
+        // Remove all following siblings and their parent's following siblings
+        let nodeToRemove = textNode.nextSibling;
+        while (nodeToRemove) {
+          const next = nodeToRemove.nextSibling;
+          nodeToRemove.parentNode?.removeChild(nodeToRemove);
+          nodeToRemove = next;
+        }
+        
+        let parentEl = textNode.parentNode;
+        while (parentEl && parentEl !== cleanBeforeDiv) {
+          let siblingToRemove = parentEl.nextSibling;
+          while (siblingToRemove) {
+            const next = siblingToRemove.nextSibling;
+            siblingToRemove.parentNode?.removeChild(siblingToRemove);
+            siblingToRemove = next;
+          }
+          parentEl = parentEl.parentNode;
+        }
+        break;
+      }
+      cleanCharCount += nodeLength;
+    }
+    
+    return { before: cleanBeforeDiv.innerHTML, after: afterHtml };
+  };
+
   const splitShotAtCursor = (shotId: string, cursorPosition: number) => {
     setShots(currentShots => {
+      // Save state before split for undo
+      pushToUndoStack(currentShots);
+      
       const shotIndex = currentShots.findIndex(s => s.id === shotId);
       if (shotIndex === -1) return currentShots;
 
       const shot = currentShots[shotIndex];
-      const beforeText = shot.scriptSegment.substring(0, cursorPosition);
-      const afterText = shot.scriptSegment.substring(cursorPosition);
+      
+      // Use HTML-aware splitting
+      const { before, after } = splitHtmlAtTextPosition(shot.scriptSegment, cursorPosition);
 
-      const updatedShot = { ...shot, scriptSegment: beforeText };
+      const updatedShot = { ...shot, scriptSegment: before };
       const newShot: ShotItem = {
         id: crypto.randomUUID(),
-        scriptSegment: afterText,
-        scene: shot.scene,
+        scriptSegment: after,
+        scene: '',
         shotImagePaths: [],
-        location: shot.location,
+        location: '',
         sectionName: shot.sectionName,
         isCompleted: false,
       };
@@ -494,6 +659,8 @@ const ShotListRecord = () => {
   };
 
   const removeShot = (id: string) => {
+    // Save state before removal for undo
+    pushToUndoStack(shots);
     setShots(shots.filter(s => s.id !== id));
   };
 
@@ -579,6 +746,9 @@ const ShotListRecord = () => {
 
     if (over && active.id !== over.id) {
       setShots((items) => {
+        // Save state before reorder for undo
+        pushToUndoStack(items);
+        
         const oldIndex = items.findIndex(item => item.id === active.id);
         const newIndex = items.findIndex(item => item.id === over.id);
         return arrayMove(items, oldIndex, newIndex);
