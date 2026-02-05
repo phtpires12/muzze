@@ -312,6 +312,11 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
         scriptData.status = 'review';
       }
 
+      // Se é um novo script, salvar o workflow_template atual
+      if (!scriptId) {
+        scriptData.workflow_template = profile?.current_workflow || 'classic';
+      }
+
       if (scriptId) {
         const { error } = await supabase
           .from('scripts')
