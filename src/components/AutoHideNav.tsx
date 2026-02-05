@@ -50,7 +50,7 @@ export const AutoHideNav = () => {
     const contentId = session.contentId;
     
     if (stage === 'edit') {
-      return contentId ? `/shot-list/review?scriptId=${contentId}` : '/session?stage=edit';
+      return contentId ? `/editing-workspace?scriptId=${contentId}` : '/editing-workspace';
     }
     if (stage === 'record') {
       return contentId ? `/shot-list/record?scriptId=${contentId}` : '/session?stage=record';

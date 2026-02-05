@@ -8,6 +8,7 @@ const SAFE_SESSION_PATHS = [
   '/shot-list',
   '/shot-list/record',
   '/shot-list/review',
+  '/editing-workspace', // Workspace de edição (novo fluxo)
   '/settings',
   '/profile',
 ];

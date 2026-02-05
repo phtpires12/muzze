@@ -103,7 +103,7 @@ export const BottomNav = () => {
         break;
       case "edit":
         startSession("edit");
-        navigate(`/session?stage=edit`);
+        navigate(project.id ? `/editing-workspace?scriptId=${project.id}` : '/editing-workspace');
         break;
     }
   };
