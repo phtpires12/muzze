@@ -30,6 +30,7 @@ import { useNavigationBlocker } from "@/hooks/useNavigationBlocker";
 import { useSessionContext } from "@/contexts/SessionContext";
 import { useSession } from "@/hooks/useSession";
 import { useWorkspaceContext } from "@/contexts/WorkspaceContext";
+import { useProfileContext } from "@/contexts/ProfileContext";
 import { useCelebration } from "@/contexts/CelebrationContext";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -53,6 +54,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
   const { timer, setMuzzeSession } = useSessionContext();
   const { saveCurrentStageTime, endSession } = useSession();
   const { activeWorkspace } = useWorkspaceContext();
+  const { profile } = useProfileContext();
   const { triggerFullCelebration } = useCelebration();
   const [title, setTitle] = useState("Novo Roteiro");
   const [content, setContent] = useState({
@@ -308,6 +310,11 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
       } else {
         // Se está na etapa de revisão, garantir que status é 'review'
         scriptData.status = 'review';
+      }
+
+      // Se é um novo script, salvar o workflow_template atual
+      if (!scriptId) {
+        scriptData.workflow_template = profile?.current_workflow || 'classic';
       }
 
       if (scriptId) {

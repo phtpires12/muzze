@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useWorkspaceContext } from "@/contexts/WorkspaceContext";
 import { usePlanCapabilitiesOptional } from "@/contexts/PlanContext";
+import { useProfileContext } from "@/contexts/ProfileContext";
 import { Paywall } from "@/components/Paywall";
 import { getDayKey, isDateInCurrentWeek } from "@/lib/timezone-utils";
 import { ArrowRight } from "lucide-react";
@@ -29,6 +30,7 @@ export const IdeaForm = ({ scriptId }: IdeaFormProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { activeWorkspace } = useWorkspaceContext();
+  const { profile } = useProfileContext();
   const planCapabilities = usePlanCapabilitiesOptional();
   
   const [title, setTitle] = useState("");
@@ -124,6 +126,7 @@ export const IdeaForm = ({ scriptId }: IdeaFormProps) => {
         user_id: user.id,
         publish_date: publishDate,
         workspace_id: activeWorkspace?.id,
+        workflow_template: profile?.current_workflow || 'classic',
       };
 
       let savedScriptId = currentScriptId;
