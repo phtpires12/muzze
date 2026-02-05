@@ -22,7 +22,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { ProfileSheet } from "@/components/ProfileSheet";
 import { FreePlanBanner } from "@/components/FreePlanBanner";
 import { ContinuityCarousel } from "@/components/home/ContinuityCarousel";
-import { Flame, Clock, Trophy, Zap, Sparkles, Check, AlertCircle, Lock, Lightbulb, Film, Mic, Scissors } from "lucide-react";
+import { Flame, Clock, Trophy, Zap, Workflow, Check, AlertCircle, Lock, Lightbulb, Film, Mic, Scissors } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
