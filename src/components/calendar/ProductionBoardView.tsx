@@ -45,6 +45,9 @@ export function ProductionBoardView({
   onUpdateStatus,
 }: ProductionBoardViewProps) {
   const { toast } = useToast();
+  const { stages } = useWorkflowTemplate();
+  const orderedColumns = getOrderedProductionColumns(stages);
+  
   // Filtrar scripts que não estão completos E não foram postados
   const productionScripts = scripts.filter(s => 
     s.status !== 'completed' && 
