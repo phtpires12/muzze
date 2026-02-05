@@ -727,10 +727,10 @@ const ShotListReview = () => {
               {isSaving ? 'Salvando...' : hasUnsavedChanges ? '● Salvar' : 'Salvo ✓'}
             </Button>
             <Button
-              onClick={handleAdvanceToRecord}
+              onClick={handleAdvanceToNextStage}
               disabled={isSaving}
             >
-              Avançar para Gravação
+              Avançar para {nextStage('review') ? getStageLabel(nextStage('review')!) : 'Gravação'}
             </Button>
           </div>
         </div>
