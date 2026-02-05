@@ -746,6 +746,9 @@ const ShotListRecord = () => {
 
     if (over && active.id !== over.id) {
       setShots((items) => {
+        // Save state before reorder for undo
+        pushToUndoStack(items);
+        
         const oldIndex = items.findIndex(item => item.id === active.id);
         const newIndex = items.findIndex(item => item.id === over.id);
         return arrayMove(items, oldIndex, newIndex);
