@@ -25,6 +25,8 @@ import { TrophyCelebration } from "@/components/TrophyCelebration";
 import { ImageGalleryModal } from "@/components/shotlist/ImageGalleryModal";
 import { generateShotListFromContent, normalizeText } from "@/lib/shotlist-generator";
 import { extractPathFromUrl, generateSignedUrlsBatch } from "@/lib/storage-helpers";
+import { useWorkflowTemplate, getNextStageUrl } from "@/hooks/useWorkflowTemplate";
+import { WorkflowTemplateId, getStageLabel } from "@/lib/workflow-templates";
 
 const ShotListReview = () => {
   const navigate = useNavigate();
@@ -40,6 +42,10 @@ const ShotListReview = () => {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [lastSavedShots, setLastSavedShots] = useState<ShotItem[]>([]);
   const [galleryOpenShotId, setGalleryOpenShotId] = useState<string | null>(null);
+  
+  // Workflow template state
+  const [scriptWorkflow, setScriptWorkflow] = useState<WorkflowTemplateId | null>(null);
+  const { nextStage, currentTemplate, isStageIncluded } = useWorkflowTemplate({ scriptWorkflow });
   
   // Sync modal state
   const [showSyncModal, setShowSyncModal] = useState(false);
@@ -194,13 +200,16 @@ const ShotListReview = () => {
     try {
       const { data, error } = await supabase
         .from('scripts')
-        .select('title, shot_list')
+        .select('title, shot_list, workflow_template')
         .eq('id', scriptId)
         .single();
 
       if (error) throw error;
 
       setScriptTitle(data.title);
+      
+      // Load workflow template for dynamic navigation
+      setScriptWorkflow(data.workflow_template as WorkflowTemplateId | null);
 
       if (data.shot_list && Array.isArray(data.shot_list) && data.shot_list.length > 0) {
         let needsMigration = false;
@@ -496,17 +505,36 @@ const ShotListReview = () => {
     ? Math.min((session.elapsedSeconds / (session.dailyGoalMinutes * 60)) * 100, 100)
     : Math.min((session.elapsedSeconds / session.targetSeconds) * 100, 100);
 
-  const handleAdvanceToRecord = async () => {
+  const handleAdvanceToNextStage = async () => {
     await handleSave();
     await saveCurrentStageTime();
     
-    // Update status to 'recording'
+    // Determine next stage based on workflow
+    const next = nextStage('review');
+    
+    if (!next) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível determinar o próximo estágio.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Update status
     await supabase
       .from('scripts')
-      .update({ status: 'recording' })
+      .update({ status: next })
       .eq('id', scriptId);
     
-    navigate(`/shot-list/record?scriptId=${scriptId}`);
+    // Navigate to the next stage
+    const url = getNextStageUrl('review', currentTemplate, scriptId!);
+    if (url) {
+      navigate(url);
+    } else {
+      // Fallback
+      navigate(`/shot-list/record?scriptId=${scriptId}`);
+    }
   };
 
   // Calculate sync changes between current shots and script content
@@ -652,7 +680,7 @@ const ShotListReview = () => {
               {isSaving ? 'Salvando...' : hasUnsavedChanges ? '● Salvar' : 'Salvo ✓'}
             </Button>
             <Button
-              onClick={handleAdvanceToRecord}
+              onClick={handleAdvanceToNextStage}
               disabled={isSaving}
               size="sm"
               className="flex-1"
@@ -698,10 +726,10 @@ const ShotListReview = () => {
               {isSaving ? 'Salvando...' : hasUnsavedChanges ? '● Salvar' : 'Salvo ✓'}
             </Button>
             <Button
-              onClick={handleAdvanceToRecord}
+              onClick={handleAdvanceToNextStage}
               disabled={isSaving}
             >
-              Avançar para Gravação
+              Avançar para {nextStage('review') ? getStageLabel(nextStage('review')!) : 'Gravação'}
             </Button>
           </div>
         </div>

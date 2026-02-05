@@ -10,6 +10,79 @@ import {
 } from "@/lib/workflow-templates";
 import { PRODUCTION_COLUMNS } from "@/lib/kanban-columns";
 
+// Mapeamento bidirecional SessionStage <-> CreativeStage
+export const SESSION_TO_CREATIVE: Record<string, CreativeStage> = {
+  'idea': 'ideation',
+  'ideation': 'ideation',
+  'script': 'script',
+  'review': 'review',
+  'record': 'recording',
+  'recording': 'recording',
+  'edit': 'editing',
+  'editing': 'editing',
+};
+
+export const CREATIVE_TO_SESSION: Record<CreativeStage, string> = {
+  'ideation': 'idea',
+  'script': 'script',
+  'review': 'review',
+  'recording': 'record',
+  'editing': 'edit',
+};
+
+/**
+ * Helper para obter a URL de navegação para o próximo estágio
+ */
+export function getNextStageUrl(
+  currentStage: CreativeStage,
+  template: WorkflowTemplate,
+  scriptId: string
+): string | null {
+  const currentIndex = template.stages.indexOf(currentStage);
+  if (currentIndex === -1 || currentIndex >= template.stages.length - 1) {
+    return null;
+  }
+  
+  const nextCreativeStage = template.stages[currentIndex + 1];
+  const sessionStage = CREATIVE_TO_SESSION[nextCreativeStage];
+  
+  // Gravação tem URL especial
+  if (nextCreativeStage === 'recording') {
+    return `/shot-list/record?scriptId=${scriptId}`;
+  }
+  
+  return `/session?stage=${sessionStage}&scriptId=${scriptId}`;
+}
+
+/**
+ * Helper para obter a URL de navegação para o estágio anterior
+ */
+export function getPrevStageUrl(
+  currentStage: CreativeStage,
+  template: WorkflowTemplate,
+  scriptId: string
+): string | null {
+  const currentIndex = template.stages.indexOf(currentStage);
+  if (currentIndex <= 0) {
+    return null;
+  }
+  
+  const prevCreativeStage = template.stages[currentIndex - 1];
+  const sessionStage = CREATIVE_TO_SESSION[prevCreativeStage];
+  
+  // Gravação tem URL especial
+  if (prevCreativeStage === 'recording') {
+    return `/shot-list/record?scriptId=${scriptId}`;
+  }
+  
+  // Revisão tem URL especial
+  if (prevCreativeStage === 'review') {
+    return `/shot-list/review?scriptId=${scriptId}`;
+  }
+  
+  return `/session?stage=${sessionStage}&scriptId=${scriptId}`;
+}
+
 interface UseWorkflowTemplateOptions {
   /** 
    * Workflow específico do conteúdo (sobrescreve o global).
@@ -89,6 +162,20 @@ export function useWorkflowTemplate(options?: UseWorkflowTemplateOptions) {
       .filter(Boolean);
   }, [stages]);
 
+  /**
+   * Obtém a URL para navegar para o próximo estágio
+   */
+  const getNextUrl = useCallback((currentStage: CreativeStage, scriptId: string): string | null => {
+    return getNextStageUrl(currentStage, currentTemplate, scriptId);
+  }, [currentTemplate]);
+
+  /**
+   * Obtém a URL para navegar para o estágio anterior
+   */
+  const getPrevUrl = useCallback((currentStage: CreativeStage, scriptId: string): string | null => {
+    return getPrevStageUrl(currentStage, currentTemplate, scriptId);
+  }, [currentTemplate]);
+
   return {
     // Template global do usuário
     globalTemplate,
@@ -110,5 +197,8 @@ export function useWorkflowTemplate(options?: UseWorkflowTemplateOptions) {
     isLastStage,
     isStageIncluded,
     getOrderedKanbanColumns,
+    // Helpers de navegação
+    getNextUrl,
+    getPrevUrl,
   };
 }

@@ -13,12 +13,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { FileText, ExternalLink, Loader2, Check, Trash2 } from "lucide-react";
+import { FileText, ExternalLink, Loader2, Check, Trash2, Video, Scissors } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ThumbnailUploader } from "@/components/ThumbnailUploader";
 import { WorkflowSelector } from "@/components/workflows/WorkflowSelector";
-import { WorkflowTemplateId } from "@/lib/workflow-templates";
+import { WorkflowTemplateId, getStageLabel } from "@/lib/workflow-templates";
+import { useWorkflowTemplate, CREATIVE_TO_SESSION } from "@/hooks/useWorkflowTemplate";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -70,6 +71,9 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isInitialLoad = useRef(true);
+
+  // Workflow hook para navegação dinâmica
+  const { nextStage, getNextUrl } = useWorkflowTemplate({ scriptWorkflow: workflowTemplate });
 
   useEffect(() => {
     loadIdea();
@@ -158,21 +162,57 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
     };
   }, [title, contentType, centralIdea, referenceUrl, thumbnailUrl, workflowTemplate, loading, idea, autoSave]);
 
-  const handleRoteirizar = async () => {
+  const handleAdvanceToNextStage = async () => {
     // Save any pending changes first
     if (hasUnsavedChanges) {
       await autoSave();
     }
     
-    // Update status to 'draft' (script stage)
+    // Determinar próximo estágio baseado no workflow
+    const next = nextStage('ideation');
+    if (!next) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível determinar o próximo estágio do workflow.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Update status to the next stage
     await supabase
       .from("scripts")
-      .update({ status: "draft" })
+      .update({ status: next })
       .eq("id", scriptId);
     
-    // Navigate to script stage
-    navigate(`/session?stage=script&scriptId=${scriptId}`);
+    // Navigate to the next stage using dynamic URL
+    const url = getNextUrl('ideation', scriptId);
+    if (url) {
+      navigate(url);
+    } else {
+      // Fallback para script se algo der errado
+      navigate(`/session?stage=script&scriptId=${scriptId}`);
+    }
   };
+
+  // Helper para obter ícone e label do botão
+  const getNextStageButton = () => {
+    const next = nextStage('ideation');
+    if (!next) return { label: "Roteirizar essa ideia", icon: FileText };
+    
+    switch (next) {
+      case 'script':
+        return { label: "Roteirizar essa ideia", icon: FileText };
+      case 'recording':
+        return { label: "Ir para Gravação", icon: Video };
+      case 'editing':
+        return { label: "Ir para Edição", icon: Scissors };
+      default:
+        return { label: `Avançar para ${getStageLabel(next)}`, icon: FileText };
+    }
+  };
+
+  const nextStageButton = getNextStageButton();
 
   const handleDelete = async () => {
     setDeleting(true);
@@ -369,7 +409,7 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
           {/* Action Buttons */}
           <div className="flex flex-col gap-3 pt-4">
             <Button
-              onClick={handleRoteirizar}
+              onClick={handleAdvanceToNextStage}
               disabled={saving}
               className="w-full bg-primary hover:bg-primary/90"
               size="lg"
@@ -377,9 +417,9 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
               {saving ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               ) : (
-                <FileText className="h-4 w-4 mr-2" />
+                <nextStageButton.icon className="h-4 w-4 mr-2" />
               )}
-              Roteirizar essa ideia
+              {nextStageButton.label}
             </Button>
             <Button
               variant="outline"

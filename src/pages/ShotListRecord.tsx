@@ -29,6 +29,8 @@ import SessionSummary from "@/components/SessionSummary";
 import { StreakCelebration } from "@/components/StreakCelebration";
 import { TrophyCelebration } from "@/components/TrophyCelebration";
 import { extractPathFromUrl, generateSignedUrlsBatch } from "@/lib/storage-helpers";
+import { useWorkflowTemplate, getNextStageUrl, getPrevStageUrl } from "@/hooks/useWorkflowTemplate";
+import { WorkflowTemplateId, getStageLabel } from "@/lib/workflow-templates";
 
 interface ContentSections {
   gancho?: string;
@@ -52,6 +54,10 @@ const ShotListRecord = () => {
   const [saveTimeoutId, setSaveTimeoutId] = useState<NodeJS.Timeout | null>(null);
   const [uploadingImages, setUploadingImages] = useState<Set<string>>(new Set());
   const [galleryOpenShotId, setGalleryOpenShotId] = useState<string | null>(null);
+  
+  // Workflow template state
+  const [scriptWorkflow, setScriptWorkflow] = useState<WorkflowTemplateId | null>(null);
+  const { nextStage, prevStage, currentTemplate, isStageIncluded } = useWorkflowTemplate({ scriptWorkflow });
 
   // Unified Session System
   const {
@@ -249,13 +255,16 @@ const ShotListRecord = () => {
     try {
       const { data, error } = await supabase
         .from('scripts')
-        .select('title, shot_list, content')
+        .select('title, shot_list, content, workflow_template')
         .eq('id', scriptId)
         .single();
 
       if (error) throw error;
 
       setScriptTitle(data.title);
+      
+      // Load workflow template for dynamic navigation
+      setScriptWorkflow(data.workflow_template as WorkflowTemplateId | null);
       
       // Guardar conteúdo do roteiro para o Modo Frase-a-Frase
       if (data.content) {
@@ -359,6 +368,10 @@ const ShotListRecord = () => {
       return;
     }
     
+    // Determine next stage based on workflow
+    const next = nextStage('recording');
+    const nextStatus = next || 'editing';
+    
     // Se há mudanças não salvas, salvar primeiro
     if (autoSaveStatus === 'unsaved') {
       setAutoSaveStatus('saving');
@@ -374,21 +387,22 @@ const ShotListRecord = () => {
         setAutoSaveStatus('saved');
         toast({
           title: "Progresso salvo!",
-          description: "Avançando para a etapa de edição...",
+          description: `Avançando para a etapa de ${getStageLabel(nextStatus)}...`,
         });
         
         // Salvar tempo da sessão
         await saveCurrentStageTime();
         
-        // Update status to 'editing'
+        // Update status
         await supabase
           .from('scripts')
-          .update({ status: 'editing' })
+          .update({ status: nextStatus })
           .eq('id', scriptId);
         
-        // Pequeno delay para feedback visual
+        // Navigate to next stage
+        const url = getNextStageUrl('recording', currentTemplate, scriptId!);
         setTimeout(() => {
-          navigate(`/session?stage=edit&scriptId=${scriptId}`);
+          navigate(url || `/session?stage=edit&scriptId=${scriptId}`);
         }, 500);
         
       } catch (error) {
@@ -400,18 +414,19 @@ const ShotListRecord = () => {
         });
         setAutoSaveStatus('unsaved');
       }
-      } else {
-        // Já está salvo, salvar tempo e avançar
-        await saveCurrentStageTime();
-        
-        // Update status to 'editing'
-        await supabase
-          .from('scripts')
-          .update({ status: 'editing' })
-          .eq('id', scriptId);
-        
-        navigate(`/session?stage=edit&scriptId=${scriptId}`);
-      }
+    } else {
+      // Já está salvo, salvar tempo e avançar
+      await saveCurrentStageTime();
+      
+      // Update status
+      await supabase
+        .from('scripts')
+        .update({ status: nextStatus })
+        .eq('id', scriptId);
+      
+      const url = getNextStageUrl('recording', currentTemplate, scriptId!);
+      navigate(url || `/session?stage=edit&scriptId=${scriptId}`);
+    }
   };
 
   // SaveStatusIndicator Component
@@ -598,22 +613,30 @@ const ShotListRecord = () => {
     ? Math.min((session.elapsedSeconds / (session.dailyGoalMinutes * 60)) * 100, 100)
     : Math.min((session.elapsedSeconds / session.targetSeconds) * 100, 100);
 
-  // Handler para voltar à revisão (usado no Modo Frase-a-Frase)
-  const handleBackToReview = async () => {
+  // Handler para voltar ao estágio anterior (usado no Modo Frase-a-Frase)
+  const handleBackToPreviousStage = async () => {
     if (!scriptId) {
       console.error('scriptId não encontrado para atualizar status');
       return;
     }
+    
     await saveCurrentStageTime();
+    
+    // Determine previous stage based on workflow
+    const prev = prevStage('recording');
+    const prevStatus = prev || 'review';
+    
     const { error } = await supabase
       .from('scripts')
-      .update({ status: 'review' })
+      .update({ status: prevStatus })
       .eq('id', scriptId);
     if (error) {
-      console.error('Erro ao atualizar status para review:', error);
+      console.error(`Erro ao atualizar status para ${prevStatus}:`, error);
     }
-    // Ir direto para a página de revisão do roteiro (onde o texto aparece)
-    navigate(`/session?stage=review&scriptId=${scriptId}`);
+    
+    // Navigate to previous stage
+    const url = getPrevStageUrl('recording', currentTemplate, scriptId);
+    navigate(url || `/session?stage=review&scriptId=${scriptId}`);
   };
 
   // Salvar o modo de gravação usado (teleprompter ou shotlist) para navegação futura
@@ -644,7 +667,7 @@ const ShotListRecord = () => {
           scriptTitle={scriptTitle}
           scriptContent={scriptContent}
           onAdvanceToEdit={handleAdvanceToEdit}
-          onBack={handleBackToReview}
+          onBack={handleBackToPreviousStage}
           session={{
             isActive: session.isActive,
             isPaused: session.isPaused,
