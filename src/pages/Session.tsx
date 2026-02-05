@@ -275,6 +275,15 @@ const Session = () => {
     handleRecordStage();
   }, [session.stage, stageParam, scriptId, navigate, toast]);
 
+  // Handle edit stage - redirect to new Editing Workspace
+  useEffect(() => {
+    if (session.stage === "edit" && stageParam === "edit") {
+      if (scriptId && scriptId !== 'null' && scriptId !== 'undefined') {
+        navigate(`/editing-workspace?scriptId=${scriptId}`);
+      }
+    }
+  }, [session.stage, stageParam, scriptId, navigate]);
+
   const formatTime = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);

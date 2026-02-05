@@ -50,6 +50,7 @@ import ContentView from "./pages/ContentView";
 import MyPlan from "./pages/MyPlan";
 import PaywallPage from "./pages/PaywallPage";
 import PaywallSuccess from "./pages/PaywallSuccess";
+import EditingWorkspace from "./pages/EditingWorkspace";
 import { LevelUpModal } from "./components/LevelUpModal";
 import { TrophyUnlockedModal } from "./components/TrophyUnlockedModal";
 import { TutorialProvider } from "./components/tutorial/TutorialProvider";
@@ -174,6 +175,7 @@ const router = createBrowserRouter([
       { path: "/guests", element: <ProtectedRoute><Layout><Guests /></Layout></ProtectedRoute> },
       { path: "/invite", element: <AcceptInvite /> },
       { path: "/content/view/:scriptId", element: <ProtectedRoute><ContentView /></ProtectedRoute> },
+      { path: "/editing-workspace", element: <ProtectedRoute><EditingWorkspace /></ProtectedRoute> },
       { path: "*", element: <NotFound /> },
     ],
   },
