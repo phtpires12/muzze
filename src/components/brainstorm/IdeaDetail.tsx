@@ -92,6 +92,7 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
         setCentralIdea(data.central_idea || "");
         setReferenceUrl(data.reference_url || "");
         setThumbnailUrl(data.thumbnail_url);
+        setWorkflowTemplate(data.workflow_template as WorkflowTemplateId | null);
         isInitialLoad.current = false;
       }
     } catch (error) {
