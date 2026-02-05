@@ -613,22 +613,30 @@ const ShotListRecord = () => {
     ? Math.min((session.elapsedSeconds / (session.dailyGoalMinutes * 60)) * 100, 100)
     : Math.min((session.elapsedSeconds / session.targetSeconds) * 100, 100);
 
-  // Handler para voltar à revisão (usado no Modo Frase-a-Frase)
-  const handleBackToReview = async () => {
+  // Handler para voltar ao estágio anterior (usado no Modo Frase-a-Frase)
+  const handleBackToPreviousStage = async () => {
     if (!scriptId) {
       console.error('scriptId não encontrado para atualizar status');
       return;
     }
+    
     await saveCurrentStageTime();
+    
+    // Determine previous stage based on workflow
+    const prev = prevStage('recording');
+    const prevStatus = prev || 'review';
+    
     const { error } = await supabase
       .from('scripts')
-      .update({ status: 'review' })
+      .update({ status: prevStatus })
       .eq('id', scriptId);
     if (error) {
-      console.error('Erro ao atualizar status para review:', error);
+      console.error(`Erro ao atualizar status para ${prevStatus}:`, error);
     }
-    // Ir direto para a página de revisão do roteiro (onde o texto aparece)
-    navigate(`/session?stage=review&scriptId=${scriptId}`);
+    
+    // Navigate to previous stage
+    const url = getPrevStageUrl('recording', currentTemplate, scriptId);
+    navigate(url || `/session?stage=review&scriptId=${scriptId}`);
   };
 
   // Salvar o modo de gravação usado (teleprompter ou shotlist) para navegação futura
