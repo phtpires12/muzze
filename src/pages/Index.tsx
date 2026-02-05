@@ -553,17 +553,17 @@ const Index = () => {
             </button>
 
             <button 
-              onClick={() => navigate('/novidades')}
+              onClick={() => navigate('/workflows')}
               className="p-4 bg-card rounded-xl border border-border text-center hover:shadow-md transition-all"
             >
               <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-accent flex items-center justify-center">
-                <Sparkles className="w-6 h-6 text-accent-foreground" />
+                <Workflow className="w-6 h-6 text-accent-foreground" />
               </div>
               <div className="text-sm font-semibold text-foreground">
-                Em breve
+                Workflow
               </div>
               <div className="text-xs text-muted-foreground">
-                Novidades
+                Seu método
               </div>
             </button>
           </div>

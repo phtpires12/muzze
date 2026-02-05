@@ -151,7 +151,7 @@ const router = createBrowserRouter([
       { path: "/onboarding", element: <Onboarding /> },
       { path: "/install", element: <Install /> },
       { path: "/", element: <ProtectedRoute><Layout><Index /></Layout></ProtectedRoute> },
-      { path: "/novidades", element: <ProtectedRoute><Layout><Novidades /></Layout></ProtectedRoute> },
+      { path: "/workflows", element: <ProtectedRoute><Layout><Workflows /></Layout></ProtectedRoute> },
       { path: "/calendario", element: <ProtectedRoute><Layout><CalendarioEditorial /></Layout></ProtectedRoute> },
       { path: "/session", element: <ProtectedRoute><Session /></ProtectedRoute> },
       { path: "/shot-list/review", element: <ProtectedRoute><ShotListReview /></ProtectedRoute> },
