@@ -38,6 +38,8 @@ import { ThumbnailUploader } from "@/components/ThumbnailUploader";
 import { generateShotListFromContent } from "@/lib/shotlist-generator";
 import { FEATURES } from "@/lib/feature-flags";
 import { MasterScriptEditor } from "@/components/MasterScriptEditor";
+import { useWorkflowTemplate, getNextStageUrl } from "@/hooks/useWorkflowTemplate";
+import { WorkflowTemplateId, getStageLabel } from "@/lib/workflow-templates";
 
 interface ScriptEditorProps {
   onClose?: () => void;
@@ -88,6 +90,10 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
   const [notesOpen, setNotesOpen] = useState(false);
   const [showEndSessionConfirmation, setShowEndSessionConfirmation] = useState(false);
   const [hasShotList, setHasShotList] = useState(false);
+  
+  // Workflow template state
+  const [scriptWorkflow, setScriptWorkflow] = useState<WorkflowTemplateId | null>(null);
+  const { nextStage, currentTemplate, isStageIncluded } = useWorkflowTemplate({ scriptWorkflow });
 
   // Memoizar callback para evitar recriações desnecessárias
   const handleNavigationBlocked = useCallback(() => {
