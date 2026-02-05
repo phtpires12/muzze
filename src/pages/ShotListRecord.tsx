@@ -667,7 +667,7 @@ const ShotListRecord = () => {
           scriptTitle={scriptTitle}
           scriptContent={scriptContent}
           onAdvanceToEdit={handleAdvanceToEdit}
-          onBack={handleBackToReview}
+          onBack={handleBackToPreviousStage}
           session={{
             isActive: session.isActive,
             isPaused: session.isPaused,
