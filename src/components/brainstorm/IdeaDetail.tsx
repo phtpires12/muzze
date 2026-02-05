@@ -132,7 +132,7 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
     } finally {
       setSaving(false);
     }
-  }, [title, contentType, centralIdea, referenceUrl, thumbnailUrl, scriptId]);
+  }, [title, contentType, centralIdea, referenceUrl, thumbnailUrl, workflowTemplate, scriptId]);
 
   // Debounced auto-save effect
   useEffect(() => {
