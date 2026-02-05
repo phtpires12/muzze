@@ -59,7 +59,20 @@ export default defineConfig(({ mode }) => ({
         cleanupOutdatedCaches: true,
         // Navigation preload for faster page loads
         navigationPreload: true,
-        runtimeCaching: [
+      runtimeCaching: [
+          // JS/CSS files - buscar do servidor primeiro para evitar cache obsoleto
+          {
+            urlPattern: /\.(js|css)$/,
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "assets-cache",
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 60 * 60 * 2, // 2 horas
+              },
+              networkTimeoutSeconds: 3,
+            }
+          },
           // HTML files - sempre buscar do servidor primeiro
           {
             urlPattern: /\.html$/,

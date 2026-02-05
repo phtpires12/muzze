@@ -11,11 +11,20 @@ export function usePWAUpdate() {
   } = useRegisterSW({
     onRegisteredSW(swUrl, registration) {
       console.log('[PWA] SW registered:', swUrl);
-      // Check for updates every 60 seconds (less aggressive)
+      
       if (registration) {
+        // Check for updates every 30 seconds (more aggressive)
         setInterval(() => {
           registration.update();
-        }, 60 * 1000);
+        }, 30 * 1000);
+        
+        // Check for updates when tab gains focus
+        document.addEventListener('visibilitychange', () => {
+          if (!document.hidden) {
+            console.log('[PWA] Tab focused, checking for updates...');
+            registration.update();
+          }
+        });
       }
     },
     onRegisterError(error) {
@@ -23,16 +32,14 @@ export function usePWAUpdate() {
     },
   });
 
-  // Auto-update when new version is detected
+  // Auto-update immediately when new version is detected
   useEffect(() => {
     if (needRefresh && !autoUpdateTriggeredRef.current) {
       autoUpdateTriggeredRef.current = true;
-      console.log('[PWA] New version detected, auto-updating...');
+      console.log('[PWA] New version detected, forcing immediate update...');
       
-      // Small delay to show the overlay
-      setTimeout(() => {
-        updateServiceWorker(true);
-      }, 500);
+      // Update immediately without delay
+      updateServiceWorker(true);
     }
   }, [needRefresh, updateServiceWorker]);
 
