@@ -1,126 +1,91 @@
 
-# Plano: Shift+Enter para Dividir Shot em Novo Take
+# Plano: Corrigir Divisão de Shots (Shift+Enter)
 
-## Entendimento
+## Problemas Identificados
 
-O usuário quer que **Shift+Enter divida o shot atual em dois shots separados** no ponto do cursor:
-- Texto antes do cursor: permanece no shot atual
-- Texto depois do cursor: vai para um novo shot (com campos vazios de cena, imagem, locação)
+### 1. Offset de 3 caracteres
+A função `splitShotAtCursor` em `ShotListRecord.tsx` (linha 474-475) faz:
+```typescript
+const beforeText = shot.scriptSegment.substring(0, cursorPosition);
+const afterText = shot.scriptSegment.substring(cursorPosition);
+```
 
-A função `splitShotAtCursor` já existe em `ShotListRecord.tsx` (linhas 468-493), mas não está conectada ao `RichTextEditor`.
+O problema é que `scriptSegment` é **HTML** (ex: `<p>2026 vai ser...</p>`), mas `cursorPosition` é a posição no **texto puro**. Os 3 caracteres de diferença são exatamente o `<p>` inicial.
+
+### 2. Código não foi aplicado anteriormente
+O `RichTextEditor` ainda não tem:
+- A prop `onSplitAtCursor`
+- O handler `handleKeyDown` para Shift+Enter
+
+O `ShotListTable.tsx`:
+- Linha 226: ainda usa `(window as any).__resolvedUrls?.get(path)` em vez de `resolvedUrls`
+- Linha 188-194: não passa `onSplitAtCursor` para o editor
 
 ---
 
-## Arquitetura da Solução
+## Solução Técnica
 
-```text
-┌────────────────────────────────────────────────────────────────────┐
-│                        ShotListCard                                │
-│  ┌──────────────────────────────────────────────────────────────┐  │
-│  │  RichTextEditor (Trecho do Roteiro)                          │  │
-│  │                                                              │  │
-│  │  [Usuário pressiona Shift+Enter]                             │  │
-│  │           ↓                                                  │  │
-│  │  handleKeyDown → detecta Shift+Enter                         │  │
-│  │           ↓                                                  │  │
-│  │  Chama onSplitShot(cursorPosition)                           │  │
-│  └──────────────────────────────────────────────────────────────┘  │
-│                          ↓                                         │
-│  Props: onSplitShot(cursorPosition)                                │
-└────────────────────────────────────────────────────────────────────┘
-                          ↓
-┌────────────────────────────────────────────────────────────────────┐
-│                    ShotListRecord                                  │
-│                                                                    │
-│  splitShotAtCursor(shotId, cursorPosition)                         │
-│  - Divide scriptSegment no ponto do cursor                         │
-│  - Cria novo shot com texto restante                               │
-│  - Insere logo após o shot atual                                   │
-└────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## Mudanças Necessárias
-
-### 1. Atualizar `RichTextEditor` para aceitar callback de split
-
-**Arquivo**: `src/components/ui/rich-text-editor.tsx`
-
-Adicionar nova prop `onSplitAtCursor`:
+### 1. Criar helper para dividir HTML na posição de texto
 
 ```typescript
-interface RichTextEditorProps {
-  content: string;
-  onChange: (html: string) => void;
-  placeholder?: string;
-  className?: string;
-  editable?: boolean;
-  minHeight?: string;
-  showMobileLineBreak?: boolean;
-  onSplitAtCursor?: (cursorPosition: number) => void;  // NOVO
-}
-```
-
-Adicionar `handleKeyDown` no `editorProps` para interceptar Shift+Enter:
-
-```typescript
-editorProps: {
-  handleKeyDown: (view, event) => {
-    if (event.key === 'Enter' && event.shiftKey && onSplitAtCursor) {
-      event.preventDefault();
-      
-      // Obter posição do cursor no texto puro (sem HTML)
-      const { from } = view.state.selection;
-      const textBefore = view.state.doc.textBetween(0, from);
-      const cursorPosition = textBefore.length;
-      
-      onSplitAtCursor(cursorPosition);
-      return true;
+function splitHtmlAtTextPosition(html: string, textPosition: number): { before: string; after: string } {
+  // Criar documento temporário
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = html;
+  
+  // Percorrer nós de texto
+  const walker = document.createTreeWalker(tempDiv, NodeFilter.SHOW_TEXT, null);
+  let charCount = 0;
+  let splitNode: Text | null = null;
+  let splitOffset = 0;
+  
+  while (walker.nextNode()) {
+    const textNode = walker.currentNode as Text;
+    const nodeLength = textNode.textContent?.length || 0;
+    
+    if (charCount + nodeLength >= textPosition) {
+      splitNode = textNode;
+      splitOffset = textPosition - charCount;
+      break;
     }
-    return false;
-  },
-  // ... outras props
+    charCount += nodeLength;
+  }
+  
+  if (!splitNode) {
+    return { before: html, after: '' };
+  }
+  
+  // Dividir o nó de texto no ponto correto
+  const afterTextNode = splitNode.splitText(splitOffset);
+  
+  // Reconstruir HTML para "antes" e "depois"
+  const beforeHtml = tempDiv.innerHTML;
+  
+  // Para "depois": criar novo container com texto restante
+  const afterDiv = document.createElement('div');
+  
+  // Mover nós após o ponto de divisão
+  let currentNode: Node | null = afterTextNode;
+  while (currentNode) {
+    const nextNode = currentNode.nextSibling;
+    afterDiv.appendChild(currentNode.cloneNode(true));
+    currentNode = nextNode;
+  }
+  
+  // Envolver em <p> se necessário
+  let afterHtml = afterDiv.innerHTML.trim();
+  if (afterHtml && !afterHtml.startsWith('<p>')) {
+    afterHtml = `<p>${afterHtml}</p>`;
+  }
+  
+  // Limpar HTML "antes" removendo texto após divisão
+  // ... (lógica de limpeza)
+  
+  return { before: beforeHtml, after: afterHtml };
 }
 ```
 
-### 2. Atualizar `ShotListCard` para passar callback
-
-**Arquivo**: `src/components/shotlist/ShotListCard.tsx`
-
-Passar `onSplitAtCursor` para o `RichTextEditor` do campo "Trecho do Roteiro":
-
-```tsx
-<RichTextEditor
-  content={shot.scriptSegment}
-  onChange={handleScriptSegmentChange}
-  placeholder="Trecho do roteiro..."
-  minHeight="120px"
-  onSplitAtCursor={(cursorPosition) => onSplitAtCursor(shot.id, cursorPosition)}
-/>
-```
-
-### 3. Atualizar texto de ajuda
-
-Trocar "Use Shift+Enter para quebrar linha" por "Use Shift+Enter para criar novo take":
-
-```tsx
-<span className="text-xs text-muted-foreground hidden md:inline">
-  Use Shift+Enter para criar novo take
-</span>
-```
-
----
-
-## Desafio: Posição do Cursor em HTML
-
-O conteúdo é HTML (`<p>Texto <strong>negrito</strong></p>`), mas precisamos da posição no texto puro para dividir corretamente.
-
-**Solução**: Usar `view.state.doc.textBetween(0, from)` do ProseMirror para obter apenas o texto até o cursor, ignorando tags HTML.
-
-A função `splitShotAtCursor` em `ShotListRecord.tsx` espera uma posição baseada em texto puro (`shot.scriptSegment.substring()`), mas como o conteúdo é HTML, precisamos ajustar para dividir o HTML corretamente.
-
-**Ajuste na função split**:
+### 2. Atualizar `splitShotAtCursor` em ShotListRecord.tsx
 
 ```typescript
 const splitShotAtCursor = (shotId: string, cursorPosition: number) => {
@@ -130,17 +95,20 @@ const splitShotAtCursor = (shotId: string, cursorPosition: number) => {
 
     const shot = currentShots[shotIndex];
     
-    // Dividir HTML baseado na posição do texto
-    const { beforeHtml, afterHtml } = splitHtmlAtPosition(shot.scriptSegment, cursorPosition);
+    // Usar helper que entende HTML
+    const { before, after } = splitHtmlAtTextPosition(shot.scriptSegment, cursorPosition);
 
-    const updatedShot = { ...shot, scriptSegment: beforeHtml };
+    // Atualizar shot original com texto ANTES do cursor
+    const updatedShot = { ...shot, scriptSegment: before };
+    
+    // Criar novo shot com texto DEPOIS do cursor
     const newShot: ShotItem = {
       id: crypto.randomUUID(),
-      scriptSegment: afterHtml,
-      scene: '',  // Novo take começa com campos vazios
+      scriptSegment: after,
+      scene: '',  // Campos vazios
       shotImagePaths: [],
       location: '',
-      sectionName: shot.sectionName,  // Herda a seção
+      sectionName: shot.sectionName,
       isCompleted: false,
     };
 
@@ -153,67 +121,69 @@ const splitShotAtCursor = (shotId: string, cursorPosition: number) => {
 };
 ```
 
-**Helper para dividir HTML**:
+### 3. Adicionar `onSplitAtCursor` ao RichTextEditor
+
+**Arquivo**: `src/components/ui/rich-text-editor.tsx`
 
 ```typescript
-function splitHtmlAtPosition(html: string, textPosition: number): { beforeHtml: string; afterHtml: string } {
-  const doc = new DOMParser().parseFromString(html, 'text/html');
-  const walker = document.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT, null);
-  
-  let charCount = 0;
-  let splitNode: Text | null = null;
-  let splitOffset = 0;
-  
-  while (walker.nextNode()) {
-    const textNode = walker.currentNode as Text;
-    const nodeLength = textNode.length;
-    
-    if (charCount + nodeLength >= textPosition) {
-      splitNode = textNode;
-      splitOffset = textPosition - charCount;
-      break;
-    }
-    charCount += nodeLength;
-  }
-  
-  if (!splitNode) {
-    return { beforeHtml: html, afterHtml: '' };
-  }
-  
-  // Dividir o nó de texto
-  const afterTextNode = splitNode.splitText(splitOffset);
-  
-  // Clonar estrutura para "depois"
-  const afterBody = doc.body.cloneNode(true) as HTMLElement;
-  
-  // Limpar texto "antes" do clone "depois"
-  // ... (lógica de limpeza de nós)
-  
-  // Serializar ambos
-  const beforeHtml = doc.body.innerHTML;
-  const afterHtml = afterBody.innerHTML;
-  
-  return { beforeHtml: beforeHtml.trim(), afterHtml: afterHtml.trim() };
+interface RichTextEditorProps {
+  // ... props existentes
+  onSplitAtCursor?: (cursorPosition: number) => void;
 }
+
+// No useEditor, adicionar ao editorProps:
+editorProps: {
+  handleKeyDown: (view, event) => {
+    if (event.key === 'Enter' && event.shiftKey && onSplitAtCursor) {
+      event.preventDefault();
+      const { from } = view.state.selection;
+      // Posição baseada em texto puro
+      const textBefore = view.state.doc.textBetween(0, from);
+      onSplitAtCursor(textBefore.length);
+      return true;
+    }
+    return false;
+  },
+  attributes: { /* ... */ },
+}
+```
+
+### 4. Conectar no ShotListTable.tsx
+
+```tsx
+<RichTextEditor
+  content={shot.scriptSegment}
+  onChange={handleScriptSegmentChange}
+  placeholder="Trecho do roteiro..."
+  onSplitAtCursor={(cursorPosition) => onSplitAtCursor(shot.id, cursorPosition)}
+/>
+```
+
+### 5. Corrigir imagens (linha 226)
+
+```typescript
+// ANTES:
+const resolvedUrl = (window as any).__resolvedUrls?.get(path);
+
+// DEPOIS:
+const resolvedUrl = resolvedUrls.get(path);
 ```
 
 ---
 
-## Resumo das Alterações
+## Arquivos a Modificar
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/components/ui/rich-text-editor.tsx` | Adicionar prop `onSplitAtCursor` e handler de Shift+Enter |
-| `src/components/shotlist/ShotListCard.tsx` | Passar callback para RichTextEditor, atualizar texto de ajuda |
-| `src/pages/ShotListRecord.tsx` | Atualizar `splitShotAtCursor` para lidar com HTML |
+| `src/components/ui/rich-text-editor.tsx` | Adicionar prop `onSplitAtCursor` + handler Shift+Enter |
+| `src/components/shotlist/ShotListTable.tsx` | Passar callback + corrigir resolvedUrls |
+| `src/pages/ShotListRecord.tsx` | Criar helper `splitHtmlAtTextPosition` + atualizar `splitShotAtCursor` |
 
 ---
 
-## Critérios de Aceite
+## Resultado Esperado
 
-- [ ] Shift+Enter no campo "Trecho do Roteiro" divide o shot em dois
-- [ ] Texto antes do cursor permanece no shot original
-- [ ] Texto depois do cursor vai para um novo shot abaixo
-- [ ] Novo shot herda apenas a seção (sectionName), demais campos vazios
-- [ ] Texto de ajuda atualizado para "Use Shift+Enter para criar novo take"
-- [ ] Formatação (negrito, itálico) é preservada após a divisão
+- Shift+Enter divide o shot **exatamente** onde o cursor está
+- Texto **antes** do cursor permanece no shot original
+- Texto **depois** do cursor vai para o novo shot (sem duplicação)
+- Imagens de referência carregam corretamente
