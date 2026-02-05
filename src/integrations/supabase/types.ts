@@ -212,9 +212,11 @@ export type Database = {
           content: string | null
           content_type: string | null
           created_at: string
+          editing_notes: string | null
           editing_progress: string[] | null
           editing_times: Json | null
           id: string
+          music_reference: Json | null
           notes: string | null
           original_content: string | null
           publish_date: string | null
@@ -228,6 +230,7 @@ export type Database = {
           title: string
           updated_at: string
           user_id: string
+          video_references: Json | null
           workflow_template: string | null
           workspace_id: string | null
         }
@@ -236,9 +239,11 @@ export type Database = {
           content?: string | null
           content_type?: string | null
           created_at?: string
+          editing_notes?: string | null
           editing_progress?: string[] | null
           editing_times?: Json | null
           id?: string
+          music_reference?: Json | null
           notes?: string | null
           original_content?: string | null
           publish_date?: string | null
@@ -252,6 +257,7 @@ export type Database = {
           title: string
           updated_at?: string
           user_id: string
+          video_references?: Json | null
           workflow_template?: string | null
           workspace_id?: string | null
         }
@@ -260,9 +266,11 @@ export type Database = {
           content?: string | null
           content_type?: string | null
           created_at?: string
+          editing_notes?: string | null
           editing_progress?: string[] | null
           editing_times?: Json | null
           id?: string
+          music_reference?: Json | null
           notes?: string | null
           original_content?: string | null
           publish_date?: string | null
@@ -276,6 +284,7 @@ export type Database = {
           title?: string
           updated_at?: string
           user_id?: string
+          video_references?: Json | null
           workflow_template?: string | null
           workspace_id?: string | null
         }
