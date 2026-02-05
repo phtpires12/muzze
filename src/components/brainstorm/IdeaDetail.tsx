@@ -119,6 +119,7 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
           central_idea: centralIdea || null,
           reference_url: referenceUrl || null,
           thumbnail_url: thumbnailUrl,
+          workflow_template: workflowTemplate,
         })
         .eq("id", scriptId);
 
