@@ -425,7 +425,7 @@ const ShotListRecord = () => {
         .eq('id', scriptId);
       
       const url = getNextStageUrl('recording', currentTemplate, scriptId!);
-      navigate(url || `/session?stage=edit&scriptId=${scriptId}`);
+      navigate(url || `/editing-workspace?scriptId=${scriptId}`);
     }
   };
 
