@@ -1,94 +1,219 @@
 
+# Plano: Shift+Enter para Dividir Shot em Novo Take
 
-# Plano: Corrigir Imagens Quebradas e Shift+Enter no ShotListRecord
+## Entendimento
 
-## Problema 1: Imagem de Referência Não Carrega
+O usuário quer que **Shift+Enter divida o shot atual em dois shots separados** no ponto do cursor:
+- Texto antes do cursor: permanece no shot atual
+- Texto depois do cursor: vai para um novo shot (com campos vazios de cena, imagem, locação)
 
-### Diagnóstico
-No arquivo `src/components/shotlist/ShotListTable.tsx` (linha 226), o código tenta buscar a URL resolvida usando uma variável global inexistente:
-
-```typescript
-const resolvedUrl = (window as any).__resolvedUrls?.get(path);
-```
-
-No entanto, a prop `resolvedUrls` é passada corretamente para o componente mas **não está sendo usada**. Esta é a fonte do bug - a imagem sempre mostra o `path` bruto (que não é uma URL válida) em vez da signed URL resolvida.
-
-### Solução
-Corrigir a linha 226 para usar a prop `resolvedUrls` que já é passada corretamente:
-
-```typescript
-// ANTES (errado):
-const resolvedUrl = (window as any).__resolvedUrls?.get(path);
-
-// DEPOIS (correto):
-const resolvedUrl = resolvedUrls.get(path);
-```
-
-### Arquivo a Modificar
-| Arquivo | Alteração |
-|---------|-----------|
-| `src/components/shotlist/ShotListTable.tsx` | Linha 226: substituir `(window as any).__resolvedUrls?.get(path)` por `resolvedUrls.get(path)` |
+A função `splitShotAtCursor` já existe em `ShotListRecord.tsx` (linhas 468-493), mas não está conectada ao `RichTextEditor`.
 
 ---
 
-## Problema 2: Shift+Enter Não Funciona para Quebrar Linha
+## Arquitetura da Solução
 
-### Diagnóstico
-O TipTap com StarterKit deveria suportar `Shift+Enter` para inserir um `hardBreak` (quebra de linha sem novo parágrafo) por padrão. No entanto, o comportamento atual está criando um novo parágrafo em vez de uma quebra de linha.
-
-O problema é que o StarterKit **inclui a extensão HardBreak por padrão**, mas pode haver conflito com outras extensões (GlobalDragHandle, AutoJoiner, NotionListKeymap) que estão interceptando o evento de teclado.
-
-### Solução
-Adicionar configuração explícita do `HardBreak` no StarterKit com shortcut garantido:
-
-```typescript
-StarterKit.configure({
-  // ... outras configs
-  hardBreak: {
-    keepMarks: true,  // Mantém formatação após quebra de linha
-  },
-}),
+```text
+┌────────────────────────────────────────────────────────────────────┐
+│                        ShotListCard                                │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │  RichTextEditor (Trecho do Roteiro)                          │  │
+│  │                                                              │  │
+│  │  [Usuário pressiona Shift+Enter]                             │  │
+│  │           ↓                                                  │  │
+│  │  handleKeyDown → detecta Shift+Enter                         │  │
+│  │           ↓                                                  │  │
+│  │  Chama onSplitShot(cursorPosition)                           │  │
+│  └──────────────────────────────────────────────────────────────┘  │
+│                          ↓                                         │
+│  Props: onSplitShot(cursorPosition)                                │
+└────────────────────────────────────────────────────────────────────┘
+                          ↓
+┌────────────────────────────────────────────────────────────────────┐
+│                    ShotListRecord                                  │
+│                                                                    │
+│  splitShotAtCursor(shotId, cursorPosition)                         │
+│  - Divide scriptSegment no ponto do cursor                         │
+│  - Cria novo shot com texto restante                               │
+│  - Insere logo após o shot atual                                   │
+└────────────────────────────────────────────────────────────────────┘
 ```
 
-Além disso, criar um handler de teclado customizado para garantir que Shift+Enter sempre funcione:
+---
+
+## Mudanças Necessárias
+
+### 1. Atualizar `RichTextEditor` para aceitar callback de split
+
+**Arquivo**: `src/components/ui/rich-text-editor.tsx`
+
+Adicionar nova prop `onSplitAtCursor`:
+
+```typescript
+interface RichTextEditorProps {
+  content: string;
+  onChange: (html: string) => void;
+  placeholder?: string;
+  className?: string;
+  editable?: boolean;
+  minHeight?: string;
+  showMobileLineBreak?: boolean;
+  onSplitAtCursor?: (cursorPosition: number) => void;  // NOVO
+}
+```
+
+Adicionar `handleKeyDown` no `editorProps` para interceptar Shift+Enter:
 
 ```typescript
 editorProps: {
   handleKeyDown: (view, event) => {
-    // Garantir que Shift+Enter insere hardBreak
-    if (event.key === 'Enter' && event.shiftKey) {
-      view.dispatch(
-        view.state.tr.replaceSelectionWith(
-          view.state.schema.nodes.hardBreak.create()
-        )
-      );
+    if (event.key === 'Enter' && event.shiftKey && onSplitAtCursor) {
+      event.preventDefault();
+      
+      // Obter posição do cursor no texto puro (sem HTML)
+      const { from } = view.state.selection;
+      const textBefore = view.state.doc.textBetween(0, from);
+      const cursorPosition = textBefore.length;
+      
+      onSplitAtCursor(cursorPosition);
       return true;
     }
     return false;
   },
+  // ... outras props
 }
 ```
 
-### Arquivo a Modificar
-| Arquivo | Alteração |
-|---------|-----------|
-| `src/components/ui/rich-text-editor.tsx` | Adicionar `handleKeyDown` no `editorProps` para interceptar Shift+Enter |
+### 2. Atualizar `ShotListCard` para passar callback
+
+**Arquivo**: `src/components/shotlist/ShotListCard.tsx`
+
+Passar `onSplitAtCursor` para o `RichTextEditor` do campo "Trecho do Roteiro":
+
+```tsx
+<RichTextEditor
+  content={shot.scriptSegment}
+  onChange={handleScriptSegmentChange}
+  placeholder="Trecho do roteiro..."
+  minHeight="120px"
+  onSplitAtCursor={(cursorPosition) => onSplitAtCursor(shot.id, cursorPosition)}
+/>
+```
+
+### 3. Atualizar texto de ajuda
+
+Trocar "Use Shift+Enter para quebrar linha" por "Use Shift+Enter para criar novo take":
+
+```tsx
+<span className="text-xs text-muted-foreground hidden md:inline">
+  Use Shift+Enter para criar novo take
+</span>
+```
 
 ---
 
-## Resumo das Mudanças
+## Desafio: Posição do Cursor em HTML
 
-| Problema | Arquivo | Correção |
-|----------|---------|----------|
-| Imagem quebrada | `ShotListTable.tsx` | Usar prop `resolvedUrls` em vez de `window.__resolvedUrls` |
-| Shift+Enter | `rich-text-editor.tsx` | Adicionar handler de teclado para garantir hardBreak |
+O conteúdo é HTML (`<p>Texto <strong>negrito</strong></p>`), mas precisamos da posição no texto puro para dividir corretamente.
+
+**Solução**: Usar `view.state.doc.textBetween(0, from)` do ProseMirror para obter apenas o texto até o cursor, ignorando tags HTML.
+
+A função `splitShotAtCursor` em `ShotListRecord.tsx` espera uma posição baseada em texto puro (`shot.scriptSegment.substring()`), mas como o conteúdo é HTML, precisamos ajustar para dividir o HTML corretamente.
+
+**Ajuste na função split**:
+
+```typescript
+const splitShotAtCursor = (shotId: string, cursorPosition: number) => {
+  setShots(currentShots => {
+    const shotIndex = currentShots.findIndex(s => s.id === shotId);
+    if (shotIndex === -1) return currentShots;
+
+    const shot = currentShots[shotIndex];
+    
+    // Dividir HTML baseado na posição do texto
+    const { beforeHtml, afterHtml } = splitHtmlAtPosition(shot.scriptSegment, cursorPosition);
+
+    const updatedShot = { ...shot, scriptSegment: beforeHtml };
+    const newShot: ShotItem = {
+      id: crypto.randomUUID(),
+      scriptSegment: afterHtml,
+      scene: '',  // Novo take começa com campos vazios
+      shotImagePaths: [],
+      location: '',
+      sectionName: shot.sectionName,  // Herda a seção
+      isCompleted: false,
+    };
+
+    const newShots = [...currentShots];
+    newShots[shotIndex] = updatedShot;
+    newShots.splice(shotIndex + 1, 0, newShot);
+
+    return newShots;
+  });
+};
+```
+
+**Helper para dividir HTML**:
+
+```typescript
+function splitHtmlAtPosition(html: string, textPosition: number): { beforeHtml: string; afterHtml: string } {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const walker = document.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT, null);
+  
+  let charCount = 0;
+  let splitNode: Text | null = null;
+  let splitOffset = 0;
+  
+  while (walker.nextNode()) {
+    const textNode = walker.currentNode as Text;
+    const nodeLength = textNode.length;
+    
+    if (charCount + nodeLength >= textPosition) {
+      splitNode = textNode;
+      splitOffset = textPosition - charCount;
+      break;
+    }
+    charCount += nodeLength;
+  }
+  
+  if (!splitNode) {
+    return { beforeHtml: html, afterHtml: '' };
+  }
+  
+  // Dividir o nó de texto
+  const afterTextNode = splitNode.splitText(splitOffset);
+  
+  // Clonar estrutura para "depois"
+  const afterBody = doc.body.cloneNode(true) as HTMLElement;
+  
+  // Limpar texto "antes" do clone "depois"
+  // ... (lógica de limpeza de nós)
+  
+  // Serializar ambos
+  const beforeHtml = doc.body.innerHTML;
+  const afterHtml = afterBody.innerHTML;
+  
+  return { beforeHtml: beforeHtml.trim(), afterHtml: afterHtml.trim() };
+}
+```
+
+---
+
+## Resumo das Alterações
+
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/components/ui/rich-text-editor.tsx` | Adicionar prop `onSplitAtCursor` e handler de Shift+Enter |
+| `src/components/shotlist/ShotListCard.tsx` | Passar callback para RichTextEditor, atualizar texto de ajuda |
+| `src/pages/ShotListRecord.tsx` | Atualizar `splitShotAtCursor` para lidar com HTML |
 
 ---
 
 ## Critérios de Aceite
 
-- [ ] Imagens de referência carregam corretamente no ShotListRecord
-- [ ] Imagens aparecem como thumbnail na galeria de edição
-- [ ] Shift+Enter cria quebra de linha (não novo parágrafo)
-- [ ] Botão mobile "Nova linha" continua funcionando
-
+- [ ] Shift+Enter no campo "Trecho do Roteiro" divide o shot em dois
+- [ ] Texto antes do cursor permanece no shot original
+- [ ] Texto depois do cursor vai para um novo shot abaixo
+- [ ] Novo shot herda apenas a seção (sectionName), demais campos vazios
+- [ ] Texto de ajuda atualizado para "Use Shift+Enter para criar novo take"
+- [ ] Formatação (negrito, itálico) é preservada após a divisão
