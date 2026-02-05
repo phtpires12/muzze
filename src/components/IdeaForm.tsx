@@ -30,6 +30,7 @@ export const IdeaForm = ({ scriptId }: IdeaFormProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { activeWorkspace } = useWorkspaceContext();
+  const { profile } = useProfileContext();
   const planCapabilities = usePlanCapabilitiesOptional();
   
   const [title, setTitle] = useState("");
