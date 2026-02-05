@@ -200,13 +200,16 @@ const ShotListReview = () => {
     try {
       const { data, error } = await supabase
         .from('scripts')
-        .select('title, shot_list')
+        .select('title, shot_list, workflow_template')
         .eq('id', scriptId)
         .single();
 
       if (error) throw error;
 
       setScriptTitle(data.title);
+      
+      // Load workflow template for dynamic navigation
+      setScriptWorkflow(data.workflow_template as WorkflowTemplateId | null);
 
       if (data.shot_list && Array.isArray(data.shot_list) && data.shot_list.length > 0) {
         let needsMigration = false;
