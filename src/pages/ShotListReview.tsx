@@ -681,7 +681,7 @@ const ShotListReview = () => {
               {isSaving ? 'Salvando...' : hasUnsavedChanges ? '● Salvar' : 'Salvo ✓'}
             </Button>
             <Button
-              onClick={handleAdvanceToRecord}
+              onClick={handleAdvanceToNextStage}
               disabled={isSaving}
               size="sm"
               className="flex-1"
