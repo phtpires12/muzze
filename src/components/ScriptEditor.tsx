@@ -245,6 +245,9 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
         // Check if shot_list exists
         setHasShotList(data.shot_list && Array.isArray(data.shot_list) && data.shot_list.length > 0);
         
+        // Load workflow template for dynamic navigation
+        setScriptWorkflow(data.workflow_template as WorkflowTemplateId | null);
+        
         setIsLoaded(true);
       }
     } catch (error) {
