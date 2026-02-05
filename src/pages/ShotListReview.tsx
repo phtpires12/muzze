@@ -43,6 +43,12 @@ const ShotListReview = () => {
   const [lastSavedShots, setLastSavedShots] = useState<ShotItem[]>([]);
   const [galleryOpenShotId, setGalleryOpenShotId] = useState<string | null>(null);
   
+  // Workflow template state
+  const [scriptWorkflow, setScriptWorkflow] = useState<WorkflowTemplateId | null>(null);
+  const { nextStage, currentTemplate, isStageIncluded } = useWorkflowTemplate({ scriptWorkflow });
+  const [lastSavedShots, setLastSavedShots] = useState<ShotItem[]>([]);
+  const [galleryOpenShotId, setGalleryOpenShotId] = useState<string | null>(null);
+  
   // Sync modal state
   const [showSyncModal, setShowSyncModal] = useState(false);
   const [syncChanges, setSyncChanges] = useState<{
