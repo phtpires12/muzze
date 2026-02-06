@@ -137,8 +137,8 @@ function SceneCard({ shot, index, resolvedUrl, onUpdateShot }: SceneCardProps) {
           <div className="pt-2 border-t border-border">
             {shot.videoUrl ? (
               /* Has video linked */
-              <div className="flex items-center gap-2 p-2 rounded-lg bg-green-500/10 border border-green-500/20">
-                <div className="flex items-center gap-1.5 text-green-600 dark:text-green-400 flex-1 min-w-0">
+              <div className="flex items-center gap-2 p-2 rounded-lg bg-primary/10 border border-primary/20">
+                <div className="flex items-center gap-1.5 text-primary flex-1 min-w-0">
                   {getVideoTypeIcon(shot.videoType || 'other')}
                   <span className="text-xs font-medium truncate">
                     {getVideoTypeLabel(shot.videoType || 'other')}
