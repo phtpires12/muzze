@@ -353,12 +353,6 @@ export default function EditingWorkspace() {
             resolvedUrls={resolvedUrls}
           />
 
-          {/* Video References Panel */}
-          <VideoReferencesPanel
-            references={script.video_references || []}
-            onAdd={handleAddVideoRef}
-            onRemove={handleRemoveVideoRef}
-          />
 
           {/* Music Panel */}
           <MusicPanel
