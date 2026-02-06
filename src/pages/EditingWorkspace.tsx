@@ -106,12 +106,26 @@ export default function EditingWorkspace() {
     loadScript();
   }, [scriptId, navigate, toast]);
 
-  // Convert shot_list strings to ShotItem objects
-  const shots: ShotItem[] = (script?.shot_list || []).map((desc, index) => ({
-    id: `shot-${index}`,
-    description: desc,
-    order: index,
-  }));
+  // Convert shot_list to ShotItem objects (handles both string and object formats)
+  const shots: ShotItem[] = (script?.shot_list || []).map((item: any, index) => {
+    // Legacy format: simple string
+    if (typeof item === 'string') {
+      return {
+        id: `shot-${index}`,
+        description: item,
+        order: index,
+      };
+    }
+    
+    // Current format: object with scriptSegment, shotImagePaths, location, etc.
+    return {
+      id: item.id || `shot-${index}`,
+      description: item.scriptSegment || item.description || '',
+      imageUrl: item.shotImagePaths?.[0] || undefined,
+      location: item.location || undefined,
+      order: index,
+    };
+  });
 
   // Save handlers
   const saveVideoReferences = useCallback(async (refs: VideoReference[]) => {
