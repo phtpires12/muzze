@@ -140,7 +140,10 @@ function SceneCard({ shot, index, resolvedUrl, onUpdateShot, onClick }: SceneCar
           </p>
 
           {/* Video Link Section */}
-          <div className="pt-2 border-t border-border">
+          <div 
+            className="pt-2 border-t border-border"
+            onClick={(e) => e.stopPropagation()}
+          >
             {shot.videoUrl ? (
               /* Has video linked */
               <div className="flex items-center gap-2 p-2 rounded-lg bg-primary/10 border border-primary/20">
