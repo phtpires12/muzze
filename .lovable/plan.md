@@ -1,103 +1,155 @@
 
-# Plano: Corrigir Exibição de JSON Bruto na Mesa de Edição (Shotlist)
+# Plano: Galeria Estilo Notion com Cards 16:9 e Vinculação de Vídeos
 
-## Problema Identificado
+## Visão Geral
 
-O JSON bruto aparece nos cards da Shotlist porque o código trata os dados como strings simples, mas eles são **objetos complexos** salvos no banco.
+Transformar a `ShotlistPanel` atual (lista vertical) em uma galeria horizontal estilo Notion com cards 16:9, scroll horizontal com snap, e a capacidade de vincular arquivos de vídeo a cada cena individualmente.
 
-### Evidência
-
-Screenshot mostra: `{"id":"acc819fe-1eb5-471a-b567...","scriptSegment":"<p>2026 vai ser o ano...`
-
-Este é o objeto completo da shotlist sendo renderizado como texto.
-
-## Causa Raiz
+## O Que Será Construído
 
 ```text
-┌────────────────────────────────────────────────────┐
-│  Banco de Dados (shot_list)                        │
-│  Array de OBJETOS:                                 │
-│  [{id, scriptSegment, scene, shotImagePaths,...}]  │
-└───────────────────┬────────────────────────────────┘
-                    │
-                    ▼
-┌────────────────────────────────────────────────────┐
-│  EditingWorkspace.tsx (linha 110-114)              │
-│                                                    │
-│  const shots = (script?.shot_list || [])           │
-│    .map((desc, index) => ({                        │
-│       description: desc,  ← ERRO: desc é objeto!   │
-│    }));                                            │
-└───────────────────┬────────────────────────────────┘
-                    │
-                    ▼
-┌────────────────────────────────────────────────────┐
-│  ShotlistPanel.tsx (linha 154)                     │
-│                                                    │
-│  <p>{shot.description}</p>                         │
-│  ↓                                                 │
-│  Renderiza: {"id":"...", "scriptSegment":"..."}    │
-└────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────┐
+│  📹 Shotlist Gallery                                        [12 cenas]       │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ◀ ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐ ┌──────────  ▶│
+│    │   ┌─────────┐   │ │   ┌─────────┐   │ │   ┌─────────┐   │ │   ...      │
+│    │   │  16:9   │   │ │   │  Imagem │   │ │   │Placeholder│  │ │           │
+│    │   │Thumbnail│   │ │   │   Ref   │   │ │   │   Cinza  │  │ │           │
+│    │   └─────────┘   │ │   └─────────┘   │ │   └─────────┘   │ │           │
+│    │                 │ │                 │ │                 │ │           │
+│    │ "2026 vai ser...│ │ "Você já tá...  │ │ "Oi eu sou o..." │ │           │
+│    │                 │ │                 │ │                 │ │           │
+│    │ [📍 Estúdio]    │ │ [📍 Externa]    │ │                 │ │           │
+│    │                 │ │                 │ │                 │ │           │
+│    │ ┌─────────────┐ │ │ ┌─────────────┐ │ │ ┌─────────────┐ │ │           │
+│    │ │🎬 Vincular  │ │ │ │✅ Take 2    │ │ │ │🎬 Vincular  │ │ │           │
+│    │ │   Vídeo     │ │ │ │  drive.com  │ │ │ │   Vídeo     │ │ │           │
+│    │ └─────────────┘ │ │ └─────────────┘ │ │ └─────────────┘ │ │           │
+│    └─────────────────┘ └─────────────────┘ └─────────────────┘ └──────────  │
+│                                                                              │
+│     ○  ●  ○  ○  ○  ○  ○  ○  ○  ○  ○  ○   (12 dots de navegação)             │
+└──────────────────────────────────────────────────────────────────────────────┘
 ```
-
-## Solução
-
-Corrigir o mapeamento em `EditingWorkspace.tsx` para extrair o campo `scriptSegment` do objeto:
-
-```typescript
-// ANTES (errado):
-const shots: ShotItem[] = (script?.shot_list || []).map((desc, index) => ({
-  id: `shot-${index}`,
-  description: desc,  // desc é objeto, não string
-  order: index,
-}));
-
-// DEPOIS (correto):
-const shots: ShotItem[] = (script?.shot_list || []).map((item: any, index) => {
-  // Se item for string (formato antigo), usar direto
-  if (typeof item === 'string') {
-    return {
-      id: `shot-${index}`,
-      description: item,
-      order: index,
-    };
-  }
-  
-  // Se item for objeto (formato atual), extrair campos
-  return {
-    id: item.id || `shot-${index}`,
-    description: item.scriptSegment || item.description || '',
-    imageUrl: item.shotImagePaths?.[0] || undefined,
-    location: item.location || undefined,
-    order: index,
-  };
-});
-```
-
----
 
 ## Arquivos a Modificar
 
-| Arquivo | Alteração |
-|---------|-----------|
-| `src/pages/EditingWorkspace.tsx` | Corrigir mapeamento de `shot_list` para extrair `scriptSegment` corretamente |
+| Arquivo | Ação | Descrição |
+|---------|------|-----------|
+| `src/components/editing/ShotlistPanel.tsx` | **Reescrever** | Nova galeria horizontal com cards 16:9 |
+| `src/lib/shotlist-generator.ts` | Modificar | Adicionar campo `videoUrl` à interface |
+| `src/pages/EditingWorkspace.tsx` | Modificar | Propagar `videoUrl` no mapeamento e salvar alterações |
 
----
+## Detalhamento Técnico
 
-## Por que isso não é cache
+### 1. Atualizar Interface ShotItem
 
-O código que você está vendo **já é o código correto** no repositório - o problema é que o **mapeamento de dados** está errado. Não importa quantas vezes você limpe o cache, o bug vai continuar porque está na lógica do código, não no cache.
+```typescript
+// src/lib/shotlist-generator.ts
+export interface ShotItem {
+  id: string;
+  scriptSegment: string;
+  scene: string;
+  shotImagePaths: string[];
+  shotImageUrls?: string[];   // DEPRECADO
+  location: string;
+  sectionName?: string;
+  isCompleted?: boolean;
+  videoUrl?: string;          // NOVO: Link do vídeo gravado (Drive/Dropbox/YouTube)
+  videoType?: 'google_drive' | 'dropbox' | 'youtube' | 'other'; // NOVO
+}
+```
 
-A razão pela qual "funcionava antes" pode ser:
-1. Os dados antigos eram salvos como strings simples
-2. Os dados novos são salvos como objetos completos
-3. O código não foi atualizado para lidar com o novo formato
+### 2. Nova Estrutura do ShotlistPanel
 
----
+O componente será completamente reestruturado para:
+
+- **Layout Horizontal**: Usar `overflow-x-auto` + `snap-x snap-mandatory`
+- **Cards 16:9**: Cada card terá `aspect-video` para manter proporção
+- **Largura Fixa**: Cards com `w-[280px] sm:w-[320px]` para garantir scroll
+- **Thumbnail**: Exibir imagem de referência ou placeholder cinza
+- **Texto Condensado**: Trecho do script com `line-clamp-2`
+- **Badge de Locação**: Pequeno badge no canto do card
+- **Botão de Vídeo**: Área para vincular/exibir link do vídeo gravado
+
+### 3. Vinculação de Vídeo Inline
+
+Cada card terá um botão/input para vincular vídeo:
+
+```text
+┌────────────────────────────────┐
+│  Se NÃO tem vídeo:             │
+│  ┌──────────────────────────┐  │
+│  │ 🎬 + Vincular Vídeo      │  │
+│  │  (abre modal/input)      │  │
+│  └──────────────────────────┘  │
+├────────────────────────────────┤
+│  Se TEM vídeo:                 │
+│  ┌──────────────────────────┐  │
+│  │ ✅ Take 1              🔗│  │
+│  │    drive.google.com      │  │
+│  │              [x remover] │  │
+│  └──────────────────────────┘  │
+└────────────────────────────────┘
+```
+
+### 4. Salvar videoUrl no Banco
+
+O `shot_list` já é um JSONB array no banco. Apenas adicionaremos o campo `videoUrl` aos objetos existentes. Não precisa de migração SQL.
+
+Fluxo:
+1. Usuário cola link no card
+2. Sistema detecta tipo (Drive, Dropbox, YouTube)
+3. Atualiza o objeto no array `shot_list`
+4. Salva todo o array atualizado via Supabase
+
+### 5. Componentes UI Utilizados
+
+- **embla-carousel-react**: Já instalado, usado para scroll horizontal suave
+- **AspectRatio**: Componente Radix já disponível para 16:9
+- **ScrollArea**: Alternativa se preferir scroll nativo
+
+## Fluxo de Dados
+
+```text
+                    ┌─────────────────────────────────────────┐
+                    │           shot_list (JSONB)             │
+                    │  [{id, scriptSegment, videoUrl, ...}]   │
+                    └─────────────────┬───────────────────────┘
+                                      │
+                                      ▼
+              ┌───────────────────────────────────────────────┐
+              │           EditingWorkspace.tsx                │
+              │  - Carrega shot_list do banco                 │
+              │  - Mapeia para ShotItem[] com videoUrl        │
+              │  - Passa handleUpdateShot para ShotlistPanel  │
+              └───────────────────────┬───────────────────────┘
+                                      │
+                                      ▼
+              ┌───────────────────────────────────────────────┐
+              │           ShotlistPanel.tsx                   │
+              │  - Renderiza galeria horizontal               │
+              │  - Cada card exibe: thumbnail, texto, vídeo   │
+              │  - onVideoLink → atualiza shot e salva        │
+              └───────────────────────────────────────────────┘
+```
+
+## O Que Vai Mudar Visualmente
+
+| Antes | Depois |
+|-------|--------|
+| Lista vertical simples | Galeria horizontal com scroll |
+| Cards pequenos lado a lado | Cards grandes 16:9 com snap |
+| Sem vídeo vinculado | Cada cena pode ter seu vídeo |
+| Filtros complexos | Interface limpa focada em visualização |
 
 ## Resultado Esperado
 
-- Cards da Shotlist mostrarão o **texto do roteiro** (`scriptSegment`) ao invés do JSON bruto
-- Imagens de referência (`shotImagePaths`) serão exibidas quando disponíveis
-- Locação será exibida como badge
-- Compatibilidade com dados antigos (strings) e novos (objetos)
+1. A Mesa de Edição exibirá uma galeria horizontal bonita estilo Notion
+2. Cada cena aparece como um card 16:9 com thumbnail (imagem ou placeholder)
+3. O texto do roteiro aparece condensado abaixo da thumbnail
+4. Badges de locação aparecem quando definidos
+5. Botão para vincular vídeo permite associar links do Google Drive, Dropbox ou YouTube
+6. Ao vincular, o botão muda para exibir o link e permitir abrir/remover
+7. Scroll horizontal suave com snap para navegar entre cenas
+8. Indicadores de posição (dots) mostram qual cena está ativa
