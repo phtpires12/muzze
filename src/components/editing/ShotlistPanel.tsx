@@ -22,6 +22,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ShotItem } from "@/lib/shotlist-generator";
 import { stripHtml } from "@/lib/shot-list-parser";
+import { SceneDetailModal } from "./SceneDetailModal";
 
 interface ShotlistPanelProps {
   shots: ShotItem[];
