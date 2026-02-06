@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ShotItem } from "@/lib/shotlist-generator";
+import { stripHtml } from "@/lib/shot-list-parser";
 
 interface ShotlistPanelProps {
   shots: ShotItem[];
