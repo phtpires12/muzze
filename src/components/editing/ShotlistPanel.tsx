@@ -88,8 +88,11 @@ function SceneCard({ shot, index, resolvedUrl, onUpdateShot, onClick }: SceneCar
   const thumbnailUrl = resolvedUrl || (shot.shotImagePaths?.[0] ? undefined : undefined);
 
   return (
-    <div className="flex-shrink-0 w-[280px] sm:w-[320px] snap-center">
-      <Card className="overflow-hidden border border-border bg-card h-full">
+    <div 
+      className="flex-shrink-0 w-[280px] sm:w-[320px] snap-center cursor-pointer group"
+      onClick={onClick}
+    >
+      <Card className="overflow-hidden border border-border bg-card h-full transition-shadow group-hover:shadow-lg group-hover:border-primary/30">
         {/* 16:9 Thumbnail Area */}
         <AspectRatio ratio={16 / 9} className="bg-muted">
           {thumbnailUrl ? (
