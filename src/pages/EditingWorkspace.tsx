@@ -38,6 +38,7 @@ export default function EditingWorkspace() {
   const [script, setScript] = useState<ScriptData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [resolvedUrls, setResolvedUrls] = useState<Record<string, string>>({});
   
   // Session for optional timer
   const { session, startSession, pauseSession, resumeSession, endSession, saveCurrentStageTime } = useSession({
