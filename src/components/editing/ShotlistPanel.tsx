@@ -61,7 +61,7 @@ interface SceneCardProps {
   onClick?: () => void;
 }
 
-function SceneCard({ shot, index, resolvedUrl, onUpdateShot }: SceneCardProps) {
+function SceneCard({ shot, index, resolvedUrl, onUpdateShot, onClick }: SceneCardProps) {
   const [isLinking, setIsLinking] = useState(false);
   const [linkInput, setLinkInput] = useState('');
 
