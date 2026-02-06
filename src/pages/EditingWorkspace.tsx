@@ -16,6 +16,7 @@ import { CompleteEditingButton } from "@/components/editing/CompleteEditingButto
 import { useWorkflowTemplate, getPrevStageUrl } from "@/hooks/useWorkflowTemplate";
 import { WorkflowTemplateId, getStageLabel } from "@/lib/workflow-templates";
 import { ShotItem } from "@/lib/shotlist-generator";
+import { generateSignedUrlsBatch } from "@/lib/storage-helpers";
 import { cn } from "@/lib/utils";
 
 interface ScriptData {
