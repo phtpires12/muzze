@@ -9,7 +9,7 @@ import { useSession } from "@/hooks/useSession";
 import { DraggableSessionTimer } from "@/components/DraggableSessionTimer";
 import { AutoHideNav } from "@/components/AutoHideNav";
 import { ShotlistPanel } from "@/components/editing/ShotlistPanel";
-import { VideoReferencesPanel, VideoReference } from "@/components/editing/VideoReferencesPanel";
+
 import { MusicPanel, MusicReference } from "@/components/editing/MusicPanel";
 import { EditingNotesPanel } from "@/components/editing/EditingNotesPanel";
 import { CompleteEditingButton } from "@/components/editing/CompleteEditingButton";
@@ -24,7 +24,7 @@ interface ScriptData {
   id: string;
   title: string;
   shot_list: string[] | null;
-  video_references: VideoReference[] | null;
+  
   music_reference: MusicReference | null;
   editing_notes: string | null;
 }
@@ -119,7 +119,6 @@ export default function EditingWorkspace() {
         id: data.id,
         title: data.title,
         shot_list: data.shot_list,
-        video_references: scriptWithNewFields.video_references || [],
         music_reference: scriptWithNewFields.music_reference || null,
         editing_notes: scriptWithNewFields.editing_notes || '',
       });
@@ -177,31 +176,6 @@ export default function EditingWorkspace() {
   }, [scriptId, script?.shot_list]);
 
   // Save handlers
-  const saveVideoReferences = useCallback(async (refs: VideoReference[]) => {
-    if (!scriptId) return;
-    setSaving(true);
-    await supabase
-      .from('scripts')
-      .update({ video_references: refs as any })
-      .eq('id', scriptId);
-    setScript(prev => prev ? { ...prev, video_references: refs } : null);
-    setSaving(false);
-  }, [scriptId]);
-
-  const handleAddVideoRef = useCallback((ref: Omit<VideoReference, 'id' | 'addedAt'>) => {
-    const newRef: VideoReference = {
-      ...ref,
-      id: crypto.randomUUID(),
-      addedAt: new Date().toISOString(),
-    };
-    const updated = [...(script?.video_references || []), newRef];
-    saveVideoReferences(updated);
-  }, [script?.video_references, saveVideoReferences]);
-
-  const handleRemoveVideoRef = useCallback((id: string) => {
-    const updated = (script?.video_references || []).filter(r => r.id !== id);
-    saveVideoReferences(updated);
-  }, [script?.video_references, saveVideoReferences]);
 
   const handleSaveMusic = useCallback(async (music: MusicReference | null) => {
     if (!scriptId) return;
@@ -353,12 +327,6 @@ export default function EditingWorkspace() {
             resolvedUrls={resolvedUrls}
           />
 
-          {/* Video References Panel */}
-          <VideoReferencesPanel
-            references={script.video_references || []}
-            onAdd={handleAddVideoRef}
-            onRemove={handleRemoveVideoRef}
-          />
 
           {/* Music Panel */}
           <MusicPanel
