@@ -276,17 +276,13 @@ export function ShotlistPanel({
 
                 {/* Navigation Dots */}
                 <div className="flex justify-center gap-1.5 pt-2">
-                  {shots.slice(0, 12).map((shot, index) => (
+                  {shots.slice(0, 12).map((shot) => (
                     <div 
                       key={shot.id}
                       className={cn(
                         "w-2 h-2 rounded-full transition-colors",
                         shot.videoUrl 
                           ? "bg-primary" 
-                          : "bg-muted-foreground/30"
-                      )}
-                    />
-                  ))}
                           : "bg-muted-foreground/30"
                       )}
                     />
