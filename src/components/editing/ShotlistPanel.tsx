@@ -323,6 +323,18 @@ export function ShotlistPanel({
           </div>
         </CollapsibleContent>
       </Card>
+
+      {/* Scene Detail Modal */}
+      <SceneDetailModal
+        shot={selectedShot}
+        isOpen={selectedSceneIndex !== null}
+        onClose={() => setSelectedSceneIndex(null)}
+        onUpdateShot={onUpdateShot}
+        resolvedUrl={selectedResolvedUrl}
+        currentIndex={selectedSceneIndex ?? 0}
+        totalScenes={shots.length}
+        onNavigate={handleNavigate}
+      />
     </Collapsible>
   );
 }
