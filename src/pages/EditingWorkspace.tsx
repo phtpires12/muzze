@@ -17,6 +17,7 @@ import { useWorkflowTemplate, getPrevStageUrl } from "@/hooks/useWorkflowTemplat
 import { WorkflowTemplateId, getStageLabel } from "@/lib/workflow-templates";
 import { ShotItem } from "@/lib/shotlist-generator";
 import { generateSignedUrlsBatch } from "@/lib/storage-helpers";
+import { parseShotList } from "@/lib/shot-list-parser";
 import { cn } from "@/lib/utils";
 
 interface ScriptData {
