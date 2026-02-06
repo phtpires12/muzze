@@ -17,6 +17,7 @@ import { useWorkflowTemplate, getPrevStageUrl } from "@/hooks/useWorkflowTemplat
 import { WorkflowTemplateId, getStageLabel } from "@/lib/workflow-templates";
 import { ShotItem } from "@/lib/shotlist-generator";
 import { generateSignedUrlsBatch } from "@/lib/storage-helpers";
+import { parseShotList } from "@/lib/shot-list-parser";
 import { cn } from "@/lib/utils";
 
 interface ScriptData {
@@ -127,23 +128,8 @@ export default function EditingWorkspace() {
         setScriptWorkflow(data.workflow_template as WorkflowTemplateId);
       }
       
-      // Resolve image URLs for thumbnails
-      const parsedShots: ShotItem[] = (data.shot_list || []).map((item: any, index: number) => {
-        if (typeof item === 'string') {
-          return { id: `shot-${index}`, scriptSegment: item, scene: '', location: '', shotImagePaths: [] };
-        }
-        return {
-          id: item.id || `shot-${index}`,
-          scriptSegment: item.scriptSegment || item.description || '',
-          scene: item.scene || '',
-          location: item.location || '',
-          shotImagePaths: item.shotImagePaths || [],
-          sectionName: item.sectionName,
-          isCompleted: item.isCompleted,
-          videoUrl: item.videoUrl,
-          videoType: item.videoType,
-        };
-      });
+      // Parse shot list using the centralized parser (handles JSON strings)
+      const parsedShots = parseShotList(data.shot_list);
       
       if (parsedShots.length > 0) {
         resolveImageUrls(parsedShots);
@@ -155,32 +141,8 @@ export default function EditingWorkspace() {
     loadScript();
   }, [scriptId, navigate, toast, resolveImageUrls]);
 
-  // Convert shot_list to ShotItem objects (handles both string and object formats)
-  const shots: ShotItem[] = (script?.shot_list || []).map((item: any, index) => {
-    // Legacy format: simple string
-    if (typeof item === 'string') {
-      return {
-        id: `shot-${index}`,
-        scriptSegment: item,
-        scene: '',
-        location: '',
-        shotImagePaths: [],
-      };
-    }
-    
-    // Current format: object with scriptSegment, shotImagePaths, location, etc.
-    return {
-      id: item.id || `shot-${index}`,
-      scriptSegment: item.scriptSegment || item.description || '',
-      scene: item.scene || '',
-      location: item.location || '',
-      shotImagePaths: item.shotImagePaths || [],
-      sectionName: item.sectionName,
-      isCompleted: item.isCompleted,
-      videoUrl: item.videoUrl,
-      videoType: item.videoType,
-    };
-  });
+  // Convert shot_list to ShotItem objects using centralized parser
+  const shots = parseShotList(script?.shot_list);
 
   // Handle updating a shot (for video linking)
   const handleUpdateShot = useCallback(async (shotId: string, updates: Partial<ShotItem>) => {

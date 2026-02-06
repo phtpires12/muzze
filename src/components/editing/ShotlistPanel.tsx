@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ShotItem } from "@/lib/shotlist-generator";
+import { stripHtml } from "@/lib/shot-list-parser";
 
 interface ShotlistPanelProps {
   shots: ShotItem[];
@@ -128,9 +129,9 @@ function SceneCard({ shot, index, resolvedUrl, onUpdateShot }: SceneCardProps) {
 
         {/* Content Area */}
         <div className="p-3 space-y-3">
-          {/* Script Text */}
+          {/* Script Text (HTML stripped for clean display) */}
           <p className="text-sm text-foreground line-clamp-2 min-h-[2.5rem]">
-            {shot.scriptSegment || 'Sem texto'}
+            {stripHtml(shot.scriptSegment) || 'Sem texto'}
           </p>
 
           {/* Video Link Section */}
