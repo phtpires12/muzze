@@ -1,85 +1,77 @@
 
-# Plano: Garantir Atualização Automática do PWA (Eliminar Cache Obsoleto)
+# Plano: Corrigir Exibição de JSON Bruto na Mesa de Edição (Shotlist)
 
 ## Problema Identificado
 
-O Service Worker do PWA está servindo arquivos antigos do cache. Mesmo com configurações como `skipWaiting: true`, o cache persistente pode causar:
-- JSON bruto aparecendo nos cards (layout antigo)
-- Funcionalidades corrigidas (Shift+Enter, imagens) não aparecendo
-- Necessidade de reinstalar o app para ver atualizações
+O JSON bruto aparece nos cards da Shotlist porque o código trata os dados como strings simples, mas eles são **objetos complexos** salvos no banco.
+
+### Evidência
+
+Screenshot mostra: `{"id":"acc819fe-1eb5-471a-b567...","scriptSegment":"<p>2026 vai ser o ano...`
+
+Este é o objeto completo da shotlist sendo renderizado como texto.
 
 ## Causa Raiz
 
-1. **Cache agressivo**: O Service Worker mantém arquivos JS/CSS em cache
-2. **Detecção lenta**: Verificação de updates a cada 60 segundos pode não ser suficiente
-3. **Sem forçar reload**: Quando nova versão é detectada, não força reload imediato
-
----
-
-## Solução Técnica
-
-### 1. Verificação mais frequente de atualizações
-
-Reduzir intervalo de verificação e adicionar verificação ao focar na aba:
-
-```typescript
-// usePWAUpdate.ts
-onRegisteredSW(swUrl, registration) {
-  if (registration) {
-    // Verificar a cada 30 segundos
-    setInterval(() => registration.update(), 30 * 1000);
-    
-    // Verificar quando a aba ganha foco
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) {
-        registration.update();
-      }
-    });
-  }
-}
+```text
+┌────────────────────────────────────────────────────┐
+│  Banco de Dados (shot_list)                        │
+│  Array de OBJETOS:                                 │
+│  [{id, scriptSegment, scene, shotImagePaths,...}]  │
+└───────────────────┬────────────────────────────────┘
+                    │
+                    ▼
+┌────────────────────────────────────────────────────┐
+│  EditingWorkspace.tsx (linha 110-114)              │
+│                                                    │
+│  const shots = (script?.shot_list || [])           │
+│    .map((desc, index) => ({                        │
+│       description: desc,  ← ERRO: desc é objeto!   │
+│    }));                                            │
+└───────────────────┬────────────────────────────────┘
+                    │
+                    ▼
+┌────────────────────────────────────────────────────┐
+│  ShotlistPanel.tsx (linha 154)                     │
+│                                                    │
+│  <p>{shot.description}</p>                         │
+│  ↓                                                 │
+│  Renderiza: {"id":"...", "scriptSegment":"..."}    │
+└────────────────────────────────────────────────────┘
 ```
 
-### 2. Forçar atualização imediata sem overlay
+## Solução
 
-Quando nova versão é detectada, atualizar imediatamente sem esperar interação:
+Corrigir o mapeamento em `EditingWorkspace.tsx` para extrair o campo `scriptSegment` do objeto:
 
 ```typescript
-useEffect(() => {
-  if (needRefresh && !autoUpdateTriggeredRef.current) {
-    autoUpdateTriggeredRef.current = true;
-    console.log('[PWA] New version detected, forcing immediate update...');
-    updateServiceWorker(true); // Sem delay
+// ANTES (errado):
+const shots: ShotItem[] = (script?.shot_list || []).map((desc, index) => ({
+  id: `shot-${index}`,
+  description: desc,  // desc é objeto, não string
+  order: index,
+}));
+
+// DEPOIS (correto):
+const shots: ShotItem[] = (script?.shot_list || []).map((item: any, index) => {
+  // Se item for string (formato antigo), usar direto
+  if (typeof item === 'string') {
+    return {
+      id: `shot-${index}`,
+      description: item,
+      order: index,
+    };
   }
-}, [needRefresh, updateServiceWorker]);
-```
-
-### 3. Adicionar indicador de versão visível no app
-
-Mostrar versão atual na tela para debug fácil:
-
-```typescript
-// No Settings ou DevTools, já existe BuildInfo
-// Adicionar log no console para fácil verificação
-console.log(`[Muzze] Build: ${getShortBuildId()}`);
-```
-
-### 4. Invalidar cache de navegação
-
-Adicionar estratégia NetworkFirst para todos os arquivos JS/CSS principais:
-
-```typescript
-// vite.config.ts - workbox.runtimeCaching
-{
-  urlPattern: /\.(js|css)$/,
-  handler: "NetworkFirst",
-  options: {
-    cacheName: "assets-cache",
-    expiration: {
-      maxAgeSeconds: 60 * 60 * 2, // 2 horas
-    },
-    networkTimeoutSeconds: 3,
-  }
-}
+  
+  // Se item for objeto (formato atual), extrair campos
+  return {
+    id: item.id || `shot-${index}`,
+    description: item.scriptSegment || item.description || '',
+    imageUrl: item.shotImagePaths?.[0] || undefined,
+    location: item.location || undefined,
+    order: index,
+  };
+});
 ```
 
 ---
@@ -88,33 +80,24 @@ Adicionar estratégia NetworkFirst para todos os arquivos JS/CSS principais:
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/hooks/usePWAUpdate.ts` | Verificar mais frequente, update no focus, forçar reload imediato |
-| `src/main.tsx` | Log da versão atual no console |
-| `vite.config.ts` | NetworkFirst para JS/CSS |
+| `src/pages/EditingWorkspace.tsx` | Corrigir mapeamento de `shot_list` para extrair `scriptSegment` corretamente |
+
+---
+
+## Por que isso não é cache
+
+O código que você está vendo **já é o código correto** no repositório - o problema é que o **mapeamento de dados** está errado. Não importa quantas vezes você limpe o cache, o bug vai continuar porque está na lógica do código, não no cache.
+
+A razão pela qual "funcionava antes" pode ser:
+1. Os dados antigos eram salvos como strings simples
+2. Os dados novos são salvos como objetos completos
+3. O código não foi atualizado para lidar com o novo formato
 
 ---
 
 ## Resultado Esperado
 
-- Updates são detectados em até 30 segundos (vs 60s atual)
-- Quando aba ganha foco, verifica updates imediatamente
-- Nova versão atualiza automaticamente sem intervenção do usuário
-- Log no console permite verificar qual versão está rodando
-- Cache de JS/CSS busca do servidor primeiro (NetworkFirst)
-
----
-
-## Ação Imediata para Você
-
-Enquanto implemento as melhorias, faça isso para forçar a atualização agora:
-
-**No Safari/Chrome (desktop):**
-1. Abra DevTools (F12 ou Cmd+Option+I)
-2. Vá em Application → Service Workers
-3. Clique "Unregister" em todos
-4. Faça hard refresh: Cmd+Shift+R (Mac) ou Ctrl+Shift+R (Windows)
-
-**No PWA instalado (iOS/Android):**
-1. Feche completamente o app (swipe up)
-2. Reabra o app
-3. Se persistir: desinstale e reinstale
+- Cards da Shotlist mostrarão o **texto do roteiro** (`scriptSegment`) ao invés do JSON bruto
+- Imagens de referência (`shotImagePaths`) serão exibidas quando disponíveis
+- Locação será exibida como badge
+- Compatibilidade com dados antigos (strings) e novos (objetos)
