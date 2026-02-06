@@ -9,6 +9,8 @@ export interface ShotItem {
   location: string;
   sectionName?: string;
   isCompleted?: boolean;
+  videoUrl?: string;             // Link do vídeo gravado (Drive/Dropbox/YouTube)
+  videoType?: 'google_drive' | 'dropbox' | 'youtube' | 'other';
 }
 
 interface ContentSections {
