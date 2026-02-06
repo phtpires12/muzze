@@ -1,132 +1,158 @@
 
-# Plano: Adicionar Resolução de URLs de Imagens na Mesa de Edição
+# Plano: Corrigir Parsing de shot_list com Strings JSON
 
-## Problema Atual
+## Problema Identificado
 
-O `ShotlistPanel` já aceita a prop `resolvedUrls`, mas o `EditingWorkspace` não está:
-1. Extraindo os paths das imagens dos shots
-2. Gerando signed URLs usando `generateSignedUrlsBatch()`
-3. Passando essas URLs resolvidas para o componente
+O banco de dados armazena `shot_list` como um **array de strings JSON escapadas**, não como um array de objetos. 
+
+### Evidência do Banco:
+```
+shot_list = [
+  "{\"id\":\"acc819fe-1eb5-471a-b567-1a319a2fcf25\",\"scriptSegment\":\"<p>2026 vai ser o ano...\",...}",
+  "{\"id\":\"d4b6bd10-2bbe-4809-a9bd-b0e37d8f12e7\",\"scriptSegment\":\"Você já tá vendo...\",...}",
+  ...
+]
+```
+
+Cada elemento é uma **string** que contém JSON, não um objeto JavaScript diretamente acessível.
+
+### O Que Acontece Hoje:
+
+```text
+┌────────────────────────────────────────────────────────────────────────┐
+│  Banco retorna:                                                        │
+│  shot_list[0] = "{\"id\":\"abc\",\"scriptSegment\":\"texto...\"}"      │
+│                  ↑                                                     │
+│            Uma STRING, não objeto                                      │
+└────────────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│  Código atual:                                                         │
+│                                                                        │
+│  const shots = shot_list.map(item => ({                                │
+│    scriptSegment: item.scriptSegment  ← UNDEFINED! item é string       │
+│  }));                                                                  │
+└────────────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│  Resultado:                                                            │
+│                                                                        │
+│  scriptSegment = undefined                                             │
+│  Fallback para item.description = undefined                            │
+│  Fallback final = '' (string vazia)                                    │
+│                                                                        │
+│  MAS o card mostra o objeto inteiro porque está usando                 │
+│  typeof item === 'string' → trata como texto simples                   │
+└────────────────────────────────────────────────────────────────────────┘
+```
 
 ## Solução
 
-Seguir o padrão já implementado em `ShotListRecord.tsx`:
+Adicionar `JSON.parse()` para cada elemento do array que é uma string contendo JSON.
 
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│  EditingWorkspace.tsx                                           │
-│                                                                 │
-│  1. Adicionar state: resolvedUrls                               │
-│  2. Extrair todos os shotImagePaths dos shots                   │
-│  3. Chamar generateSignedUrlsBatch() após carregar dados        │
-│  4. Passar resolvedUrls para ShotlistPanel                      │
-└─────────────────────────────────────────────────────────────────┘
-                          │
-                          ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  ShotlistPanel.tsx                                              │
-│                                                                 │
-│  - Já aceita resolvedUrls?: Record<string, string>              │
-│  - Já usa: resolvedUrls[shot.shotImagePaths?.[0]]               │
-│  - Apenas precisa receber os dados                              │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-## Arquivos a Modificar
+### Arquivo a Modificar
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/pages/EditingWorkspace.tsx` | Adicionar lógica de resolução de URLs e passar prop |
+| `src/pages/EditingWorkspace.tsx` | Adicionar parsing de strings JSON no mapeamento |
 
-## Detalhamento Técnico
-
-### 1. Adicionar Import
+### Lógica Corrigida
 
 ```typescript
-import { generateSignedUrlsBatch } from "@/lib/storage-helpers";
-```
-
-### 2. Adicionar State
-
-```typescript
-const [resolvedUrls, setResolvedUrls] = useState<Record<string, string>>({});
-```
-
-### 3. Adicionar Função de Resolução
-
-```typescript
-// Resolve image URLs from storage paths
-const resolveImageUrls = useCallback(async (shots: ShotItem[]) => {
-  const allPaths: string[] = [];
-  shots.forEach(shot => {
-    (shot.shotImagePaths || []).forEach(path => {
-      if (path && !allPaths.includes(path)) {
-        allPaths.push(path);
-      }
-    });
-  });
+const shots: ShotItem[] = (script?.shot_list || []).map((item: any, index) => {
+  // Parse JSON string if needed
+  let parsed = item;
+  if (typeof item === 'string') {
+    try {
+      parsed = JSON.parse(item);
+    } catch {
+      // Fallback: treat as plain text (legacy format)
+      return {
+        id: `shot-${index}`,
+        scriptSegment: item,
+        scene: '',
+        location: '',
+        shotImagePaths: [],
+      };
+    }
+  }
   
-  if (allPaths.length === 0) return;
-  
-  const urlMap = await generateSignedUrlsBatch(allPaths, 86400); // 24h
-  
-  // Convert Map to Record for the component
-  const urlRecord: Record<string, string> = {};
-  urlMap.forEach((url, path) => {
-    urlRecord[path] = url;
-  });
-  
-  setResolvedUrls(urlRecord);
-}, []);
+  // Now 'parsed' is guaranteed to be an object
+  return {
+    id: parsed.id || `shot-${index}`,
+    scriptSegment: parsed.scriptSegment || parsed.description || '',
+    scene: parsed.scene || '',
+    location: parsed.location || '',
+    shotImagePaths: parsed.shotImagePaths || [],
+    sectionName: parsed.sectionName,
+    isCompleted: parsed.isCompleted,
+    videoUrl: parsed.videoUrl,
+    videoType: parsed.videoType,
+  };
+});
 ```
 
-### 4. Chamar Após Carregar Dados
+### Dois Lugares a Corrigir
 
-No `loadScript`, após processar o `shot_list`:
+1. **Linha ~131-146**: Parsing dentro do `loadScript()` (para resolver URLs)
+2. **Linha ~159-183**: Parsing para gerar o array `shots` exibido
 
-```typescript
-// Resolve image URLs after loading
-if (parsedShots.length > 0) {
-  resolveImageUrls(parsedShots);
-}
-```
+Ambos precisam da mesma lógica de `JSON.parse()` para strings.
 
-### 5. Passar Prop para ShotlistPanel
-
-```tsx
-<ShotlistPanel 
-  shots={shots} 
-  onUpdateShot={handleUpdateShot}
-  resolvedUrls={resolvedUrls}  // ADICIONAR
-/>
-```
-
-## Fluxo de Dados
+## Fluxo Corrigido
 
 ```text
-        Banco de Dados
-              │
-              ▼
-   shot_list com shotImagePaths
-              │
-              ▼
-   ┌──────────────────────────┐
-   │  generateSignedUrlsBatch │
-   │  (paths → signed URLs)   │
-   └────────────┬─────────────┘
-                │
-                ▼
-        resolvedUrls state
-                │
-                ▼
-   ┌──────────────────────────┐
-   │     ShotlistPanel        │
-   │  exibe thumbnails 16:9   │
-   └──────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────┐
+│  Banco retorna:                                                        │
+│  shot_list[0] = "{\"id\":\"abc\",\"scriptSegment\":\"texto...\"}"      │
+└────────────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│  typeof item === 'string' ? JSON.parse(item) : item                    │
+│                              ↓                                         │
+│  parsed = { id: "abc", scriptSegment: "texto..." }                     │
+└────────────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│  scriptSegment: parsed.scriptSegment  ← "2026 vai ser o ano..."       │
+│  location: parsed.location            ← ""                             │
+│  shotImagePaths: parsed.shotImagePaths ← ["path/to/image.jpeg"]        │
+└────────────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│  Card exibe:                                                           │
+│  ┌────────────────┐                                                    │
+│  │   [thumbnail]  │                                                    │
+│  │                │                                                    │
+│  │ "2026 vai ser  │ ← Texto correto!                                   │
+│  │  o ano em que..."│                                                  │
+│  └────────────────┘                                                    │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+## Bonus: Limpar HTML do scriptSegment
+
+O `scriptSegment` contém HTML (`<p>2026 vai ser...</p>`). Vamos também remover as tags para exibir apenas o texto limpo nos cards.
+
+```typescript
+// Helper para extrair texto puro de HTML
+function stripHtml(html: string): string {
+  if (!html) return '';
+  return html.replace(/<[^>]*>/g, '').trim();
+}
+
+// No card:
+<p>{stripHtml(shot.scriptSegment) || 'Sem texto'}</p>
 ```
 
 ## Resultado Esperado
 
-- Thumbnails das cenas aparecerão nos cards 16:9 da galeria
-- Imagens de referência carregadas via signed URLs (válidas por 24h)
-- Se não houver imagem, placeholder cinza continua aparecendo
+- Cards da Shotlist exibirão o **texto do roteiro** em vez do JSON bruto
+- Imagens de referência serão carregadas corretamente
+- Badges de seção (Gancho, Setup, etc.) aparecerão
+- Sistema continuará funcionando com dados antigos (strings simples) e novos (JSON strings)
