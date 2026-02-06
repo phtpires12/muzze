@@ -294,6 +294,7 @@ export function ShotlistPanel({
                       index={index}
                       resolvedUrl={resolvedUrls[shot.shotImagePaths?.[0] || '']}
                       onUpdateShot={onUpdateShot}
+                      onClick={() => setSelectedSceneIndex(index)}
                     />
                   ))}
                 </div>
