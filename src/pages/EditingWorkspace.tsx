@@ -141,32 +141,8 @@ export default function EditingWorkspace() {
     loadScript();
   }, [scriptId, navigate, toast, resolveImageUrls]);
 
-  // Convert shot_list to ShotItem objects (handles both string and object formats)
-  const shots: ShotItem[] = (script?.shot_list || []).map((item: any, index) => {
-    // Legacy format: simple string
-    if (typeof item === 'string') {
-      return {
-        id: `shot-${index}`,
-        scriptSegment: item,
-        scene: '',
-        location: '',
-        shotImagePaths: [],
-      };
-    }
-    
-    // Current format: object with scriptSegment, shotImagePaths, location, etc.
-    return {
-      id: item.id || `shot-${index}`,
-      scriptSegment: item.scriptSegment || item.description || '',
-      scene: item.scene || '',
-      location: item.location || '',
-      shotImagePaths: item.shotImagePaths || [],
-      sectionName: item.sectionName,
-      isCompleted: item.isCompleted,
-      videoUrl: item.videoUrl,
-      videoType: item.videoType,
-    };
-  });
+  // Convert shot_list to ShotItem objects using centralized parser
+  const shots = parseShotList(script?.shot_list);
 
   // Handle updating a shot (for video linking)
   const handleUpdateShot = useCallback(async (shotId: string, updates: Partial<ShotItem>) => {
