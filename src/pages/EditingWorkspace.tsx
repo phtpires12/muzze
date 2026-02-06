@@ -119,7 +119,6 @@ export default function EditingWorkspace() {
         id: data.id,
         title: data.title,
         shot_list: data.shot_list,
-        video_references: scriptWithNewFields.video_references || [],
         music_reference: scriptWithNewFields.music_reference || null,
         editing_notes: scriptWithNewFields.editing_notes || '',
       });
