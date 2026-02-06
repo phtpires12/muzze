@@ -231,8 +231,23 @@ export function ShotlistPanel({
   resolvedUrls = {}
 }: ShotlistPanelProps) {
   const [isOpen, setIsOpen] = useState(true);
+  const [selectedSceneIndex, setSelectedSceneIndex] = useState<number | null>(null);
 
   const linkedCount = shots.filter(s => s.videoUrl).length;
+
+  const handleNavigate = useCallback((direction: 'prev' | 'next') => {
+    setSelectedSceneIndex(prev => {
+      if (prev === null) return null;
+      if (direction === 'prev' && prev > 0) return prev - 1;
+      if (direction === 'next' && prev < shots.length - 1) return prev + 1;
+      return prev;
+    });
+  }, [shots.length]);
+
+  const selectedShot = selectedSceneIndex !== null ? shots[selectedSceneIndex] : null;
+  const selectedResolvedUrl = selectedShot?.shotImagePaths?.[0] 
+    ? resolvedUrls[selectedShot.shotImagePaths[0]] 
+    : undefined;
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
