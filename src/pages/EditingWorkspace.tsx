@@ -8,13 +8,14 @@ import { useCelebration } from "@/contexts/CelebrationContext";
 import { useSession } from "@/hooks/useSession";
 import { DraggableSessionTimer } from "@/components/DraggableSessionTimer";
 import { AutoHideNav } from "@/components/AutoHideNav";
-import { ShotlistPanel, ShotItem } from "@/components/editing/ShotlistPanel";
+import { ShotlistPanel } from "@/components/editing/ShotlistPanel";
 import { VideoReferencesPanel, VideoReference } from "@/components/editing/VideoReferencesPanel";
 import { MusicPanel, MusicReference } from "@/components/editing/MusicPanel";
 import { EditingNotesPanel } from "@/components/editing/EditingNotesPanel";
 import { CompleteEditingButton } from "@/components/editing/CompleteEditingButton";
 import { useWorkflowTemplate, getPrevStageUrl } from "@/hooks/useWorkflowTemplate";
 import { WorkflowTemplateId, getStageLabel } from "@/lib/workflow-templates";
+import { ShotItem } from "@/lib/shotlist-generator";
 import { cn } from "@/lib/utils";
 
 interface ScriptData {
@@ -112,20 +113,58 @@ export default function EditingWorkspace() {
     if (typeof item === 'string') {
       return {
         id: `shot-${index}`,
-        description: item,
-        order: index,
+        scriptSegment: item,
+        scene: '',
+        location: '',
+        shotImagePaths: [],
       };
     }
     
     // Current format: object with scriptSegment, shotImagePaths, location, etc.
     return {
       id: item.id || `shot-${index}`,
-      description: item.scriptSegment || item.description || '',
-      imageUrl: item.shotImagePaths?.[0] || undefined,
-      location: item.location || undefined,
-      order: index,
+      scriptSegment: item.scriptSegment || item.description || '',
+      scene: item.scene || '',
+      location: item.location || '',
+      shotImagePaths: item.shotImagePaths || [],
+      sectionName: item.sectionName,
+      isCompleted: item.isCompleted,
+      videoUrl: item.videoUrl,
+      videoType: item.videoType,
     };
   });
+
+  // Handle updating a shot (for video linking)
+  const handleUpdateShot = useCallback(async (shotId: string, updates: Partial<ShotItem>) => {
+    if (!scriptId || !script?.shot_list) return;
+    
+    const updatedShotList = (script.shot_list as any[]).map((item: any, index) => {
+      const itemId = typeof item === 'string' ? `shot-${index}` : (item.id || `shot-${index}`);
+      if (itemId === shotId) {
+        if (typeof item === 'string') {
+          return {
+            id: itemId,
+            scriptSegment: item,
+            scene: '',
+            location: '',
+            shotImagePaths: [],
+            ...updates,
+          };
+        }
+        return { ...item, ...updates };
+      }
+      return item;
+    });
+
+    const { error } = await supabase
+      .from('scripts')
+      .update({ shot_list: updatedShotList as any })
+      .eq('id', scriptId);
+
+    if (!error) {
+      setScript(prev => prev ? { ...prev, shot_list: updatedShotList } : null);
+    }
+  }, [scriptId, script?.shot_list]);
 
   // Save handlers
   const saveVideoReferences = useCallback(async (refs: VideoReference[]) => {
@@ -300,7 +339,7 @@ export default function EditingWorkspace() {
           {/* Shotlist Panel */}
           <ShotlistPanel 
             shots={shots} 
-            scriptId={script.id}
+            onUpdateShot={handleUpdateShot}
           />
 
           {/* Video References Panel */}

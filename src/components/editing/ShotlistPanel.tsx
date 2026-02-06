@@ -1,66 +1,229 @@
-import { useState, useMemo } from "react";
+import { useState, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, List, MapPin, AlertTriangle, GripVertical, Star } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { AspectRatio } from "@/components/ui/aspect-ratio";
+import { 
+  Collapsible, 
+  CollapsibleContent, 
+  CollapsibleTrigger 
+} from "@/components/ui/collapsible";
+import { 
+  ChevronDown, 
+  Video, 
+  MapPin, 
+  Link2, 
+  ExternalLink, 
+  X, 
+  ImageIcon,
+  Film
+} from "lucide-react";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/integrations/supabase/client";
-
-export interface ShotItem {
-  id: string;
-  description: string;
-  imageUrl?: string;
-  location?: string;
-  isComplex?: boolean;
-  order: number;
-}
+import { ShotItem } from "@/lib/shotlist-generator";
 
 interface ShotlistPanelProps {
   shots: ShotItem[];
-  scriptId: string;
-  onShotsChange?: (shots: ShotItem[]) => void;
+  onUpdateShot?: (shotId: string, updates: Partial<ShotItem>) => void;
+  resolvedUrls?: Record<string, string>;
 }
 
-type FilterType = 'chronological' | 'location' | 'complexity';
+type VideoType = 'google_drive' | 'dropbox' | 'youtube' | 'other';
 
-export function ShotlistPanel({ shots, scriptId, onShotsChange }: ShotlistPanelProps) {
-  const [isOpen, setIsOpen] = useState(true);
-  const [filter, setFilter] = useState<FilterType>('chronological');
-  const [localShots, setLocalShots] = useState<ShotItem[]>(shots);
+function detectVideoType(url: string): VideoType {
+  if (url.includes('drive.google.com')) return 'google_drive';
+  if (url.includes('dropbox.com')) return 'dropbox';
+  if (url.includes('youtube.com') || url.includes('youtu.be')) return 'youtube';
+  return 'other';
+}
 
-  // Sync local state with props
-  useMemo(() => {
-    setLocalShots(shots);
-  }, [shots]);
+function getVideoTypeLabel(type: VideoType): string {
+  switch (type) {
+    case 'google_drive': return 'Google Drive';
+    case 'dropbox': return 'Dropbox';
+    case 'youtube': return 'YouTube';
+    default: return 'Link';
+  }
+}
 
-  const filteredShots = useMemo(() => {
-    const sorted = [...localShots];
+function getVideoTypeIcon(type: VideoType) {
+  // All video types use the same icon for simplicity
+  return <Film className="w-3 h-3" />;
+}
+
+interface SceneCardProps {
+  shot: ShotItem;
+  index: number;
+  resolvedUrl?: string;
+  onUpdateShot?: (shotId: string, updates: Partial<ShotItem>) => void;
+}
+
+function SceneCard({ shot, index, resolvedUrl, onUpdateShot }: SceneCardProps) {
+  const [isLinking, setIsLinking] = useState(false);
+  const [linkInput, setLinkInput] = useState('');
+
+  const handleLinkVideo = useCallback(() => {
+    if (!linkInput.trim() || !onUpdateShot) return;
     
-    switch (filter) {
-      case 'location':
-        return sorted.sort((a, b) => (a.location || '').localeCompare(b.location || ''));
-      case 'complexity':
-        return sorted.sort((a, b) => {
-          if (a.isComplex && !b.isComplex) return -1;
-          if (!a.isComplex && b.isComplex) return 1;
-          return a.order - b.order;
-        });
-      case 'chronological':
-      default:
-        return sorted.sort((a, b) => a.order - b.order);
-    }
-  }, [localShots, filter]);
+    const videoType = detectVideoType(linkInput.trim());
+    onUpdateShot(shot.id, {
+      videoUrl: linkInput.trim(),
+      videoType,
+    });
+    setLinkInput('');
+    setIsLinking(false);
+  }, [linkInput, onUpdateShot, shot.id]);
 
-  const toggleComplexity = async (shotId: string) => {
-    const updatedShots = localShots.map(shot => 
-      shot.id === shotId ? { ...shot, isComplex: !shot.isComplex } : shot
-    );
-    setLocalShots(updatedShots);
-    onShotsChange?.(updatedShots);
-  };
+  const handleRemoveVideo = useCallback(() => {
+    if (!onUpdateShot) return;
+    onUpdateShot(shot.id, {
+      videoUrl: undefined,
+      videoType: undefined,
+    });
+  }, [onUpdateShot, shot.id]);
 
-  const complexCount = localShots.filter(s => s.isComplex).length;
+  const thumbnailUrl = resolvedUrl || (shot.shotImagePaths?.[0] ? undefined : undefined);
+
+  return (
+    <div className="flex-shrink-0 w-[280px] sm:w-[320px] snap-center">
+      <Card className="overflow-hidden border border-border bg-card h-full">
+        {/* 16:9 Thumbnail Area */}
+        <AspectRatio ratio={16 / 9} className="bg-muted">
+          {thumbnailUrl ? (
+            <img 
+              src={thumbnailUrl} 
+              alt={`Cena ${index + 1}`}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-muted">
+              <div className="text-center text-muted-foreground">
+                <ImageIcon className="w-8 h-8 mx-auto mb-1 opacity-40" />
+                <span className="text-xs opacity-60">Cena {index + 1}</span>
+              </div>
+            </div>
+          )}
+          
+          {/* Location Badge Overlay */}
+          {shot.location && (
+            <Badge 
+              variant="secondary" 
+              className="absolute top-2 left-2 text-xs bg-background/80 backdrop-blur-sm"
+            >
+              <MapPin className="w-3 h-3 mr-1" />
+              {shot.location}
+            </Badge>
+          )}
+          
+          {/* Section Name Badge */}
+          {shot.sectionName && (
+            <Badge 
+              variant="outline" 
+              className="absolute top-2 right-2 text-xs bg-background/80 backdrop-blur-sm border-primary/30"
+            >
+              {shot.sectionName}
+            </Badge>
+          )}
+        </AspectRatio>
+
+        {/* Content Area */}
+        <div className="p-3 space-y-3">
+          {/* Script Text */}
+          <p className="text-sm text-foreground line-clamp-2 min-h-[2.5rem]">
+            {shot.scriptSegment || 'Sem texto'}
+          </p>
+
+          {/* Video Link Section */}
+          <div className="pt-2 border-t border-border">
+            {shot.videoUrl ? (
+              /* Has video linked */
+              <div className="flex items-center gap-2 p-2 rounded-lg bg-primary/10 border border-primary/20">
+                <div className="flex items-center gap-1.5 text-primary flex-1 min-w-0">
+                  {getVideoTypeIcon(shot.videoType || 'other')}
+                  <span className="text-xs font-medium truncate">
+                    {getVideoTypeLabel(shot.videoType || 'other')}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0"
+                    onClick={() => window.open(shot.videoUrl, '_blank')}
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                    onClick={handleRemoveVideo}
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              </div>
+            ) : isLinking ? (
+              /* Linking mode */
+              <div className="space-y-2">
+                <Input
+                  placeholder="Cole o link do vídeo..."
+                  value={linkInput}
+                  onChange={(e) => setLinkInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleLinkVideo()}
+                  className="h-8 text-xs"
+                  autoFocus
+                />
+                <div className="flex gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="flex-1 h-7 text-xs"
+                    onClick={handleLinkVideo}
+                    disabled={!linkInput.trim()}
+                  >
+                    Vincular
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => {
+                      setIsLinking(false);
+                      setLinkInput('');
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              /* No video - show link button */
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full h-8 text-xs gap-2"
+                onClick={() => setIsLinking(true)}
+              >
+                <Link2 className="w-3.5 h-3.5" />
+                Vincular Vídeo
+              </Button>
+            )}
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+export function ShotlistPanel({ 
+  shots, 
+  onUpdateShot,
+  resolvedUrls = {}
+}: ShotlistPanelProps) {
+  const [isOpen, setIsOpen] = useState(true);
+
+  const linkedCount = shots.filter(s => s.videoUrl).length;
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -68,13 +231,13 @@ export function ShotlistPanel({ shots, scriptId, onShotsChange }: ShotlistPanelP
         <CollapsibleTrigger asChild>
           <button className="w-full p-4 flex items-center justify-between hover:bg-muted/50 transition-colors rounded-t-lg">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center">
-                <List className="w-5 h-5 text-blue-500" />
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <Video className="w-5 h-5 text-primary" />
               </div>
               <div className="text-left">
                 <h3 className="font-semibold text-foreground">Shotlist</h3>
                 <p className="text-xs text-muted-foreground">
-                  {localShots.length} cenas {complexCount > 0 && `• ${complexCount} complexas`}
+                  {shots.length} cenas {linkedCount > 0 && `• ${linkedCount} com vídeo`}
                 </p>
               </div>
             </div>
@@ -86,99 +249,51 @@ export function ShotlistPanel({ shots, scriptId, onShotsChange }: ShotlistPanelP
         </CollapsibleTrigger>
 
         <CollapsibleContent>
-          <div className="px-4 pb-4 space-y-4">
-            {/* Filters */}
-            <div className="flex gap-2 overflow-x-auto pb-2">
-              <Button
-                variant={filter === 'chronological' ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setFilter('chronological')}
-                className="flex-shrink-0"
-              >
-                <List className="w-4 h-4 mr-1" />
-                Ordem
-              </Button>
-              <Button
-                variant={filter === 'location' ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setFilter('location')}
-                className="flex-shrink-0"
-              >
-                <MapPin className="w-4 h-4 mr-1" />
-                Locação
-              </Button>
-              <Button
-                variant={filter === 'complexity' ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setFilter('complexity')}
-                className="flex-shrink-0"
-              >
-                <AlertTriangle className="w-4 h-4 mr-1" />
-                Complexas
-              </Button>
-            </div>
-
-            {/* Shots List */}
-            {filteredShots.length === 0 ? (
+          <div className="px-2 pb-4">
+            {shots.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                <List className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                <Video className="w-12 h-12 mx-auto mb-2 opacity-50" />
                 <p className="text-sm">Nenhuma cena na shotlist</p>
                 <p className="text-xs">Adicione cenas durante a etapa de roteiro</p>
               </div>
             ) : (
-              <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                {filteredShots.map((shot, index) => (
-                  <div
-                    key={shot.id}
-                    className={cn(
-                      "flex items-start gap-3 p-3 rounded-lg border transition-colors",
-                      shot.isComplex 
-                        ? "border-yellow-500/30 bg-yellow-500/5" 
-                        : "border-border bg-background"
-                    )}
-                  >
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <GripVertical className="w-4 h-4 opacity-50" />
-                      <span className="text-xs font-mono w-5">{index + 1}</span>
-                    </div>
-                    
-                    {shot.imageUrl && (
-                      <img 
-                        src={shot.imageUrl} 
-                        alt={`Cena ${index + 1}`}
-                        className="w-16 h-12 object-cover rounded-md flex-shrink-0"
-                      />
-                    )}
-                    
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-foreground line-clamp-2">
-                        {shot.description}
-                      </p>
-                      {shot.location && (
-                        <Badge variant="outline" className="mt-1 text-xs">
-                          <MapPin className="w-3 h-3 mr-1" />
-                          {shot.location}
-                        </Badge>
-                      )}
-                    </div>
-                    
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => toggleComplexity(shot.id)}
+              <>
+                {/* Horizontal Gallery */}
+                <div 
+                  className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-4 pt-2 px-2 -mx-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent"
+                  style={{ scrollbarWidth: 'thin' }}
+                >
+                  {shots.map((shot, index) => (
+                    <SceneCard
+                      key={shot.id}
+                      shot={shot}
+                      index={index}
+                      resolvedUrl={resolvedUrls[shot.shotImagePaths?.[0] || '']}
+                      onUpdateShot={onUpdateShot}
+                    />
+                  ))}
+                </div>
+
+                {/* Navigation Dots */}
+                <div className="flex justify-center gap-1.5 pt-2">
+                  {shots.slice(0, 12).map((shot) => (
+                    <div 
+                      key={shot.id}
                       className={cn(
-                        "flex-shrink-0",
-                        shot.isComplex && "text-yellow-500"
+                        "w-2 h-2 rounded-full transition-colors",
+                        shot.videoUrl 
+                          ? "bg-primary" 
+                          : "bg-muted-foreground/30"
                       )}
-                    >
-                      <Star className={cn(
-                        "w-4 h-4",
-                        shot.isComplex && "fill-yellow-500"
-                      )} />
-                    </Button>
-                  </div>
-                ))}
-              </div>
+                    />
+                  ))}
+                  {shots.length > 12 && (
+                    <span className="text-xs text-muted-foreground ml-1">
+                      +{shots.length - 12}
+                    </span>
+                  )}
+                </div>
+              </>
             )}
           </div>
         </CollapsibleContent>
