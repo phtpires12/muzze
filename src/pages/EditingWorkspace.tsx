@@ -128,23 +128,8 @@ export default function EditingWorkspace() {
         setScriptWorkflow(data.workflow_template as WorkflowTemplateId);
       }
       
-      // Resolve image URLs for thumbnails
-      const parsedShots: ShotItem[] = (data.shot_list || []).map((item: any, index: number) => {
-        if (typeof item === 'string') {
-          return { id: `shot-${index}`, scriptSegment: item, scene: '', location: '', shotImagePaths: [] };
-        }
-        return {
-          id: item.id || `shot-${index}`,
-          scriptSegment: item.scriptSegment || item.description || '',
-          scene: item.scene || '',
-          location: item.location || '',
-          shotImagePaths: item.shotImagePaths || [],
-          sectionName: item.sectionName,
-          isCompleted: item.isCompleted,
-          videoUrl: item.videoUrl,
-          videoType: item.videoType,
-        };
-      });
+      // Parse shot list using the centralized parser (handles JSON strings)
+      const parsedShots = parseShotList(data.shot_list);
       
       if (parsedShots.length > 0) {
         resolveImageUrls(parsedShots);
