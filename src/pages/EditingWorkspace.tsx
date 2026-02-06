@@ -388,6 +388,7 @@ export default function EditingWorkspace() {
           <ShotlistPanel 
             shots={shots} 
             onUpdateShot={handleUpdateShot}
+            resolvedUrls={resolvedUrls}
           />
 
           {/* Video References Panel */}
