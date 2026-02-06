@@ -22,6 +22,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ShotItem } from "@/lib/shotlist-generator";
 import { stripHtml } from "@/lib/shot-list-parser";
+import { SceneDetailModal } from "./SceneDetailModal";
 
 interface ShotlistPanelProps {
   shots: ShotItem[];
@@ -57,9 +58,10 @@ interface SceneCardProps {
   index: number;
   resolvedUrl?: string;
   onUpdateShot?: (shotId: string, updates: Partial<ShotItem>) => void;
+  onClick?: () => void;
 }
 
-function SceneCard({ shot, index, resolvedUrl, onUpdateShot }: SceneCardProps) {
+function SceneCard({ shot, index, resolvedUrl, onUpdateShot, onClick }: SceneCardProps) {
   const [isLinking, setIsLinking] = useState(false);
   const [linkInput, setLinkInput] = useState('');
 
@@ -86,8 +88,11 @@ function SceneCard({ shot, index, resolvedUrl, onUpdateShot }: SceneCardProps) {
   const thumbnailUrl = resolvedUrl || (shot.shotImagePaths?.[0] ? undefined : undefined);
 
   return (
-    <div className="flex-shrink-0 w-[280px] sm:w-[320px] snap-center">
-      <Card className="overflow-hidden border border-border bg-card h-full">
+    <div 
+      className="flex-shrink-0 w-[280px] sm:w-[320px] snap-center cursor-pointer group"
+      onClick={onClick}
+    >
+      <Card className="overflow-hidden border border-border bg-card h-full transition-shadow group-hover:shadow-lg group-hover:border-primary/30">
         {/* 16:9 Thumbnail Area */}
         <AspectRatio ratio={16 / 9} className="bg-muted">
           {thumbnailUrl ? (
@@ -135,7 +140,10 @@ function SceneCard({ shot, index, resolvedUrl, onUpdateShot }: SceneCardProps) {
           </p>
 
           {/* Video Link Section */}
-          <div className="pt-2 border-t border-border">
+          <div 
+            className="pt-2 border-t border-border"
+            onClick={(e) => e.stopPropagation()}
+          >
             {shot.videoUrl ? (
               /* Has video linked */
               <div className="flex items-center gap-2 p-2 rounded-lg bg-primary/10 border border-primary/20">
@@ -223,8 +231,23 @@ export function ShotlistPanel({
   resolvedUrls = {}
 }: ShotlistPanelProps) {
   const [isOpen, setIsOpen] = useState(true);
+  const [selectedSceneIndex, setSelectedSceneIndex] = useState<number | null>(null);
 
   const linkedCount = shots.filter(s => s.videoUrl).length;
+
+  const handleNavigate = useCallback((direction: 'prev' | 'next') => {
+    setSelectedSceneIndex(prev => {
+      if (prev === null) return null;
+      if (direction === 'prev' && prev > 0) return prev - 1;
+      if (direction === 'next' && prev < shots.length - 1) return prev + 1;
+      return prev;
+    });
+  }, [shots.length]);
+
+  const selectedShot = selectedSceneIndex !== null ? shots[selectedSceneIndex] : null;
+  const selectedResolvedUrl = selectedShot?.shotImagePaths?.[0] 
+    ? resolvedUrls[selectedShot.shotImagePaths[0]] 
+    : undefined;
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -271,6 +294,7 @@ export function ShotlistPanel({
                       index={index}
                       resolvedUrl={resolvedUrls[shot.shotImagePaths?.[0] || '']}
                       onUpdateShot={onUpdateShot}
+                      onClick={() => setSelectedSceneIndex(index)}
                     />
                   ))}
                 </div>
@@ -299,6 +323,18 @@ export function ShotlistPanel({
           </div>
         </CollapsibleContent>
       </Card>
+
+      {/* Scene Detail Modal */}
+      <SceneDetailModal
+        shot={selectedShot}
+        isOpen={selectedSceneIndex !== null}
+        onClose={() => setSelectedSceneIndex(null)}
+        onUpdateShot={onUpdateShot}
+        resolvedUrl={selectedResolvedUrl}
+        currentIndex={selectedSceneIndex ?? 0}
+        totalScenes={shots.length}
+        onNavigate={handleNavigate}
+      />
     </Collapsible>
   );
 }
