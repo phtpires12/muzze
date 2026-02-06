@@ -58,6 +58,7 @@ interface SceneCardProps {
   index: number;
   resolvedUrl?: string;
   onUpdateShot?: (shotId: string, updates: Partial<ShotItem>) => void;
+  onClick?: () => void;
 }
 
 function SceneCard({ shot, index, resolvedUrl, onUpdateShot }: SceneCardProps) {
