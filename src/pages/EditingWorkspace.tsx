@@ -9,7 +9,7 @@ import { useSession } from "@/hooks/useSession";
 import { DraggableSessionTimer } from "@/components/DraggableSessionTimer";
 import { AutoHideNav } from "@/components/AutoHideNav";
 import { ShotlistPanel } from "@/components/editing/ShotlistPanel";
-import { VideoReferencesPanel, VideoReference } from "@/components/editing/VideoReferencesPanel";
+
 import { MusicPanel, MusicReference } from "@/components/editing/MusicPanel";
 import { EditingNotesPanel } from "@/components/editing/EditingNotesPanel";
 import { CompleteEditingButton } from "@/components/editing/CompleteEditingButton";
