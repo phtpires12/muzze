@@ -176,31 +176,6 @@ export default function EditingWorkspace() {
   }, [scriptId, script?.shot_list]);
 
   // Save handlers
-  const saveVideoReferences = useCallback(async (refs: VideoReference[]) => {
-    if (!scriptId) return;
-    setSaving(true);
-    await supabase
-      .from('scripts')
-      .update({ video_references: refs as any })
-      .eq('id', scriptId);
-    setScript(prev => prev ? { ...prev, video_references: refs } : null);
-    setSaving(false);
-  }, [scriptId]);
-
-  const handleAddVideoRef = useCallback((ref: Omit<VideoReference, 'id' | 'addedAt'>) => {
-    const newRef: VideoReference = {
-      ...ref,
-      id: crypto.randomUUID(),
-      addedAt: new Date().toISOString(),
-    };
-    const updated = [...(script?.video_references || []), newRef];
-    saveVideoReferences(updated);
-  }, [script?.video_references, saveVideoReferences]);
-
-  const handleRemoveVideoRef = useCallback((id: string) => {
-    const updated = (script?.video_references || []).filter(r => r.id !== id);
-    saveVideoReferences(updated);
-  }, [script?.video_references, saveVideoReferences]);
 
   const handleSaveMusic = useCallback(async (music: MusicReference | null) => {
     if (!scriptId) return;
