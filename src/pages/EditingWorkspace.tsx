@@ -16,6 +16,7 @@ import { CompleteEditingButton } from "@/components/editing/CompleteEditingButto
 import { useWorkflowTemplate, getPrevStageUrl } from "@/hooks/useWorkflowTemplate";
 import { WorkflowTemplateId, getStageLabel } from "@/lib/workflow-templates";
 import { ShotItem } from "@/lib/shotlist-generator";
+import { generateSignedUrlsBatch } from "@/lib/storage-helpers";
 import { cn } from "@/lib/utils";
 
 interface ScriptData {
@@ -37,6 +38,7 @@ export default function EditingWorkspace() {
   const [script, setScript] = useState<ScriptData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [resolvedUrls, setResolvedUrls] = useState<Record<string, string>>({});
   
   // Session for optional timer
   const { session, startSession, pauseSession, resumeSession, endSession, saveCurrentStageTime } = useSession({
@@ -46,6 +48,30 @@ export default function EditingWorkspace() {
   // Workflow template for dynamic navigation
   const [scriptWorkflow, setScriptWorkflow] = useState<WorkflowTemplateId | null>(null);
   const { prevStage, currentTemplate } = useWorkflowTemplate({ scriptWorkflow });
+
+  // Resolve image URLs from storage paths
+  const resolveImageUrls = useCallback(async (shotItems: ShotItem[]) => {
+    const allPaths: string[] = [];
+    shotItems.forEach(shot => {
+      (shot.shotImagePaths || []).forEach(path => {
+        if (path && !allPaths.includes(path)) {
+          allPaths.push(path);
+        }
+      });
+    });
+    
+    if (allPaths.length === 0) return;
+    
+    const urlMap = await generateSignedUrlsBatch(allPaths, 86400); // 24h
+    
+    // Convert Map to Record for the component
+    const urlRecord: Record<string, string> = {};
+    urlMap.forEach((url, path) => {
+      urlRecord[path] = url;
+    });
+    
+    setResolvedUrls(urlRecord);
+  }, []);
 
   // Start session when page loads
   useEffect(() => {
@@ -101,11 +127,33 @@ export default function EditingWorkspace() {
         setScriptWorkflow(data.workflow_template as WorkflowTemplateId);
       }
       
+      // Resolve image URLs for thumbnails
+      const parsedShots: ShotItem[] = (data.shot_list || []).map((item: any, index: number) => {
+        if (typeof item === 'string') {
+          return { id: `shot-${index}`, scriptSegment: item, scene: '', location: '', shotImagePaths: [] };
+        }
+        return {
+          id: item.id || `shot-${index}`,
+          scriptSegment: item.scriptSegment || item.description || '',
+          scene: item.scene || '',
+          location: item.location || '',
+          shotImagePaths: item.shotImagePaths || [],
+          sectionName: item.sectionName,
+          isCompleted: item.isCompleted,
+          videoUrl: item.videoUrl,
+          videoType: item.videoType,
+        };
+      });
+      
+      if (parsedShots.length > 0) {
+        resolveImageUrls(parsedShots);
+      }
+      
       setLoading(false);
     };
 
     loadScript();
-  }, [scriptId, navigate, toast]);
+  }, [scriptId, navigate, toast, resolveImageUrls]);
 
   // Convert shot_list to ShotItem objects (handles both string and object formats)
   const shots: ShotItem[] = (script?.shot_list || []).map((item: any, index) => {
@@ -340,6 +388,7 @@ export default function EditingWorkspace() {
           <ShotlistPanel 
             shots={shots} 
             onUpdateShot={handleUpdateShot}
+            resolvedUrls={resolvedUrls}
           />
 
           {/* Video References Panel */}
