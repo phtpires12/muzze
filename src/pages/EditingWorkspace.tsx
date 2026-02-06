@@ -8,13 +8,14 @@ import { useCelebration } from "@/contexts/CelebrationContext";
 import { useSession } from "@/hooks/useSession";
 import { DraggableSessionTimer } from "@/components/DraggableSessionTimer";
 import { AutoHideNav } from "@/components/AutoHideNav";
-import { ShotlistPanel, ShotItem } from "@/components/editing/ShotlistPanel";
+import { ShotlistPanel } from "@/components/editing/ShotlistPanel";
 import { VideoReferencesPanel, VideoReference } from "@/components/editing/VideoReferencesPanel";
 import { MusicPanel, MusicReference } from "@/components/editing/MusicPanel";
 import { EditingNotesPanel } from "@/components/editing/EditingNotesPanel";
 import { CompleteEditingButton } from "@/components/editing/CompleteEditingButton";
 import { useWorkflowTemplate, getPrevStageUrl } from "@/hooks/useWorkflowTemplate";
 import { WorkflowTemplateId, getStageLabel } from "@/lib/workflow-templates";
+import { ShotItem } from "@/lib/shotlist-generator";
 import { cn } from "@/lib/utils";
 
 interface ScriptData {
