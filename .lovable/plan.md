@@ -1,158 +1,156 @@
 
-# Plano: Corrigir Parsing de shot_list com Strings JSON
+# Plano: Visualização Completa de Cena (Estilo Notion)
 
-## Problema Identificado
+## Objetivo
 
-O banco de dados armazena `shot_list` como um **array de strings JSON escapadas**, não como um array de objetos. 
+Permitir que o editor clique em qualquer cena da galeria e veja o texto completo do roteiro, sem truncamento, em uma visualização expandida estilo "página dentro de página" do Notion.
 
-### Evidência do Banco:
-```
-shot_list = [
-  "{\"id\":\"acc819fe-1eb5-471a-b567-1a319a2fcf25\",\"scriptSegment\":\"<p>2026 vai ser o ano...\",...}",
-  "{\"id\":\"d4b6bd10-2bbe-4809-a9bd-b0e37d8f12e7\",\"scriptSegment\":\"Você já tá vendo...\",...}",
-  ...
-]
-```
-
-Cada elemento é uma **string** que contém JSON, não um objeto JavaScript diretamente acessível.
-
-### O Que Acontece Hoje:
+## Comportamento
 
 ```text
-┌────────────────────────────────────────────────────────────────────────┐
-│  Banco retorna:                                                        │
-│  shot_list[0] = "{\"id\":\"abc\",\"scriptSegment\":\"texto...\"}"      │
-│                  ↑                                                     │
-│            Uma STRING, não objeto                                      │
-└────────────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│  Código atual:                                                         │
-│                                                                        │
-│  const shots = shot_list.map(item => ({                                │
-│    scriptSegment: item.scriptSegment  ← UNDEFINED! item é string       │
-│  }));                                                                  │
-└────────────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│  Resultado:                                                            │
-│                                                                        │
-│  scriptSegment = undefined                                             │
-│  Fallback para item.description = undefined                            │
-│  Fallback final = '' (string vazia)                                    │
-│                                                                        │
-│  MAS o card mostra o objeto inteiro porque está usando                 │
-│  typeof item === 'string' → trata como texto simples                   │
-└────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│  GALERIA HORIZONTAL                                                     │
+│  ┌────────────┐ ┌────────────┐ ┌────────────┐                          │
+│  │   Cena 1   │ │   Cena 2   │ │   Cena 3   │ ← Clique aqui            │
+│  │ "texto..." │ │ "texto..." │ │ "texto..." │                          │
+│  └────────────┘ └────────────┘ └────────────┘                          │
+└─────────────────────────────────────────────────────────────────────────┘
+                                        │
+                                        ▼ (abre)
+┌─────────────────────────────────────────────────────────────────────────┐
+│  ┌───────────────────────────────────────────────────────────────────┐  │
+│  │ ╔═══════════════════════════════════════════════════════════════╗ │  │
+│  │ ║                     [THUMBNAIL 16:9]                          ║ │  │
+│  │ ║                                                               ║ │  │
+│  │ ╠═══════════════════════════════════════════════════════════════╣ │  │
+│  │ ║  [Badge: Setup]                      Cena 3 de 12     [← →]   ║ │  │
+│  │ ╠═══════════════════════════════════════════════════════════════╣ │  │
+│  │ ║                                                               ║ │  │
+│  │ ║  Oi eu sou o Tor4 e com a IA dominando tudo nos últimos       ║ │  │
+│  │ ║  anos, aquilo que é handmade, aquilo que é artesanal,         ║ │  │
+│  │ ║  aquilo que é feito por um ser humano real, tende a ser       ║ │  │
+│  │ ║  cada vez mais valorizado. E é por isso que eu quero          ║ │  │
+│  │ ║  compartilhar com você o meu processo criativo completo.      ║ │  │
+│  │ ║                                                               ║ │  │
+│  │ ║  ↑ TEXTO COMPLETO SEM TRUNCAMENTO                             ║ │  │
+│  │ ║                                                               ║ │  │
+│  │ ╠═══════════════════════════════════════════════════════════════╣ │  │
+│  │ ║  🎬 Vincular Vídeo                                            ║ │  │
+│  │ ║  [Input para colar link do Drive/Dropbox/YouTube]             ║ │  │
+│  │ ╚═══════════════════════════════════════════════════════════════╝ │  │
+│  └───────────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Solução
+## Arquivos a Criar/Modificar
 
-Adicionar `JSON.parse()` para cada elemento do array que é uma string contendo JSON.
+| Arquivo | Ação | Descrição |
+|---------|------|-----------|
+| `src/components/editing/SceneDetailModal.tsx` | **Criar** | Novo componente para visualização completa |
+| `src/components/editing/ShotlistPanel.tsx` | Modificar | Adicionar estado e handler de abertura |
 
-### Arquivo a Modificar
+## Detalhamento Técnico
 
-| Arquivo | Alteração |
-|---------|-----------|
-| `src/pages/EditingWorkspace.tsx` | Adicionar parsing de strings JSON no mapeamento |
+### 1. Criar SceneDetailModal.tsx
 
-### Lógica Corrigida
+Novo componente que renderiza:
+- **Mobile**: `Drawer` (bottom sheet) com scroll interno
+- **Desktop**: `Dialog` centralizado estilo Notion
+
+Conteúdo do modal:
+- Thumbnail 16:9 como "hero" (ou placeholder)
+- Header com badge de seção + navegação (← Cena X de Y →)
+- Texto completo do roteiro (sem `line-clamp`)
+- Badge de locação (se houver)
+- Área de vinculação de vídeo (mesma lógica do card)
+
+### 2. Modificar ShotlistPanel.tsx
+
+Adicionar:
+- State: `selectedSceneIndex: number | null`
+- Handler: `onCardClick(index)` → abre modal
+- Navegação: funções `goToPrevious()` e `goToNext()`
+- Renderizar `SceneDetailModal` controlado pelo state
+
+### 3. Estrutura do SceneDetailModal
 
 ```typescript
-const shots: ShotItem[] = (script?.shot_list || []).map((item: any, index) => {
-  // Parse JSON string if needed
-  let parsed = item;
-  if (typeof item === 'string') {
-    try {
-      parsed = JSON.parse(item);
-    } catch {
-      // Fallback: treat as plain text (legacy format)
-      return {
-        id: `shot-${index}`,
-        scriptSegment: item,
-        scene: '',
-        location: '',
-        shotImagePaths: [],
-      };
-    }
+interface SceneDetailModalProps {
+  shot: ShotItem | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onUpdateShot?: (shotId: string, updates: Partial<ShotItem>) => void;
+  resolvedUrl?: string;
+  currentIndex: number;
+  totalScenes: number;
+  onNavigate: (direction: 'prev' | 'next') => void;
+}
+```
+
+### 4. Detecção de Dispositivo
+
+```typescript
+import { useIsMobile } from "@/hooks/use-mobile";
+
+function SceneDetailModal(props) {
+  const isMobile = useIsMobile();
+  
+  if (isMobile) {
+    return <SceneDetailDrawer {...props} />;
   }
   
-  // Now 'parsed' is guaranteed to be an object
-  return {
-    id: parsed.id || `shot-${index}`,
-    scriptSegment: parsed.scriptSegment || parsed.description || '',
-    scene: parsed.scene || '',
-    location: parsed.location || '',
-    shotImagePaths: parsed.shotImagePaths || [],
-    sectionName: parsed.sectionName,
-    isCompleted: parsed.isCompleted,
-    videoUrl: parsed.videoUrl,
-    videoType: parsed.videoType,
-  };
-});
+  return <SceneDetailDialog {...props} />;
+}
 ```
 
-### Dois Lugares a Corrigir
+## Funcionalidades do Modal
 
-1. **Linha ~131-146**: Parsing dentro do `loadScript()` (para resolver URLs)
-2. **Linha ~159-183**: Parsing para gerar o array `shots` exibido
+1. **Texto Completo**: Exibe `stripHtml(shot.scriptSegment)` sem limite de linhas
+2. **Navegação**: Setas ou swipe para ir para próxima/anterior cena
+3. **Teclado**: Setas ← → para navegar, ESC para fechar
+4. **Vinculação de Vídeo**: Mesma funcionalidade do card inline
+5. **Badge de Seção**: Mostra "Gancho", "Setup", etc.
+6. **Indicador de Posição**: "Cena 3 de 12"
 
-Ambos precisam da mesma lógica de `JSON.parse()` para strings.
-
-## Fluxo Corrigido
+## Fluxo de Interação
 
 ```text
-┌────────────────────────────────────────────────────────────────────────┐
-│  Banco retorna:                                                        │
-│  shot_list[0] = "{\"id\":\"abc\",\"scriptSegment\":\"texto...\"}"      │
-└────────────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│  typeof item === 'string' ? JSON.parse(item) : item                    │
-│                              ↓                                         │
-│  parsed = { id: "abc", scriptSegment: "texto..." }                     │
-└────────────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│  scriptSegment: parsed.scriptSegment  ← "2026 vai ser o ano..."       │
-│  location: parsed.location            ← ""                             │
-│  shotImagePaths: parsed.shotImagePaths ← ["path/to/image.jpeg"]        │
-└────────────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│  Card exibe:                                                           │
-│  ┌────────────────┐                                                    │
-│  │   [thumbnail]  │                                                    │
-│  │                │                                                    │
-│  │ "2026 vai ser  │ ← Texto correto!                                   │
-│  │  o ano em que..."│                                                  │
-│  └────────────────┘                                                    │
-└────────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│  1. Usuário clica no card da Cena 3                          │
+│                         │                                    │
+│                         ▼                                    │
+│  2. setSelectedSceneIndex(2)                                 │
+│                         │                                    │
+│                         ▼                                    │
+│  3. SceneDetailModal abre com shot = shots[2]                │
+│                         │                                    │
+│                         ▼                                    │
+│  4. Usuário lê texto completo, vincula vídeo se quiser       │
+│                         │                                    │
+│                         ▼                                    │
+│  5. Usuário clica → para próxima cena                        │
+│     → setSelectedSceneIndex(3)                               │
+│                         │                                    │
+│                         ▼                                    │
+│  6. Usuário fecha (X ou ESC ou clica fora)                   │
+│     → setSelectedSceneIndex(null)                            │
+└──────────────────────────────────────────────────────────────┘
 ```
 
-## Bonus: Limpar HTML do scriptSegment
+## Mobile vs Desktop
 
-O `scriptSegment` contém HTML (`<p>2026 vai ser...</p>`). Vamos também remover as tags para exibir apenas o texto limpo nos cards.
-
-```typescript
-// Helper para extrair texto puro de HTML
-function stripHtml(html: string): string {
-  if (!html) return '';
-  return html.replace(/<[^>]*>/g, '').trim();
-}
-
-// No card:
-<p>{stripHtml(shot.scriptSegment) || 'Sem texto'}</p>
-```
+| Aspecto | Mobile (Drawer) | Desktop (Dialog) |
+|---------|-----------------|------------------|
+| Abertura | Slide de baixo | Fade + zoom central |
+| Altura | ~85vh com scroll | max-w-2xl, altura automática |
+| Navegação | Swipe ou botões | Setas do teclado + botões |
+| Fechamento | Swipe para baixo | Click fora ou ESC |
 
 ## Resultado Esperado
 
-- Cards da Shotlist exibirão o **texto do roteiro** em vez do JSON bruto
-- Imagens de referência serão carregadas corretamente
-- Badges de seção (Gancho, Setup, etc.) aparecerão
-- Sistema continuará funcionando com dados antigos (strings simples) e novos (JSON strings)
+1. Cards da galeria continuam mostrando preview com 2 linhas
+2. Ao clicar em qualquer card, abre visualização expandida
+3. Editor pode ler o texto completo do roteiro da cena
+4. Pode navegar entre cenas sem fechar o modal
+5. Pode vincular vídeo diretamente no modal
+6. Experiência adaptada para mobile (drawer) e desktop (dialog)
