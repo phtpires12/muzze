@@ -49,6 +49,30 @@ export default function EditingWorkspace() {
   const [scriptWorkflow, setScriptWorkflow] = useState<WorkflowTemplateId | null>(null);
   const { prevStage, currentTemplate } = useWorkflowTemplate({ scriptWorkflow });
 
+  // Resolve image URLs from storage paths
+  const resolveImageUrls = useCallback(async (shotItems: ShotItem[]) => {
+    const allPaths: string[] = [];
+    shotItems.forEach(shot => {
+      (shot.shotImagePaths || []).forEach(path => {
+        if (path && !allPaths.includes(path)) {
+          allPaths.push(path);
+        }
+      });
+    });
+    
+    if (allPaths.length === 0) return;
+    
+    const urlMap = await generateSignedUrlsBatch(allPaths, 86400); // 24h
+    
+    // Convert Map to Record for the component
+    const urlRecord: Record<string, string> = {};
+    urlMap.forEach((url, path) => {
+      urlRecord[path] = url;
+    });
+    
+    setResolvedUrls(urlRecord);
+  }, []);
+
   // Start session when page loads
   useEffect(() => {
     if (!session.isActive && !isShowingAnyCelebration) {
