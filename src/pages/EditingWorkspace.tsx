@@ -339,7 +339,7 @@ export default function EditingWorkspace() {
           {/* Shotlist Panel */}
           <ShotlistPanel 
             shots={shots} 
-            scriptId={script.id}
+            onUpdateShot={handleUpdateShot}
           />
 
           {/* Video References Panel */}

@@ -282,7 +282,11 @@ export function ShotlistPanel({
                       className={cn(
                         "w-2 h-2 rounded-full transition-colors",
                         shot.videoUrl 
-                          ? "bg-green-500" 
+                          ? "bg-primary" 
+                          : "bg-muted-foreground/30"
+                      )}
+                    />
+                  ))}
                           : "bg-muted-foreground/30"
                       )}
                     />
