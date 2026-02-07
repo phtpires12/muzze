@@ -1,104 +1,109 @@
 
-# Plano: Corrigir Encerramento de Sessão no EditingWorkspace
 
-## Diagnóstico do Problema
+# Plano: Corrigir Navegação após Encerrar Sessão no Timer
 
-### O que acontece atualmente (bug)
+## Diagnóstico Detalhado
+
+### Por que Session.tsx funciona e EditingWorkspace não?
+
+| Componente | Padrão usado | Resultado |
+|------------|--------------|-----------|
+| Session.tsx (`handleEnd`) | `await triggerFullCelebration(..., () => navigate('/'))` | ✅ Funciona |
+| EditingWorkspace (`handleComplete`) | `await triggerFullCelebration(..., () => navigate('/calendario'))` | ✅ Funciona |
+| EditingWorkspace (`onStop` do timer) | `await endSession(); navigate('/')` | ❌ Não funciona |
+
+### O que acontece no bug
 
 ```text
 1. Usuário clica "Encerrar sessão" no timer
-2. onStop() é chamado
-3. await endSession() → session.isActive = false
-4. React re-renderiza ANTES de navigate('/')
-5. useEffect detecta !session.isActive → chama startSession('edit')
-6. Nova sessão inicia → session.isActive = true
-7. navigate('/') tenta executar
-8. useNavigationBlocker BLOQUEIA (sessão ativa + rota '/' não está em SAFE_SESSION_PATHS)
-9. Warning: "A router only supports one blocker at a time"
+2. DraggableSessionTimer.handleConfirmEnd() é chamado
+3. handleConfirmEnd NÃO É ASYNC - chama onStop() sem await
+4. onStop async inicia execução
+5. setHasEndedSession(true) é chamado
+6. await endSession() começa...
+7. Dentro de endSession, resetTimer() é chamado
+8. session.isActive = false → Timer some da tela (condição falsa)
+9. O componente DraggableSessionTimer desmonta
+10. navigate('/') pode não executar corretamente porque o contexto mudou
 ```
 
-### Por que Session.tsx funciona
+### Por que triggerFullCelebration funciona
 
-A página Session.tsx implementa um padrão de proteção usando um flag `hasEndedSession`:
-
-| Passo | Session.tsx (correto) | EditingWorkspace.tsx (bug) |
-|-------|----------------------|---------------------------|
-| 1 | `setHasEndedSession(true)` **antes** de endSession | Não usa flag |
-| 2 | `await endSession()` | `await endSession()` |
-| 3 | useEffect verifica `!hasEndedSession` | useEffect NÃO verifica |
-| 4 | Não reinicia sessão | **Reinicia sessão** (bug) |
+O `triggerFullCelebration` armazena o callback de navegação e o executa **após** a celebração terminar, em um contexto estável. Ele não depende do timer estar montado.
 
 ## Solução
 
-Implementar o mesmo padrão de proteção do `Session.tsx` no `EditingWorkspace.tsx`:
+Alterar o `onStop` do EditingWorkspace para seguir o mesmo padrão do `handleEnd` de Session.tsx:
 
-### 1. Adicionar o flag `hasEndedSession`
-
-```typescript
-const [hasEndedSession, setHasEndedSession] = useState(false);
-```
-
-### 2. Atualizar o useEffect de auto-start
-
-```typescript
-useEffect(() => {
-  // NÃO iniciar sessão se acabou de encerrar ou em celebração
-  if (!session.isActive && !isShowingAnyCelebration && !hasEndedSession) {
-    startSession('edit');
-  }
-}, [session.isActive, isShowingAnyCelebration, hasEndedSession, startSession]);
-```
-
-### 3. Atualizar o onStop do timer
-
+### Código Atual (bugado)
 ```typescript
 onStop={async () => {
-  // Ativar flag ANTES de encerrar para evitar reinício
   setHasEndedSession(true);
   await endSession();
-  navigate('/');
+  navigate('/');  // ← Pode não executar
 }}
 ```
 
-### 4. Atualizar handleComplete também
-
+### Código Corrigido
 ```typescript
-const handleComplete = useCallback(async () => {
-  // ... código existente ...
+onStop={async () => {
+  // Capturar dados ANTES do reset
+  const capturedDuration = session.elapsedSeconds;
   
-  // Ativar flag ANTES de encerrar
   setHasEndedSession(true);
   
-  // Save timer session
-  await saveCurrentStageTime();
-  
-  // End session with celebration
   const result = await endSession();
-  // ... resto do código ...
-}, [/* deps */]);
+  if (result) {
+    const sessionSummary = {
+      duration: result.duration || capturedDuration || 0,
+      xpGained: result.xpGained || 0,
+      stage: 'edit',
+    };
+    
+    const alreadyCounted = (result as any).alreadyCounted || false;
+    const shouldShowStreak = (result as any).shouldShowCelebration && !alreadyCounted;
+    const streakCountResult = shouldShowStreak ? ((result as any).newStreak || 0) : 0;
+    
+    // Usar triggerFullCelebration com callback de navegação
+    await triggerFullCelebration(sessionSummary, streakCountResult, result.xpGained || 0, () => {
+      navigate('/');
+    });
+  } else {
+    // Fallback: navegação direta se endSession falhar
+    navigate('/');
+  }
+}}
 ```
+
+## Por que esta solução funciona
+
+1. **Captura dados antes do reset**: Garante que temos os valores corretos da sessão
+2. **Usa triggerFullCelebration**: O callback de navegação é armazenado e executado em contexto estável
+3. **Mostra celebração**: Experiência consistente - usuário vê o resumo da sessão ao encerrar
+4. **Fallback de segurança**: Se `endSession` falhar, ainda navega para home
+
+## Benefício Adicional
+
+Esta mudança também traz consistência UX:
+- Encerrar pelo timer agora mostra celebração (SessionSummary, StreakCelebration)
+- Antes, só o botão "Marcar como Editado" mostrava celebração
+- Experiência unificada independente de como o usuário encerra
 
 ## Arquivo a Modificar
 
-| Arquivo | Alterações |
-|---------|------------|
-| `src/pages/EditingWorkspace.tsx` | Adicionar `hasEndedSession` state e verificações |
-
-## Resumo das Alterações
-
-| Linha atual | Alteração |
-|-------------|-----------|
-| ~39 | Adicionar `const [hasEndedSession, setHasEndedSession] = useState(false);` |
-| ~79-82 | Adicionar `&& !hasEndedSession` na condição do useEffect |
-| ~234 (handleComplete) | Adicionar `setHasEndedSession(true);` antes de endSession |
-| ~389-392 (onStop) | Adicionar `setHasEndedSession(true);` antes de endSession |
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/pages/EditingWorkspace.tsx` | Substituir `onStop` do DraggableSessionTimer para usar `triggerFullCelebration` |
 
 ## Resultado Esperado
 
-1. Usuário clica "Encerrar sessão"
-2. `setHasEndedSession(true)` é chamado
-3. `await endSession()` → `session.isActive = false`
-4. React re-renderiza, useEffect detecta `!session.isActive`
-5. Mas `hasEndedSession = true` → **NÃO reinicia sessão**
-6. `navigate('/')` executa sem bloqueio
-7. Usuário é redirecionado para home corretamente
+1. Usuário clica "Encerrar sessão" no timer
+2. `setHasEndedSession(true)` previne reinício
+3. `await endSession()` salva dados e reseta timer
+4. `triggerFullCelebration` armazena callback de navegação
+5. SessionSummary aparece mostrando tempo trabalhado
+6. Usuário clica "Continuar"
+7. StreakCelebration aparece (se aplicável)
+8. Ao final, callback executa `navigate('/')`
+9. Usuário é redirecionado para home corretamente
+
