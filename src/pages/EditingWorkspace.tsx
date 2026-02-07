@@ -325,7 +325,7 @@ export default function EditingWorkspace() {
       </div>
 
       {/* Content */}
-      <div className="max-w-4xl mx-auto px-4 py-6 pb-32">
+      <div className="max-w-4xl mx-auto px-4 py-6 pb-28">
         <div className="space-y-4">
           {/* Shotlist Panel */}
           <ShotlistPanel 
@@ -333,7 +333,6 @@ export default function EditingWorkspace() {
             onUpdateShot={handleUpdateShot}
             resolvedUrls={resolvedUrls}
           />
-
 
           {/* Music Panel */}
           <MusicPanel
@@ -346,19 +345,14 @@ export default function EditingWorkspace() {
             notes={script.editing_notes || ''}
             onSave={handleSaveNotes}
           />
-        </div>
-      </div>
 
-      {/* Fixed Bottom Button */}
-      <div 
-        className="fixed bottom-0 left-0 right-0 p-4 bg-background/95 backdrop-blur-md border-t border-border"
-        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' }}
-      >
-        <div className="max-w-4xl mx-auto">
-          <CompleteEditingButton 
-            onComplete={handleComplete}
-            isLoading={saving}
-          />
+          {/* Complete Button - inline at bottom of content */}
+          <div className="pt-4 pb-8">
+            <CompleteEditingButton 
+              onComplete={handleComplete}
+              isLoading={saving}
+            />
+          </div>
         </div>
       </div>
 

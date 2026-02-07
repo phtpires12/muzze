@@ -40,7 +40,7 @@ export const AutoHideNav = () => {
   const { triggerFullCelebration } = useCelebration();
 
   // Verificar se estamos numa página de sessão ativa
-  const isOnSessionPage = ['/session', '/shot-list/record', '/shot-list/review'].some(
+  const isOnSessionPage = ['/session', '/shot-list/record', '/shot-list/review', '/editing-workspace'].some(
     path => location.pathname.startsWith(path)
   );
 
