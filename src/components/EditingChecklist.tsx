@@ -13,7 +13,16 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { EDITING_STEP_IDS } from "@/lib/kanban-columns";
+
+// IDs das etapas de edição (usado apenas neste componente legado)
+const EDITING_STEP_IDS = [
+  'decupagem', 
+  'musica', 
+  'efeitosSonoros', 
+  'efeitosVisuais', 
+  'legenda', 
+  'cor'
+] as const;
 
 interface EditStep {
   id: string;
