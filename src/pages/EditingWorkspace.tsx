@@ -9,9 +9,7 @@ import { useSession } from "@/hooks/useSession";
 import { DraggableSessionTimer } from "@/components/DraggableSessionTimer";
 import { AutoHideNav } from "@/components/AutoHideNav";
 import { ShotlistPanel } from "@/components/editing/ShotlistPanel";
-
 import { MusicPanel, MusicReference } from "@/components/editing/MusicPanel";
-import { EditingNotesPanel } from "@/components/editing/EditingNotesPanel";
 import { CompleteEditingButton } from "@/components/editing/CompleteEditingButton";
 import { useWorkflowTemplate, getPrevStageUrl } from "@/hooks/useWorkflowTemplate";
 import { WorkflowTemplateId, getStageLabel } from "@/lib/workflow-templates";
@@ -196,15 +194,6 @@ export default function EditingWorkspace() {
     setSaving(false);
   }, [scriptId]);
 
-  const handleSaveNotes = useCallback(async (notes: string) => {
-    if (!scriptId) return;
-    await supabase
-      .from('scripts')
-      .update({ editing_notes: notes })
-      .eq('id', scriptId);
-    setScript(prev => prev ? { ...prev, editing_notes: notes } : null);
-  }, [scriptId]);
-
   const handleComplete = useCallback(async () => {
     if (!scriptId) return;
 
@@ -359,12 +348,6 @@ export default function EditingWorkspace() {
             shots={shots} 
             onUpdateShot={handleUpdateShot}
             resolvedUrls={resolvedUrls}
-          />
-
-          {/* Notes Panel */}
-          <EditingNotesPanel
-            notes={script.editing_notes || ''}
-            onSave={handleSaveNotes}
           />
 
           {/* Complete Button - inline at bottom of content */}
