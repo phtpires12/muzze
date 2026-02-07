@@ -216,6 +216,8 @@ export type Database = {
           editing_progress: string[] | null
           editing_times: Json | null
           id: string
+          main_video_type: string | null
+          main_video_url: string | null
           music_reference: Json | null
           notes: string | null
           original_content: string | null
@@ -243,6 +245,8 @@ export type Database = {
           editing_progress?: string[] | null
           editing_times?: Json | null
           id?: string
+          main_video_type?: string | null
+          main_video_url?: string | null
           music_reference?: Json | null
           notes?: string | null
           original_content?: string | null
@@ -270,6 +274,8 @@ export type Database = {
           editing_progress?: string[] | null
           editing_times?: Json | null
           id?: string
+          main_video_type?: string | null
+          main_video_url?: string | null
           music_reference?: Json | null
           notes?: string | null
           original_content?: string | null

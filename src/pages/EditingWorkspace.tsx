@@ -17,12 +17,16 @@ import { ShotItem } from "@/lib/shotlist-generator";
 import { generateSignedUrlsBatch } from "@/lib/storage-helpers";
 import { parseShotList } from "@/lib/shot-list-parser";
 
+type VideoType = 'google_drive' | 'dropbox' | 'youtube' | 'other';
+
 interface ScriptData {
   id: string;
   title: string;
   shot_list: string[] | null;
   music_reference: MusicReference | null;
   reference_url: string | null;
+  main_video_url: string | null;
+  main_video_type: VideoType | null;
 }
 
 export default function EditingWorkspace() {
@@ -93,7 +97,7 @@ export default function EditingWorkspace() {
       setLoading(true);
       const { data, error } = await supabase
         .from('scripts')
-        .select('id, title, shot_list, workflow_template, reference_url')
+        .select('id, title, shot_list, workflow_template, reference_url, main_video_url, main_video_type')
         .eq('id', scriptId)
         .single();
 
@@ -117,6 +121,8 @@ export default function EditingWorkspace() {
         shot_list: data.shot_list,
         music_reference: scriptWithNewFields.music_reference || null,
         reference_url: data.reference_url || null,
+        main_video_url: (data as any).main_video_url || null,
+        main_video_type: (data as any).main_video_type || null,
       });
       
       if (data.workflow_template) {
@@ -189,6 +195,18 @@ export default function EditingWorkspace() {
       .eq('id', scriptId);
     setScript(prev => prev ? { ...prev, music_reference: music } : null);
     setSaving(false);
+  }, [scriptId]);
+
+  const handleSaveMainVideo = useCallback(async (url: string | null, type: VideoType | null) => {
+    if (!scriptId) return;
+    await supabase
+      .from('scripts')
+      .update({ 
+        main_video_url: url,
+        main_video_type: type,
+      } as any)
+      .eq('id', scriptId);
+    setScript(prev => prev ? { ...prev, main_video_url: url, main_video_type: type } : null);
   }, [scriptId]);
 
   const handleComplete = useCallback(async () => {
@@ -341,6 +359,9 @@ export default function EditingWorkspace() {
             shots={shots} 
             onUpdateShot={handleUpdateShot}
             resolvedUrls={resolvedUrls}
+            mainVideoUrl={script.main_video_url}
+            mainVideoType={script.main_video_type}
+            onSaveMainVideo={handleSaveMainVideo}
           />
 
           {/* Complete Button - inline at bottom of content */}
