@@ -747,55 +747,43 @@ const Session = () => {
             </Button>
           </div>
 
-              {/* Stage Selection OR Editing Checklist */}
-              {session.stage === "edit" ? (
-                // Checklist para etapa de Edição
-                <div className="space-y-4">
-                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                    Etapas de Edição
-                  </h3>
-                  <EditingChecklist scriptId={scriptId} onAllCompleted={handleEditingCompleted} />
-                  
-                </div>
-              ) : (
-                // Botões de mudança de etapa para outras etapas
-                <div className="space-y-3">
-                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                    Mudar Etapa
-                  </h3>
-                  <div className="grid grid-cols-2 gap-2">
-                    {STAGES.map((stage) => {
-                      const Icon = stage.icon;
-                      const isActive = stage.id === session.stage;
-                      return (
-                        <button
-                          key={stage.id}
-                          onClick={() => !isActive && changeStage(stage.id)}
-                          disabled={isActive}
-                          className={cn(
-                            "p-3 rounded-lg border transition-colors",
-                            "flex flex-col items-center gap-1.5",
-                            isActive 
-                              ? "bg-primary/10 border-primary/30" 
-                              : "bg-background border-border hover:border-primary/30 hover:bg-muted/50"
-                          )}
-                        >
-                          <Icon className={cn(
-                            "w-5 h-5",
-                            isActive ? "text-primary" : stage.color
-                          )} />
-                          <span className={cn(
-                            "text-xs font-medium",
-                            isActive ? "text-primary" : "text-foreground"
-                          )}>
-                            {stage.label}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
+          {/* Stage Selection */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+              Mudar Etapa
+            </h3>
+            <div className="grid grid-cols-2 gap-2">
+              {STAGES.map((stage) => {
+                const Icon = stage.icon;
+                const isActive = stage.id === session.stage;
+                return (
+                  <button
+                    key={stage.id}
+                    onClick={() => !isActive && changeStage(stage.id)}
+                    disabled={isActive}
+                    className={cn(
+                      "p-3 rounded-lg border transition-colors",
+                      "flex flex-col items-center gap-1.5",
+                      isActive 
+                        ? "bg-primary/10 border-primary/30" 
+                        : "bg-background border-border hover:border-primary/30 hover:bg-muted/50"
+                    )}
+                  >
+                    <Icon className={cn(
+                      "w-5 h-5",
+                      isActive ? "text-primary" : stage.color
+                    )} />
+                    <span className={cn(
+                      "text-xs font-medium",
+                      isActive ? "text-primary" : "text-foreground"
+                    )}>
+                      {stage.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </Card>
       </div>
 
