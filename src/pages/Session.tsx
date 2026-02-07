@@ -29,7 +29,6 @@ import { StreakHalo } from "@/components/StreakHalo";
 import { ScriptEditor } from "@/components/ScriptEditor";
 import { BrainstormWorkspace } from "@/components/brainstorm/BrainstormWorkspace";
 import { IdeaDetail } from "@/components/brainstorm/IdeaDetail";
-import { EditingChecklist } from "@/components/EditingChecklist";
 import { DraggableSessionTimer } from "@/components/DraggableSessionTimer";
 import { AutoHideNav } from "@/components/AutoHideNav";
 import { supabase } from "@/integrations/supabase/client";
