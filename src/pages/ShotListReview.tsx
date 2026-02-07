@@ -1008,6 +1008,29 @@ const ShotListReview = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Delete Shotlist Confirmation Modal */}
+      <AlertDialog open={showDeleteShotlistModal} onOpenChange={setShowDeleteShotlistModal}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Shotlist?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação vai apagar todas as cenas e imagens de referência desta shotlist. 
+              Você não poderá desfazer esta ação.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeletingShotlist}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteShotlist}
+              disabled={isDeletingShotlist}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeletingShotlist ? 'Excluindo...' : 'Excluir Shotlist'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
