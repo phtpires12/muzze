@@ -11,7 +11,6 @@ import { AutoHideNav } from "@/components/AutoHideNav";
 import { ShotlistPanel } from "@/components/editing/ShotlistPanel";
 import { MusicPanel, MusicReference } from "@/components/editing/MusicPanel";
 import { CompleteEditingButton } from "@/components/editing/CompleteEditingButton";
-import { CompleteEditingButton } from "@/components/editing/CompleteEditingButton";
 import { useWorkflowTemplate, getPrevStageUrl } from "@/hooks/useWorkflowTemplate";
 import { WorkflowTemplateId, getStageLabel } from "@/lib/workflow-templates";
 import { ShotItem } from "@/lib/shotlist-generator";
