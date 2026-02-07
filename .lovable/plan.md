@@ -1,147 +1,126 @@
 
-# Plano: Corrigir Vinculação de Vídeo no Modal
+# Plano: Corrigir Posicionamento do Botão de Concluir Edição
 
 ## Problema Identificado
 
-O `handleUpdateShot` no `EditingWorkspace.tsx` não está parseando as strings JSON do `shot_list` para extrair o ID real, causando incompatibilidade:
+O botão "Marcar como Editado" está fixo no bottom da tela e fica encoberto/competindo com a barra de navegação inferior (AutoHideNav).
 
-```text
-┌────────────────────────────────────────────────────────────────────────┐
-│  Modal envia:                                                          │
-│  shotId = "abc123-uuid-real"  ← ID real do objeto parseado             │
-└────────────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│  handleUpdateShot compara:                                             │
-│                                                                        │
-│  script.shot_list = [                                                  │
-│    "{\"id\":\"abc123-uuid-real\",...}",  ← STRING JSON                 │
-│    "{\"id\":\"def456-uuid-real\",...}"                                 │
-│  ]                                                                     │
-│                                                                        │
-│  typeof item === 'string'  → true                                      │
-│  itemId = "shot-0"         ← ID genérico gerado                        │
-│                                                                        │
-│  "shot-0" === "abc123-uuid-real"  → FALSE                              │
-│  → Atualização NUNCA acontece!                                         │
-└────────────────────────────────────────────────────────────────────────┘
-```
+Isso acontece porque:
+1. A rota `/editing-workspace` **não está incluída** na lista de `isOnSessionPage`
+2. Portanto, a navegação fica sempre visível (não faz auto-hide)
+3. Ambos elementos estão posicionados no bottom, causando sobreposição
 
-## Solução
+## Solução Proposta
 
-Modificar `handleUpdateShot` para parsear strings JSON antes de comparar IDs:
+Há duas abordagens possíveis:
 
-```text
-┌────────────────────────────────────────────────────────────────────────┐
-│  ANTES (quebrado):                                                     │
-│                                                                        │
-│  const itemId = typeof item === 'string'                               │
-│    ? `shot-${index}`    ← Errado! Gera ID genérico                     │
-│    : (item.id || ...)                                                  │
-└────────────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│  DEPOIS (corrigido):                                                   │
-│                                                                        │
-│  let parsed = item;                                                    │
-│  if (typeof item === 'string') {                                       │
-│    try { parsed = JSON.parse(item); } catch {}                         │
-│  }                                                                     │
-│  const itemId = parsed.id || `shot-${index}`;                          │
-│                    ↑                                                   │
-│         Agora extrai o ID real do JSON parseado!                       │
-└────────────────────────────────────────────────────────────────────────┘
-```
+| Abordagem | Descrição | Prós | Contras |
+|-----------|-----------|------|---------|
+| **A: Adicionar editing-workspace ao isOnSessionPage** | A navegação fará auto-hide durante sessão de edição | Comportamento consistente com outras páginas de sessão | Usuário precisa fazer hover para ver nav |
+| **B: Ajustar padding do botão para ficar acima da nav** | Botão fica sempre visível acima da navegação | Sempre acessível | Ocupa mais espaço vertical |
 
-## Arquivo a Modificar
+**Recomendação: Abordagem A** - é mais consistente com o padrão de outras páginas de sessão ativa onde a navegação faz auto-hide.
+
+## Alterações Necessárias
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/pages/EditingWorkspace.tsx` | Corrigir `handleUpdateShot` para parsear JSON |
+| `src/components/AutoHideNav.tsx` | Adicionar `/editing-workspace` à lista de `isOnSessionPage` |
+| `src/components/SideNav.tsx` | Adicionar `/editing-workspace` à lista de `isOnSessionPage` |
+| `src/pages/EditingWorkspace.tsx` | Remover container fixo do botão e movê-lo para dentro do fluxo do conteúdo |
 
-## Código Corrigido
+## Detalhes Técnicos
+
+### 1. Atualizar isOnSessionPage (AutoHideNav.tsx)
 
 ```typescript
-const handleUpdateShot = useCallback(async (shotId: string, updates: Partial<ShotItem>) => {
-  if (!scriptId || !script?.shot_list) return;
-  
-  const updatedShotList = (script.shot_list as any[]).map((item: any, index) => {
-    // Parse JSON string if needed to get the real ID
-    let parsed = item;
-    if (typeof item === 'string') {
-      try {
-        parsed = JSON.parse(item);
-      } catch {
-        // Plain text fallback - use index-based ID
-        parsed = { id: `shot-${index}`, scriptSegment: item };
-      }
-    }
-    
-    const itemId = parsed.id || `shot-${index}`;
-    
-    if (itemId === shotId) {
-      // Apply updates to the parsed object
-      const updated = { ...parsed, ...updates };
-      // Return as JSON string to maintain format consistency
-      return JSON.stringify(updated);
-    }
-    
-    // Return original item unchanged (keep as string if it was string)
-    return item;
-  });
+// ANTES
+const isOnSessionPage = ['/session', '/shot-list/record', '/shot-list/review'].some(
+  path => location.pathname.startsWith(path)
+);
 
-  const { error } = await supabase
-    .from('scripts')
-    .update({ shot_list: updatedShotList as any })
-    .eq('id', scriptId);
-
-  if (!error) {
-    setScript(prev => prev ? { ...prev, shot_list: updatedShotList } : null);
-  }
-}, [scriptId, script?.shot_list]);
+// DEPOIS
+const isOnSessionPage = ['/session', '/shot-list/record', '/shot-list/review', '/editing-workspace'].some(
+  path => location.pathname.startsWith(path)
+);
 ```
 
-## Fluxo Corrigido
+### 2. Atualizar isOnSessionPage (SideNav.tsx)
+
+```typescript
+// ANTES
+const isOnSessionPage = ['/session', '/shot-list/record', '/shot-list/review'].some(
+  path => location.pathname.startsWith(path)
+);
+
+// DEPOIS
+const isOnSessionPage = ['/session', '/shot-list/record', '/shot-list/review', '/editing-workspace'].some(
+  path => location.pathname.startsWith(path)
+);
+```
+
+### 3. Remover container fixo do botão (EditingWorkspace.tsx)
+
+Em vez de posicionar o botão como `fixed bottom-0`, vamos:
+1. Remover o container fixo do botão
+2. Adicionar o botão diretamente após o último painel (EditingNotesPanel)
+3. Usar padding suficiente para garantir visibilidade
+
+```typescript
+// Fluxo do conteúdo atualizado
+<div className="space-y-4">
+  <ShotlistPanel ... />
+  <MusicPanel ... />
+  <EditingNotesPanel ... />
+  
+  {/* Botão inline com espaço para navegação */}
+  <div className="pt-4 pb-8">
+    <CompleteEditingButton ... />
+  </div>
+</div>
+```
+
+## Comportamento Resultante
 
 ```text
-┌────────────────────────────────────────────────────────────────────────┐
-│  1. Modal envia: shotId = "abc123-uuid-real"                           │
-└────────────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│  2. handleUpdateShot recebe shot_list[0] = "{\"id\":\"abc123...\"}"    │
-│                                                                        │
-│     typeof item === 'string' → true                                    │
-│     parsed = JSON.parse(item) → { id: "abc123-uuid-real", ... }        │
-│     itemId = parsed.id → "abc123-uuid-real"                            │
-└────────────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│  3. Comparação:                                                        │
-│     "abc123-uuid-real" === "abc123-uuid-real" → TRUE ✓                 │
-└────────────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│  4. Aplica updates:                                                    │
-│     updated = { ...parsed, videoUrl: "https://...", videoType: "..." } │
-│     return JSON.stringify(updated)                                     │
-└────────────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│  5. Salva no banco e atualiza state                                    │
-│     → UI reflete a vinculação corretamente                             │
-└────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│  ANTES (problema)                                                       │
+│  ┌──────────────────────────────────────────────────────────────┐      │
+│  │ ...conteúdo...                                                │      │
+│  └──────────────────────────────────────────────────────────────┘      │
+│                                                                         │
+│  ┌──────────────────────────────────────────────────────────────┐      │
+│  │ [Botão Concluir - fixed bottom-0]         ← Encoberto!       │      │
+│  └──────────────────────────────────────────────────────────────┘      │
+│  ┌──────────────────────────────────────────────────────────────┐      │
+│  │ [Navegação - fixed bottom + 1rem]         ← Por cima!        │      │
+│  └──────────────────────────────────────────────────────────────┘      │
+└─────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│  DEPOIS (corrigido)                                                     │
+│  ┌──────────────────────────────────────────────────────────────┐      │
+│  │ ...conteúdo...                                                │      │
+│  │                                                                │      │
+│  │ ┌────────────────────────────────────────────────────────────┐│      │
+│  │ │ [Botão Concluir - inline no scroll]  ← Sempre visível!     ││      │
+│  │ └────────────────────────────────────────────────────────────┘│      │
+│  └──────────────────────────────────────────────────────────────┘      │
+│                                                                         │
+│  (navegação faz auto-hide, aparece ao passar mouse/scroll)              │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
+
+## Fluxo Mobile vs Desktop
+
+| Dispositivo | Comportamento da Navegação | Botão |
+|-------------|---------------------------|-------|
+| **Mobile** | Sempre visível (fixa) | Inline com scroll, acima da nav pelo padding |
+| **Desktop** | Auto-hide durante sessão | Inline com scroll, nav aparece no hover |
 
 ## Resultado Esperado
 
-- Vinculação de vídeo funcionará tanto no card quanto no modal
-- IDs reais dos shots serão corretamente matchados
-- Formato de armazenamento (JSON strings) será mantido
-- Compatibilidade com dados legados preservada
+1. Botão "Marcar como Editado" sempre visível e clicável
+2. Não há sobreposição com a navegação
+3. Comportamento consistente com outras páginas de sessão
+4. Funciona corretamente em mobile e desktop
