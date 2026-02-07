@@ -1,4 +1,5 @@
 
+
 # Plano 2 de 5: Adicionar Link de Referência do Roteiro
 
 ## Contexto
@@ -21,6 +22,82 @@ O campo `reference_url` existe na tabela `scripts`, mas não é carregado nem ex
 |---------|-----------|
 | `src/pages/EditingWorkspace.tsx` | Adicionar `reference_url` à query e criar seção de exibição |
 
+## Detalhes Técnicos
+
+### 1. Atualizar interface ScriptData
+
+```typescript
+interface ScriptData {
+  id: string;
+  title: string;
+  shot_list: string[] | null;
+  music_reference: MusicReference | null;
+  editing_notes: string | null;
+  reference_url: string | null;  // NOVO
+}
+```
+
+### 2. Atualizar query de carregamento
+
+```typescript
+const { data, error } = await supabase
+  .from('scripts')
+  .select('id, title, shot_list, workflow_template, reference_url')  // ADICIONAR reference_url
+  .eq('id', scriptId)
+  .single();
+```
+
+### 3. Criar seção de exibição do link de referência
+
+```tsx
+{/* Reference Link Panel - Se existir */}
+{script.reference_url && (
+  <div className="bg-card border border-border rounded-lg p-4">
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-2">
+        <ExternalLink className="w-4 h-4 text-blue-500" />
+        <span className="text-sm font-medium">Referência</span>
+      </div>
+      <a
+        href={script.reference_url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-sm text-blue-500 hover:text-blue-400 underline truncate max-w-[200px]"
+      >
+        Abrir referência
+      </a>
+    </div>
+  </div>
+)}
+```
+
+## Layout Final
+
+```text
+┌─────────────────────────────────────────────────────────────────────────┐
+│  Header (Mesa de Edição - Process as art)                               │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  ┌─────────────────────────────────────────────────────────────────┐   │
+│  │ 🎵 Música                                    [Abrir no YouTube]  │   │
+│  └─────────────────────────────────────────────────────────────────┘   │
+│                                                                         │
+│  ┌─────────────────────────────────────────────────────────────────┐   │
+│  │ 🔗 Referência                               [Abrir referência]   │   │  ← NOVO
+│  └─────────────────────────────────────────────────────────────────┘   │
+│                                                                         │
+│  ┌─────────────────────────────────────────────────────────────────┐   │
+│  │ 📋 Shotlist                                                      │   │
+│  │    [cards das cenas...]                                          │   │
+│  └─────────────────────────────────────────────────────────────────┘   │
+│                                                                         │
+│  ┌─────────────────────────────────────────────────────────────────┐   │
+│  │ [✓ Marcar como Editado]                                          │   │
+│  └─────────────────────────────────────────────────────────────────┘   │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
 ## Resultado Esperado
 
 O editor terá acesso direto ao link de referência do vídeo, podendo clicar e abrir a referência para seguir durante a edição.
@@ -37,74 +114,3 @@ O editor terá acesso direto ao link de referência do vídeo, podendo clicar e 
 | 4 | Reformular header/botão voltar | 📋 Pendente |
 | 5 | Bolinhas de progresso não funcionam | 📋 Pendente |
 
----
-
-# ~~Plano 1 de 5: Reposicionar Música acima do Shotlist~~ ✅ CONCLUÍDO
-
-## Contexto
-
-A Mesa de Edição atualmente exibe os painéis na ordem:
-1. Shotlist
-2. Música
-3. Notas de Edição
-
-O usuário solicitou que a **Música fique acima do Shotlist**, pois é uma informação prioritária para entender o ritmo do vídeo antes de revisar as cenas.
-
-## Problema Atual
-
-No arquivo `src/pages/EditingWorkspace.tsx` (linhas 329-347):
-
-```jsx
-<div className="space-y-4">
-  {/* Shotlist Panel */}
-  <ShotlistPanel ... />
-
-  {/* Music Panel */}
-  <MusicPanel ... />
-
-  {/* Notes Panel */}
-  <EditingNotesPanel ... />
-</div>
-```
-
-## Solução
-
-Simplesmente inverter a ordem dos componentes:
-
-```jsx
-<div className="space-y-4">
-  {/* Music Panel - AGORA PRIMEIRO */}
-  <MusicPanel ... />
-
-  {/* Shotlist Panel */}
-  <ShotlistPanel ... />
-
-  {/* Notes Panel */}
-  <EditingNotesPanel ... />
-</div>
-```
-
-## Arquivo a Modificar
-
-| Arquivo | Alteração |
-|---------|-----------|
-| `src/pages/EditingWorkspace.tsx` | Mover `MusicPanel` para antes de `ShotlistPanel` |
-
-## Resultado Esperado
-
-A ordem visual dos painéis será:
-1. **Música** (primeira posição - informação prioritária)
-2. Shotlist
-3. Notas de Edição
-
----
-
-## Próximos Problemas (armazenados para resolver depois)
-
-| # | Problema | Status |
-|---|----------|--------|
-| 1 | Reposicionar Música acima do Shotlist | ✅ Este plano |
-| 2 | Adicionar link de referência do roteiro | 📋 Pendente |
-| 3 | Remover campo Notas de Edição | 📋 Pendente |
-| 4 | Reformular header/botão voltar | 📋 Pendente |
-| 5 | Bolinhas de progresso não funcionam | 📋 Pendente |
