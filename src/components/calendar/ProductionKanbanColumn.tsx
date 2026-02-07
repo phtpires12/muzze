@@ -70,7 +70,6 @@ export function ProductionKanbanColumn({
                 columnId={column.id}
                 onClick={() => onViewScript(script.id)}
                 onDelete={(e) => onDeleteScript(e, script.id)}
-                showEditingProgress={column.id === 'editing'}
               />
             ))
           )}

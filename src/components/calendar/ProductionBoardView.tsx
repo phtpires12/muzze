@@ -31,7 +31,6 @@ interface Script {
   status: string | null;
   thumbnail_url?: string | null;
   reference_url?: string | null;
-  editing_progress?: string[] | null;
   publish_status?: string | null;
   workflow_template?: string | null;
 }

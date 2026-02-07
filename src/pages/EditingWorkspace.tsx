@@ -116,7 +116,6 @@ export default function EditingWorkspace() {
         title: data.title,
         shot_list: data.shot_list,
         music_reference: scriptWithNewFields.music_reference || null,
-        editing_notes: scriptWithNewFields.editing_notes || '',
         reference_url: data.reference_url || null,
       });
       

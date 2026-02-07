@@ -5,7 +5,6 @@ import { ptBR } from "date-fns/locale";
 import { Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { EDITING_STEP_IDS } from "@/lib/kanban-columns";
 import { getWorkflowTemplate, WorkflowTemplateId } from "@/lib/workflow-templates";
 import { useWorkflowTemplate } from "@/hooks/useWorkflowTemplate";
 
@@ -16,7 +15,6 @@ interface Script {
   publish_date: string | null;
   thumbnail_url?: string | null;
   reference_url?: string | null;
-  editing_progress?: string[] | null;
   workflow_template?: string | null;
 }
 
@@ -25,7 +23,6 @@ interface ProductionKanbanCardProps {
   columnId: string;
   onClick: () => void;
   onDelete: (e: React.MouseEvent) => void;
-  showEditingProgress?: boolean;
 }
 
 export function ProductionKanbanCard({ 
@@ -33,7 +30,6 @@ export function ProductionKanbanCard({
   columnId, 
   onClick, 
   onDelete,
-  showEditingProgress = false 
 }: ProductionKanbanCardProps) {
   const { globalTemplateId } = useWorkflowTemplate();
   
@@ -57,9 +53,6 @@ export function ProductionKanbanCard({
     transform: CSS.Transform.toString(transform),
     transition,
   };
-
-  const progressCount = script.editing_progress?.length || 0;
-  const totalSteps = EDITING_STEP_IDS.length;
   
   // Verificar se tem workflow diferente do global
   const hasCustomWorkflow = script.workflow_template && 
@@ -130,26 +123,6 @@ export function ProductionKanbanCard({
           </Badge>
         )}
       </div>
-
-      {/* Indicador de progresso de edição */}
-      {showEditingProgress && (
-        <div className="flex items-center gap-0.5 mt-2">
-          {EDITING_STEP_IDS.map(stepId => (
-            <div 
-              key={stepId}
-              className={cn(
-                "w-2 h-2 rounded-full transition-colors",
-                script.editing_progress?.includes(stepId) 
-                  ? "bg-green-500" 
-                  : "bg-muted-foreground/30"
-              )}
-            />
-          ))}
-          <span className="text-[10px] text-muted-foreground ml-1.5">
-            {progressCount}/{totalSteps}
-          </span>
-        </div>
-      )}
 
       {/* Reference URL chip */}
       {script.reference_url && (
