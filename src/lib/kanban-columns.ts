@@ -88,15 +88,6 @@ export const PUBLICATION_DRAG_RULES = {
   ],
 };
 
-// === IDs DAS ETAPAS DE EDIÇÃO ===
-export const EDITING_STEP_IDS = [
-  'decupagem', 
-  'musica', 
-  'efeitosSonoros', 
-  'efeitosVisuais', 
-  'legenda', 
-  'cor'
-] as const;
 
 // === HELPERS PARA PRODUÇÃO ===
 export const getProductionColumnForStatus = (status: string | null): ProductionColumnId => {

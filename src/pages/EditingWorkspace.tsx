@@ -12,18 +12,16 @@ import { ShotlistPanel } from "@/components/editing/ShotlistPanel";
 import { MusicPanel, MusicReference } from "@/components/editing/MusicPanel";
 import { CompleteEditingButton } from "@/components/editing/CompleteEditingButton";
 import { useWorkflowTemplate, getPrevStageUrl } from "@/hooks/useWorkflowTemplate";
-import { WorkflowTemplateId, getStageLabel } from "@/lib/workflow-templates";
+import { WorkflowTemplateId } from "@/lib/workflow-templates";
 import { ShotItem } from "@/lib/shotlist-generator";
 import { generateSignedUrlsBatch } from "@/lib/storage-helpers";
 import { parseShotList } from "@/lib/shot-list-parser";
-import { cn } from "@/lib/utils";
 
 interface ScriptData {
   id: string;
   title: string;
   shot_list: string[] | null;
   music_reference: MusicReference | null;
-  editing_notes: string | null;
   reference_url: string | null;
 }
 
@@ -118,7 +116,6 @@ export default function EditingWorkspace() {
         title: data.title,
         shot_list: data.shot_list,
         music_reference: scriptWithNewFields.music_reference || null,
-        editing_notes: scriptWithNewFields.editing_notes || '',
         reference_url: data.reference_url || null,
       });
       
