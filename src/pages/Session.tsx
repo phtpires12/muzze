@@ -274,14 +274,22 @@ const Session = () => {
     handleRecordStage();
   }, [session.stage, stageParam, scriptId, navigate, toast]);
 
-  // Handle edit stage - redirect to new Editing Workspace
+  // Handle edit stage - always redirect to Editing Workspace
   useEffect(() => {
     if (session.stage === "edit" && stageParam === "edit") {
       if (scriptId && scriptId !== 'null' && scriptId !== 'undefined') {
         navigate(`/editing-workspace?scriptId=${scriptId}`);
+      } else {
+        // No scriptId for edit stage, redirect to calendar
+        toast({
+          title: "Conteúdo não encontrado",
+          description: "Selecione um conteúdo para editar no calendário.",
+          variant: "destructive",
+        });
+        navigate('/calendario?view=board');
       }
     }
-  }, [session.stage, stageParam, scriptId, navigate]);
+  }, [session.stage, stageParam, scriptId, navigate, toast]);
 
   const formatTime = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
