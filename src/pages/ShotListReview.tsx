@@ -55,6 +55,10 @@ const ShotListReview = () => {
     toKeep: ShotItem[];
     hasFilledData: boolean;
   } | null>(null);
+  
+  // Delete shotlist modal state
+  const [showDeleteShotlistModal, setShowDeleteShotlistModal] = useState(false);
+  const [isDeletingShotlist, setIsDeletingShotlist] = useState(false);
 
   // Unified Session System
   const {
