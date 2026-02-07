@@ -1,156 +1,147 @@
 
-# Plano: Visualização Completa de Cena (Estilo Notion)
+# Plano: Corrigir Vinculação de Vídeo no Modal
 
-## Objetivo
+## Problema Identificado
 
-Permitir que o editor clique em qualquer cena da galeria e veja o texto completo do roteiro, sem truncamento, em uma visualização expandida estilo "página dentro de página" do Notion.
-
-## Comportamento
+O `handleUpdateShot` no `EditingWorkspace.tsx` não está parseando as strings JSON do `shot_list` para extrair o ID real, causando incompatibilidade:
 
 ```text
-┌─────────────────────────────────────────────────────────────────────────┐
-│  GALERIA HORIZONTAL                                                     │
-│  ┌────────────┐ ┌────────────┐ ┌────────────┐                          │
-│  │   Cena 1   │ │   Cena 2   │ │   Cena 3   │ ← Clique aqui            │
-│  │ "texto..." │ │ "texto..." │ │ "texto..." │                          │
-│  └────────────┘ └────────────┘ └────────────┘                          │
-└─────────────────────────────────────────────────────────────────────────┘
-                                        │
-                                        ▼ (abre)
-┌─────────────────────────────────────────────────────────────────────────┐
-│  ┌───────────────────────────────────────────────────────────────────┐  │
-│  │ ╔═══════════════════════════════════════════════════════════════╗ │  │
-│  │ ║                     [THUMBNAIL 16:9]                          ║ │  │
-│  │ ║                                                               ║ │  │
-│  │ ╠═══════════════════════════════════════════════════════════════╣ │  │
-│  │ ║  [Badge: Setup]                      Cena 3 de 12     [← →]   ║ │  │
-│  │ ╠═══════════════════════════════════════════════════════════════╣ │  │
-│  │ ║                                                               ║ │  │
-│  │ ║  Oi eu sou o Tor4 e com a IA dominando tudo nos últimos       ║ │  │
-│  │ ║  anos, aquilo que é handmade, aquilo que é artesanal,         ║ │  │
-│  │ ║  aquilo que é feito por um ser humano real, tende a ser       ║ │  │
-│  │ ║  cada vez mais valorizado. E é por isso que eu quero          ║ │  │
-│  │ ║  compartilhar com você o meu processo criativo completo.      ║ │  │
-│  │ ║                                                               ║ │  │
-│  │ ║  ↑ TEXTO COMPLETO SEM TRUNCAMENTO                             ║ │  │
-│  │ ║                                                               ║ │  │
-│  │ ╠═══════════════════════════════════════════════════════════════╣ │  │
-│  │ ║  🎬 Vincular Vídeo                                            ║ │  │
-│  │ ║  [Input para colar link do Drive/Dropbox/YouTube]             ║ │  │
-│  │ ╚═══════════════════════════════════════════════════════════════╝ │  │
-│  └───────────────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────┐
+│  Modal envia:                                                          │
+│  shotId = "abc123-uuid-real"  ← ID real do objeto parseado             │
+└────────────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│  handleUpdateShot compara:                                             │
+│                                                                        │
+│  script.shot_list = [                                                  │
+│    "{\"id\":\"abc123-uuid-real\",...}",  ← STRING JSON                 │
+│    "{\"id\":\"def456-uuid-real\",...}"                                 │
+│  ]                                                                     │
+│                                                                        │
+│  typeof item === 'string'  → true                                      │
+│  itemId = "shot-0"         ← ID genérico gerado                        │
+│                                                                        │
+│  "shot-0" === "abc123-uuid-real"  → FALSE                              │
+│  → Atualização NUNCA acontece!                                         │
+└────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Arquivos a Criar/Modificar
+## Solução
 
-| Arquivo | Ação | Descrição |
-|---------|------|-----------|
-| `src/components/editing/SceneDetailModal.tsx` | **Criar** | Novo componente para visualização completa |
-| `src/components/editing/ShotlistPanel.tsx` | Modificar | Adicionar estado e handler de abertura |
+Modificar `handleUpdateShot` para parsear strings JSON antes de comparar IDs:
 
-## Detalhamento Técnico
-
-### 1. Criar SceneDetailModal.tsx
-
-Novo componente que renderiza:
-- **Mobile**: `Drawer` (bottom sheet) com scroll interno
-- **Desktop**: `Dialog` centralizado estilo Notion
-
-Conteúdo do modal:
-- Thumbnail 16:9 como "hero" (ou placeholder)
-- Header com badge de seção + navegação (← Cena X de Y →)
-- Texto completo do roteiro (sem `line-clamp`)
-- Badge de locação (se houver)
-- Área de vinculação de vídeo (mesma lógica do card)
-
-### 2. Modificar ShotlistPanel.tsx
-
-Adicionar:
-- State: `selectedSceneIndex: number | null`
-- Handler: `onCardClick(index)` → abre modal
-- Navegação: funções `goToPrevious()` e `goToNext()`
-- Renderizar `SceneDetailModal` controlado pelo state
-
-### 3. Estrutura do SceneDetailModal
-
-```typescript
-interface SceneDetailModalProps {
-  shot: ShotItem | null;
-  isOpen: boolean;
-  onClose: () => void;
-  onUpdateShot?: (shotId: string, updates: Partial<ShotItem>) => void;
-  resolvedUrl?: string;
-  currentIndex: number;
-  totalScenes: number;
-  onNavigate: (direction: 'prev' | 'next') => void;
-}
+```text
+┌────────────────────────────────────────────────────────────────────────┐
+│  ANTES (quebrado):                                                     │
+│                                                                        │
+│  const itemId = typeof item === 'string'                               │
+│    ? `shot-${index}`    ← Errado! Gera ID genérico                     │
+│    : (item.id || ...)                                                  │
+└────────────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│  DEPOIS (corrigido):                                                   │
+│                                                                        │
+│  let parsed = item;                                                    │
+│  if (typeof item === 'string') {                                       │
+│    try { parsed = JSON.parse(item); } catch {}                         │
+│  }                                                                     │
+│  const itemId = parsed.id || `shot-${index}`;                          │
+│                    ↑                                                   │
+│         Agora extrai o ID real do JSON parseado!                       │
+└────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 4. Detecção de Dispositivo
+## Arquivo a Modificar
+
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/pages/EditingWorkspace.tsx` | Corrigir `handleUpdateShot` para parsear JSON |
+
+## Código Corrigido
 
 ```typescript
-import { useIsMobile } from "@/hooks/use-mobile";
-
-function SceneDetailModal(props) {
-  const isMobile = useIsMobile();
+const handleUpdateShot = useCallback(async (shotId: string, updates: Partial<ShotItem>) => {
+  if (!scriptId || !script?.shot_list) return;
   
-  if (isMobile) {
-    return <SceneDetailDrawer {...props} />;
+  const updatedShotList = (script.shot_list as any[]).map((item: any, index) => {
+    // Parse JSON string if needed to get the real ID
+    let parsed = item;
+    if (typeof item === 'string') {
+      try {
+        parsed = JSON.parse(item);
+      } catch {
+        // Plain text fallback - use index-based ID
+        parsed = { id: `shot-${index}`, scriptSegment: item };
+      }
+    }
+    
+    const itemId = parsed.id || `shot-${index}`;
+    
+    if (itemId === shotId) {
+      // Apply updates to the parsed object
+      const updated = { ...parsed, ...updates };
+      // Return as JSON string to maintain format consistency
+      return JSON.stringify(updated);
+    }
+    
+    // Return original item unchanged (keep as string if it was string)
+    return item;
+  });
+
+  const { error } = await supabase
+    .from('scripts')
+    .update({ shot_list: updatedShotList as any })
+    .eq('id', scriptId);
+
+  if (!error) {
+    setScript(prev => prev ? { ...prev, shot_list: updatedShotList } : null);
   }
-  
-  return <SceneDetailDialog {...props} />;
-}
+}, [scriptId, script?.shot_list]);
 ```
 
-## Funcionalidades do Modal
-
-1. **Texto Completo**: Exibe `stripHtml(shot.scriptSegment)` sem limite de linhas
-2. **Navegação**: Setas ou swipe para ir para próxima/anterior cena
-3. **Teclado**: Setas ← → para navegar, ESC para fechar
-4. **Vinculação de Vídeo**: Mesma funcionalidade do card inline
-5. **Badge de Seção**: Mostra "Gancho", "Setup", etc.
-6. **Indicador de Posição**: "Cena 3 de 12"
-
-## Fluxo de Interação
+## Fluxo Corrigido
 
 ```text
-┌──────────────────────────────────────────────────────────────┐
-│  1. Usuário clica no card da Cena 3                          │
-│                         │                                    │
-│                         ▼                                    │
-│  2. setSelectedSceneIndex(2)                                 │
-│                         │                                    │
-│                         ▼                                    │
-│  3. SceneDetailModal abre com shot = shots[2]                │
-│                         │                                    │
-│                         ▼                                    │
-│  4. Usuário lê texto completo, vincula vídeo se quiser       │
-│                         │                                    │
-│                         ▼                                    │
-│  5. Usuário clica → para próxima cena                        │
-│     → setSelectedSceneIndex(3)                               │
-│                         │                                    │
-│                         ▼                                    │
-│  6. Usuário fecha (X ou ESC ou clica fora)                   │
-│     → setSelectedSceneIndex(null)                            │
-└──────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────┐
+│  1. Modal envia: shotId = "abc123-uuid-real"                           │
+└────────────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│  2. handleUpdateShot recebe shot_list[0] = "{\"id\":\"abc123...\"}"    │
+│                                                                        │
+│     typeof item === 'string' → true                                    │
+│     parsed = JSON.parse(item) → { id: "abc123-uuid-real", ... }        │
+│     itemId = parsed.id → "abc123-uuid-real"                            │
+└────────────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│  3. Comparação:                                                        │
+│     "abc123-uuid-real" === "abc123-uuid-real" → TRUE ✓                 │
+└────────────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│  4. Aplica updates:                                                    │
+│     updated = { ...parsed, videoUrl: "https://...", videoType: "..." } │
+│     return JSON.stringify(updated)                                     │
+└────────────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│  5. Salva no banco e atualiza state                                    │
+│     → UI reflete a vinculação corretamente                             │
+└────────────────────────────────────────────────────────────────────────┘
 ```
-
-## Mobile vs Desktop
-
-| Aspecto | Mobile (Drawer) | Desktop (Dialog) |
-|---------|-----------------|------------------|
-| Abertura | Slide de baixo | Fade + zoom central |
-| Altura | ~85vh com scroll | max-w-2xl, altura automática |
-| Navegação | Swipe ou botões | Setas do teclado + botões |
-| Fechamento | Swipe para baixo | Click fora ou ESC |
 
 ## Resultado Esperado
 
-1. Cards da galeria continuam mostrando preview com 2 linhas
-2. Ao clicar em qualquer card, abre visualização expandida
-3. Editor pode ler o texto completo do roteiro da cena
-4. Pode navegar entre cenas sem fechar o modal
-5. Pode vincular vídeo diretamente no modal
-6. Experiência adaptada para mobile (drawer) e desktop (dialog)
+- Vinculação de vídeo funcionará tanto no card quanto no modal
+- IDs reais dos shots serão corretamente matchados
+- Formato de armazenamento (JSON strings) será mantido
+- Compatibilidade com dados legados preservada
