@@ -1,161 +1,154 @@
 
 
-# Plano 4 de 5: Reformular Header e Botão Voltar
+# Plano 5 (Reformulado): Limpar Código Morto - Remoção Completa do Sistema Antigo de Bolinhas
 
 ## Contexto
 
-O header da Mesa de Edição não segue o padrão visual das outras páginas de Session (ShotListRecord e ShotListReview). Isso cria inconsistência na experiência do usuário.
+A Mesa de Edição está sendo reformulada do zero. O sistema antigo de 6 etapas de edição (Decupagem, Música, Efeitos Sonoros, etc.) com timers individuais e bolinhas de progresso **não faz mais parte do novo design**. 
 
-## Análise Comparativa
+A nova fonte da verdade é simples:
+- **Editado** = clicou em "Marcar como Editado"
+- **Não Editado** = não clicou
 
-### Padrão Atual (ShotListRecord/ShotListReview)
+## O Que Será Removido
 
-```text
-┌──────────────────────────────────────────────────────────────┐
-│  [←]     Gravação                              [PDF] [●]     │
-│          Nome do roteiro                                     │
-└──────────────────────────────────────────────────────────────┘
-```
+### 1. Arquivo a Deletar
 
-- **Botão Voltar**: `variant="ghost"` + `size="icon"` (apenas ícone `ArrowLeft`)
-- **Título**: `text-lg font-bold text-foreground` (sem ícone decorativo)
-- **Subtítulo**: `text-xs text-muted-foreground truncate`
+| Arquivo | Motivo |
+|---------|--------|
+| `src/components/editing/EditingNotesPanel.tsx` | Não é usado em nenhum lugar |
 
-### EditingWorkspace Atual (inconsistente)
+### 2. Componente a Manter (por enquanto)
 
-```text
-┌──────────────────────────────────────────────────────────────┐
-│  [< 🎥 Gravação]     🎬 Mesa de Edição                       │
-│                      Nome do roteiro                         │
-└──────────────────────────────────────────────────────────────┘
-```
+| Arquivo | Situação |
+|---------|----------|
+| `src/components/EditingChecklist.tsx` | Usado em `Session.tsx` - remover requer refatorar Session.tsx também |
 
-- Botão voltar tem ícone `ChevronLeft` + ícone `Video` + texto
-- Título tem ícone `Film` inline dentro do `h1`
-- `size="sm"` em vez de `size="icon"`
+**Decisão**: Manter o `EditingChecklist.tsx` por ora, já que ele está acoplado à página `Session.tsx`. A limpeza total da `Session.tsx` pode ser um projeto futuro separado.
 
-## Solução
+### 3. Remover Bolinhas do Kanban
 
-Reformular o header para seguir exatamente o padrão das outras páginas:
+O impacto principal é no **Calendário Editorial** - remover as 6 bolinhas que aparecem nos cards da coluna "Edição".
 
-```text
-┌──────────────────────────────────────────────────────────────┐
-│  [←]     Mesa de Edição                                      │
-│          Nome do roteiro                                     │
-└──────────────────────────────────────────────────────────────┘
-```
-
-## Alterações Técnicas
-
-### 1. Atualizar imports
-
-Substituir `ChevronLeft` por `ArrowLeft`:
-
-```tsx
-import { ArrowLeft, ExternalLink } from "lucide-react";
-// Remover: Film, ChevronLeft, Video
-```
-
-### 2. Reformular o botão voltar
-
-De:
-```tsx
-<Button
-  variant="ghost"
-  size="sm"
-  onClick={handleGoBack}
-  className="gap-2"
->
-  <ChevronLeft className="w-4 h-4" />
-  <Video className="w-4 h-4 text-red-500" />
-  <span className="hidden sm:inline text-xs">
-    {prevStage('editing') ? getStageLabel(prevStage('editing')!) : 'Gravação'}
-  </span>
-</Button>
-```
-
-Para:
-```tsx
-<Button
-  variant="ghost"
-  size="icon"
-  className="shrink-0"
-  onClick={handleGoBack}
-  title="Voltar para Gravação"
->
-  <ArrowLeft className="w-5 h-5" />
-</Button>
-```
-
-### 3. Reformular o título
-
-De:
-```tsx
-<h1 className="text-lg font-semibold text-foreground truncate flex items-center gap-2">
-  <Film className="w-5 h-5 text-purple-500 flex-shrink-0" />
-  Mesa de Edição
-</h1>
-```
-
-Para:
-```tsx
-<h1 className="text-lg font-bold text-foreground truncate">
-  Mesa de Edição
-</h1>
-```
-
-### 4. Ajustar container do header
-
-De:
-```tsx
-<div className="flex items-center gap-3">
-```
-
-Para (manter consistência com outras páginas):
-```tsx
-<div className="flex items-center gap-3">
-  <!-- Botão voltar -->
-  <Button variant="ghost" size="icon" ... />
-  
-  <!-- Título e subtítulo -->
-  <div className="flex-1 min-w-0">
-    <h1>Mesa de Edição</h1>
-    <p>{script.title}</p>
-  </div>
-</div>
-```
-
-## Arquivo a Modificar
+**Arquivos afetados:**
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/pages/EditingWorkspace.tsx` | Reformular header seguindo padrão visual |
+| `src/components/calendar/ProductionKanbanCard.tsx` | Remover prop `showEditingProgress`, remover import `EDITING_STEP_IDS`, remover seção das bolinhas |
+| `src/components/calendar/ProductionKanbanColumn.tsx` | Remover `editing_progress` da interface Script, remover prop `showEditingProgress={column.id === 'editing'}` |
+| `src/components/calendar/ProductionBoardView.tsx` | Remover `editing_progress` da interface Script |
+| `src/components/calendar/OrphanColumn.tsx` | Remover `editing_progress` da interface, remover import `EDITING_STEP_IDS` não utilizado |
+| `src/pages/CalendarioEditorial.tsx` | Remover `editing_progress` da interface |
+
+### 4. Limpar kanban-columns.ts
+
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/lib/kanban-columns.ts` | Remover export `EDITING_STEP_IDS` |
+
+### 5. Limpar EditingWorkspace.tsx
+
+| Código a Remover | Motivo |
+|------------------|--------|
+| `editing_notes` da interface `ScriptData` | Campo não é mais usado |
+| `editing_notes` no setScript | Não é exibido |
+| Import `cn` de @/lib/utils | Não é utilizado |
+| Import `getStageLabel` | Não é utilizado |
+
+## Alterações Técnicas Detalhadas
+
+### ProductionKanbanCard.tsx
+
+**Antes:**
+```tsx
+import { EDITING_STEP_IDS } from "@/lib/kanban-columns";
+
+interface Script {
+  editing_progress?: string[] | null;  // REMOVER
+}
+
+interface ProductionKanbanCardProps {
+  showEditingProgress?: boolean;  // REMOVER
+}
+
+// Dentro do componente:
+const progressCount = script.editing_progress?.length || 0;  // REMOVER
+const totalSteps = EDITING_STEP_IDS.length;  // REMOVER
+
+{showEditingProgress && (  // REMOVER SEÇÃO INTEIRA
+  <div className="flex items-center gap-0.5 mt-2">
+    {EDITING_STEP_IDS.map(stepId => (...))}
+  </div>
+)}
+```
+
+**Depois:**
+```tsx
+// Sem import de EDITING_STEP_IDS
+// Sem editing_progress na interface
+// Sem showEditingProgress na props
+// Sem seção de bolinhas
+```
+
+### ProductionKanbanColumn.tsx
+
+**Antes:**
+```tsx
+interface Script {
+  editing_progress?: string[] | null;  // REMOVER
+}
+
+<ProductionKanbanCard
+  showEditingProgress={column.id === 'editing'}  // REMOVER
+/>
+```
+
+### kanban-columns.ts
+
+```tsx
+// REMOVER estas linhas (91-99):
+// === IDs DAS ETAPAS DE EDIÇÃO ===
+export const EDITING_STEP_IDS = [
+  'decupagem', 
+  'musica', 
+  'efeitosSonoros', 
+  'efeitosVisuais', 
+  'legenda', 
+  'cor'
+] as const;
+```
 
 ## Resultado Esperado
 
-O header da Mesa de Edição terá:
-- Botão voltar simples com apenas ícone de seta (`ArrowLeft`)
-- Título sem ícone decorativo, usando `font-bold` como as outras páginas
-- Visual consistente com ShotListRecord e ShotListReview
+1. **Calendário Editorial**: Cards na coluna "Edição" não mostram mais as 6 bolinhas de progresso
+2. **Mesa de Edição**: Fica limpa, sem referências a notas de edição
+3. **Código**: Mais enxuto, sem constantes/interfaces não utilizadas
 
-## Comparação Visual Final
+## Nota sobre o Banco de Dados
 
-| Elemento | Antes | Depois |
-|----------|-------|--------|
-| Botão Voltar | `ChevronLeft` + `Video` + texto | `ArrowLeft` apenas |
-| Tamanho Botão | `size="sm"` | `size="icon"` |
-| Título | Com ícone `Film` inline | Texto puro |
-| Fonte Título | `font-semibold` | `font-bold` |
+Os campos `editing_progress` e `editing_times` na tabela `scripts` **não serão removidos** neste momento porque:
+- Migrations de remoção de coluna são mais arriscadas
+- Os dados históricos podem ser úteis para análise futura
+- Não causam overhead significativo
 
----
+A remoção do schema pode ser feita em um momento futuro se desejado.
 
-## Próximos Problemas
+## O Que **Não** Será Alterado
 
-| # | Problema | Status |
-|---|----------|--------|
-| 1 | Reposicionar Música acima do Shotlist | ✅ Concluído |
-| 2 | Adicionar link de referência do roteiro | ✅ Concluído |
-| 3 | Remover campo Notas de Edição | ✅ Concluído |
-| 4 | Reformular header/botão voltar | ✅ Concluído |
-| 5 | Bolinhas de progresso não funcionam | 📋 Pendente |
+- `Session.tsx` - continua usando `EditingChecklist` (limpeza futura)
+- `EditingChecklist.tsx` - mantido por dependência do Session.tsx
+- Colunas do banco de dados - mantidas por segurança
+
+## Resumo das Mudanças
+
+| Ação | Arquivo |
+|------|---------|
+| **DELETAR** | `src/components/editing/EditingNotesPanel.tsx` |
+| **EDITAR** | `src/components/calendar/ProductionKanbanCard.tsx` |
+| **EDITAR** | `src/components/calendar/ProductionKanbanColumn.tsx` |
+| **EDITAR** | `src/components/calendar/ProductionBoardView.tsx` |
+| **EDITAR** | `src/components/calendar/OrphanColumn.tsx` |
+| **EDITAR** | `src/pages/CalendarioEditorial.tsx` |
+| **EDITAR** | `src/lib/kanban-columns.ts` |
+| **EDITAR** | `src/pages/EditingWorkspace.tsx` |
 
