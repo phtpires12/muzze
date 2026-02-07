@@ -79,3 +79,14 @@ export function generateShotListFromContent(content: ContentSections): ShotItem[
 export function normalizeText(text: string): string {
   return (text || '').toLowerCase().trim().replace(/\s+/g, ' ');
 }
+
+/**
+ * Infers the roll type based on shot metadata
+ * A-roll: No scene description AND no reference images (just talking to camera)
+ * B-roll: Has scene description OR has reference images (needs specific coverage)
+ */
+export function inferRollType(shot: ShotItem): 'a-roll' | 'b-roll' {
+  const hasScene = shot.scene && shot.scene.trim().length > 0;
+  const hasReferenceImages = shot.shotImagePaths && shot.shotImagePaths.length > 0;
+  return (hasScene || hasReferenceImages) ? 'b-roll' : 'a-roll';
+}
