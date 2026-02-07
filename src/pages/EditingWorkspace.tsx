@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Film, ChevronLeft, Video } from "lucide-react";
+import { Film, ChevronLeft, Video, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useCelebration } from "@/contexts/CelebrationContext";
@@ -24,9 +24,9 @@ interface ScriptData {
   id: string;
   title: string;
   shot_list: string[] | null;
-  
   music_reference: MusicReference | null;
   editing_notes: string | null;
+  reference_url: string | null;
 }
 
 export default function EditingWorkspace() {
@@ -97,7 +97,7 @@ export default function EditingWorkspace() {
       setLoading(true);
       const { data, error } = await supabase
         .from('scripts')
-        .select('id, title, shot_list, workflow_template')
+        .select('id, title, shot_list, workflow_template, reference_url')
         .eq('id', scriptId)
         .single();
 
@@ -121,6 +121,7 @@ export default function EditingWorkspace() {
         shot_list: data.shot_list,
         music_reference: scriptWithNewFields.music_reference || null,
         editing_notes: scriptWithNewFields.editing_notes || '',
+        reference_url: data.reference_url || null,
       });
       
       if (data.workflow_template) {
@@ -332,6 +333,26 @@ export default function EditingWorkspace() {
             music={script.music_reference}
             onSave={handleSaveMusic}
           />
+
+          {/* Reference Link Panel - Se existir */}
+          {script.reference_url && (
+            <div className="bg-card border border-border rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <ExternalLink className="w-4 h-4 text-blue-500" />
+                  <span className="text-sm font-medium">Referência</span>
+                </div>
+                <a
+                  href={script.reference_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-blue-500 hover:text-blue-400 underline truncate max-w-[200px]"
+                >
+                  Abrir referência
+                </a>
+              </div>
+            </div>
+          )}
 
           {/* Shotlist Panel */}
           <ShotlistPanel 
