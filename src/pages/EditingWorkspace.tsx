@@ -197,6 +197,18 @@ export default function EditingWorkspace() {
     setSaving(false);
   }, [scriptId]);
 
+  const handleSaveMainVideo = useCallback(async (url: string | null, type: VideoType | null) => {
+    if (!scriptId) return;
+    await supabase
+      .from('scripts')
+      .update({ 
+        main_video_url: url,
+        main_video_type: type,
+      } as any)
+      .eq('id', scriptId);
+    setScript(prev => prev ? { ...prev, main_video_url: url, main_video_type: type } : null);
+  }, [scriptId]);
+
   const handleComplete = useCallback(async () => {
     if (!scriptId) return;
 
