@@ -146,6 +146,7 @@ export const ShotListCard = ({
     <Card
       ref={setNodeRef}
       style={style}
+      data-shot-id={shot.id}
       className={cn(
         "touch-none transition-all",
         // Feedback visual de drag melhorado
@@ -205,7 +206,7 @@ export const ShotListCard = ({
             minHeight="120px"
           />
           <span className="text-xs text-muted-foreground hidden md:inline">
-            Use Shift+Enter para quebrar linha
+            Shift+Enter: quebra linha | Ctrl/Cmd+Shift+Enter: novo take
           </span>
         </div>
 

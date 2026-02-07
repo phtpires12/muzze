@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useNavigationBlocker } from "@/hooks/useNavigationBlocker";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Plus, RefreshCw, FileDown } from "lucide-react";
+import { ArrowLeft, Plus, RefreshCw, FileDown, Trash2 } from "lucide-react";
 import { ExportPDFButton } from "@/components/shotlist/ExportPDFButton";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -55,6 +55,10 @@ const ShotListReview = () => {
     toKeep: ShotItem[];
     hasFilledData: boolean;
   } | null>(null);
+  
+  // Delete shotlist modal state
+  const [showDeleteShotlistModal, setShowDeleteShotlistModal] = useState(false);
+  const [isDeletingShotlist, setIsDeletingShotlist] = useState(false);
 
   // Unified Session System
   const {
@@ -406,6 +410,102 @@ const ShotListReview = () => {
     });
   };
 
+  // Global Ctrl/Cmd+Shift+Enter listener for splitting take at cursor
+  useEffect(() => {
+    const handleSplitKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+Shift+Enter ou Cmd+Shift+Enter
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'Enter') {
+        const target = e.target as HTMLElement;
+        const editor = target.closest('.ProseMirror');
+        
+        if (!editor) return;
+        
+        // Encontrar o card/row pai que contém o shot
+        const shotContainer = editor.closest('[data-shot-id]');
+        if (!shotContainer) return;
+        
+        const shotId = shotContainer.getAttribute('data-shot-id');
+        if (!shotId) return;
+        
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Obter posição do cursor no texto puro
+        const selection = window.getSelection();
+        if (!selection || selection.rangeCount === 0) return;
+        
+        const range = selection.getRangeAt(0);
+        const preCaretRange = range.cloneRange();
+        preCaretRange.selectNodeContents(editor);
+        preCaretRange.setEnd(range.startContainer, range.startOffset);
+        const cursorPosition = preCaretRange.toString().length;
+        
+        // Chamar split
+        splitShotAtCursor(shotId, cursorPosition);
+      }
+    };
+
+    window.addEventListener('keydown', handleSplitKeyDown, true);
+    return () => window.removeEventListener('keydown', handleSplitKeyDown, true);
+  }, []);
+
+  // Delete shotlist handler
+  const handleDeleteShotlist = async () => {
+    if (!scriptId) return;
+    
+    setIsDeletingShotlist(true);
+    
+    try {
+      // 1. Coletar todos os paths de imagens
+      const allImagePaths: string[] = [];
+      shots.forEach(shot => {
+        (shot.shotImagePaths || []).forEach(path => {
+          if (path && !allImagePaths.includes(path)) {
+            allImagePaths.push(path);
+          }
+        });
+      });
+      
+      // 2. Apagar imagens do storage
+      if (allImagePaths.length > 0) {
+        const { error: storageError } = await supabase.storage
+          .from('shot-references')
+          .remove(allImagePaths);
+        
+        if (storageError) {
+          console.error('Error removing images:', storageError);
+        }
+      }
+      
+      // 3. Limpar shot_list no banco
+      const { error } = await supabase
+        .from('scripts')
+        .update({ shot_list: [] })
+        .eq('id', scriptId);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Shotlist excluída",
+        description: "A shotlist foi removida com sucesso",
+      });
+      
+      // 4. Navegar de volta
+      navigate(`/calendario`);
+      
+    } catch (error) {
+      console.error('Error deleting shotlist:', error);
+      toast({
+        title: "Erro ao excluir",
+        description: "Não foi possível excluir a shotlist",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeletingShotlist(false);
+      setShowDeleteShotlistModal(false);
+    }
+  };
+
   const removeShot = (id: string) => {
     setShots(shots.filter(s => s.id !== id));
   };
@@ -659,6 +759,15 @@ const ShotListReview = () => {
             >
               <RefreshCw className="w-4 h-4" />
             </Button>
+            <Button
+              onClick={() => setShowDeleteShotlistModal(true)}
+              size="sm"
+              variant="ghost"
+              className="px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+              title="Excluir Shotlist"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
             <ExportPDFButton
               shots={shots}
               scriptTitle={scriptTitle}
@@ -751,6 +860,14 @@ const ShotListReview = () => {
           >
             <RefreshCw className="w-4 h-4" />
             Sincronizar com Revisão
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => setShowDeleteShotlistModal(true)}
+            className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+          >
+            <Trash2 className="w-4 h-4" />
+            Excluir Shotlist
           </Button>
         </div>
 
@@ -896,6 +1013,29 @@ const ShotListReview = () => {
               disabled={syncChanges?.toAdd.length === 0 && syncChanges?.toRemove.length === 0}
             >
               Confirmar Sincronização
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Shotlist Confirmation Modal */}
+      <AlertDialog open={showDeleteShotlistModal} onOpenChange={setShowDeleteShotlistModal}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Shotlist?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação vai apagar todas as cenas e imagens de referência desta shotlist. 
+              Você não poderá desfazer esta ação.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeletingShotlist}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteShotlist}
+              disabled={isDeletingShotlist}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeletingShotlist ? 'Excluindo...' : 'Excluir Shotlist'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

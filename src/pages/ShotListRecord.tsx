@@ -523,6 +523,45 @@ const ShotListRecord = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [undoStack.length, toast]);
 
+  // Global Ctrl/Cmd+Shift+Enter listener for splitting take at cursor
+  useEffect(() => {
+    const handleSplitKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+Shift+Enter ou Cmd+Shift+Enter
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'Enter') {
+        const target = e.target as HTMLElement;
+        const editor = target.closest('.ProseMirror');
+        
+        if (!editor) return;
+        
+        // Encontrar o card/row pai que contém o shot
+        const shotContainer = editor.closest('[data-shot-id]');
+        if (!shotContainer) return;
+        
+        const shotId = shotContainer.getAttribute('data-shot-id');
+        if (!shotId) return;
+        
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Obter posição do cursor no texto puro
+        const selection = window.getSelection();
+        if (!selection || selection.rangeCount === 0) return;
+        
+        const range = selection.getRangeAt(0);
+        const preCaretRange = range.cloneRange();
+        preCaretRange.selectNodeContents(editor);
+        preCaretRange.setEnd(range.startContainer, range.startOffset);
+        const cursorPosition = preCaretRange.toString().length;
+        
+        // Chamar split
+        splitShotAtCursor(shotId, cursorPosition);
+      }
+    };
+
+    window.addEventListener('keydown', handleSplitKeyDown, true);
+    return () => window.removeEventListener('keydown', handleSplitKeyDown, true);
+  }, []);
+
   // Helper to split HTML at text position (preserving HTML structure)
   const splitHtmlAtTextPosition = (html: string, textPosition: number): { before: string; after: string } => {
     const tempDiv = document.createElement('div');
