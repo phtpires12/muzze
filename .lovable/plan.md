@@ -1,5 +1,45 @@
 
-# Plano 1 de 5: Reposicionar Música acima do Shotlist
+# Plano 2 de 5: Adicionar Link de Referência do Roteiro
+
+## Contexto
+
+O editor precisa de acesso ao link de referência que foi definido durante a criação do roteiro. Este campo (`reference_url`) já existe no banco de dados e é preenchido em outras etapas do workflow.
+
+## Problema Atual
+
+O campo `reference_url` existe na tabela `scripts`, mas não é carregado nem exibido na Mesa de Edição.
+
+## Solução
+
+1. Incluir `reference_url` na query de carregamento do script
+2. Criar um componente simples para exibir o link de referência (similar ao MusicPanel)
+3. Posicionar abaixo do MusicPanel
+
+## Arquivos a Modificar
+
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/pages/EditingWorkspace.tsx` | Adicionar `reference_url` à query e criar seção de exibição |
+
+## Resultado Esperado
+
+O editor terá acesso direto ao link de referência do vídeo, podendo clicar e abrir a referência para seguir durante a edição.
+
+---
+
+## Próximos Problemas (armazenados para resolver depois)
+
+| # | Problema | Status |
+|---|----------|--------|
+| 1 | Reposicionar Música acima do Shotlist | ✅ Concluído |
+| 2 | Adicionar link de referência do roteiro | ✅ Este plano |
+| 3 | Remover campo Notas de Edição | 📋 Pendente |
+| 4 | Reformular header/botão voltar | 📋 Pendente |
+| 5 | Bolinhas de progresso não funcionam | 📋 Pendente |
+
+---
+
+# ~~Plano 1 de 5: Reposicionar Música acima do Shotlist~~ ✅ CONCLUÍDO
 
 ## Contexto
 

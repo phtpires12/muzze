@@ -327,17 +327,17 @@ export default function EditingWorkspace() {
       {/* Content */}
       <div className="max-w-4xl mx-auto px-4 py-6 pb-28">
         <div className="space-y-4">
+          {/* Music Panel - Prioridade: entender o ritmo do vídeo */}
+          <MusicPanel
+            music={script.music_reference}
+            onSave={handleSaveMusic}
+          />
+
           {/* Shotlist Panel */}
           <ShotlistPanel 
             shots={shots} 
             onUpdateShot={handleUpdateShot}
             resolvedUrls={resolvedUrls}
-          />
-
-          {/* Music Panel */}
-          <MusicPanel
-            music={script.music_reference}
-            onSave={handleSaveMusic}
           />
 
           {/* Notes Panel */}
