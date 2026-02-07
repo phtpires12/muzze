@@ -486,20 +486,15 @@ const ShotListReview = () => {
       
       if (error) throw error;
       
-      // 4. IMPORTANTE: Encerrar sessão ANTES de navegar para evitar bloqueio
-      if (session.isActive) {
-        await saveCurrentStageTime();
-        // Resetar timer silenciosamente (sem disparar celebração - é um abandono)
-        resetTimer();
-      }
-      
       toast({
         title: "Shotlist excluída",
-        description: "A shotlist foi removida com sucesso",
+        description: "Você pode criar uma nova ou avançar para gravação",
       });
       
-      // 5. Navegar - agora não será bloqueado porque sessão está encerrada
-      navigate(`/calendario`, { replace: true });
+      // 4. Voltar para página de Review (NÃO encerra sessão)
+      // A rota /session está na lista SAFE_SESSION_PATHS
+      // então não será bloqueada pelo useNavigationBlocker
+      navigate(`/session?stage=review&scriptId=${scriptId}`);
       
     } catch (error) {
       console.error('Error deleting shotlist:', error);
