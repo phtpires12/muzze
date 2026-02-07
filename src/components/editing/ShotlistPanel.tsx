@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,20 +17,31 @@ import {
   ExternalLink, 
   X, 
   ImageIcon,
-  Film
+  Film,
+  LayoutGrid,
+  Folder
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ShotItem } from "@/lib/shotlist-generator";
+import { ShotItem, inferRollType } from "@/lib/shotlist-generator";
 import { stripHtml } from "@/lib/shot-list-parser";
 import { SceneDetailModal } from "./SceneDetailModal";
+import { FolderView, FolderHeader } from "./FolderView";
+import { SimplifiedVideoPanel } from "./SimplifiedVideoPanel";
+
+type RollType = 'a-roll' | 'b-roll';
+type ViewMode = 'gallery' | 'folders';
+type FilterType = 'all' | RollType;
+type VideoType = 'google_drive' | 'dropbox' | 'youtube' | 'other';
 
 interface ShotlistPanelProps {
   shots: ShotItem[];
   onUpdateShot?: (shotId: string, updates: Partial<ShotItem>) => void;
   resolvedUrls?: Record<string, string>;
+  // Props for simplified mode (no shot list)
+  mainVideoUrl?: string | null;
+  mainVideoType?: VideoType | null;
+  onSaveMainVideo?: (url: string | null, type: VideoType | null) => void;
 }
-
-type VideoType = 'google_drive' | 'dropbox' | 'youtube' | 'other';
 
 function detectVideoType(url: string): VideoType {
   if (url.includes('drive.google.com')) return 'google_drive';
@@ -46,11 +57,6 @@ function getVideoTypeLabel(type: VideoType): string {
     case 'youtube': return 'YouTube';
     default: return 'Link';
   }
-}
-
-function getVideoTypeIcon(type: VideoType) {
-  // All video types use the same icon for simplicity
-  return <Film className="w-3 h-3" />;
 }
 
 interface SceneCardProps {
@@ -86,6 +92,7 @@ function SceneCard({ shot, index, resolvedUrl, onUpdateShot, onClick }: SceneCar
   }, [onUpdateShot, shot.id]);
 
   const thumbnailUrl = resolvedUrl || (shot.shotImagePaths?.[0] ? undefined : undefined);
+  const rollType = inferRollType(shot);
 
   return (
     <div 
@@ -110,11 +117,24 @@ function SceneCard({ shot, index, resolvedUrl, onUpdateShot, onClick }: SceneCar
             </div>
           )}
           
+          {/* Roll Type Badge */}
+          <Badge 
+            variant="secondary" 
+            className={cn(
+              "absolute top-2 left-2 text-xs backdrop-blur-sm",
+              rollType === 'a-roll' 
+                ? "bg-blue-500/80 text-white border-blue-600" 
+                : "bg-amber-500/80 text-white border-amber-600"
+            )}
+          >
+            {rollType === 'a-roll' ? 'A-roll' : 'B-roll'}
+          </Badge>
+          
           {/* Location Badge Overlay */}
           {shot.location && (
             <Badge 
               variant="secondary" 
-              className="absolute top-2 left-2 text-xs bg-background/80 backdrop-blur-sm"
+              className="absolute bottom-2 left-2 text-xs bg-background/80 backdrop-blur-sm"
             >
               <MapPin className="w-3 h-3 mr-1" />
               {shot.location}
@@ -148,7 +168,7 @@ function SceneCard({ shot, index, resolvedUrl, onUpdateShot, onClick }: SceneCar
               /* Has video linked */
               <div className="flex items-center gap-2 p-2 rounded-lg bg-primary/10 border border-primary/20">
                 <div className="flex items-center gap-1.5 text-primary flex-1 min-w-0">
-                  {getVideoTypeIcon(shot.videoType || 'other')}
+                  <Film className="w-3 h-3" />
                   <span className="text-xs font-medium truncate">
                     {getVideoTypeLabel(shot.videoType || 'other')}
                   </span>
@@ -225,29 +245,117 @@ function SceneCard({ shot, index, resolvedUrl, onUpdateShot, onClick }: SceneCar
   );
 }
 
+interface FilterButtonsProps {
+  filter: FilterType;
+  onFilterChange: (filter: FilterType) => void;
+  counts: { all: number; aRoll: number; bRoll: number };
+}
+
+function FilterButtons({ filter, onFilterChange, counts }: FilterButtonsProps) {
+  return (
+    <div className="flex gap-1 px-2 py-2">
+      <Button
+        variant={filter === 'all' ? 'secondary' : 'ghost'}
+        size="sm"
+        onClick={() => onFilterChange('all')}
+        className="text-xs h-7"
+      >
+        Todas ({counts.all})
+      </Button>
+      <Button
+        variant={filter === 'a-roll' ? 'secondary' : 'ghost'}
+        size="sm"
+        onClick={() => onFilterChange('a-roll')}
+        className="text-xs h-7"
+      >
+        A-roll ({counts.aRoll})
+      </Button>
+      <Button
+        variant={filter === 'b-roll' ? 'secondary' : 'ghost'}
+        size="sm"
+        onClick={() => onFilterChange('b-roll')}
+        className="text-xs h-7"
+      >
+        B-roll ({counts.bRoll})
+      </Button>
+    </div>
+  );
+}
+
 export function ShotlistPanel({ 
   shots, 
   onUpdateShot,
-  resolvedUrls = {}
+  resolvedUrls = {},
+  mainVideoUrl,
+  mainVideoType,
+  onSaveMainVideo
 }: ShotlistPanelProps) {
   const [isOpen, setIsOpen] = useState(true);
+  const [viewMode, setViewMode] = useState<ViewMode>('gallery');
+  const [filter, setFilter] = useState<FilterType>('all');
   const [selectedSceneIndex, setSelectedSceneIndex] = useState<number | null>(null);
+  const [folderDrillDown, setFolderDrillDown] = useState<RollType | null>(null);
+
+  // Calculate counts
+  const counts = useMemo(() => {
+    const aRollShots = shots.filter(s => inferRollType(s) === 'a-roll');
+    const bRollShots = shots.filter(s => inferRollType(s) === 'b-roll');
+    return {
+      all: shots.length,
+      aRoll: aRollShots.length,
+      bRoll: bRollShots.length,
+    };
+  }, [shots]);
+
+  // Filter shots based on current filter
+  const filteredShots = useMemo(() => {
+    if (filter === 'all') return shots;
+    return shots.filter(s => inferRollType(s) === filter);
+  }, [shots, filter]);
+
+  // For folder drill-down view
+  const folderFilteredShots = useMemo(() => {
+    if (!folderDrillDown) return shots;
+    return shots.filter(s => inferRollType(s) === folderDrillDown);
+  }, [shots, folderDrillDown]);
 
   const linkedCount = shots.filter(s => s.videoUrl).length;
 
   const handleNavigate = useCallback((direction: 'prev' | 'next') => {
     setSelectedSceneIndex(prev => {
       if (prev === null) return null;
+      const currentShots = folderDrillDown ? folderFilteredShots : filteredShots;
       if (direction === 'prev' && prev > 0) return prev - 1;
-      if (direction === 'next' && prev < shots.length - 1) return prev + 1;
+      if (direction === 'next' && prev < currentShots.length - 1) return prev + 1;
       return prev;
     });
-  }, [shots.length]);
+  }, [folderDrillDown, folderFilteredShots, filteredShots]);
 
-  const selectedShot = selectedSceneIndex !== null ? shots[selectedSceneIndex] : null;
+  const handleFolderSelect = useCallback((type: RollType) => {
+    setFolderDrillDown(type);
+  }, []);
+
+  const handleFolderBack = useCallback(() => {
+    setFolderDrillDown(null);
+  }, []);
+
+  // Get selected shot from appropriate list
+  const currentDisplayShots = folderDrillDown ? folderFilteredShots : filteredShots;
+  const selectedShot = selectedSceneIndex !== null ? currentDisplayShots[selectedSceneIndex] : null;
   const selectedResolvedUrl = selectedShot?.shotImagePaths?.[0] 
     ? resolvedUrls[selectedShot.shotImagePaths[0]] 
     : undefined;
+
+  // If no shots, show simplified panel
+  if (shots.length === 0) {
+    return (
+      <SimplifiedVideoPanel
+        mainVideoUrl={mainVideoUrl}
+        mainVideoType={mainVideoType}
+        onSave={onSaveMainVideo || (() => {})}
+      />
+    );
+  }
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -265,33 +373,67 @@ export function ShotlistPanel({
                 </p>
               </div>
             </div>
-            <ChevronDown className={cn(
-              "w-5 h-5 text-muted-foreground transition-transform",
-              isOpen && "rotate-180"
-            )} />
+            <div className="flex items-center gap-2">
+              {/* View Mode Toggle */}
+              <div 
+                className="flex gap-0.5 bg-muted rounded-lg p-0.5"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Button
+                  variant={viewMode === 'gallery' ? 'secondary' : 'ghost'}
+                  size="sm"
+                  className="h-7 w-7 p-0"
+                  onClick={() => {
+                    setViewMode('gallery');
+                    setFolderDrillDown(null);
+                  }}
+                  title="Galeria"
+                >
+                  <LayoutGrid className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant={viewMode === 'folders' ? 'secondary' : 'ghost'}
+                  size="sm"
+                  className="h-7 w-7 p-0"
+                  onClick={() => {
+                    setViewMode('folders');
+                    setFilter('all');
+                  }}
+                  title="Pastas"
+                >
+                  <Folder className="w-4 h-4" />
+                </Button>
+              </div>
+              
+              <ChevronDown className={cn(
+                "w-5 h-5 text-muted-foreground transition-transform",
+                isOpen && "rotate-180"
+              )} />
+            </div>
           </button>
         </CollapsibleTrigger>
 
         <CollapsibleContent>
-          <div className="px-2 pb-4">
-            {shots.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <Video className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">Nenhuma cena na shotlist</p>
-                <p className="text-xs">Adicione cenas durante a etapa de roteiro</p>
-              </div>
-            ) : (
+          <div className="pb-4">
+            {viewMode === 'gallery' && !folderDrillDown ? (
               <>
+                {/* Filter Buttons */}
+                <FilterButtons 
+                  filter={filter} 
+                  onFilterChange={setFilter} 
+                  counts={counts}
+                />
+                
                 {/* Horizontal Gallery */}
                 <div 
-                  className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-4 pt-2 px-2 -mx-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent"
+                  className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-4 pt-2 px-4 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent"
                   style={{ scrollbarWidth: 'thin' }}
                 >
-                  {shots.map((shot, index) => (
+                  {filteredShots.map((shot, index) => (
                     <SceneCard
                       key={shot.id}
                       shot={shot}
-                      index={index}
+                      index={shots.indexOf(shot)}
                       resolvedUrl={resolvedUrls[shot.shotImagePaths?.[0] || '']}
                       onUpdateShot={onUpdateShot}
                       onClick={() => setSelectedSceneIndex(index)}
@@ -301,7 +443,7 @@ export function ShotlistPanel({
 
                 {/* Navigation Dots */}
                 <div className="flex justify-center gap-1.5 pt-2">
-                  {shots.slice(0, 12).map((shot) => (
+                  {filteredShots.slice(0, 12).map((shot) => (
                     <div 
                       key={shot.id}
                       className={cn(
@@ -312,14 +454,63 @@ export function ShotlistPanel({
                       )}
                     />
                   ))}
-                  {shots.length > 12 && (
+                  {filteredShots.length > 12 && (
                     <span className="text-xs text-muted-foreground ml-1">
-                      +{shots.length - 12}
+                      +{filteredShots.length - 12}
                     </span>
                   )}
                 </div>
               </>
-            )}
+            ) : viewMode === 'folders' && !folderDrillDown ? (
+              /* Folder View */
+              <FolderView shots={shots} onSelectFolder={handleFolderSelect} />
+            ) : folderDrillDown ? (
+              /* Folder Drill-Down (Gallery with Back Button) */
+              <>
+                <FolderHeader 
+                  type={folderDrillDown} 
+                  count={folderFilteredShots.length}
+                  onBack={handleFolderBack}
+                />
+                
+                {/* Horizontal Gallery for Folder */}
+                <div 
+                  className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-4 pt-2 px-4 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent"
+                  style={{ scrollbarWidth: 'thin' }}
+                >
+                  {folderFilteredShots.map((shot, index) => (
+                    <SceneCard
+                      key={shot.id}
+                      shot={shot}
+                      index={shots.indexOf(shot)}
+                      resolvedUrl={resolvedUrls[shot.shotImagePaths?.[0] || '']}
+                      onUpdateShot={onUpdateShot}
+                      onClick={() => setSelectedSceneIndex(index)}
+                    />
+                  ))}
+                </div>
+
+                {/* Navigation Dots */}
+                <div className="flex justify-center gap-1.5 pt-2">
+                  {folderFilteredShots.slice(0, 12).map((shot) => (
+                    <div 
+                      key={shot.id}
+                      className={cn(
+                        "w-2 h-2 rounded-full transition-colors",
+                        shot.videoUrl 
+                          ? "bg-primary" 
+                          : "bg-muted-foreground/30"
+                      )}
+                    />
+                  ))}
+                  {folderFilteredShots.length > 12 && (
+                    <span className="text-xs text-muted-foreground ml-1">
+                      +{folderFilteredShots.length - 12}
+                    </span>
+                  )}
+                </div>
+              </>
+            ) : null}
           </div>
         </CollapsibleContent>
       </Card>
@@ -332,7 +523,7 @@ export function ShotlistPanel({
         onUpdateShot={onUpdateShot}
         resolvedUrl={selectedResolvedUrl}
         currentIndex={selectedSceneIndex ?? 0}
-        totalScenes={shots.length}
+        totalScenes={currentDisplayShots.length}
         onNavigate={handleNavigate}
       />
     </Collapsible>
