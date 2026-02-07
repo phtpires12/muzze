@@ -195,15 +195,6 @@ export default function EditingWorkspace() {
     setSaving(false);
   }, [scriptId]);
 
-  const handleSaveNotes = useCallback(async (notes: string) => {
-    if (!scriptId) return;
-    await supabase
-      .from('scripts')
-      .update({ editing_notes: notes })
-      .eq('id', scriptId);
-    setScript(prev => prev ? { ...prev, editing_notes: notes } : null);
-  }, [scriptId]);
-
   const handleComplete = useCallback(async () => {
     if (!scriptId) return;
 
