@@ -69,6 +69,7 @@ const ShotListReview = () => {
     resumeSession,
     endSession,
     saveCurrentStageTime,
+    resetTimer,
   } = useSession({ 
     attachBeforeUnloadListener: false 
   });
@@ -485,13 +486,20 @@ const ShotListReview = () => {
       
       if (error) throw error;
       
+      // 4. IMPORTANTE: Encerrar sessão ANTES de navegar para evitar bloqueio
+      if (session.isActive) {
+        await saveCurrentStageTime();
+        // Resetar timer silenciosamente (sem disparar celebração - é um abandono)
+        resetTimer();
+      }
+      
       toast({
         title: "Shotlist excluída",
         description: "A shotlist foi removida com sucesso",
       });
       
-      // 4. Navegar de volta
-      navigate(`/calendario`);
+      // 5. Navegar - agora não será bloqueado porque sessão está encerrada
+      navigate(`/calendario`, { replace: true });
       
     } catch (error) {
       console.error('Error deleting shotlist:', error);
