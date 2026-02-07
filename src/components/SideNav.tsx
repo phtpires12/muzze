@@ -52,7 +52,7 @@ export const SideNav = () => {
   } = useCelebration();
 
   // Check if we're on an active session page
-  const isOnSessionPage = ['/session', '/shot-list/record', '/shot-list/review'].some(path => location.pathname.startsWith(path));
+  const isOnSessionPage = ['/session', '/shot-list/record', '/shot-list/review', '/editing-workspace'].some(path => location.pathname.startsWith(path));
 
   // Construir URL de retorno baseada no estágio atual da sessão
   const getSessionReturnUrl = (): string => {
