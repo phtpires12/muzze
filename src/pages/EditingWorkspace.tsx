@@ -40,6 +40,7 @@ export default function EditingWorkspace() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [resolvedUrls, setResolvedUrls] = useState<Record<string, string>>({});
+  const [hasEndedSession, setHasEndedSession] = useState(false);
   
   // Session for optional timer
   const { session, startSession, pauseSession, resumeSession, endSession, saveCurrentStageTime } = useSession({
@@ -76,10 +77,11 @@ export default function EditingWorkspace() {
 
   // Start session when page loads
   useEffect(() => {
-    if (!session.isActive && !isShowingAnyCelebration) {
+    // NÃO iniciar sessão se acabou de encerrar ou em celebração
+    if (!session.isActive && !isShowingAnyCelebration && !hasEndedSession) {
       startSession('edit');
     }
-  }, [session.isActive, isShowingAnyCelebration, startSession]);
+  }, [session.isActive, isShowingAnyCelebration, hasEndedSession, startSession]);
 
   // Load script data
   useEffect(() => {
@@ -229,6 +231,9 @@ export default function EditingWorkspace() {
       });
       return;
     }
+
+    // Ativar flag ANTES de encerrar para evitar reinício automático
+    setHasEndedSession(true);
 
     // Save timer session
     await saveCurrentStageTime();
@@ -387,6 +392,8 @@ export default function EditingWorkspace() {
           onPause={pauseSession}
           onResume={resumeSession}
           onStop={async () => {
+            // Ativar flag ANTES de encerrar para evitar reinício automático
+            setHasEndedSession(true);
             await endSession();
             navigate('/');
           }}
