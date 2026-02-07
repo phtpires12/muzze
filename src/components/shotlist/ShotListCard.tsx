@@ -146,6 +146,7 @@ export const ShotListCard = ({
     <Card
       ref={setNodeRef}
       style={style}
+      data-shot-id={shot.id}
       className={cn(
         "touch-none transition-all",
         // Feedback visual de drag melhorado
