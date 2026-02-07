@@ -410,6 +410,102 @@ const ShotListReview = () => {
     });
   };
 
+  // Global Ctrl/Cmd+Shift+Enter listener for splitting take at cursor
+  useEffect(() => {
+    const handleSplitKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+Shift+Enter ou Cmd+Shift+Enter
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'Enter') {
+        const target = e.target as HTMLElement;
+        const editor = target.closest('.ProseMirror');
+        
+        if (!editor) return;
+        
+        // Encontrar o card/row pai que contém o shot
+        const shotContainer = editor.closest('[data-shot-id]');
+        if (!shotContainer) return;
+        
+        const shotId = shotContainer.getAttribute('data-shot-id');
+        if (!shotId) return;
+        
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Obter posição do cursor no texto puro
+        const selection = window.getSelection();
+        if (!selection || selection.rangeCount === 0) return;
+        
+        const range = selection.getRangeAt(0);
+        const preCaretRange = range.cloneRange();
+        preCaretRange.selectNodeContents(editor);
+        preCaretRange.setEnd(range.startContainer, range.startOffset);
+        const cursorPosition = preCaretRange.toString().length;
+        
+        // Chamar split
+        splitShotAtCursor(shotId, cursorPosition);
+      }
+    };
+
+    window.addEventListener('keydown', handleSplitKeyDown, true);
+    return () => window.removeEventListener('keydown', handleSplitKeyDown, true);
+  }, []);
+
+  // Delete shotlist handler
+  const handleDeleteShotlist = async () => {
+    if (!scriptId) return;
+    
+    setIsDeletingShotlist(true);
+    
+    try {
+      // 1. Coletar todos os paths de imagens
+      const allImagePaths: string[] = [];
+      shots.forEach(shot => {
+        (shot.shotImagePaths || []).forEach(path => {
+          if (path && !allImagePaths.includes(path)) {
+            allImagePaths.push(path);
+          }
+        });
+      });
+      
+      // 2. Apagar imagens do storage
+      if (allImagePaths.length > 0) {
+        const { error: storageError } = await supabase.storage
+          .from('shot-references')
+          .remove(allImagePaths);
+        
+        if (storageError) {
+          console.error('Error removing images:', storageError);
+        }
+      }
+      
+      // 3. Limpar shot_list no banco
+      const { error } = await supabase
+        .from('scripts')
+        .update({ shot_list: [] })
+        .eq('id', scriptId);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Shotlist excluída",
+        description: "A shotlist foi removida com sucesso",
+      });
+      
+      // 4. Navegar de volta
+      navigate(`/calendario`);
+      
+    } catch (error) {
+      console.error('Error deleting shotlist:', error);
+      toast({
+        title: "Erro ao excluir",
+        description: "Não foi possível excluir a shotlist",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeletingShotlist(false);
+      setShowDeleteShotlistModal(false);
+    }
+  };
+
   const removeShot = (id: string) => {
     setShots(shots.filter(s => s.id !== id));
   };
