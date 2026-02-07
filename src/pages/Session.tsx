@@ -27,6 +27,7 @@ import { AutoHideNav } from "@/components/AutoHideNav";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { DevToolsPanel } from "@/components/DevToolsPanel";
+import { TROPHIES } from "@/lib/gamification";
 import { CreativeStage } from "@/types/workspace";
 import { useWorkflowTemplate } from "@/hooks/useWorkflowTemplate";
 import { WorkflowTemplateId } from "@/lib/workflow-templates";
