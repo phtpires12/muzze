@@ -1,154 +1,232 @@
 
 
-# Plano 5 (Reformulado): Limpar Código Morto - Remoção Completa do Sistema Antigo de Bolinhas
+# Plano: Sistema Híbrido de Visualização - Galeria + Pastas (Atualizado)
 
-## Contexto
+## Resumo
 
-A Mesa de Edição está sendo reformulada do zero. O sistema antigo de 6 etapas de edição (Decupagem, Música, Efeitos Sonoros, etc.) com timers individuais e bolinhas de progresso **não faz mais parte do novo design**. 
+Implementar visualização híbrida no `ShotlistPanel`:
 
-A nova fonte da verdade é simples:
-- **Editado** = clicou em "Marcar como Editado"
-- **Não Editado** = não clicou
+1. **Com shot list**: Duas visualizações (Galeria ou Pastas) com classificação automática A-roll/B-roll
+2. **Sem shot list**: Painel ultra-simplificado para vincular apenas o vídeo principal
 
-## O Que Será Removido
+---
 
-### 1. Arquivo a Deletar
+## Nomenclatura Final
 
-| Arquivo | Motivo |
-|---------|--------|
-| `src/components/editing/EditingNotesPanel.tsx` | Não é usado em nenhum lugar |
+| Uso na UI |
+|-----------|
+| **A-roll** |
+| **B-roll** |
 
-### 2. Componente a Manter (por enquanto)
+Mantemos os termos originais conforme solicitado.
 
-| Arquivo | Situação |
-|---------|----------|
-| `src/components/EditingChecklist.tsx` | Usado em `Session.tsx` - remover requer refatorar Session.tsx também |
+---
 
-**Decisão**: Manter o `EditingChecklist.tsx` por ora, já que ele está acoplado à página `Session.tsx`. A limpeza total da `Session.tsx` pode ser um projeto futuro separado.
+## Lógica de Classificação Automática
 
-### 3. Remover Bolinhas do Kanban
-
-O impacto principal é no **Calendário Editorial** - remover as 6 bolinhas que aparecem nos cards da coluna "Edição".
-
-**Arquivos afetados:**
-
-| Arquivo | Alteração |
-|---------|-----------|
-| `src/components/calendar/ProductionKanbanCard.tsx` | Remover prop `showEditingProgress`, remover import `EDITING_STEP_IDS`, remover seção das bolinhas |
-| `src/components/calendar/ProductionKanbanColumn.tsx` | Remover `editing_progress` da interface Script, remover prop `showEditingProgress={column.id === 'editing'}` |
-| `src/components/calendar/ProductionBoardView.tsx` | Remover `editing_progress` da interface Script |
-| `src/components/calendar/OrphanColumn.tsx` | Remover `editing_progress` da interface, remover import `EDITING_STEP_IDS` não utilizado |
-| `src/pages/CalendarioEditorial.tsx` | Remover `editing_progress` da interface |
-
-### 4. Limpar kanban-columns.ts
-
-| Arquivo | Alteração |
-|---------|-----------|
-| `src/lib/kanban-columns.ts` | Remover export `EDITING_STEP_IDS` |
-
-### 5. Limpar EditingWorkspace.tsx
-
-| Código a Remover | Motivo |
-|------------------|--------|
-| `editing_notes` da interface `ScriptData` | Campo não é mais usado |
-| `editing_notes` no setScript | Não é exibido |
-| Import `cn` de @/lib/utils | Não é utilizado |
-| Import `getStageLabel` | Não é utilizado |
-
-## Alterações Técnicas Detalhadas
-
-### ProductionKanbanCard.tsx
-
-**Antes:**
-```tsx
-import { EDITING_STEP_IDS } from "@/lib/kanban-columns";
-
-interface Script {
-  editing_progress?: string[] | null;  // REMOVER
+```typescript
+function inferRollType(shot: ShotItem): 'a-roll' | 'b-roll' {
+  const hasScene = shot.scene && shot.scene.trim().length > 0;
+  const hasReferenceImages = shot.shotImagePaths && shot.shotImagePaths.length > 0;
+  
+  // Se tem descrição de cena OU imagem de referência = B-roll
+  // Se está vazio = A-roll (só falando para câmera)
+  return (hasScene || hasReferenceImages) ? 'b-roll' : 'a-roll';
 }
+```
 
-interface ProductionKanbanCardProps {
-  showEditingProgress?: boolean;  // REMOVER
+---
+
+## Cenário 1: Roteiro COM Shot List
+
+### Visualização Galeria (aprimorada)
+
+```text
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ 📹 Shotlist                                           [📑 Galeria] [📂 Pastas] │
+│    12 cenas • 5 com vídeo                                                       │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                  │
+│  Filtro:  [Todas]  [A-roll (5)]  [B-roll (7)]                                   │
+│                                                                                  │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  →                     │
+│  │  Cena 1  │  │  Cena 2  │  │  Cena 3  │  │  Cena 4  │                        │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────┘                        │
+│                                                                                  │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Visualização Pastas (nova)
+
+```text
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ 📹 Shotlist                                           [📑 Galeria] [📂 Pastas] │
+│    12 cenas • 5 com vídeo                                                       │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                  │
+│  ┌────────────────────────────────────────────────────────────────────────────┐ │
+│  │  📂 A-roll                                                                 │ │
+│  │     5 cenas • 3 com vídeo                                         [→]     │ │
+│  └────────────────────────────────────────────────────────────────────────────┘ │
+│                                                                                  │
+│  ┌────────────────────────────────────────────────────────────────────────────┐ │
+│  │  📂 B-roll                                                                 │ │
+│  │     7 cenas • 2 com vídeo                                         [→]     │ │
+│  └────────────────────────────────────────────────────────────────────────────┘ │
+│                                                                                  │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+Ao clicar em uma pasta, abre a galeria filtrada:
+
+```text
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ 📂 B-roll                                                      [← Voltar]      │
+│    7 cenas                                                                      │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                  │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  →                     │
+│  │  Cena 2  │  │  Cena 4  │  │  Cena 6  │  │  Cena 8  │                        │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────┘                        │
+│                                                                                  │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Cenário 2: Roteiro SEM Shot List (Simplificado)
+
+Quando `shots.length === 0`, o painel mostra apenas:
+
+```text
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ 📹 Arquivo de Vídeo                                                             │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                  │
+│  ┌────────────────────────────────────────────────────────────────────────────┐ │
+│  │  🎬 Vídeo Principal                                                        │ │
+│  │                                                                            │ │
+│  │              [Vincular vídeo]                                              │ │
+│  │                                                                            │ │
+│  └────────────────────────────────────────────────────────────────────────────┘ │
+│                                                                                  │
+│           ou (se já vinculado):                                                  │
+│                                                                                  │
+│  ┌────────────────────────────────────────────────────────────────────────────┐ │
+│  │  🎬 Vídeo Principal                                                        │ │
+│  │                                                                            │ │
+│  │    ✅ Google Drive                                        [Abrir] [✕]     │ │
+│  │                                                                            │ │
+│  └────────────────────────────────────────────────────────────────────────────┘ │
+│                                                                                  │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Lógica**: Se não criou shot list = não vai usar B-roll. Apenas um campo para o vídeo principal.
+
+---
+
+## Alterações Técnicas
+
+### 1. Adicionar função de inferência
+
+**Arquivo**: `src/lib/shotlist-generator.ts`
+
+```typescript
+export function inferRollType(shot: ShotItem): 'a-roll' | 'b-roll' {
+  const hasScene = shot.scene && shot.scene.trim().length > 0;
+  const hasReferenceImages = shot.shotImagePaths && shot.shotImagePaths.length > 0;
+  return (hasScene || hasReferenceImages) ? 'b-roll' : 'a-roll';
 }
-
-// Dentro do componente:
-const progressCount = script.editing_progress?.length || 0;  // REMOVER
-const totalSteps = EDITING_STEP_IDS.length;  // REMOVER
-
-{showEditingProgress && (  // REMOVER SEÇÃO INTEIRA
-  <div className="flex items-center gap-0.5 mt-2">
-    {EDITING_STEP_IDS.map(stepId => (...))}
-  </div>
-)}
 ```
 
-**Depois:**
-```tsx
-// Sem import de EDITING_STEP_IDS
-// Sem editing_progress na interface
-// Sem showEditingProgress na props
-// Sem seção de bolinhas
+### 2. Refatorar ShotlistPanel
+
+**Arquivo**: `src/components/editing/ShotlistPanel.tsx`
+
+- Adicionar estado `viewMode: 'gallery' | 'folders'`
+- Adicionar estado `filter: 'all' | 'a-roll' | 'b-roll'`
+- Adicionar toggle de visualização no header
+- Adicionar filtro na galeria
+- Renderizar `FolderView` ou `GalleryView` baseado no mode
+- Quando `shots.length === 0`, renderizar `SimplifiedVideoPanel`
+
+### 3. Criar componente FolderView
+
+**Arquivo**: `src/components/editing/FolderView.tsx` (novo)
+
+- Mostrar duas pastas (A-roll e B-roll)
+- Contar cenas de cada tipo
+- Ao clicar, mostrar galeria filtrada com botão "Voltar"
+
+### 4. Criar componente SimplifiedVideoPanel
+
+**Arquivo**: `src/components/editing/SimplifiedVideoPanel.tsx` (novo)
+
+- Campo único para vincular vídeo principal
+- Reutilizar lógica de detecção de tipo (Google Drive, Dropbox, YouTube)
+- Interface mínima e limpa
+
+### 5. Adicionar campo ao banco (opcional)
+
+**Migração SQL** (se necessário para persistir o vídeo quando não há shot list):
+
+```sql
+ALTER TABLE scripts 
+ADD COLUMN IF NOT EXISTS main_video_url TEXT DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS main_video_type TEXT DEFAULT NULL;
 ```
 
-### ProductionKanbanColumn.tsx
+---
 
-**Antes:**
-```tsx
-interface Script {
-  editing_progress?: string[] | null;  // REMOVER
-}
+## Arquivos a Modificar/Criar
 
-<ProductionKanbanCard
-  showEditingProgress={column.id === 'editing'}  // REMOVER
-/>
+| Arquivo | Ação |
+|---------|------|
+| `src/lib/shotlist-generator.ts` | Adicionar `inferRollType()` |
+| `src/components/editing/ShotlistPanel.tsx` | Refatorar para suportar views + filtros |
+| `src/components/editing/FolderView.tsx` | **Criar** - Visualização de pastas |
+| `src/components/editing/SimplifiedVideoPanel.tsx` | **Criar** - Painel para roteiros sem shot list |
+| `src/pages/EditingWorkspace.tsx` | Passar props para `main_video_url` se existir |
+| Migração SQL | Adicionar colunas `main_video_url` e `main_video_type` |
+
+---
+
+## Fluxo de Decisão
+
+```text
+                          ┌─────────────────┐
+                          │  shots.length   │
+                          └────────┬────────┘
+                                   │
+                    ┌──────────────┴──────────────┐
+                    │                             │
+                ▼ = 0                         ▼ > 0
+     ┌──────────────────────┐     ┌────────────────────────────┐
+     │ SimplifiedVideoPanel │     │  viewMode === 'gallery'?  │
+     │ (só vídeo principal) │     └─────────────┬─────────────┘
+     └──────────────────────┘                   │
+                                     ┌──────────┴──────────┐
+                                     │                     │
+                                 ▼ sim                  ▼ não
+                         ┌──────────────┐        ┌─────────────┐
+                         │  GalleryView │        │  FolderView │
+                         │  + filtros   │        │  (2 pastas) │
+                         │  A-roll/B-roll│       └─────────────┘
+                         └──────────────┘
 ```
 
-### kanban-columns.ts
+---
 
-```tsx
-// REMOVER estas linhas (91-99):
-// === IDs DAS ETAPAS DE EDIÇÃO ===
-export const EDITING_STEP_IDS = [
-  'decupagem', 
-  'musica', 
-  'efeitosSonoros', 
-  'efeitosVisuais', 
-  'legenda', 
-  'cor'
-] as const;
-```
+## Ordem de Implementação
 
-## Resultado Esperado
-
-1. **Calendário Editorial**: Cards na coluna "Edição" não mostram mais as 6 bolinhas de progresso
-2. **Mesa de Edição**: Fica limpa, sem referências a notas de edição
-3. **Código**: Mais enxuto, sem constantes/interfaces não utilizadas
-
-## Nota sobre o Banco de Dados
-
-Os campos `editing_progress` e `editing_times` na tabela `scripts` **não serão removidos** neste momento porque:
-- Migrations de remoção de coluna são mais arriscadas
-- Os dados históricos podem ser úteis para análise futura
-- Não causam overhead significativo
-
-A remoção do schema pode ser feita em um momento futuro se desejado.
-
-## O Que **Não** Será Alterado
-
-- `Session.tsx` - continua usando `EditingChecklist` (limpeza futura)
-- `EditingChecklist.tsx` - mantido por dependência do Session.tsx
-- Colunas do banco de dados - mantidas por segurança
-
-## Resumo das Mudanças
-
-| Ação | Arquivo |
-|------|---------|
-| **DELETAR** | `src/components/editing/EditingNotesPanel.tsx` |
-| **EDITAR** | `src/components/calendar/ProductionKanbanCard.tsx` |
-| **EDITAR** | `src/components/calendar/ProductionKanbanColumn.tsx` |
-| **EDITAR** | `src/components/calendar/ProductionBoardView.tsx` |
-| **EDITAR** | `src/components/calendar/OrphanColumn.tsx` |
-| **EDITAR** | `src/pages/CalendarioEditorial.tsx` |
-| **EDITAR** | `src/lib/kanban-columns.ts` |
-| **EDITAR** | `src/pages/EditingWorkspace.tsx` |
+| # | Tarefa |
+|---|--------|
+| 1 | Adicionar função `inferRollType()` |
+| 2 | Adicionar filtro A-roll/B-roll na galeria existente |
+| 3 | Criar `FolderView` com navegação |
+| 4 | Adicionar toggle Galeria/Pastas no header |
+| 5 | Criar `SimplifiedVideoPanel` |
+| 6 | Migração do banco para `main_video_url` |
+| 7 | Integrar tudo no `EditingWorkspace` |
 
