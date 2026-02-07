@@ -77,10 +77,11 @@ export default function EditingWorkspace() {
 
   // Start session when page loads
   useEffect(() => {
-    if (!session.isActive && !isShowingAnyCelebration) {
+    // NÃO iniciar sessão se acabou de encerrar ou em celebração
+    if (!session.isActive && !isShowingAnyCelebration && !hasEndedSession) {
       startSession('edit');
     }
-  }, [session.isActive, isShowingAnyCelebration, startSession]);
+  }, [session.isActive, isShowingAnyCelebration, hasEndedSession, startSession]);
 
   // Load script data
   useEffect(() => {
