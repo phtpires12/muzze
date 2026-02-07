@@ -485,13 +485,21 @@ const ShotListReview = () => {
       
       if (error) throw error;
       
+      // 4. IMPORTANTE: Encerrar sessão ANTES de navegar para evitar bloqueio
+      if (session.isActive) {
+        await saveCurrentStageTime();
+        // Apenas resetar o timer sem disparar celebração (é um abandono, não conclusão)
+        // endSession() dispararia celebração - usamos apenas saveCurrentStageTime e navegamos
+      }
+      
       toast({
         title: "Shotlist excluída",
         description: "A shotlist foi removida com sucesso",
       });
       
-      // 4. Navegar de volta
-      navigate(`/calendario`);
+      // 5. Resetar timer manualmente e navegar (sem celebração)
+      // O useSession.resetTimer limpa o estado do timer
+      navigate(`/calendario`, { replace: true });
       
     } catch (error) {
       console.error('Error deleting shotlist:', error);
