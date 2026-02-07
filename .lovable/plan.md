@@ -1,23 +1,28 @@
 
 
-# Plano: Corrigir Exclusão de Shotlist
+# Plano: Exclusão de Shotlist - Voltar para Review
 
-## Problema
+## Resumo do Comportamento Correto
 
-Quando o usuário exclui a shotlist, a navegação para `/calendario` é bloqueada pelo `useNavigationBlocker` porque há uma sessão ativa. Isso causa:
+Ao excluir a shotlist, o usuário deve:
 
-1. Toast "Shotlist excluída" aparece corretamente
-2. Banco de dados é atualizado (shot_list = [])
-3. Modal "Encerrar sessão?" aparece bloqueando a navegação
-4. Usuário permanece na página com a shotlist visualmente presente
+| Ação | Comportamento |
+|------|---------------|
+| Sessão | Mantém ativa ✓ |
+| Navegação | Volta para `/session?stage=review&scriptId=...` |
+| Destino | Página de revisão onde pode criar nova shotlist ou avançar para gravação |
 
-## Causa Raiz
+## Fluxo Esperado
 
-O `handleDeleteShotlist` chama `navigate('/calendario')` enquanto há sessão ativa. O `useNavigationBlocker` intercepta essa navegação e exige confirmação.
-
-## Solução
-
-Encerrar a sessão **antes** de navegar quando a shotlist é excluída. Isso faz sentido semanticamente porque o usuário está abandonando o trabalho nesse conteúdo.
+```text
+ShotListReview → [Excluir Shotlist] → Session (stage=review)
+                                          ↓
+                                    Usuário pode:
+                                    ├── Revisar texto
+                                    ├── Comparar versões
+                                    ├── "Criar Shot List" novamente
+                                    └── "Avançar para Gravação" (modo frase a frase)
+```
 
 ## Alteração Técnica
 
@@ -59,17 +64,15 @@ const handleDeleteShotlist = async () => {
     
     if (error) throw error;
     
-    // 4. IMPORTANTE: Salvar tempo da sessão e encerrar ANTES de navegar
-    await saveCurrentStageTime();
-    await endSession();
-    
     toast({
       title: "Shotlist excluída",
-      description: "A shotlist foi removida com sucesso",
+      description: "Você pode criar uma nova ou avançar para gravação",
     });
     
-    // 5. Navegar - agora não será bloqueado porque sessão está encerrada
-    navigate('/calendario');
+    // 4. Voltar para página de Review (NÃO encerra sessão)
+    // A rota /session com stage=review está na lista SAFE_SESSION_PATHS
+    // então não será bloqueada pelo useNavigationBlocker
+    navigate(`/session?stage=review&scriptId=${scriptId}`);
     
   } catch (error) {
     console.error('Error deleting shotlist:', error);
@@ -85,42 +88,40 @@ const handleDeleteShotlist = async () => {
 };
 ```
 
-## Por que essa solução?
+## Por que funciona sem bloqueio
 
-1. **Semanticamente correta**: Excluir a shotlist significa abandonar o trabalho nesse conteúdo
-2. **Salva o progresso**: O tempo da sessão é registrado antes de sair
-3. **Evita o blocker**: Com sessão encerrada, `timer.isActive = false`, então `useNavigationBlocker` não bloqueia
-4. **Sem efeitos colaterais**: Não precisa modificar o blocker nem adicionar rotas à lista segura
-
-## Alteração Adicional (Opcional)
-
-Também podemos **não disparar celebração** neste caso, já que não é uma conclusão de trabalho - é um abandono. A sessão seria encerrada silenciosamente:
+A rota `/session` está na lista `SAFE_SESSION_PATHS` em `useNavigationBlocker.ts`:
 
 ```typescript
-// Encerrar sessão sem disparar celebração
-if (session.isActive) {
-  await saveCurrentStageTime();
-  // Encerrar internamente sem triggerFullCelebration
-  // Podemos usar uma função interna ou simplesmente não chamar endSession
-}
+const SAFE_SESSION_PATHS = [
+  '/session',        // ✓ Navegação para cá não é bloqueada
+  '/shot-list',
+  '/shot-list/record',
+  '/shot-list/review',
+  '/editing-workspace',
+  '/settings',
+  '/profile',
+];
 ```
 
-Porém, para simplicidade, a solução principal já resolve o problema.
+Portanto, a navegação de `/shot-list/review` para `/session?stage=review` não será interceptada.
 
-## Arquivos a Modificar
+## Arquivo a Modificar
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/pages/ShotListReview.tsx` | Adicionar `saveCurrentStageTime()` e `endSession()` antes de `navigate()` em `handleDeleteShotlist` |
+| `src/pages/ShotListReview.tsx` | Trocar `resetTimer()` + `navigate('/calendario')` por `navigate('/session?stage=review&scriptId=${scriptId}')` |
 
 ## Resultado Esperado
 
 1. Usuário clica em "Excluir Shotlist"
 2. Modal de confirmação aparece
-3. Usuário clica em "Excluir Shotlist" (confirmar)
-4. Imagens são removidas do storage
-5. `shot_list` é setado como array vazio no banco
-6. Sessão é encerrada silenciosamente
-7. Toast "Shotlist excluída" aparece
-8. Navegação para `/calendario` ocorre sem bloqueio
+3. Usuário confirma
+4. Imagens removidas do storage ✓
+5. `shot_list = []` no banco ✓
+6. Toast "Shotlist excluída" ✓
+7. Navega para página de Review (imagem anexada)
+8. Timer continua rodando normalmente
+9. Usuário vê botão "Criar Shot List" disponível novamente
+10. Pode criar nova shotlist ou clicar "Avançar para Gravação"
 
