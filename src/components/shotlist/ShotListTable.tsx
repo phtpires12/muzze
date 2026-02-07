@@ -153,7 +153,8 @@ const SortableRow = ({
   return (
     <tr 
       ref={setNodeRef} 
-      style={style} 
+      style={style}
+      data-shot-id={shot.id}
       className={cn(
         "border-t border-border hover:bg-muted/20 transition-all relative",
         showCheckbox && shot.isCompleted && "bg-green-50 dark:bg-green-950/20 opacity-75"
