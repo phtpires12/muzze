@@ -232,6 +232,9 @@ export default function EditingWorkspace() {
       return;
     }
 
+    // Ativar flag ANTES de encerrar para evitar reinício automático
+    setHasEndedSession(true);
+
     // Save timer session
     await saveCurrentStageTime();
 
