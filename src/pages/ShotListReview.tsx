@@ -759,6 +759,15 @@ const ShotListReview = () => {
             >
               <RefreshCw className="w-4 h-4" />
             </Button>
+            <Button
+              onClick={() => setShowDeleteShotlistModal(true)}
+              size="sm"
+              variant="ghost"
+              className="px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+              title="Excluir Shotlist"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
             <ExportPDFButton
               shots={shots}
               scriptTitle={scriptTitle}
