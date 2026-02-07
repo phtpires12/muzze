@@ -351,12 +351,6 @@ export default function EditingWorkspace() {
             resolvedUrls={resolvedUrls}
           />
 
-          {/* Notes Panel */}
-          <EditingNotesPanel
-            notes={script.editing_notes || ''}
-            onSave={handleSaveNotes}
-          />
-
           {/* Complete Button - inline at bottom of content */}
           <div className="pt-4 pb-8">
             <CompleteEditingButton 

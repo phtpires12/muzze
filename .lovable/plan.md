@@ -1,39 +1,39 @@
 
 
-# Plano 3 de 5: Remover Campo Notas de Edição
+# Plano 4 de 5: Reformular Header e Botão Voltar
 
 ## Contexto
 
-O campo "Notas de Edição" foi considerado redundante pelo usuário, pois anotações podem ser feitas diretamente nas cenas individuais.
+O botão de voltar e o header da Mesa de Edição não seguem o padrão visual das outras páginas de Session (como ShotListRecord e ShotListReview).
 
 ## Problema Atual
 
-O componente `EditingNotesPanel` está sendo exibido na Mesa de Edição, ocupando espaço sem agregar valor.
+O header atual usa um estilo inconsistente com ícones e layout diferentes das outras páginas do fluxo de trabalho.
 
 ## Solução
 
-1. Remover a importação do `EditingNotesPanel`
-2. Remover o estado e handlers relacionados a `editing_notes`
-3. Remover a renderização do componente
+Analisar o padrão visual de `ShotListRecord.tsx` e `ShotListReview.tsx` e aplicar o mesmo estilo ao header da Mesa de Edição.
 
-## Arquivos a Modificar
+## Arquivos a Analisar
 
-| Arquivo | Alteração |
-|---------|-----------|
-| `src/pages/EditingWorkspace.tsx` | Remover referências ao EditingNotesPanel |
+| Arquivo | Motivo |
+|---------|--------|
+| `src/pages/ShotListRecord.tsx` | Referência de padrão visual |
+| `src/pages/ShotListReview.tsx` | Referência de padrão visual |
+| `src/pages/EditingWorkspace.tsx` | Aplicar as alterações |
 
 ## Resultado Esperado
 
-A Mesa de Edição ficará mais limpa, sem o painel de Notas de Edição.
+O header da Mesa de Edição seguirá o mesmo padrão visual das outras páginas de Session.
 
 ---
 
-## Próximos Problemas (armazenados para resolver depois)
+## Próximos Problemas
 
 | # | Problema | Status |
 |---|----------|--------|
 | 1 | Reposicionar Música acima do Shotlist | ✅ Concluído |
 | 2 | Adicionar link de referência do roteiro | ✅ Concluído |
-| 3 | Remover campo Notas de Edição | 📋 Este plano |
-| 4 | Reformular header/botão voltar | 📋 Pendente |
+| 3 | Remover campo Notas de Edição | ✅ Concluído |
+| 4 | Reformular header/botão voltar | 📋 Este plano |
 | 5 | Bolinhas de progresso não funcionam | 📋 Pendente |
