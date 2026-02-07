@@ -392,6 +392,8 @@ export default function EditingWorkspace() {
           onPause={pauseSession}
           onResume={resumeSession}
           onStop={async () => {
+            // Ativar flag ANTES de encerrar para evitar reinício automático
+            setHasEndedSession(true);
             await endSession();
             navigate('/');
           }}
