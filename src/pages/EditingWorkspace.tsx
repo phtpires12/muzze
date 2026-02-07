@@ -22,7 +22,6 @@ interface ScriptData {
   title: string;
   shot_list: string[] | null;
   music_reference: MusicReference | null;
-  editing_notes: string | null;
   reference_url: string | null;
 }
 
