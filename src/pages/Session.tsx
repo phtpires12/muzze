@@ -338,26 +338,6 @@ const Session = () => {
     }
   };
 
-  const handleEditingCompleted = async () => {
-    // Update publish_status to pronto_para_postar when editing is completed
-    if (scriptId) {
-      try {
-        await supabase
-          .from('scripts')
-          .update({ publish_status: 'pronto_para_postar' })
-          .eq('id', scriptId);
-      } catch (error) {
-        console.error('Error updating publish_status:', error);
-      }
-    }
-
-    toast({
-      title: "🎉 Edição Concluída!",
-      description: "Seu conteúdo está pronto para publicar!",
-    });
-    await handleEnd();
-  };
-
   const currentStage = STAGES.find(s => s.id === session.stage);
   const progress = (session.elapsedSeconds / (session.isStreakMode ? session.dailyGoalMinutes * 60 : 25 * 60)) * 100;
 
