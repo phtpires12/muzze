@@ -69,6 +69,7 @@ const ShotListReview = () => {
     resumeSession,
     endSession,
     saveCurrentStageTime,
+    resetTimer,
   } = useSession({ 
     attachBeforeUnloadListener: false 
   });
