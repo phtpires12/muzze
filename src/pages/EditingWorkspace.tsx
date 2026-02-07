@@ -121,6 +121,8 @@ export default function EditingWorkspace() {
         shot_list: data.shot_list,
         music_reference: scriptWithNewFields.music_reference || null,
         reference_url: data.reference_url || null,
+        main_video_url: (data as any).main_video_url || null,
+        main_video_type: (data as any).main_video_type || null,
       });
       
       if (data.workflow_template) {
