@@ -445,13 +445,25 @@ const Session = () => {
 
   const CurrentIcon = currentStage.icon;
 
-  // If stage is "record", show loading while fetching script
+  // If stage is "record", show loading while redirecting to shot list
   if (session.stage === "record") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center space-y-3">
           <div className="w-12 h-12 rounded-full bg-muted animate-pulse mx-auto" />
           <p className="text-sm text-muted-foreground">Carregando shot list...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If stage is "edit", show loading while redirecting to Editing Workspace
+  if (session.stage === "edit") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center space-y-3">
+          <div className="w-12 h-12 rounded-full bg-muted animate-pulse mx-auto" />
+          <p className="text-sm text-muted-foreground">Abrindo mesa de edição...</p>
         </div>
       </div>
     );
