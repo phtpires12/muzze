@@ -10,7 +10,6 @@ interface Script {
   publish_date: string | null;
   thumbnail_url?: string | null;
   reference_url?: string | null;
-  editing_progress?: string[] | null;
 }
 
 interface KanbanColumnType {
