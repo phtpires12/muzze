@@ -17,12 +17,16 @@ import { ShotItem } from "@/lib/shotlist-generator";
 import { generateSignedUrlsBatch } from "@/lib/storage-helpers";
 import { parseShotList } from "@/lib/shot-list-parser";
 
+type VideoType = 'google_drive' | 'dropbox' | 'youtube' | 'other';
+
 interface ScriptData {
   id: string;
   title: string;
   shot_list: string[] | null;
   music_reference: MusicReference | null;
   reference_url: string | null;
+  main_video_url: string | null;
+  main_video_type: VideoType | null;
 }
 
 export default function EditingWorkspace() {
