@@ -852,6 +852,14 @@ const ShotListReview = () => {
             <RefreshCw className="w-4 h-4" />
             Sincronizar com Revisão
           </Button>
+          <Button
+            variant="ghost"
+            onClick={() => setShowDeleteShotlistModal(true)}
+            className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+          >
+            <Trash2 className="w-4 h-4" />
+            Excluir Shotlist
+          </Button>
         </div>
 
         {/* Mobile FAB - Add Shot */}
