@@ -97,7 +97,7 @@ export default function EditingWorkspace() {
       setLoading(true);
       const { data, error } = await supabase
         .from('scripts')
-        .select('id, title, shot_list, workflow_template, reference_url')
+        .select('id, title, shot_list, workflow_template, reference_url, main_video_url, main_video_type')
         .eq('id', scriptId)
         .single();
 
