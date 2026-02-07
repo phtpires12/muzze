@@ -148,20 +148,27 @@ export default function EditingWorkspace() {
     if (!scriptId || !script?.shot_list) return;
     
     const updatedShotList = (script.shot_list as any[]).map((item: any, index) => {
-      const itemId = typeof item === 'string' ? `shot-${index}` : (item.id || `shot-${index}`);
-      if (itemId === shotId) {
-        if (typeof item === 'string') {
-          return {
-            id: itemId,
-            scriptSegment: item,
-            scene: '',
-            location: '',
-            shotImagePaths: [],
-            ...updates,
-          };
+      // Parse JSON string if needed to get the real ID
+      let parsed = item;
+      if (typeof item === 'string') {
+        try {
+          parsed = JSON.parse(item);
+        } catch {
+          // Plain text fallback - use index-based ID
+          parsed = { id: `shot-${index}`, scriptSegment: item };
         }
-        return { ...item, ...updates };
       }
+      
+      const itemId = parsed.id || `shot-${index}`;
+      
+      if (itemId === shotId) {
+        // Apply updates to the parsed object
+        const updated = { ...parsed, ...updates };
+        // Return as JSON string to maintain format consistency
+        return JSON.stringify(updated);
+      }
+      
+      // Return original item unchanged (keep as string if it was string)
       return item;
     });
 
