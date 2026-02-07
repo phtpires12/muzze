@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useNavigationBlocker } from "@/hooks/useNavigationBlocker";
 import { useSession, SessionStage } from "@/hooks/useSession";
@@ -9,27 +9,19 @@ import { useCelebration } from "@/contexts/CelebrationContext";
 import { useProfileWithLevel } from "@/hooks/useProfileWithLevel";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { 
-  Play, 
-  Pause, 
-  Square, 
   Lightbulb, 
   FileText, 
   Video, 
   Scissors, 
   CheckCircle,
   ArrowLeft,
-  ChevronLeft,
-  Flame
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { StreakHalo } from "@/components/StreakHalo";
 import { ScriptEditor } from "@/components/ScriptEditor";
 import { BrainstormWorkspace } from "@/components/brainstorm/BrainstormWorkspace";
 import { IdeaDetail } from "@/components/brainstorm/IdeaDetail";
-import { EditingChecklist } from "@/components/EditingChecklist";
 import { DraggableSessionTimer } from "@/components/DraggableSessionTimer";
 import { AutoHideNav } from "@/components/AutoHideNav";
 import { supabase } from "@/integrations/supabase/client";
@@ -37,8 +29,8 @@ import { useToast } from "@/hooks/use-toast";
 import { DevToolsPanel } from "@/components/DevToolsPanel";
 import { TROPHIES } from "@/lib/gamification";
 import { CreativeStage } from "@/types/workspace";
-import { useWorkflowTemplate, getPrevStageUrl, CREATIVE_TO_SESSION } from "@/hooks/useWorkflowTemplate";
-import { WorkflowTemplateId, getStageLabel } from "@/lib/workflow-templates";
+import { useWorkflowTemplate } from "@/hooks/useWorkflowTemplate";
+import { WorkflowTemplateId } from "@/lib/workflow-templates";
 
 const STAGES: { 
   id: SessionStage; 
@@ -275,14 +267,22 @@ const Session = () => {
     handleRecordStage();
   }, [session.stage, stageParam, scriptId, navigate, toast]);
 
-  // Handle edit stage - redirect to new Editing Workspace
+  // Handle edit stage - always redirect to Editing Workspace
   useEffect(() => {
     if (session.stage === "edit" && stageParam === "edit") {
       if (scriptId && scriptId !== 'null' && scriptId !== 'undefined') {
         navigate(`/editing-workspace?scriptId=${scriptId}`);
+      } else {
+        // No scriptId for edit stage, redirect to calendar
+        toast({
+          title: "Conteúdo não encontrado",
+          description: "Selecione um conteúdo para editar no calendário.",
+          variant: "destructive",
+        });
+        navigate('/calendario?view=board');
       }
     }
-  }, [session.stage, stageParam, scriptId, navigate]);
+  }, [session.stage, stageParam, scriptId, navigate, toast]);
 
   const formatTime = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
@@ -329,26 +329,6 @@ const Session = () => {
       // Se falhou, resetar flag
       setHasEndedSession(false);
     }
-  };
-
-  const handleEditingCompleted = async () => {
-    // Update publish_status to pronto_para_postar when editing is completed
-    if (scriptId) {
-      try {
-        await supabase
-          .from('scripts')
-          .update({ publish_status: 'pronto_para_postar' })
-          .eq('id', scriptId);
-      } catch (error) {
-        console.error('Error updating publish_status:', error);
-      }
-    }
-
-    toast({
-      title: "🎉 Edição Concluída!",
-      description: "Seu conteúdo está pronto para publicar!",
-    });
-    await handleEnd();
   };
 
   const currentStage = STAGES.find(s => s.id === session.stage);
@@ -458,13 +438,25 @@ const Session = () => {
 
   const CurrentIcon = currentStage.icon;
 
-  // If stage is "record", show loading while fetching script
+  // If stage is "record", show loading while redirecting to shot list
   if (session.stage === "record") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center space-y-3">
           <div className="w-12 h-12 rounded-full bg-muted animate-pulse mx-auto" />
           <p className="text-sm text-muted-foreground">Carregando shot list...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If stage is "edit", show loading while redirecting to Editing Workspace
+  if (session.stage === "edit") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center space-y-3">
+          <div className="w-12 h-12 rounded-full bg-muted animate-pulse mx-auto" />
+          <p className="text-sm text-muted-foreground">Abrindo mesa de edição...</p>
         </div>
       </div>
     );
@@ -582,260 +574,13 @@ const Session = () => {
     );
   }
 
-
-  // Calculate bonus mode for edit stage (same logic as DraggableSessionTimer)
-  // Usar dailyBaselineSeconds (snapshot do início da sessão) + elapsedSeconds para cálculo monotônico
-  const goalSeconds = session.dailyGoalMinutes * 60;
-  const totalCreatedToday = session.dailyBaselineSeconds + session.elapsedSeconds;
-  const remainingSeconds = Math.max(0, goalSeconds - totalCreatedToday);
-  const bonusSeconds = Math.max(0, totalCreatedToday - goalSeconds);
-  const isBonusMode = bonusSeconds >= 90 && session.isStreakMode;
-
-  // Dynamic goal text
-  const goalText = remainingSeconds > 0 
-    ? `Falta: ${formatTime(remainingSeconds)}`
-    : `🔥 Bônus: +${formatTime(bonusSeconds)} além da meta`;
-
+  // Fallback: unknown stage - redirect to home
   return (
-    <div 
-      className="min-h-screen bg-background px-4 py-6"
-      style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}
-    >
-      <div className="max-w-2xl mx-auto">
-        <Card className={cn(
-          "relative p-6 border rounded-xl transition-all duration-500",
-          session.isStreakMode 
-            ? "bg-primary/5 border-primary/30" 
-            : isBonusMode
-              ? "bg-purple-500/5 border-purple-500/30"
-              : "bg-background border-border"
-        )}>
-          {/* Back to Previous Stage Button - top left */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={async () => {
-              if (!scriptId) {
-                console.error('scriptId não encontrado para atualizar status');
-                return;
-              }
-              await saveCurrentStageTime();
-              
-              // Determine previous stage based on workflow
-              const prev = prevStage('editing');
-              const prevStatus = prev || 'recording';
-              
-              const { error } = await supabase
-                .from('scripts')
-                .update({ status: prevStatus })
-                .eq('id', scriptId);
-              if (error) {
-                console.error(`Erro ao atualizar status para ${prevStatus}:`, error);
-              }
-              
-              // Navigate to previous stage
-              const url = getPrevStageUrl('editing', currentTemplate, scriptId);
-              navigate(url || `/shot-list/record?scriptId=${scriptId}`);
-            }}
-            className="absolute top-2 left-4 gap-2 text-muted-foreground hover:text-foreground hover:bg-red-500/10"
-          >
-            <ChevronLeft className="w-4 h-4" />
-            {prevStage('editing') === 'recording' ? (
-              <>
-                <Video className="w-4 h-4 text-red-500" />
-                <span className="text-xs">Gravação</span>
-              </>
-            ) : prevStage('editing') === 'ideation' ? (
-              <>
-                <Lightbulb className="w-4 h-4 text-yellow-500" />
-                <span className="text-xs">Ideação</span>
-              </>
-            ) : (
-              <>
-                <Video className="w-4 h-4 text-red-500" />
-                <span className="text-xs">{prevStage('editing') ? getStageLabel(prevStage('editing')!) : 'Gravação'}</span>
-              </>
-            )}
-          </Button>
-
-          {/* Timer Display */}
-          <div className="text-center mb-6">
-            <div className={cn(
-              "w-20 h-20 mx-auto mb-4 rounded-full flex items-center justify-center transition-all duration-500",
-              session.isStreakMode
-                ? "bg-primary/10"
-                : isBonusMode
-                  ? "bg-purple-500/10"
-                  : "bg-muted"
-            )}>
-              {session.isStreakMode ? (
-                <Flame className="w-10 h-10 text-primary" />
-              ) : isBonusMode ? (
-                <Flame className="w-10 h-10 text-purple-500" />
-              ) : (
-                <CurrentIcon className={cn("w-10 h-10", currentStage.color)} />
-              )}
-            </div>
-            
-            <h2 className="text-lg font-semibold text-foreground mb-1">
-              {currentStage.label}
-            </h2>
-            
-            <div className={cn(
-              "text-5xl font-bold tracking-tight mb-1 tabular-nums transition-colors duration-500",
-              session.isStreakMode 
-                ? "text-primary" 
-                : isBonusMode 
-                  ? "text-purple-600"
-                  : "text-foreground"
-            )}>
-              {formatTime(session.elapsedSeconds)}
-            </div>
-
-            <div className={cn(
-              "text-sm mb-3 transition-colors duration-500",
-              session.isStreakMode 
-                ? "text-primary/70" 
-                : isBonusMode
-                  ? "text-purple-500/70"
-                  : "text-muted-foreground"
-            )}>
-              {goalText}
-            </div>
-
-            <Progress 
-              value={progress} 
-              className={cn(
-                "max-w-xs mx-auto mb-4 h-2",
-                session.isStreakMode && "[&>div]:bg-primary",
-                isBonusMode && !session.isStreakMode && "[&>div]:bg-purple-500"
-              )}
-            />
-            
-            {session.isPaused && (
-              <p className="text-sm text-muted-foreground">Sessão pausada</p>
-            )}
-          </div>
-
-          {/* Controls */}
-          <div className="flex gap-3 mb-6">
-            {!session.isPaused ? (
-              <Button
-                onClick={pauseSession}
-                variant="outline"
-                className="flex-1 h-12 rounded-lg font-medium"
-              >
-                <Pause className="w-4 h-4 mr-2" />
-                Pausar
-              </Button>
-            ) : (
-              <Button
-                onClick={resumeSession}
-                className="flex-1 h-12 rounded-lg font-medium"
-              >
-                <Play className="w-4 h-4 mr-2" />
-                Retomar
-              </Button>
-            )}
-            
-            <Button
-              onClick={handleEnd}
-              variant="destructive"
-              className="flex-1 h-12 rounded-lg font-medium"
-            >
-              <Square className="w-4 h-4 mr-2" />
-              Finalizar
-            </Button>
-          </div>
-
-              {/* Stage Selection OR Editing Checklist */}
-              {session.stage === "edit" ? (
-                // Checklist para etapa de Edição
-                <div className="space-y-4">
-                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                    Etapas de Edição
-                  </h3>
-                  <EditingChecklist scriptId={scriptId} onAllCompleted={handleEditingCompleted} />
-                  
-                </div>
-              ) : (
-                // Botões de mudança de etapa para outras etapas
-                <div className="space-y-3">
-                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                    Mudar Etapa
-                  </h3>
-                  <div className="grid grid-cols-2 gap-2">
-                    {STAGES.map((stage) => {
-                      const Icon = stage.icon;
-                      const isActive = stage.id === session.stage;
-                      return (
-                        <button
-                          key={stage.id}
-                          onClick={() => !isActive && changeStage(stage.id)}
-                          disabled={isActive}
-                          className={cn(
-                            "p-3 rounded-lg border transition-colors",
-                            "flex flex-col items-center gap-1.5",
-                            isActive 
-                              ? "bg-primary/10 border-primary/30" 
-                              : "bg-background border-border hover:border-primary/30 hover:bg-muted/50"
-                          )}
-                        >
-                          <Icon className={cn(
-                            "w-5 h-5",
-                            isActive ? "text-primary" : stage.color
-                          )} />
-                          <span className={cn(
-                            "text-xs font-medium",
-                            isActive ? "text-primary" : "text-foreground"
-                          )}>
-                            {stage.label}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-        </Card>
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="text-center space-y-3">
+        <div className="w-12 h-12 rounded-full bg-muted animate-pulse mx-auto" />
+        <p className="text-sm text-muted-foreground">Carregando...</p>
       </div>
-
-      {/* Floating Draggable Timer for edit stage - Hidden during celebrations */}
-      <DraggableSessionTimer
-        stage={currentStage.label}
-        icon={currentStage.iconName}
-        elapsedSeconds={session.elapsedSeconds}
-        targetSeconds={session.targetSeconds}
-        isStreakMode={session.isStreakMode}
-        dailyGoalMinutes={session.dailyGoalMinutes}
-        isPaused={session.isPaused}
-        onPause={pauseSession}
-        onResume={resumeSession}
-        onStop={handleEnd}
-        progress={progress}
-        dailyBaselineSeconds={session.dailyBaselineSeconds}
-        permissionEnabled={canUseTimer}
-        hidden={isShowingAnyCelebration}
-      />
-
-      {/* Celebration Components rendered globally via GlobalCelebrations */}
-
-
-      {/* Streak Halo Effect */}
-      <StreakHalo 
-        show={showStreakHalo} 
-        streakCount={streakCount}
-        onComplete={() => setShowStreakHalo(false)}
-      />
-      
-      {/* Auto-hide Navigation */}
-      <AutoHideNav />
-
-      {/* Developer Tools Panel */}
-      <DevToolsPanel
-        onSimulateSession={handleSimulateSession}
-        onSimulateTrophy={handleSimulateTrophy}
-      />
 
       {/* Alert Dialog para confirmar encerramento de sessão via swipe/back */}
       <AlertDialog open={showEndConfirmation} onOpenChange={(open) => {
