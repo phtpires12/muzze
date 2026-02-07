@@ -12,11 +12,10 @@ import { ShotlistPanel } from "@/components/editing/ShotlistPanel";
 import { MusicPanel, MusicReference } from "@/components/editing/MusicPanel";
 import { CompleteEditingButton } from "@/components/editing/CompleteEditingButton";
 import { useWorkflowTemplate, getPrevStageUrl } from "@/hooks/useWorkflowTemplate";
-import { WorkflowTemplateId, getStageLabel } from "@/lib/workflow-templates";
+import { WorkflowTemplateId } from "@/lib/workflow-templates";
 import { ShotItem } from "@/lib/shotlist-generator";
 import { generateSignedUrlsBatch } from "@/lib/storage-helpers";
 import { parseShotList } from "@/lib/shot-list-parser";
-import { cn } from "@/lib/utils";
 
 interface ScriptData {
   id: string;
