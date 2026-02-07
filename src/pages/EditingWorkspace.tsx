@@ -359,6 +359,9 @@ export default function EditingWorkspace() {
             shots={shots} 
             onUpdateShot={handleUpdateShot}
             resolvedUrls={resolvedUrls}
+            mainVideoUrl={script.main_video_url}
+            mainVideoType={script.main_video_type}
+            onSaveMainVideo={handleSaveMainVideo}
           />
 
           {/* Complete Button - inline at bottom of content */}
