@@ -156,6 +156,6 @@ O header da Mesa de Edição terá:
 | 1 | Reposicionar Música acima do Shotlist | ✅ Concluído |
 | 2 | Adicionar link de referência do roteiro | ✅ Concluído |
 | 3 | Remover campo Notas de Edição | ✅ Concluído |
-| 4 | Reformular header/botão voltar | 📋 Este plano |
+| 4 | Reformular header/botão voltar | ✅ Concluído |
 | 5 | Bolinhas de progresso não funcionam | 📋 Pendente |
 
