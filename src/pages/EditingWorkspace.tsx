@@ -392,10 +392,32 @@ export default function EditingWorkspace() {
           onPause={pauseSession}
           onResume={resumeSession}
           onStop={async () => {
+            // Capturar dados ANTES do reset
+            const capturedDuration = session.elapsedSeconds;
+            
             // Ativar flag ANTES de encerrar para evitar reinício automático
             setHasEndedSession(true);
-            await endSession();
-            navigate('/');
+            
+            const result = await endSession();
+            if (result) {
+              const sessionSummary = {
+                duration: result.duration || capturedDuration || 0,
+                xpGained: result.xpGained || 0,
+                stage: 'edit',
+              };
+              
+              const alreadyCounted = (result as any).alreadyCounted || false;
+              const shouldShowStreak = (result as any).shouldShowCelebration && !alreadyCounted;
+              const streakCountResult = shouldShowStreak ? ((result as any).newStreak || 0) : 0;
+              
+              // Usar triggerFullCelebration com callback de navegação
+              await triggerFullCelebration(sessionSummary, streakCountResult, result.xpGained || 0, () => {
+                navigate('/');
+              });
+            } else {
+              // Fallback: navegação direta se endSession falhar
+              navigate('/');
+            }
           }}
           progress={progress}
           dailyBaselineSeconds={session.dailyBaselineSeconds}
