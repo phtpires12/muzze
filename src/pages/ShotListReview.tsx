@@ -410,11 +410,11 @@ const ShotListReview = () => {
     });
   };
 
-  // Global Ctrl/Cmd+Shift+Enter listener for splitting take at cursor
+  // Global Shift+Enter listener for splitting take at cursor
   useEffect(() => {
     const handleSplitKeyDown = (e: KeyboardEvent) => {
-      // Ctrl+Shift+Enter ou Cmd+Shift+Enter
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'Enter') {
+      // Shift+Enter SEM Ctrl/Cmd = novo take
+      if (e.key === 'Enter' && e.shiftKey && !e.ctrlKey && !e.metaKey) {
         const target = e.target as HTMLElement;
         const editor = target.closest('.ProseMirror');
         

@@ -206,7 +206,7 @@ export const ShotListCard = ({
             minHeight="120px"
           />
           <span className="text-xs text-muted-foreground hidden md:inline">
-            Shift+Enter: quebra linha | Ctrl/Cmd+Shift+Enter: novo take
+            Shift+Enter: novo take
           </span>
         </div>
 
