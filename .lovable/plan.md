@@ -1,127 +1,104 @@
 
+# Plano: Corrigir Encerramento de Sessão no EditingWorkspace
 
-# Plano: Exclusão de Shotlist - Voltar para Review
+## Diagnóstico do Problema
 
-## Resumo do Comportamento Correto
-
-Ao excluir a shotlist, o usuário deve:
-
-| Ação | Comportamento |
-|------|---------------|
-| Sessão | Mantém ativa ✓ |
-| Navegação | Volta para `/session?stage=review&scriptId=...` |
-| Destino | Página de revisão onde pode criar nova shotlist ou avançar para gravação |
-
-## Fluxo Esperado
+### O que acontece atualmente (bug)
 
 ```text
-ShotListReview → [Excluir Shotlist] → Session (stage=review)
-                                          ↓
-                                    Usuário pode:
-                                    ├── Revisar texto
-                                    ├── Comparar versões
-                                    ├── "Criar Shot List" novamente
-                                    └── "Avançar para Gravação" (modo frase a frase)
+1. Usuário clica "Encerrar sessão" no timer
+2. onStop() é chamado
+3. await endSession() → session.isActive = false
+4. React re-renderiza ANTES de navigate('/')
+5. useEffect detecta !session.isActive → chama startSession('edit')
+6. Nova sessão inicia → session.isActive = true
+7. navigate('/') tenta executar
+8. useNavigationBlocker BLOQUEIA (sessão ativa + rota '/' não está em SAFE_SESSION_PATHS)
+9. Warning: "A router only supports one blocker at a time"
 ```
 
-## Alteração Técnica
+### Por que Session.tsx funciona
 
-Modificar `handleDeleteShotlist` em `src/pages/ShotListReview.tsx`:
+A página Session.tsx implementa um padrão de proteção usando um flag `hasEndedSession`:
+
+| Passo | Session.tsx (correto) | EditingWorkspace.tsx (bug) |
+|-------|----------------------|---------------------------|
+| 1 | `setHasEndedSession(true)` **antes** de endSession | Não usa flag |
+| 2 | `await endSession()` | `await endSession()` |
+| 3 | useEffect verifica `!hasEndedSession` | useEffect NÃO verifica |
+| 4 | Não reinicia sessão | **Reinicia sessão** (bug) |
+
+## Solução
+
+Implementar o mesmo padrão de proteção do `Session.tsx` no `EditingWorkspace.tsx`:
+
+### 1. Adicionar o flag `hasEndedSession`
 
 ```typescript
-const handleDeleteShotlist = async () => {
-  if (!scriptId) return;
-  
-  setIsDeletingShotlist(true);
-  
-  try {
-    // 1. Coletar todos os paths de imagens
-    const allImagePaths: string[] = [];
-    shots.forEach(shot => {
-      (shot.shotImagePaths || []).forEach(path => {
-        if (path && !allImagePaths.includes(path)) {
-          allImagePaths.push(path);
-        }
-      });
-    });
-    
-    // 2. Apagar imagens do storage
-    if (allImagePaths.length > 0) {
-      const { error: storageError } = await supabase.storage
-        .from('shot-references')
-        .remove(allImagePaths);
-      
-      if (storageError) {
-        console.error('Error removing images:', storageError);
-      }
-    }
-    
-    // 3. Limpar shot_list no banco
-    const { error } = await supabase
-      .from('scripts')
-      .update({ shot_list: [] })
-      .eq('id', scriptId);
-    
-    if (error) throw error;
-    
-    toast({
-      title: "Shotlist excluída",
-      description: "Você pode criar uma nova ou avançar para gravação",
-    });
-    
-    // 4. Voltar para página de Review (NÃO encerra sessão)
-    // A rota /session com stage=review está na lista SAFE_SESSION_PATHS
-    // então não será bloqueada pelo useNavigationBlocker
-    navigate(`/session?stage=review&scriptId=${scriptId}`);
-    
-  } catch (error) {
-    console.error('Error deleting shotlist:', error);
-    toast({
-      title: "Erro ao excluir",
-      description: "Não foi possível excluir a shotlist",
-      variant: "destructive",
-    });
-  } finally {
-    setIsDeletingShotlist(false);
-    setShowDeleteShotlistModal(false);
+const [hasEndedSession, setHasEndedSession] = useState(false);
+```
+
+### 2. Atualizar o useEffect de auto-start
+
+```typescript
+useEffect(() => {
+  // NÃO iniciar sessão se acabou de encerrar ou em celebração
+  if (!session.isActive && !isShowingAnyCelebration && !hasEndedSession) {
+    startSession('edit');
   }
-};
+}, [session.isActive, isShowingAnyCelebration, hasEndedSession, startSession]);
 ```
 
-## Por que funciona sem bloqueio
-
-A rota `/session` está na lista `SAFE_SESSION_PATHS` em `useNavigationBlocker.ts`:
+### 3. Atualizar o onStop do timer
 
 ```typescript
-const SAFE_SESSION_PATHS = [
-  '/session',        // ✓ Navegação para cá não é bloqueada
-  '/shot-list',
-  '/shot-list/record',
-  '/shot-list/review',
-  '/editing-workspace',
-  '/settings',
-  '/profile',
-];
+onStop={async () => {
+  // Ativar flag ANTES de encerrar para evitar reinício
+  setHasEndedSession(true);
+  await endSession();
+  navigate('/');
+}}
 ```
 
-Portanto, a navegação de `/shot-list/review` para `/session?stage=review` não será interceptada.
+### 4. Atualizar handleComplete também
+
+```typescript
+const handleComplete = useCallback(async () => {
+  // ... código existente ...
+  
+  // Ativar flag ANTES de encerrar
+  setHasEndedSession(true);
+  
+  // Save timer session
+  await saveCurrentStageTime();
+  
+  // End session with celebration
+  const result = await endSession();
+  // ... resto do código ...
+}, [/* deps */]);
+```
 
 ## Arquivo a Modificar
 
-| Arquivo | Alteração |
-|---------|-----------|
-| `src/pages/ShotListReview.tsx` | Trocar `resetTimer()` + `navigate('/calendario')` por `navigate('/session?stage=review&scriptId=${scriptId}')` |
+| Arquivo | Alterações |
+|---------|------------|
+| `src/pages/EditingWorkspace.tsx` | Adicionar `hasEndedSession` state e verificações |
+
+## Resumo das Alterações
+
+| Linha atual | Alteração |
+|-------------|-----------|
+| ~39 | Adicionar `const [hasEndedSession, setHasEndedSession] = useState(false);` |
+| ~79-82 | Adicionar `&& !hasEndedSession` na condição do useEffect |
+| ~234 (handleComplete) | Adicionar `setHasEndedSession(true);` antes de endSession |
+| ~389-392 (onStop) | Adicionar `setHasEndedSession(true);` antes de endSession |
 
 ## Resultado Esperado
 
-1. Usuário clica em "Excluir Shotlist"
-2. Modal de confirmação aparece
-3. Usuário confirma
-4. Imagens removidas do storage ✓
-5. `shot_list = []` no banco ✓
-6. Toast "Shotlist excluída" ✓
-7. Navega para página de Review (imagem anexada)
-8. Timer continua rodando normalmente
-9. Usuário vê botão "Criar Shot List" disponível novamente
-10. Pode criar nova shotlist ou clicar "Avançar para Gravação"
-
+1. Usuário clica "Encerrar sessão"
+2. `setHasEndedSession(true)` é chamado
+3. `await endSession()` → `session.isActive = false`
+4. React re-renderiza, useEffect detecta `!session.isActive`
+5. Mas `hasEndedSession = true` → **NÃO reinicia sessão**
+6. `navigate('/')` executa sem bloqueio
+7. Usuário é redirecionado para home corretamente
