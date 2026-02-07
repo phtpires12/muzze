@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useNavigationBlocker } from "@/hooks/useNavigationBlocker";
 import { useSession, SessionStage } from "@/hooks/useSession";
@@ -8,24 +8,16 @@ import { useTimerPermission } from "@/hooks/useTimerPermission";
 import { useCelebration } from "@/contexts/CelebrationContext";
 import { useProfileWithLevel } from "@/hooks/useProfileWithLevel";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { 
-  Play, 
-  Pause, 
-  Square, 
   Lightbulb, 
   FileText, 
   Video, 
   Scissors, 
   CheckCircle,
   ArrowLeft,
-  ChevronLeft,
-  Flame
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { StreakHalo } from "@/components/StreakHalo";
 import { ScriptEditor } from "@/components/ScriptEditor";
 import { BrainstormWorkspace } from "@/components/brainstorm/BrainstormWorkspace";
 import { IdeaDetail } from "@/components/brainstorm/IdeaDetail";
@@ -34,10 +26,9 @@ import { AutoHideNav } from "@/components/AutoHideNav";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { DevToolsPanel } from "@/components/DevToolsPanel";
-import { TROPHIES } from "@/lib/gamification";
 import { CreativeStage } from "@/types/workspace";
-import { useWorkflowTemplate, getPrevStageUrl, CREATIVE_TO_SESSION } from "@/hooks/useWorkflowTemplate";
-import { WorkflowTemplateId, getStageLabel } from "@/lib/workflow-templates";
+import { useWorkflowTemplate } from "@/hooks/useWorkflowTemplate";
+import { WorkflowTemplateId } from "@/lib/workflow-templates";
 
 const STAGES: { 
   id: SessionStage; 
