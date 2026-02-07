@@ -334,6 +334,26 @@ export default function EditingWorkspace() {
             onSave={handleSaveMusic}
           />
 
+          {/* Reference Link Panel - Se existir */}
+          {script.reference_url && (
+            <div className="bg-card border border-border rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <ExternalLink className="w-4 h-4 text-blue-500" />
+                  <span className="text-sm font-medium">Referência</span>
+                </div>
+                <a
+                  href={script.reference_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-blue-500 hover:text-blue-400 underline truncate max-w-[200px]"
+                >
+                  Abrir referência
+                </a>
+              </div>
+            </div>
+          )}
+
           {/* Shotlist Panel */}
           <ShotlistPanel 
             shots={shots} 
