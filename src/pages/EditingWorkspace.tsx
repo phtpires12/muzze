@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Film, ChevronLeft, Video, ExternalLink } from "lucide-react";
+import { ArrowLeft, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useCelebration } from "@/contexts/CelebrationContext";
@@ -290,20 +290,16 @@ export default function EditingWorkspace() {
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
+              className="shrink-0"
               onClick={handleGoBack}
-              className="gap-2"
+              title="Voltar"
             >
-              <ChevronLeft className="w-4 h-4" />
-              <Video className="w-4 h-4 text-red-500" />
-              <span className="hidden sm:inline text-xs">
-                {prevStage('editing') ? getStageLabel(prevStage('editing')!) : 'Gravação'}
-              </span>
+              <ArrowLeft className="w-5 h-5" />
             </Button>
             
             <div className="flex-1 min-w-0">
-              <h1 className="text-lg font-semibold text-foreground truncate flex items-center gap-2">
-                <Film className="w-5 h-5 text-purple-500 flex-shrink-0" />
+              <h1 className="text-lg font-bold text-foreground truncate">
                 Mesa de Edição
               </h1>
               <p className="text-xs text-muted-foreground truncate">
