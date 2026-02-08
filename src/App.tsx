@@ -51,6 +51,7 @@ import MyPlan from "./pages/MyPlan";
 import PaywallPage from "./pages/PaywallPage";
 import PaywallSuccess from "./pages/PaywallSuccess";
 import EditingWorkspace from "./pages/EditingWorkspace";
+import Recap from "./pages/Recap";
 import { LevelUpModal } from "./components/LevelUpModal";
 import { TrophyUnlockedModal } from "./components/TrophyUnlockedModal";
 import { TutorialProvider } from "./components/tutorial/TutorialProvider";

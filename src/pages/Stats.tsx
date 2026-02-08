@@ -166,6 +166,21 @@ const Stats = () => {
         </div>
       </section>
 
+      {/* Recap Notifications */}
+      {availableRecaps.length > 0 && (
+        <section className="px-4 pb-4 sm:px-8">
+          <div className="max-w-6xl mx-auto space-y-3">
+            {availableRecaps.map(recap => (
+              <RecapNotificationCard 
+                key={recap.id}
+                recap={recap}
+                onClick={() => navigate(`/recap/${recap.id}`)}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Cards Principais - Seção Alternada */}
       <section className="bg-muted/30 px-4 py-6 sm:px-8">
         <div className="max-w-6xl mx-auto">
