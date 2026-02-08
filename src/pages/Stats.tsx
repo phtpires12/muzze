@@ -1,13 +1,16 @@
 import { Award, Target, Zap } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { StatCard } from "@/components/StatCard";
 import { Card } from "@/components/ui/card";
 import { useStatsPage } from "@/hooks/useStatsPage";
 import { useLiveDailyProgress } from "@/hooks/useLiveDailyProgress";
 import { useProfileWithLevel } from "@/hooks/useProfileWithLevel";
+import { useRecaps } from "@/hooks/useRecaps";
 import { TROPHIES } from "@/lib/gamification";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { StatsPageSkeleton } from "@/components/stats/StatsPageSkeleton";
+import { RecapNotificationCard } from "@/components/stats/RecapNotificationCard";
 import {
   Tooltip,
   TooltipContent,
