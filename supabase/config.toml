@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.send-subscription-notifications]
 verify_jwt = false
+
+[functions.generate-recaps]
+verify_jwt = false

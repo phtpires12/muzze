@@ -1,13 +1,16 @@
 import { Award, Target, Zap } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { StatCard } from "@/components/StatCard";
 import { Card } from "@/components/ui/card";
 import { useStatsPage } from "@/hooks/useStatsPage";
 import { useLiveDailyProgress } from "@/hooks/useLiveDailyProgress";
 import { useProfileWithLevel } from "@/hooks/useProfileWithLevel";
+import { useRecaps } from "@/hooks/useRecaps";
 import { TROPHIES } from "@/lib/gamification";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { StatsPageSkeleton } from "@/components/stats/StatsPageSkeleton";
+import { RecapNotificationCard } from "@/components/stats/RecapNotificationCard";
 import {
   Tooltip,
   TooltipContent,
@@ -33,6 +36,7 @@ const formatTimeDisplay = (hours: number): string => {
 };
 
 const Stats = () => {
+  const navigate = useNavigate();
   const { effectiveLevel, goalMinutes, loading: profileLoading } = useProfileWithLevel();
   
   const {
@@ -46,6 +50,9 @@ const Stats = () => {
     gamificationStats,
     loading: statsLoading,
   } = useStatsPage({ effectiveLevel, goalMinutes });
+  
+  // Hook para recaps disponíveis
+  const { availableRecaps, loading: recapsLoading } = useRecaps();
   
   // Hook para progresso live durante sessão ativa
   const liveGoal = useLiveDailyProgress(dailyGoal.actualMinutes, dailyGoal.goalMinutes);
@@ -158,6 +165,21 @@ const Stats = () => {
           <p className="text-sm text-muted-foreground">Acompanhe seu progresso e conquistas</p>
         </div>
       </section>
+
+      {/* Recap Notifications */}
+      {availableRecaps.length > 0 && (
+        <section className="px-4 pb-4 sm:px-8">
+          <div className="max-w-6xl mx-auto space-y-3">
+            {availableRecaps.map(recap => (
+              <RecapNotificationCard 
+                key={recap.id}
+                recap={recap}
+                onClick={() => navigate(`/recap/${recap.id}`)}
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Cards Principais - Seção Alternada */}
       <section className="bg-muted/30 px-4 py-6 sm:px-8">

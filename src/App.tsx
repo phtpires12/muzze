@@ -51,6 +51,7 @@ import MyPlan from "./pages/MyPlan";
 import PaywallPage from "./pages/PaywallPage";
 import PaywallSuccess from "./pages/PaywallSuccess";
 import EditingWorkspace from "./pages/EditingWorkspace";
+import Recap from "./pages/Recap";
 import { LevelUpModal } from "./components/LevelUpModal";
 import { TrophyUnlockedModal } from "./components/TrophyUnlockedModal";
 import { TutorialProvider } from "./components/tutorial/TutorialProvider";
@@ -176,6 +177,7 @@ const router = createBrowserRouter([
       { path: "/invite", element: <AcceptInvite /> },
       { path: "/content/view/:scriptId", element: <ProtectedRoute><ContentView /></ProtectedRoute> },
       { path: "/editing-workspace", element: <ProtectedRoute><EditingWorkspace /></ProtectedRoute> },
+      { path: "/recap/:recapId", element: <ProtectedRoute><Recap /></ProtectedRoute> },
       { path: "*", element: <NotFound /> },
     ],
   },
