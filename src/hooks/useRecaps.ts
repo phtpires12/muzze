@@ -1,6 +1,43 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Recap, RecapComputedStats } from '@/types/recap';
+import { Json } from '@/integrations/supabase/types';
+
+// Helper to safely parse computed_stats from JSON
+const parseComputedStats = (stats: Json | null): RecapComputedStats => {
+  const defaultStats: RecapComputedStats = {
+    stageBreakdown: {},
+    bestDay: null,
+    bestDayMinutes: 0,
+    weeklyGoalHitCount: 0,
+    totalWeeks: 4,
+    previousPeriodMinutes: null,
+    favoriteStage: null,
+  };
+
+  if (!stats || typeof stats !== 'object' || Array.isArray(stats)) {
+    return defaultStats;
+  }
+
+  const obj = stats as Record<string, unknown>;
+  return {
+    stageBreakdown: (obj.stageBreakdown as Record<string, number>) || {},
+    bestDay: typeof obj.bestDay === 'string' ? obj.bestDay : null,
+    bestDayMinutes: typeof obj.bestDayMinutes === 'number' ? obj.bestDayMinutes : 0,
+    weeklyGoalHitCount: typeof obj.weeklyGoalHitCount === 'number' ? obj.weeklyGoalHitCount : 0,
+    totalWeeks: typeof obj.totalWeeks === 'number' ? obj.totalWeeks : 4,
+    previousPeriodMinutes: typeof obj.previousPeriodMinutes === 'number' ? obj.previousPeriodMinutes : null,
+    favoriteStage: typeof obj.favoriteStage === 'string' ? obj.favoriteStage : null,
+  };
+};
+
+// Valid period types
+const VALID_PERIOD_TYPES = ['30d', '60d', '90d', '180d', '365d'] as const;
+type PeriodType = typeof VALID_PERIOD_TYPES[number];
+
+const isValidPeriodType = (value: string): value is PeriodType => {
+  return VALID_PERIOD_TYPES.includes(value as PeriodType);
+};
 
 export const useRecaps = () => {
   const [availableRecaps, setAvailableRecaps] = useState<Recap[]>([]);
@@ -25,19 +62,14 @@ export const useRecaps = () => {
         console.error('Error fetching recaps:', error);
         setAvailableRecaps([]);
       } else {
-        // Transform the data to match our Recap type
-        const transformedRecaps: Recap[] = (data || []).map(recap => ({
-          ...recap,
-          computed_stats: (recap.computed_stats as RecapComputedStats) || {
-            stageBreakdown: {},
-            bestDay: null,
-            bestDayMinutes: 0,
-            weeklyGoalHitCount: 0,
-            totalWeeks: 4,
-            previousPeriodMinutes: null,
-            favoriteStage: null,
-          },
-        }));
+        // Transform the data to match our Recap type with proper type validation
+        const transformedRecaps: Recap[] = (data || [])
+          .filter(recap => isValidPeriodType(recap.period_type))
+          .map(recap => ({
+            ...recap,
+            period_type: recap.period_type as PeriodType,
+            computed_stats: parseComputedStats(recap.computed_stats),
+          }));
         setAvailableRecaps(transformedRecaps);
       }
     } catch (err) {

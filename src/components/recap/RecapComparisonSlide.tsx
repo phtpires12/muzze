@@ -129,9 +129,9 @@ export const RecapComparisonSlide = ({
       >
         <div className="text-center">
           <p className="text-sm text-muted-foreground">Antes</p>
-          <p className="text-lg font-semibold">{formatTime(previousMinutes!)}</p>
+          <p className="text-lg font-semibold text-foreground">{formatTime(previousMinutes!)}</p>
         </div>
-        <div className="text-2xl">→</div>
+        <div className="text-2xl text-muted-foreground">→</div>
         <div className="text-center">
           <p className="text-sm text-muted-foreground">Agora</p>
           <p className="text-lg font-semibold text-primary">{formatTime(currentMinutes)}</p>

@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Share2, X } from "lucide-react";
-import Confetti from "@/components/Confetti";
+import { Confetti } from "@/components/Confetti";
 
 interface RecapClosingSlideProps {
   totalMinutes: number;
