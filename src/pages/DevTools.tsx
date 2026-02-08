@@ -34,6 +34,11 @@ const DevTools = () => {
   // Popup simulation state
   const [showPopupSimulation, setShowPopupSimulation] = useState(false);
   
+  // Recap simulation state
+  const [recapPeriodType, setRecapPeriodType] = useState<string>('30d');
+  const [isCreatingRecap, setIsCreatingRecap] = useState(false);
+  const { refetch: refetchRecaps } = useRecaps();
+  
   // Workspace Debug state
   const [debugData, setDebugData] = useState<any>(null);
   const [debugOverlayEnabled, setDebugOverlayEnabled] = useState(
