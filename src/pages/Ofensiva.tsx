@@ -380,14 +380,7 @@ const Ofensiva = () => {
   return (
     <div className="min-h-screen bg-background pb-8">
       {/* Header */}
-      <header 
-        className="sticky z-10 bg-background border-b border-border px-4"
-        style={{ 
-          top: 'env(safe-area-inset-top, 0px)',
-          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)',
-          paddingBottom: '1rem'
-        }}
-      >
+      <header className="sticky top-0 z-10 bg-background border-b border-border px-4 py-4">
         <div className="flex items-center justify-between max-w-2xl mx-auto">
           <Button
             variant="ghost"

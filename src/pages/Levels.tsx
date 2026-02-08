@@ -29,14 +29,8 @@ export default function Levels() {
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
-      <div 
-        className="sticky z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b"
-        style={{ top: 'env(safe-area-inset-top, 0px)' }}
-      >
-        <div 
-          className="max-w-4xl mx-auto px-4 py-4"
-          style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.5rem)' }}
-        >
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+        <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
