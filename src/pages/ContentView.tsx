@@ -387,7 +387,7 @@ export default function ContentView() {
           )}
 
           {/* Main Card */}
-          <Card className="mb-6" onClick={handleEditAttempt}>
+          <Card className="mb-6 w-full overflow-hidden" onClick={handleEditAttempt}>
             <CardContent className="p-6 space-y-4 cursor-pointer break-words overflow-hidden">
               {/* Title */}
               <div className="flex items-start gap-3">
