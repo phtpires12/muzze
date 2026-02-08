@@ -51,6 +51,9 @@ const Stats = () => {
     loading: statsLoading,
   } = useStatsPage({ effectiveLevel, goalMinutes });
   
+  // Hook para recaps disponíveis
+  const { availableRecaps, loading: recapsLoading } = useRecaps();
+  
   // Hook para progresso live durante sessão ativa
   const liveGoal = useLiveDailyProgress(dailyGoal.actualMinutes, dailyGoal.goalMinutes);
   
