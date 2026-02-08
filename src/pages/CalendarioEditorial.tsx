@@ -582,7 +582,7 @@ const CalendarioEditorial = () => {
       </div>
       
       {/* Conteúdo principal - Seção branca */}
-      <div className="container mx-auto px-4 py-6">
+      <div className="max-w-6xl mx-auto px-4 py-6">
 
         {viewType === "calendar" ? (
         <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "month" | "week")}>
