@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Flame, Trophy, Navigation, Trash2, RotateCcw, Wrench, Timer, Calendar, Search, Copy, RefreshCw, BookOpen, X } from "lucide-react";
+import { ArrowLeft, Flame, Trophy, Navigation, Trash2, RotateCcw, Wrench, Timer, Calendar, Search, Copy, RefreshCw, BookOpen, X, Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useStreakCelebration } from "@/hooks/useStreakCelebration";
 import { StreakCelebration } from "@/components/StreakCelebration";
@@ -16,7 +17,8 @@ import { useToast } from "@/hooks/use-toast";
 import { AdminPlanSwitcher } from "@/components/dev/AdminPlanSwitcher";
 import { BuildInfo } from "@/components/BuildInfo";
 import { useTutorial } from "@/components/tutorial/TutorialProvider";
-
+import { supabase } from "@/integrations/supabase/client";
+import { useRecaps } from "@/hooks/useRecaps";
 const DevTools = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
