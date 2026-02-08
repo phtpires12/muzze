@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,6 +16,185 @@ interface RecapStats {
   best_day_minutes: number;
   weekly_goal_hit_count: number;
   favorite_stage: string | null;
+}
+
+const PERIOD_LABELS: Record<string, string> = {
+  '30d': 'de 30 dias',
+  '60d': 'de 60 dias',
+  '90d': 'de 90 dias',
+  '180d': 'de 6 meses',
+  '365d': 'anual',
+};
+
+// Get Firebase access token for FCM
+async function getAccessToken(): Promise<string> {
+  const serviceAccount = JSON.parse(Deno.env.get('Firebase_API_KEY') || '{}');
+  
+  if (!serviceAccount.client_email || !serviceAccount.private_key) {
+    throw new Error('Firebase service account not configured');
+  }
+  
+  const now = Math.floor(Date.now() / 1000);
+  const expiry = now + 3600;
+  
+  const header = { alg: 'RS256', typ: 'JWT' };
+  const payload = {
+    iss: serviceAccount.client_email,
+    sub: serviceAccount.client_email,
+    aud: 'https://oauth2.googleapis.com/token',
+    iat: now,
+    exp: expiry,
+    scope: 'https://www.googleapis.com/auth/firebase.messaging'
+  };
+  
+  const encodedHeader = btoa(JSON.stringify(header));
+  const encodedPayload = btoa(JSON.stringify(payload));
+  
+  const privateKey = serviceAccount.private_key;
+  const keyData = privateKey
+    .replace('-----BEGIN PRIVATE KEY-----', '')
+    .replace('-----END PRIVATE KEY-----', '')
+    .replace(/\s/g, '');
+  
+  const binaryKey = Uint8Array.from(atob(keyData), c => c.charCodeAt(0));
+  
+  const cryptoKey = await crypto.subtle.importKey(
+    'pkcs8',
+    binaryKey,
+    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  
+  const dataToSign = `${encodedHeader}.${encodedPayload}`;
+  const signature = await crypto.subtle.sign(
+    'RSASSA-PKCS1-v1_5',
+    cryptoKey,
+    new TextEncoder().encode(dataToSign)
+  );
+  
+  const encodedSignature = btoa(String.fromCharCode(...new Uint8Array(signature)))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '');
+  
+  const jwt = `${encodedHeader}.${encodedPayload}.${encodedSignature}`;
+  
+  const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+      assertion: jwt
+    })
+  });
+  
+  const tokenData = await tokenResponse.json();
+  return tokenData.access_token;
+}
+
+// Send FCM push notification
+async function sendFCMNotification(
+  token: string, 
+  title: string, 
+  body: string, 
+  accessToken: string
+): Promise<boolean> {
+  try {
+    const projectId = 'muzze-app';
+    
+    const response = await fetch(
+      `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          message: {
+            token: token,
+            notification: { title, body },
+            webpush: {
+              fcm_options: { link: '/stats' }
+            }
+          }
+        })
+      }
+    );
+    
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error('FCM API Error:', response.status, errorData);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error sending FCM notification:', error);
+    return false;
+  }
+}
+
+// Send recap notification to user
+async function sendRecapNotification(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+  periodType: string,
+  accessToken: string
+): Promise<boolean> {
+  try {
+    // Check if user has notifications enabled
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('notifications_enabled')
+      .eq('user_id', userId)
+      .single();
+
+    if (!profile?.notifications_enabled) {
+      console.log(`User ${userId} has notifications disabled`);
+      return false;
+    }
+
+    // Get user's device tokens
+    const { data: tokens } = await supabase
+      .from('device_tokens')
+      .select('token')
+      .eq('user_id', userId);
+
+    if (!tokens || tokens.length === 0) {
+      console.log(`No device tokens for user ${userId}`);
+      return false;
+    }
+
+    const periodLabel = PERIOD_LABELS[periodType] || periodType;
+    const title = '🎁 Seu recap chegou!';
+    const body = `Veja como foi sua evolução ${periodLabel}. Toque para conferir!`;
+
+    let successCount = 0;
+    for (const { token } of tokens) {
+      const success = await sendFCMNotification(token, title, body, accessToken);
+      if (success) successCount++;
+    }
+
+    // Log the notification
+    const today = new Date().toISOString().split('T')[0];
+    await supabase
+      .from('notification_logs')
+      .insert({
+        user_id: userId,
+        notification_type: `recap_${periodType}`,
+        notification_date: today,
+        success: successCount > 0,
+        error_message: successCount === 0 ? 'Failed to send to any device' : null
+      });
+
+    console.log(`Sent recap notification to user ${userId} (${successCount}/${tokens.length} devices)`);
+    return successCount > 0;
+  } catch (error) {
+    console.error(`Error sending recap notification to user ${userId}:`, error);
+    return false;
+  }
 }
 
 Deno.serve(async (req) => {
@@ -40,6 +220,15 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Get FCM access token for notifications
+    let accessToken: string | null = null;
+    try {
+      accessToken = await getAccessToken();
+      console.log('FCM access token obtained');
+    } catch (error) {
+      console.error('Failed to get FCM access token, continuing without notifications:', error);
+    }
+
     // Get all users who might need a recap
     const { data: profiles, error: profilesError } = await supabase
       .from('profiles')
@@ -54,6 +243,7 @@ Deno.serve(async (req) => {
     const results = {
       processed: 0,
       recaps_created: 0,
+      notifications_sent: 0,
       errors: [] as string[],
     };
 
@@ -176,6 +366,19 @@ Deno.serve(async (req) => {
           } else {
             results.recaps_created++;
             console.log(`Created ${period.type} recap for user ${profile.user_id}`);
+
+            // Send push notification
+            if (accessToken) {
+              const notificationSent = await sendRecapNotification(
+                supabase,
+                profile.user_id,
+                period.type,
+                accessToken
+              );
+              if (notificationSent) {
+                results.notifications_sent++;
+              }
+            }
           }
         }
       } catch (err) {
