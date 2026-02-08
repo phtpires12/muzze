@@ -418,10 +418,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background pb-24">
       {/* Header */}
-      <header 
-        className="px-6 pb-4 bg-background"
-        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 2rem)' }}
-      >
+      <header className="px-6 pt-6 pb-4 bg-background">
         <div className="flex items-center justify-between gap-3 mb-2">
           {/* Ofensiva - lado esquerdo */}
           <button 

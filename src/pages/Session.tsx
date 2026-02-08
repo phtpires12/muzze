@@ -360,10 +360,7 @@ const Session = () => {
   // Não mostrar tela de seleção se estiver exibindo celebração
   if (!session.isActive && !isShowingAnyCelebration) {
     return (
-      <div 
-        className="min-h-screen bg-background px-4 py-6"
-        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}
-      >
+      <div className="min-h-screen bg-background px-4 pt-4 pb-6">
         <div className="max-w-2xl mx-auto">
           <Button
             variant="ghost"
