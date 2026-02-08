@@ -177,6 +177,7 @@ const router = createBrowserRouter([
       { path: "/invite", element: <AcceptInvite /> },
       { path: "/content/view/:scriptId", element: <ProtectedRoute><ContentView /></ProtectedRoute> },
       { path: "/editing-workspace", element: <ProtectedRoute><EditingWorkspace /></ProtectedRoute> },
+      { path: "/recap/:recapId", element: <ProtectedRoute><Recap /></ProtectedRoute> },
       { path: "*", element: <NotFound /> },
     ],
   },
