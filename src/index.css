@@ -12,6 +12,9 @@
     /* Background: Branco puro para máxima limpeza */
     --background: 0 0% 100%;
     --foreground: 0 0% 12%;
+    
+    /* Bottom Nav Height - used for safe area calculations */
+    --bottom-nav-height: 5rem;
 
     --card: 0 0% 100%;
     --card-foreground: 0 0% 12%;
@@ -142,6 +145,31 @@
   #root {
     touch-action: pan-x pan-y;
   }
+}
+
+/* ===== GLOBAL SAFE AREA WRAPPER ===== */
+/* Wrapper global que aplica safe areas em todas as rotas */
+.safe-app {
+  min-height: 100vh;
+  min-height: 100dvh;
+  /* Fallback para iOS antigo (< 11.4) */
+  padding-top: constant(safe-area-inset-top);
+  padding-bottom: constant(safe-area-inset-bottom);
+  padding-left: constant(safe-area-inset-left);
+  padding-right: constant(safe-area-inset-right);
+  /* iOS moderno */
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
+/* Variante com bottom nav fixa (rotas que usam AppLayout com nav inferior) */
+.safe-app.with-bottom-nav {
+  /* Fallback iOS antigo */
+  padding-bottom: calc(constant(safe-area-inset-bottom) + var(--bottom-nav-height));
+  /* iOS moderno */
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--bottom-nav-height));
 }
 
 /* Safe Area Utility Classes for iOS Dynamic Island and Home Indicator */

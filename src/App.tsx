@@ -106,9 +106,9 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  if (loading) {
+if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="safe-app min-h-screen flex items-center justify-center bg-background">
         <div className="animate-pulse text-xl text-foreground">Carregando...</div>
       </div>
     );
@@ -136,7 +136,9 @@ const RootLayout = () => (
           <LevelUpModal />
           <TrophyUnlockedModal />
           <TutorialOverlay />
-          <Outlet />
+          <div className="safe-app">
+            <Outlet />
+          </div>
         </TutorialProvider>
       </PlanContextProvider>
     </WorkspaceContextProvider>
