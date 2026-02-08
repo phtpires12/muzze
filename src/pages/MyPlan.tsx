@@ -96,7 +96,7 @@ const MyPlan = () => {
       {/* Header */}
       <div className="border-b border-border bg-background">
         <div 
-          className="container mx-auto px-4 py-4"
+          className="max-w-2xl mx-auto px-4 py-4"
           style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}
         >
           <div className="flex items-center gap-4">
