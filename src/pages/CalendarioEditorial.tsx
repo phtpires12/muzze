@@ -547,7 +547,7 @@ const CalendarioEditorial = () => {
 
       {/* Seção alternada cinza para controles */}
       <div className="bg-muted/30 py-4">
-        <div className="container mx-auto px-4">
+        <div className="max-w-6xl mx-auto px-4">
           {/* View Switcher */}
           <div className="flex items-center gap-1 bg-background rounded-lg p-1 mb-4 w-fit border border-border">
             <Button 
