@@ -136,7 +136,9 @@ const RootLayout = () => (
           <LevelUpModal />
           <TrophyUnlockedModal />
           <TutorialOverlay />
-          <Outlet />
+          <div className="safe-app">
+            <Outlet />
+          </div>
         </TutorialProvider>
       </PlanContextProvider>
     </WorkspaceContextProvider>
