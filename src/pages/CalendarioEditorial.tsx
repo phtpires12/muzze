@@ -521,7 +521,7 @@ const CalendarioEditorial = () => {
       {/* Header - Seção branca */}
       <div className="border-b border-border bg-background">
         <div 
-          className="container mx-auto px-4 py-6"
+          className="max-w-6xl mx-auto px-4 py-6"
           style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1.5rem)' }}
         >
           <div className="flex justify-between items-center">
