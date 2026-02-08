@@ -374,7 +374,7 @@ export default function ContentView() {
       </div>
 
       <ScrollArea className="h-[calc(100vh-80px)]">
-        <div className="container mx-auto px-4 py-6 pb-32 max-w-2xl overflow-x-hidden">
+        <div className="w-full max-w-2xl mx-auto px-4 py-6 pb-32">
           {/* Thumbnail (YouTube) */}
           {script.thumbnail_url && (
             <div className="mb-6 rounded-xl overflow-hidden border border-border">
