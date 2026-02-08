@@ -509,7 +509,7 @@ export default function ContentView() {
 
           {/* Script Content (Read-only) */}
           {hasContent && (
-            <Card className="mb-6" onClick={handleEditAttempt}>
+            <Card className="mb-6 w-full overflow-hidden" onClick={handleEditAttempt}>
               <CardContent className="p-6 space-y-4 cursor-pointer break-words overflow-hidden">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Roteiro</p>
                 
