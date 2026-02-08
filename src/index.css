@@ -12,6 +12,9 @@
     /* Background: Branco puro para máxima limpeza */
     --background: 0 0% 100%;
     --foreground: 0 0% 12%;
+    
+    /* Bottom Nav Height - used for safe area calculations */
+    --bottom-nav-height: 5rem;
 
     --card: 0 0% 100%;
     --card-foreground: 0 0% 12%;
