@@ -113,7 +113,7 @@ const MyPlan = () => {
         </div>
       </div>
 
-      <div className="container mx-auto p-4 max-w-2xl space-y-6">
+      <div className="max-w-2xl mx-auto px-4 py-4 space-y-6">
         {/* Admin Mode Toggle - Only for internal testers */}
         {planCapabilities.isInternalTester && (
           <Card className="border border-amber-500/30 bg-amber-500/5 rounded-xl">

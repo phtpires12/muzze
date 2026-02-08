@@ -54,7 +54,7 @@ export default function Levels() {
         </div>
       </div>
 
-      <div className="container max-w-4xl mx-auto px-4 py-6 space-y-8">
+      <div className="max-w-4xl mx-auto px-4 py-6 space-y-8">
         {/* XP Progress Card */}
         <Card className="p-6 bg-gradient-to-br from-card to-muted/20 border-2 border-primary/20">
           <div className="space-y-4">

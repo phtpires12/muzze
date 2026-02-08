@@ -343,7 +343,7 @@ const Scripts = () => {
       </div>
 
       {/* Conteúdo principal */}
-      <div className="container mx-auto px-4 py-6">
+      <div className="max-w-6xl mx-auto px-4 py-6">
         <Tabs defaultValue="scripts" className="space-y-6">
           <TabsList className="grid w-full max-w-md grid-cols-2">
             <TabsTrigger value="scripts">Roteiros</TabsTrigger>
