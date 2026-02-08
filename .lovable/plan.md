@@ -1,149 +1,122 @@
 
-# Plano: Correção de Layout Mobile - Modo Visualização (ContentView)
+# Plano: Aplicar Padrão Mobile-First em Todas as Páginas
 
-## Diagnóstico do Problema
+## Objetivo
 
-A página ContentView utiliza a classe `container` do Tailwind que foi configurada para desktops com `padding: "2rem"`. No mobile iOS, isso causa:
+Substituir o uso da classe `container` do Tailwind pelo padrão `max-w-2xl mx-auto px-4` em todas as páginas restantes, garantindo layout mobile-first e suporte às safe areas do iOS.
 
-| Problema | Causa |
-|----------|-------|
-| Cards cortados lateralmente | `container` + `px-4` = padding excessivo |
-| Overflow horizontal | `container` não respeita viewport mobile |
-| Layout "desktop adaptado" | Uso de padrão não mobile-first |
+## Páginas a Corrigir
 
-## Comparação de Padrões
+| # | Página | Alterações Necessárias |
+|---|--------|------------------------|
+| 1 | `TermsOfUse.tsx` | Header + Content + Safe area top |
+| 2 | `PrivacyPolicy.tsx` | Header + Content + Safe area top |
+| 3 | `SendSuggestions.tsx` | Header + Content + Safe area top |
+| 4 | `MyProgress.tsx` | Header + Content + Safe area top |
+| 5 | `Help.tsx` | Header + Content + Safe area top |
+| 6 | `DevTools.tsx` | Content + Safe area top |
+| 7 | `Levels.tsx` | Substituir `container max-w-4xl` por `max-w-4xl` (já tem safe area) |
+| 8 | `EditProfile.tsx` | Header + Content + Safe area top |
+| 9 | `MyPlan.tsx` | Substituir `container` por `max-w-2xl` (já tem safe area) |
+| 10 | `CalendarioEditorial.tsx` | Múltiplas seções (já tem safe area) |
+| 11 | `Scripts.tsx` | Header + Content (já tem safe area) |
 
-```text
-❌ ContentView (atual):
-   container mx-auto px-4 → Padding conflitante
+## Padrão a Aplicar
 
-✅ Profile.tsx (correto):
-   max-w-2xl mx-auto px-4 → Mobile-first
-
-✅ Index.tsx (correto):
-   px-6 direto → Mobile-first
-```
-
-## Solução Proposta
-
-Substituir o uso de `container` por padrões mobile-first em toda a página ContentView:
-
-### 1. Header (linha 357-374)
-
+### Header (com safe area)
 ```typescript
-// De:
-<div className="container mx-auto px-4 py-4">
-
-// Para:
-<div className="max-w-2xl mx-auto px-4 py-4">
-```
-
-### 2. Área de Conteúdo Principal (linha 377)
-
-```typescript
-// De:
-<div className="container mx-auto px-4 py-6 pb-32 max-w-2xl overflow-x-hidden">
-
-// Para:
-<div className="w-full max-w-2xl mx-auto px-4 py-6 pb-32">
-```
-
-Note: Remover `overflow-x-hidden` pois é um patch que esconde sintomas, não resolve a causa.
-
-### 3. Botão CTA Fixo (linha 602-615)
-
-```typescript
-// De:
-<div className="container mx-auto max-w-2xl">
-
-// Para:
-<div className="max-w-2xl mx-auto px-4">
-```
-
-### 4. Adicionar Proteção de Largura no Card Principal
-
-Para garantir que o conteúdo dentro dos Cards não extrapole:
-
-```typescript
-// CardContent já tem break-words overflow-hidden, mas adicionar:
-<Card className="mb-6 w-full overflow-hidden">
-```
-
-### 5. Proteção Extra de Safe Areas Laterais
-
-Adicionar CSS para garantir respeito às safe areas laterais do iOS:
-
-```css
-/* Em src/index.css - já existe para top/bottom, adicionar para left/right */
-.safe-area-x {
-  padding-left: calc(env(safe-area-inset-left, 0px) + 1rem);
-  padding-right: calc(env(safe-area-inset-right, 0px) + 1rem);
-}
-```
-
-## Arquivos a Modificar
-
-| Arquivo | Alterações |
-|---------|------------|
-| `src/pages/ContentView.tsx` | Substituir `container` por `max-w-2xl mx-auto`, adicionar `w-full overflow-hidden` nos Cards |
-| `src/index.css` | Adicionar classe utilitária `.safe-area-x` |
-
-## Alterações Detalhadas em ContentView.tsx
-
-### Linha 357-361 (Header)
-```typescript
-<div className="sticky top-0 z-10 border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
+<div className="border-b border-border bg-background">
   <div 
     className="max-w-2xl mx-auto px-4 py-4"
     style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}
   >
+    {/* Conteúdo do header */}
+  </div>
+</div>
 ```
 
-### Linha 376-377 (Conteúdo Principal)
+### Conteúdo Principal
 ```typescript
-<ScrollArea className="h-[calc(100vh-80px)]">
-  <div className="w-full max-w-2xl mx-auto px-4 py-6 pb-32">
+<div className="max-w-2xl mx-auto px-4 py-6">
+  {/* Cards e conteúdo */}
+</div>
 ```
 
-### Linha 390 (Card Principal)
+### Para páginas com `max-w-4xl` (como Levels, CalendarioEditorial)
 ```typescript
-<Card className="mb-6 w-full overflow-hidden" onClick={handleEditAttempt}>
+<div className="max-w-4xl mx-auto px-4 py-4">
+  {/* Conteúdo */}
+</div>
 ```
 
-### Linha 512 (Card de Roteiro)
-```typescript
-<Card className="mb-6 w-full overflow-hidden" onClick={handleEditAttempt}>
-```
+## Alterações por Arquivo
 
-### Linha 548 (Card de Shot List)
-```typescript
-<Card className="mb-6 w-full overflow-hidden" onClick={handleEditAttempt}>
-```
+### 1. `src/pages/TermsOfUse.tsx`
+- Linha 12: `container mx-auto px-4` → `max-w-2xl mx-auto px-4` + safe area top
+- Linha 22: `container mx-auto p-4 max-w-2xl` → `max-w-2xl mx-auto px-4 py-4`
 
-### Linha 602-606 (CTA Fixo)
-```typescript
-<div 
-  className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background via-background to-transparent"
-  style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' }}
->
-  <div className="max-w-2xl mx-auto">
-```
+### 2. `src/pages/PrivacyPolicy.tsx`
+- Linha 12: `container mx-auto px-4` → `max-w-2xl mx-auto px-4` + safe area top
+- Linha 22: `container mx-auto p-4 max-w-2xl` → `max-w-2xl mx-auto px-4 py-4`
+
+### 3. `src/pages/SendSuggestions.tsx`
+- Linha 36: `container mx-auto px-4` → `max-w-2xl mx-auto px-4` + safe area top
+- Linha 46: `container mx-auto p-4 max-w-2xl` → `max-w-2xl mx-auto px-4 py-4`
+
+### 4. `src/pages/MyProgress.tsx`
+- Linha 30: `container mx-auto px-4` → `max-w-2xl mx-auto px-4` + safe area top
+- Linha 40: `container mx-auto p-4 max-w-2xl` → `max-w-2xl mx-auto px-4 py-4`
+
+### 5. `src/pages/Help.tsx`
+- Linha 28: `container mx-auto px-4` → `max-w-2xl mx-auto px-4` + safe area top
+- Linha 38: `container mx-auto p-4 max-w-2xl` → `max-w-2xl mx-auto px-4 py-4`
+
+### 6. `src/pages/DevTools.tsx`
+- Linha 148: `container mx-auto p-4 max-w-2xl` → `max-w-2xl mx-auto px-4 py-4` + safe area top
+
+### 7. `src/pages/Levels.tsx`
+- Linha 37: `container max-w-4xl mx-auto px-4` → `max-w-4xl mx-auto px-4`
+- Linha 57: `container max-w-4xl mx-auto px-4` → `max-w-4xl mx-auto px-4`
+
+### 8. `src/pages/EditProfile.tsx`
+- Linha 129: `container mx-auto px-4` → `max-w-2xl mx-auto px-4` + safe area top
+- Linha 145: `container mx-auto p-4 max-w-2xl` → `max-w-2xl mx-auto px-4 py-4`
+
+### 9. `src/pages/MyPlan.tsx`
+- Linha 99: `container mx-auto px-4` → `max-w-2xl mx-auto px-4`
+- Linha 116: `container mx-auto p-4 max-w-2xl` → `max-w-2xl mx-auto px-4 py-4`
+
+### 10. `src/pages/CalendarioEditorial.tsx`
+- Linha 524: `container mx-auto px-4` → `max-w-6xl mx-auto px-4`
+- Linha 538: `container mx-auto px-4` → `max-w-6xl mx-auto px-4`
+- Linha 550: `container mx-auto px-4` → `max-w-6xl mx-auto px-4`
+- Linha 585: `container mx-auto px-4` → `max-w-6xl mx-auto px-4`
+
+### 11. `src/pages/Scripts.tsx`
+- Linha 337: `container mx-auto px-4` → `max-w-6xl mx-auto px-4`
+- Linha 346: `container mx-auto px-4` → `max-w-6xl mx-auto px-4`
+
+## Resumo das Mudanças
+
+| Arquivo | Qtd. Alterações |
+|---------|-----------------|
+| TermsOfUse.tsx | 2 |
+| PrivacyPolicy.tsx | 2 |
+| SendSuggestions.tsx | 2 |
+| MyProgress.tsx | 2 |
+| Help.tsx | 2 |
+| DevTools.tsx | 1 |
+| Levels.tsx | 2 |
+| EditProfile.tsx | 2 |
+| MyPlan.tsx | 2 |
+| CalendarioEditorial.tsx | 4 |
+| Scripts.tsx | 2 |
+| **Total** | **23 alterações em 11 arquivos** |
 
 ## Resultado Esperado
 
-| Critério | Antes | Depois |
-|----------|-------|--------|
-| Conteúdo cabe na tela | ❌ | ✅ |
-| Respeita safe areas | Parcial | ✅ Completo |
-| iPhones pequenos | ❌ Corta | ✅ Cabe |
-| iPhones com Dynamic Island | ⚠️ | ✅ |
-| Scroll horizontal | Pode ter | ✅ Nunca |
-| Layout mobile-first | ❌ | ✅ |
-
-## Teste de Validação
-
-Após implementação, verificar em:
-1. iPhone SE (320px width)
-2. iPhone 13/14 (390px width)
-3. iPhone 14 Pro Max com Dynamic Island (430px width)
-4. Orientação portrait e landscape
+Após as alterações:
+- Todas as páginas terão layout mobile-first consistente
+- Sem overflow horizontal em nenhum dispositivo iOS
+- Safe areas respeitadas (Dynamic Island, notch, home indicator)
+- Experiência visual uniforme em todas as páginas do app
