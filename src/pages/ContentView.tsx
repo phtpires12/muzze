@@ -356,7 +356,7 @@ export default function ContentView() {
       {/* Header */}
       <div className="sticky top-0 z-10 border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
         <div 
-          className="container mx-auto px-4 py-4"
+          className="max-w-2xl mx-auto px-4 py-4"
           style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}
         >
           <div className="flex items-center gap-4">
@@ -374,7 +374,7 @@ export default function ContentView() {
       </div>
 
       <ScrollArea className="h-[calc(100vh-80px)]">
-        <div className="container mx-auto px-4 py-6 pb-32 max-w-2xl overflow-x-hidden">
+        <div className="w-full max-w-2xl mx-auto px-4 py-6 pb-32">
           {/* Thumbnail (YouTube) */}
           {script.thumbnail_url && (
             <div className="mb-6 rounded-xl overflow-hidden border border-border">
@@ -387,7 +387,7 @@ export default function ContentView() {
           )}
 
           {/* Main Card */}
-          <Card className="mb-6" onClick={handleEditAttempt}>
+          <Card className="mb-6 w-full overflow-hidden" onClick={handleEditAttempt}>
             <CardContent className="p-6 space-y-4 cursor-pointer break-words overflow-hidden">
               {/* Title */}
               <div className="flex items-start gap-3">
@@ -509,7 +509,7 @@ export default function ContentView() {
 
           {/* Script Content (Read-only) */}
           {hasContent && (
-            <Card className="mb-6" onClick={handleEditAttempt}>
+            <Card className="mb-6 w-full overflow-hidden" onClick={handleEditAttempt}>
               <CardContent className="p-6 space-y-4 cursor-pointer break-words overflow-hidden">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Roteiro</p>
                 
@@ -545,7 +545,7 @@ export default function ContentView() {
           )}
 
           {/* Shot List Preview */}
-          <Card className="mb-6" onClick={handleEditAttempt}>
+          <Card className="mb-6 w-full overflow-hidden" onClick={handleEditAttempt}>
             <CardContent className="p-6 space-y-3 cursor-pointer">
               {parsedShots.length > 0 ? (
                 <>
@@ -603,7 +603,7 @@ export default function ContentView() {
         className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background via-background to-transparent"
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' }}
       >
-        <div className="container mx-auto max-w-2xl">
+        <div className="max-w-2xl mx-auto px-4">
           <Button 
             onClick={() => setShowSessionModal(true)}
             className="w-full h-14 text-lg bg-gradient-to-r from-primary to-accent hover:opacity-90 text-primary-foreground shadow-lg"

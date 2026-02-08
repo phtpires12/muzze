@@ -165,6 +165,12 @@
   bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);
 }
 
+/* Safe Area Utility for horizontal insets (landscape orientation) */
+.safe-area-x {
+  padding-left: calc(env(safe-area-inset-left, 0px) + 1rem);
+  padding-right: calc(env(safe-area-inset-right, 0px) + 1rem);
+}
+
 /* Section alternating backgrounds */
 .section-alt {
   background-color: hsl(var(--section-alt));
