@@ -1,460 +1,231 @@
 
-# Plano: Recap de Progresso do Usuário (Spotify Wrapped-style)
+# Plano: Correção Global de Safe Areas para iPhones
 
-## Visão Geral
+## Problema Identificado
 
-Implementar uma funcionalidade de "recap" inspirada no Spotify Wrapped que consolida o progresso do usuário em períodos de 30, 60, 90 dias e eventualmente anual. O recap aparecerá como uma seção especial na página Stats, com experiência imersiva de múltiplas telas/slides.
+Atualmente, cada página aplica safe areas de forma **inconsistente**:
+- Algumas usam inline styles (`paddingTop: 'env(safe-area-inset-top)'`)
+- Algumas usam classes CSS existentes (`.safe-area-top`)
+- Algumas não aplicam nada
 
-## Arquitetura do Sistema
+Isso resulta em elementos "colados" no notch/Dynamic Island e na barra home do iPhone.
+
+## Solução Proposta
+
+Criar um **wrapper global** no `App.tsx` que aplique safe areas automaticamente em **todas as rotas**, eliminando a necessidade de ajustes individuais por página.
+
+## Arquitetura da Solução
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│                        BANCO DE DADOS                        │
+│                         App.tsx                              │
 ├─────────────────────────────────────────────────────────────┤
-│  user_recaps (nova tabela)                                   │
-│  ├── id, user_id, period_type, period_start, period_end     │
-│  ├── total_minutes, goal_minutes, days_active               │
-│  ├── followers_count, had_viral (inputs manuais)            │
-│  ├── viewed_at, created_at                                  │
-│  └── computed_stats (jsonb: breakdown por stage, etc)       │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                          FRONTEND                            │
-├─────────────────────────────────────────────────────────────┤
-│  Stats.tsx                                                   │
-│  └── RecapNotificationCard (novo componente)                 │
-│      ├── Badge "Novo" se não visualizado                     │
-│      └── Clique abre RecapFlow                               │
+│  <div className="safe-app">  ← Novo wrapper global          │
+│    ├── RootLayout                                            │
+│    │   └── <Outlet /> (todas as rotas)                      │
+│    └── ProtectedRoute (loading state)                       │
 │                                                              │
-│  RecapFlow.tsx (nova página/modal fullscreen)                │
-│  ├── Slide 1: Abertura ("Seu recap chegou!")                 │
-│  ├── Slide 2: Perguntas (seguidores + viralização)           │
-│  ├── Slides 3-6: Dados objetivos                             │
-│  │   ├── Tempo total criando                                 │
-│  │   ├── Meta semanal vs realizado                           │
-│  │   ├── Comparação com período anterior                     │
-│  │   └── Destaques (melhor dia, etapa favorita)              │
-│  └── Slide Final: Celebração + compartilhar                  │
+│  CSS aplica:                                                 │
+│  ├── padding-top: env(safe-area-inset-top)                  │
+│  ├── padding-bottom: env(safe-area-inset-bottom)            │
+│  └── min-height: 100dvh                                     │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│                   AppLayout (com bottom nav)                 │
+├─────────────────────────────────────────────────────────────┤
+│  .safe-app.with-bottom-nav                                  │
+│  └── padding-bottom extra para acomodar nav fixa            │
+│      (safe-area-inset-bottom + --bottom-nav-height)         │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## Fase 1: Estrutura do Banco de Dados
+## Fase 1: CSS Global (index.css)
 
-### Nova tabela: `user_recaps`
+Adicionar as seguintes classes ao `src/index.css`:
 
-```sql
-CREATE TABLE public.user_recaps (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  
-  -- Período do recap
-  period_type TEXT NOT NULL CHECK (period_type IN ('30d', '60d', '90d', '180d', '365d')),
-  period_start DATE NOT NULL,
-  period_end DATE NOT NULL,
-  
-  -- Dados calculados automaticamente
-  total_minutes INTEGER NOT NULL DEFAULT 0,
-  days_active INTEGER NOT NULL DEFAULT 0,
-  avg_daily_minutes NUMERIC(8,2) DEFAULT 0,
-  sessions_count INTEGER NOT NULL DEFAULT 0,
-  
-  -- Inputs manuais do usuário
-  followers_count INTEGER,
-  had_viral BOOLEAN,
-  
-  -- Dados computados (breakdown detalhado)
-  computed_stats JSONB DEFAULT '{}',
-  -- Exemplo: { 
-  --   stageBreakdown: { ideation: 120, script: 300, ... },
-  --   bestDay: "2026-01-15",
-  --   bestDayMinutes: 180,
-  --   weeklyGoalHitCount: 3,
-  --   comparisonWithPrevious: { minutesDiff: +500, percentChange: +25 }
-  -- }
-  
-  -- Status e timestamps
-  is_eligible BOOLEAN DEFAULT TRUE, -- >= 3 dias ativos
-  viewed_at TIMESTAMP WITH TIME ZONE,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-  
-  UNIQUE(user_id, period_type, period_end)
-);
+```css
+/* ===== GLOBAL SAFE AREA WRAPPER ===== */
+:root {
+  --bottom-nav-height: 5rem; /* 80px - altura da BottomNav */
+}
 
--- RLS Policies
-ALTER TABLE public.user_recaps ENABLE ROW LEVEL SECURITY;
+.safe-app {
+  min-height: 100vh;
+  min-height: 100dvh;
+  /* Fallback para iOS antigo */
+  padding-top: constant(safe-area-inset-top);
+  padding-bottom: constant(safe-area-inset-bottom);
+  padding-left: constant(safe-area-inset-left);
+  padding-right: constant(safe-area-inset-right);
+  /* iOS moderno */
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
 
-CREATE POLICY "Users can view own recaps"
-  ON public.user_recaps FOR SELECT
-  USING (auth.uid() = user_id);
+/* Variante com bottom nav fixa (rotas que usam AppLayout) */
+.safe-app.with-bottom-nav {
+  padding-bottom: calc(
+    env(safe-area-inset-bottom, 0px) + 
+    var(--bottom-nav-height)
+  );
+}
 
-CREATE POLICY "Users can update own recaps"
-  ON public.user_recaps FOR UPDATE
-  USING (auth.uid() = user_id);
-
--- Índices
-CREATE INDEX idx_user_recaps_user_id ON public.user_recaps(user_id);
-CREATE INDEX idx_user_recaps_viewed ON public.user_recaps(user_id, viewed_at);
-```
-
-## Fase 2: Lógica de Geração de Recaps
-
-### Edge Function ou Cron Job: `generate-recaps`
-
-A cada dia (via cron), verificar usuários elegíveis:
-
-```typescript
-// Pseudocódigo
-async function generateRecapsForUser(userId: string) {
-  const today = new Date();
-  
-  // Verificar se já passou 30 dias desde o primeiro uso
-  const firstSession = await getFirstSessionDate(userId);
-  if (!firstSession) return;
-  
-  const daysSinceStart = differenceInDays(today, firstSession);
-  
-  // Gerar recap de 30 dias
-  if (daysSinceStart >= 30) {
-    const existingRecap = await getRecap(userId, '30d', today);
-    if (!existingRecap) {
-      const stats = await computeRecapStats(userId, 30);
-      if (stats.daysActive >= 3) {
-        await createRecap(userId, '30d', stats);
-      }
-    }
+/* Fallback iOS antigo para variante com bottom nav */
+@supports (padding: constant(safe-area-inset-bottom)) {
+  .safe-app.with-bottom-nav {
+    padding-bottom: calc(
+      constant(safe-area-inset-bottom) + 
+      var(--bottom-nav-height)
+    );
   }
-  
-  // Gerar recap de 60, 90, etc.
-  // ...
 }
 ```
 
-### Hook: `useRecaps`
+## Fase 2: Modificar App.tsx
+
+### 2.1 RootLayout - Adicionar wrapper global
 
 ```typescript
-// src/hooks/useRecaps.ts
-export const useRecaps = () => {
-  const [availableRecaps, setAvailableRecaps] = useState<Recap[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchAvailableRecaps();
-  }, []);
-
-  const fetchAvailableRecaps = async () => {
-    const { data } = await supabase
-      .from('user_recaps')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('is_eligible', true)
-      .order('period_end', { ascending: false });
-    
-    setAvailableRecaps(data || []);
-    setLoading(false);
-  };
-
-  const markAsViewed = async (recapId: string) => {
-    await supabase
-      .from('user_recaps')
-      .update({ viewed_at: new Date().toISOString() })
-      .eq('id', recapId);
-  };
-
-  const saveUserInputs = async (recapId: string, followers: number, hadViral: boolean) => {
-    await supabase
-      .from('user_recaps')
-      .update({ followers_count: followers, had_viral: hadViral })
-      .eq('id', recapId);
-  };
-
-  return { availableRecaps, loading, markAsViewed, saveUserInputs, refetch: fetchAvailableRecaps };
-};
-```
-
-## Fase 3: Componentes de UI
-
-### 3.1 RecapNotificationCard (Stats.tsx)
-
-Novo card que aparece logo abaixo do header na página Stats:
-
-```typescript
-// src/components/stats/RecapNotificationCard.tsx
-interface RecapNotificationCardProps {
-  recap: Recap;
-  onClick: () => void;
-}
-
-export const RecapNotificationCard = ({ recap, onClick }: RecapNotificationCardProps) => {
-  const isNew = !recap.viewed_at;
-  const periodLabel = getPeriodLabel(recap.period_type);
-  
-  return (
-    <Card 
-      onClick={onClick}
-      className="p-4 bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20 cursor-pointer hover:border-primary/40 transition-colors"
-    >
-      <div className="flex items-center gap-4">
-        <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
-          <span className="text-2xl">📦</span>
-        </div>
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <h3 className="font-semibold text-foreground">
-              Seu recap {periodLabel} chegou!
-            </h3>
-            {isNew && (
-              <Badge variant="default" className="bg-primary text-xs">
-                Novo
-              </Badge>
-            )}
+// Root layout component that wraps all routes with providers
+const RootLayout = () => (
+  <AppNavigationProvider>
+    <WorkspaceContextProvider>
+      <PlanContextProvider>
+        <TutorialProvider>
+          <GlobalCelebrations />
+          <LevelUpModal />
+          <TrophyUnlockedModal />
+          <TutorialOverlay />
+          {/* ✅ NOVO: Wrapper global com safe areas */}
+          <div className="safe-app">
+            <Outlet />
           </div>
-          <p className="text-sm text-muted-foreground">
-            Veja sua evolução dos últimos {recap.period_type.replace('d', '')} dias
-          </p>
-        </div>
-        <ChevronRight className="w-5 h-5 text-muted-foreground" />
-      </div>
-    </Card>
-  );
-};
+        </TutorialProvider>
+      </PlanContextProvider>
+    </WorkspaceContextProvider>
+  </AppNavigationProvider>
+);
 ```
 
-### 3.2 RecapFlow (Experiência Imersiva)
-
-Nova página fullscreen com slides estilo Spotify Wrapped:
+### 2.2 ProtectedRoute - Aplicar safe-app no loading
 
 ```typescript
-// src/pages/Recap.tsx (ou modal fullscreen)
-const RecapFlow = () => {
-  const { recapId } = useParams();
-  const [currentSlide, setCurrentSlide] = useState(0);
-  const [userInputs, setUserInputs] = useState({ followers: 0, hadViral: null });
-  
-  const slides = [
-    // Slide 0: Abertura
-    <RecapOpeningSlide />,
-    
-    // Slide 1: Perguntas
-    <RecapQuestionsSlide 
-      onSubmit={(followers, hadViral) => {
-        setUserInputs({ followers, hadViral });
-        nextSlide();
-      }}
-    />,
-    
-    // Slide 2: Tempo Total
-    <RecapTotalTimeSlide totalMinutes={recap.total_minutes} />,
-    
-    // Slide 3: Meta vs Realizado
-    <RecapGoalSlide 
-      weeksHit={recap.computed_stats.weeklyGoalHitCount}
-      totalWeeks={4}
-    />,
-    
-    // Slide 4: Comparação
-    <RecapComparisonSlide 
-      current={recap.total_minutes}
-      previous={recap.computed_stats.previousPeriodMinutes}
-    />,
-    
-    // Slide 5: Destaques
-    <RecapHighlightsSlide 
-      bestDay={recap.computed_stats.bestDay}
-      favoriteStage={recap.computed_stats.favoriteStage}
-    />,
-    
-    // Slide 6: Encerramento
-    <RecapClosingSlide 
-      onShare={() => handleShare()}
-      onClose={() => navigate('/stats')}
-    />,
-  ];
-  
+if (loading) {
   return (
-    <div className="fixed inset-0 z-50 bg-background">
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={currentSlide}
-          initial={{ opacity: 0, x: 100 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -100 }}
-          className="h-full"
-        >
-          {slides[currentSlide]}
-        </motion.div>
-      </AnimatePresence>
-      
-      {/* Progress dots */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-2">
-        {slides.map((_, i) => (
-          <span 
-            key={i}
-            className={cn(
-              "w-2 h-2 rounded-full",
-              i === currentSlide ? "bg-primary" : "bg-muted"
-            )}
-          />
-        ))}
-      </div>
+    <div className="safe-app min-h-screen flex items-center justify-center bg-background">
+      <div className="animate-pulse text-xl text-foreground">Carregando...</div>
     </div>
   );
-};
+}
 ```
 
-### 3.3 Slides Individuais
+## Fase 3: Modificar AppLayout (AppNavigation.tsx)
 
-Cada slide terá:
-- Animações de entrada com Framer Motion
-- Visual impactante com gradientes
-- Números grandes e legíveis
-- Tom celebratório e motivador
+O AppLayout precisa indicar quando há bottom nav para aplicar padding extra:
 
 ```typescript
-// Exemplo: RecapTotalTimeSlide
-const RecapTotalTimeSlide = ({ totalMinutes }: { totalMinutes: number }) => {
-  const hours = Math.floor(totalMinutes / 60);
-  const mins = totalMinutes % 60;
-  
+export const AppLayout = ({ children, className }: AppLayoutProps) => {
+  const { effectivePosition, isSidebarCollapsed } = useNavPosition();
+  const hasSidebar = effectivePosition === 'side';
+  const hasBottomNav = effectivePosition === 'bottom';
+
   return (
-    <div className="h-full flex flex-col items-center justify-center p-8 text-center">
-      <motion.div
-        initial={{ scale: 0 }}
-        animate={{ scale: 1 }}
-        transition={{ type: "spring", delay: 0.2 }}
-        className="text-8xl mb-4"
-      >
-        ⏱️
-      </motion.div>
-      
-      <motion.h2
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
-        className="text-2xl text-muted-foreground mb-4"
-      >
-        Nos últimos 30 dias, você criou por
-      </motion.h2>
-      
-      <motion.div
-        initial={{ opacity: 0, scale: 0.5 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.6, type: "spring" }}
-        className="text-6xl font-bold text-primary"
-      >
-        {hours}h {mins}min
-      </motion.div>
-      
-      <motion.p
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.8 }}
-        className="text-lg text-muted-foreground mt-6"
-      >
-        Isso é mais do que 90% dos criadores! 🔥
-      </motion.p>
-      
-      <Button 
-        onClick={() => nextSlide()}
-        className="mt-8"
-        size="lg"
-      >
-        Continuar
-      </Button>
+    <div 
+      className={cn(
+        "min-h-screen bg-background transition-all duration-300",
+        hasSidebar 
+          ? (isSidebarCollapsed ? "pl-16" : "pl-56") 
+          : "", // Remover pb-20 - agora controlado globalmente
+        className
+      )}
+      // ✅ Indicar ao wrapper pai que tem bottom nav
+      data-has-bottom-nav={hasBottomNav}
+    >
+      <main className="h-full overflow-auto">{children}</main>
+      <AppNavigation />
     </div>
   );
 };
 ```
 
-## Fase 4: Integração na Stats
+**Alternativa mais simples**: Como o RootLayout envolve o Outlet, podemos usar uma abordagem diferente - detectar se estamos numa rota com Layout e aplicar a classe condicionalmente via CSS ou contexto.
 
-Modificar `src/pages/Stats.tsx` para incluir a seção de recaps:
+**Solução mais robusta**: Criar um hook/contexto que comunica ao wrapper se há bottom nav presente.
 
-```typescript
-// Em Stats.tsx, adicionar após o header:
-{availableRecaps.length > 0 && (
-  <section className="px-4 py-4 sm:px-8">
-    <div className="max-w-6xl mx-auto space-y-3">
-      {availableRecaps.map(recap => (
-        <RecapNotificationCard 
-          key={recap.id}
-          recap={recap}
-          onClick={() => navigate(`/recap/${recap.id}`)}
-        />
-      ))}
-    </div>
-  </section>
-)}
+## Fase 4: Ajustar BottomNav.tsx
+
+A BottomNav já usa `env(safe-area-inset-bottom)` no seu posicionamento:
+```tsx
+style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' }}
 ```
 
-## Fase 5: Arquivos a Criar/Modificar
+Isso está correto. A nav se posiciona acima da home bar. O conteúdo da página precisa ter padding-bottom suficiente para não ficar escondido atrás dela.
+
+## Fase 5: Limpeza de Safe Areas Duplicadas
+
+Após a implementação global, podemos **opcionalmente** remover safe areas inline de páginas individuais como:
+- `Session.tsx` (linha 365): `paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)'`
+- `Ofensiva.tsx` (linha 386-388): inline styles no header
+- `Index.tsx` (linha 423): `paddingTop: 'calc(env(safe-area-inset-top, 0px) + 2rem)'`
+- `Levels.tsx` (linha 34, 38): inline styles duplicados
+
+**Recomendação**: Manter essas páginas como estão inicialmente, pois elas adicionam padding **extra** além do safe area básico. O wrapper global garante o mínimo; páginas podem adicionar mais se necessário.
+
+## Arquivos a Modificar
 
 | Arquivo | Ação | Descrição |
 |---------|------|-----------|
-| `src/hooks/useRecaps.ts` | Criar | Hook para buscar e gerenciar recaps |
-| `src/components/stats/RecapNotificationCard.tsx` | Criar | Card de notificação de recap disponível |
-| `src/pages/Recap.tsx` | Criar | Página fullscreen da experiência de recap |
-| `src/components/recap/RecapOpeningSlide.tsx` | Criar | Slide de abertura |
-| `src/components/recap/RecapQuestionsSlide.tsx` | Criar | Slide com perguntas (seguidores, viral) |
-| `src/components/recap/RecapTotalTimeSlide.tsx` | Criar | Slide de tempo total |
-| `src/components/recap/RecapGoalSlide.tsx` | Criar | Slide de metas cumpridas |
-| `src/components/recap/RecapComparisonSlide.tsx` | Criar | Slide de comparação |
-| `src/components/recap/RecapHighlightsSlide.tsx` | Criar | Slide de destaques |
-| `src/components/recap/RecapClosingSlide.tsx` | Criar | Slide de encerramento |
-| `src/pages/Stats.tsx` | Modificar | Adicionar seção de recaps |
-| `src/App.tsx` | Modificar | Adicionar rota `/recap/:id` |
-| `supabase/functions/generate-recaps/index.ts` | Criar | Edge function para gerar recaps |
-| Migration SQL | Criar | Tabela `user_recaps` |
+| `src/index.css` | Modificar | Adicionar `.safe-app` e `.safe-app.with-bottom-nav` |
+| `src/App.tsx` | Modificar | Envolver Outlet com div.safe-app no RootLayout |
+| `src/App.tsx` | Modificar | Aplicar safe-app no loading do ProtectedRoute |
+| `src/components/AppNavigation.tsx` | Modificar | Ajustar AppLayout para não duplicar padding |
 
-## Fase 6: Fluxo de Dados Completo
+## Detalhes Técnicos
 
-```text
-1. Cron Job (diário, 00:00 UTC)
-   └── generate-recaps edge function
-       └── Para cada usuário ativo:
-           ├── Verificar elegibilidade (>=3 dias ativos)
-           ├── Calcular stats do período
-           └── Inserir registro em user_recaps
+### Variável CSS para altura da bottom nav
 
-2. Usuário abre Stats.tsx
-   └── useRecaps() busca recaps disponíveis
-       └── Filtra por viewed_at = null para badge "Novo"
-
-3. Usuário clica no RecapNotificationCard
-   └── Navega para /recap/:id
-       └── RecapFlow carrega dados do recap
-
-4. Usuário completa o flow
-   ├── Slide de perguntas salva followers + viral
-   ├── markAsViewed() atualiza viewed_at
-   └── Navega de volta para /stats
+```css
+:root {
+  --bottom-nav-height: 5rem; /* 80px */
+}
 ```
 
-## Cronograma Sugerido
+Esta variável permite ajustar a altura da nav em um só lugar se necessário.
 
-| Fase | Estimativa | Descrição |
-|------|-----------|-----------|
-| 1 | 1 hora | Criar tabela e migrations |
-| 2 | 2 horas | Edge function de geração |
-| 3 | 4 horas | Componentes de UI (slides) |
-| 4 | 1 hora | Integração em Stats |
-| 5 | 1 hora | Testes e ajustes |
+### Fallback para iOS antigo (iOS < 11.4)
 
-**Total estimado: ~9 horas de desenvolvimento**
+O CSS usa `constant()` como fallback antes de `env()`:
+```css
+padding-top: constant(safe-area-inset-top);
+padding-top: env(safe-area-inset-top, 0px);
+```
 
-## Considerações Técnicas
+### Suporte a viewport-fit=cover
 
-1. **Performance**: Os recaps são pré-computados (não calculados em tempo real)
-2. **Escalabilidade**: Cron job processa em batch, não impacta UX
-3. **Privacidade**: Dados de seguidores/viral nunca são expostos publicamente
-4. **Histórico**: Recaps antigos permanecem acessíveis para comparação futura
-5. **Mobile-first**: Slides otimizados para viewport mobile
+O `index.html` já tem:
+```html
+<meta name="viewport" content="..., viewport-fit=cover" />
+```
+
+Isso é necessário para que `env(safe-area-inset-*)` funcione.
 
 ## Resultado Esperado
 
-- Usuário vê card de recap na Stats após 30 dias de uso
-- Experiência imersiva estilo Spotify Wrapped ao clicar
-- Perguntas de engajamento salvam histórico longitudinal
-- Tom celebratório que recompensa consistência
-- Possibilidade de compartilhar resultados nas redes
+Após a implementação:
+
+1. **Botão de voltar e headers** não ficam colados no notch/Dynamic Island
+2. **CTAs e botões no rodapé** não encostam na home bar
+3. **Funciona em todos os iPhones**: SE/8 (sem notch), X-14 (com notch), 14 Pro-17 Pro (Dynamic Island)
+4. **Sem ajustes manuais por página** - o wrapper global cuida de tudo
+5. **Rotas públicas** (`/onboarding`, `/auth`, `/install`) também protegidas
+
+## Testes Recomendados
+
+Verificar nos seguintes dispositivos/simuladores:
+- iPhone SE (3rd gen) - sem notch
+- iPhone 14 - com notch
+- iPhone 15 Pro - com Dynamic Island
+- iPhone em modo landscape (safe areas laterais)
