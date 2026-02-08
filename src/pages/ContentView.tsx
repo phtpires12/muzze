@@ -545,7 +545,7 @@ export default function ContentView() {
           )}
 
           {/* Shot List Preview */}
-          <Card className="mb-6" onClick={handleEditAttempt}>
+          <Card className="mb-6 w-full overflow-hidden" onClick={handleEditAttempt}>
             <CardContent className="p-6 space-y-3 cursor-pointer">
               {parsedShots.length > 0 ? (
                 <>
