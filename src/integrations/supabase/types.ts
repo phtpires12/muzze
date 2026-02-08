@@ -460,6 +460,60 @@ export type Database = {
         }
         Relationships: []
       }
+      user_recaps: {
+        Row: {
+          avg_daily_minutes: number | null
+          computed_stats: Json | null
+          created_at: string | null
+          days_active: number
+          followers_count: number | null
+          had_viral: boolean | null
+          id: string
+          is_eligible: boolean | null
+          period_end: string
+          period_start: string
+          period_type: string
+          sessions_count: number
+          total_minutes: number
+          user_id: string
+          viewed_at: string | null
+        }
+        Insert: {
+          avg_daily_minutes?: number | null
+          computed_stats?: Json | null
+          created_at?: string | null
+          days_active?: number
+          followers_count?: number | null
+          had_viral?: boolean | null
+          id?: string
+          is_eligible?: boolean | null
+          period_end: string
+          period_start: string
+          period_type: string
+          sessions_count?: number
+          total_minutes?: number
+          user_id: string
+          viewed_at?: string | null
+        }
+        Update: {
+          avg_daily_minutes?: number | null
+          computed_stats?: Json | null
+          created_at?: string | null
+          days_active?: number
+          followers_count?: number | null
+          had_viral?: boolean | null
+          id?: string
+          is_eligible?: boolean | null
+          period_end?: string
+          period_start?: string
+          period_type?: string
+          sessions_count?: number
+          total_minutes?: number
+          user_id?: string
+          viewed_at?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null
