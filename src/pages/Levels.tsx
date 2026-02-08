@@ -34,7 +34,7 @@ export default function Levels() {
         style={{ top: 'env(safe-area-inset-top, 0px)' }}
       >
         <div 
-          className="container max-w-4xl mx-auto px-4 py-4"
+          className="max-w-4xl mx-auto px-4 py-4"
           style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.5rem)' }}
         >
           <div className="flex items-center gap-4">
