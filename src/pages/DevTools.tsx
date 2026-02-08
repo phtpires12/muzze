@@ -381,6 +381,59 @@ const DevTools = () => {
           </CardContent>
         </Card>
 
+        {/* Recap Simulation Section */}
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Gift className="w-5 h-5" />
+              Recap
+            </CardTitle>
+            <CardDescription>
+              Criar e testar recaps de progresso
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex gap-2">
+              <Select value={recapPeriodType} onValueChange={setRecapPeriodType}>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Período" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="30d">30 dias</SelectItem>
+                  <SelectItem value="60d">60 dias</SelectItem>
+                  <SelectItem value="90d">90 dias</SelectItem>
+                  <SelectItem value="180d">6 meses</SelectItem>
+                  <SelectItem value="365d">1 ano</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                onClick={handleCreateTestRecap}
+                disabled={isCreatingRecap}
+                className="gap-2"
+              >
+                <Gift className="w-4 h-4" />
+                {isCreatingRecap ? "Criando..." : "Criar Recap"}
+              </Button>
+            </div>
+            <Button
+              onClick={() => navigate('/stats')}
+              className="w-full justify-start"
+              variant="outline"
+            >
+              <Navigation className="w-4 h-4 mr-2" />
+              Ver em /stats
+            </Button>
+            <Button
+              onClick={handleDeleteAllRecaps}
+              className="w-full justify-start"
+              variant="outline"
+            >
+              <Trash2 className="w-4 h-4 mr-2 text-destructive" />
+              Excluir todos os recaps
+            </Button>
+          </CardContent>
+        </Card>
+
         {/* Popup Simulation Section */}
         <Card className="mb-4">
           <CardHeader>
