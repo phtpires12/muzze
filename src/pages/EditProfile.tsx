@@ -126,7 +126,10 @@ const EditProfile = () => {
     <div className="min-h-screen bg-background pb-24">
       {/* Header */}
       <div className="border-b border-border bg-background">
-        <div className="container mx-auto px-4 py-4">
+        <div 
+          className="max-w-2xl mx-auto px-4 py-4"
+          style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}
+        >
           <div className="flex items-center gap-4">
             <Button 
               variant="ghost" 
@@ -142,7 +145,7 @@ const EditProfile = () => {
       </div>
 
       {/* Content */}
-      <div className="container mx-auto p-4 max-w-2xl">
+      <div className="max-w-2xl mx-auto px-4 py-4">
         <Card className="border border-border rounded-xl bg-background">
           <CardHeader className="pb-4">
             <CardTitle className="text-lg font-semibold tracking-tight">

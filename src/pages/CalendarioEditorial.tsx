@@ -521,7 +521,7 @@ const CalendarioEditorial = () => {
       {/* Header - Seção branca */}
       <div className="border-b border-border bg-background">
         <div 
-          className="container mx-auto px-4 py-6"
+          className="max-w-6xl mx-auto px-4 py-6"
           style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1.5rem)' }}
         >
           <div className="flex justify-between items-center">
@@ -535,7 +535,7 @@ const CalendarioEditorial = () => {
       </div>
 
       {isIdeationMode && (
-        <div className="container mx-auto px-4 pt-4">
+        <div className="max-w-6xl mx-auto px-4 pt-4">
           <Alert data-testid="banner-ideation" className="bg-gradient-to-r from-accent/10 to-primary/10 border-accent">
             <Lightbulb className="h-4 w-4 text-accent" />
             <AlertDescription className="text-foreground">
@@ -547,7 +547,7 @@ const CalendarioEditorial = () => {
 
       {/* Seção alternada cinza para controles */}
       <div className="bg-muted/30 py-4">
-        <div className="container mx-auto px-4">
+        <div className="max-w-6xl mx-auto px-4">
           {/* View Switcher */}
           <div className="flex items-center gap-1 bg-background rounded-lg p-1 mb-4 w-fit border border-border">
             <Button 
@@ -582,7 +582,7 @@ const CalendarioEditorial = () => {
       </div>
       
       {/* Conteúdo principal - Seção branca */}
-      <div className="container mx-auto px-4 py-6">
+      <div className="max-w-6xl mx-auto px-4 py-6">
 
         {viewType === "calendar" ? (
         <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "month" | "week")}>

@@ -96,7 +96,7 @@ const MyPlan = () => {
       {/* Header */}
       <div className="border-b border-border bg-background">
         <div 
-          className="container mx-auto px-4 py-4"
+          className="max-w-2xl mx-auto px-4 py-4"
           style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}
         >
           <div className="flex items-center gap-4">
@@ -113,7 +113,7 @@ const MyPlan = () => {
         </div>
       </div>
 
-      <div className="container mx-auto p-4 max-w-2xl space-y-6">
+      <div className="max-w-2xl mx-auto px-4 py-4 space-y-6">
         {/* Admin Mode Toggle - Only for internal testers */}
         {planCapabilities.isInternalTester && (
           <Card className="border border-amber-500/30 bg-amber-500/5 rounded-xl">

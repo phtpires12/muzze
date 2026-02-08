@@ -334,7 +334,7 @@ const Scripts = () => {
       {/* Header - Seção branca */}
       <div className="border-b border-border bg-background">
         <div 
-          className="container mx-auto px-4 py-6"
+          className="max-w-6xl mx-auto px-4 py-6"
           style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1.5rem)' }}
         >
           <h1 className="text-3xl font-bold tracking-tight mb-1">Roteiros</h1>
@@ -343,7 +343,7 @@ const Scripts = () => {
       </div>
 
       {/* Conteúdo principal */}
-      <div className="container mx-auto px-4 py-6">
+      <div className="max-w-6xl mx-auto px-4 py-6">
         <Tabs defaultValue="scripts" className="space-y-6">
           <TabsList className="grid w-full max-w-md grid-cols-2">
             <TabsTrigger value="scripts">Roteiros</TabsTrigger>

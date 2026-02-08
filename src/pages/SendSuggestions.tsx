@@ -33,7 +33,10 @@ const SendSuggestions = () => {
   return (
     <div className="min-h-screen bg-background pb-24">
       <div className="border-b border-border bg-card">
-        <div className="container mx-auto px-4 py-4">
+        <div 
+          className="max-w-2xl mx-auto px-4 py-4"
+          style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}
+        >
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" onClick={() => navigate("/profile")}>
               <ArrowLeft className="w-5 h-5" />
@@ -43,7 +46,7 @@ const SendSuggestions = () => {
         </div>
       </div>
 
-      <div className="container mx-auto p-4 max-w-2xl">
+      <div className="max-w-2xl mx-auto px-4 py-4">
         <Card>
           <CardHeader>
             <CardTitle>Sua opinião é importante</CardTitle>

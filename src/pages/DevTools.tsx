@@ -145,7 +145,10 @@ const DevTools = () => {
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      <div className="container mx-auto p-4 max-w-2xl">
+      <div 
+        className="max-w-2xl mx-auto px-4 py-4"
+        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}
+      >
         {/* Header */}
         <div className="flex items-center gap-4 mb-6">
           <Button
