@@ -147,8 +147,9 @@ const Recap = () => {
       key="closing"
       totalMinutes={recap.total_minutes}
       daysActive={recap.days_active}
+      sessionsCount={recap.sessions_count}
       periodType={recap.period_type}
-      onShare={handleShare}
+      computedStats={recap.computed_stats}
       onClose={handleClose}
     />
   ];
