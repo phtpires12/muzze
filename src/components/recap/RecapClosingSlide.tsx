@@ -1,24 +1,30 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Share2, X } from "lucide-react";
+import { Share2, Download, X } from "lucide-react";
 import { Confetti } from "@/components/Confetti";
+import { RecapShareCard } from "./RecapShareCard";
+import { useRecapShare } from "@/hooks/useRecapShare";
+import { RecapComputedStats } from "@/types/recap";
 
 interface RecapClosingSlideProps {
   totalMinutes: number;
   daysActive: number;
+  sessionsCount: number;
   periodType: string;
-  onShare: () => void;
+  computedStats: RecapComputedStats;
   onClose: () => void;
 }
 
 export const RecapClosingSlide = ({ 
   totalMinutes,
   daysActive,
+  sessionsCount,
   periodType,
-  onShare, 
+  computedStats,
   onClose 
 }: RecapClosingSlideProps) => {
   const hours = Math.floor(totalMinutes / 60);
+  const { cardRef, isGenerating, shareImage, downloadImage } = useRecapShare();
   
   const getMessage = () => {
     if (hours >= 50) return "Você é uma máquina de criar conteúdo!";
@@ -28,9 +34,32 @@ export const RecapClosingSlide = ({
     return "Cada passo conta na jornada!";
   };
 
+  const handleShare = async () => {
+    const textFallback = `🎉 Meu recap de criação de conteúdo!\n\n⏱️ ${hours}h criando nos últimos 30 dias\n📅 ${daysActive} dias ativos\n🎯 ${sessionsCount} sessões\n\n#Muzze #CriadorDeConteudo`;
+    await shareImage(textFallback);
+  };
+
+  const handleDownload = () => {
+    downloadImage();
+  };
+
   return (
     <div className="h-full flex flex-col items-center justify-center p-8 text-center bg-gradient-to-b from-primary/5 via-background to-background relative overflow-hidden">
       <Confetti count={60} />
+
+      {/* Hidden share card for image generation */}
+      <div className="fixed -left-[9999px] -top-[9999px]" aria-hidden="true">
+        <RecapShareCard
+          ref={cardRef}
+          totalMinutes={totalMinutes}
+          daysActive={daysActive}
+          sessionsCount={sessionsCount}
+          periodType={periodType}
+          favoriteStage={computedStats.favoriteStage}
+          weeklyGoalHitCount={computedStats.weeklyGoalHitCount}
+          totalWeeks={computedStats.totalWeeks}
+        />
+      </div>
 
       <motion.div
         initial={{ scale: 0 }}
@@ -75,12 +104,24 @@ export const RecapClosingSlide = ({
         className="flex flex-col gap-3 w-full max-w-xs"
       >
         <Button 
-          onClick={onShare}
+          onClick={handleShare}
           size="lg"
           className="w-full gap-2"
+          disabled={isGenerating}
         >
           <Share2 className="w-4 h-4" />
-          Compartilhar meu recap
+          {isGenerating ? "Gerando imagem..." : "Compartilhar meu recap"}
+        </Button>
+
+        <Button 
+          onClick={handleDownload}
+          variant="secondary"
+          size="lg"
+          className="w-full gap-2"
+          disabled={isGenerating}
+        >
+          <Download className="w-4 h-4" />
+          Salvar imagem
         </Button>
 
         <Button 
