@@ -30,7 +30,7 @@ export const RecapClosingSlide = ({
 
   return (
     <div className="h-full flex flex-col items-center justify-center p-8 text-center bg-gradient-to-b from-primary/5 via-background to-background relative overflow-hidden">
-      <Confetti show={true} />
+      <Confetti count={60} />
 
       <motion.div
         initial={{ scale: 0 }}
