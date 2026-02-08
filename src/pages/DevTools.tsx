@@ -138,6 +138,134 @@ const DevTools = () => {
     navigate("/onboarding");
   };
 
+  const handleCreateTestRecap = async () => {
+    setIsCreatingRecap(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({ title: "Erro", description: "Usuário não autenticado", variant: "destructive" });
+        return;
+      }
+
+      // Calculate period dates based on selected type
+      const periodDays = parseInt(recapPeriodType.replace('d', ''));
+      const periodEnd = new Date();
+      periodEnd.setDate(periodEnd.getDate() - 1); // Yesterday
+      const periodStart = new Date(periodEnd);
+      periodStart.setDate(periodStart.getDate() - periodDays + 1);
+
+      // Generate random but realistic stats
+      const totalMinutes = Math.floor(Math.random() * 800) + 200; // 200-1000 min
+      const daysActive = Math.floor(Math.random() * Math.min(periodDays, 25)) + 5; // 5-30 days
+      const sessionsCount = Math.floor(Math.random() * 50) + 10; // 10-60 sessions
+      const weeklyGoalHitCount = Math.floor(Math.random() * Math.ceil(periodDays / 7));
+      const totalWeeks = Math.ceil(periodDays / 7);
+
+      const stages = ['ideation', 'script', 'recording', 'editing'];
+      const favoriteStage = stages[Math.floor(Math.random() * stages.length)];
+      
+      // Generate stage breakdown
+      const stageBreakdown: Record<string, number> = {};
+      let remaining = totalMinutes;
+      stages.forEach((stage, i) => {
+        if (i === stages.length - 1) {
+          stageBreakdown[stage] = remaining;
+        } else {
+          const portion = Math.floor(Math.random() * (remaining * 0.5));
+          stageBreakdown[stage] = portion;
+          remaining -= portion;
+        }
+      });
+
+      // Find best day (random date in period)
+      const randomDayOffset = Math.floor(Math.random() * periodDays);
+      const bestDayDate = new Date(periodStart);
+      bestDayDate.setDate(bestDayDate.getDate() + randomDayOffset);
+      const bestDay = bestDayDate.toISOString().split('T')[0];
+      const bestDayMinutes = Math.floor(Math.random() * 120) + 60; // 60-180 min
+
+      // Previous period minutes (for comparison)
+      const previousPeriodMinutes = Math.random() > 0.3 
+        ? Math.floor(totalMinutes * (0.5 + Math.random() * 0.8)) 
+        : null;
+
+      const computedStats = {
+        stageBreakdown,
+        bestDay,
+        bestDayMinutes,
+        weeklyGoalHitCount,
+        totalWeeks,
+        previousPeriodMinutes,
+        favoriteStage,
+      };
+
+      // Delete any existing recap for this period to allow re-testing
+      await supabase
+        .from('user_recaps')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('period_type', recapPeriodType)
+        .eq('period_end', periodEnd.toISOString().split('T')[0]);
+
+      // Insert the test recap
+      const { error } = await supabase
+        .from('user_recaps')
+        .insert({
+          user_id: user.id,
+          period_type: recapPeriodType,
+          period_start: periodStart.toISOString().split('T')[0],
+          period_end: periodEnd.toISOString().split('T')[0],
+          total_minutes: totalMinutes,
+          days_active: daysActive,
+          avg_daily_minutes: Math.round(totalMinutes / daysActive),
+          sessions_count: sessionsCount,
+          computed_stats: computedStats,
+          is_eligible: true,
+          viewed_at: null, // Not viewed yet - will show as "new"
+        });
+
+      if (error) {
+        console.error('Error creating test recap:', error);
+        toast({ title: "Erro", description: error.message, variant: "destructive" });
+      } else {
+        await refetchRecaps();
+        toast({ 
+          title: "✅ Recap criado!", 
+          description: `Recap de ${recapPeriodType} disponível em /stats` 
+        });
+      }
+    } catch (err) {
+      console.error('Error:', err);
+      toast({ title: "Erro", description: "Falha ao criar recap", variant: "destructive" });
+    } finally {
+      setIsCreatingRecap(false);
+    }
+  };
+
+  const handleDeleteAllRecaps = async () => {
+    const confirmed = window.confirm("Tem certeza que deseja excluir todos os seus recaps?");
+    if (!confirmed) return;
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { error } = await supabase
+        .from('user_recaps')
+        .delete()
+        .eq('user_id', user.id);
+
+      if (error) {
+        toast({ title: "Erro", description: error.message, variant: "destructive" });
+      } else {
+        await refetchRecaps();
+        toast({ title: "🗑️ Recaps excluídos!" });
+      }
+    } catch (err) {
+      toast({ title: "Erro", description: "Falha ao excluir recaps", variant: "destructive" });
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
