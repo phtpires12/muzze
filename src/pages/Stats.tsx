@@ -36,6 +36,7 @@ const formatTimeDisplay = (hours: number): string => {
 };
 
 const Stats = () => {
+  const navigate = useNavigate();
   const { effectiveLevel, goalMinutes, loading: profileLoading } = useProfileWithLevel();
   
   const {
