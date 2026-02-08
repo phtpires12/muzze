@@ -535,7 +535,7 @@ const CalendarioEditorial = () => {
       </div>
 
       {isIdeationMode && (
-        <div className="container mx-auto px-4 pt-4">
+        <div className="max-w-6xl mx-auto px-4 pt-4">
           <Alert data-testid="banner-ideation" className="bg-gradient-to-r from-accent/10 to-primary/10 border-accent">
             <Lightbulb className="h-4 w-4 text-accent" />
             <AlertDescription className="text-foreground">
