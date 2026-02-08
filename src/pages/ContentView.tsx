@@ -603,7 +603,7 @@ export default function ContentView() {
         className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background via-background to-transparent"
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' }}
       >
-        <div className="container mx-auto max-w-2xl">
+        <div className="max-w-2xl mx-auto px-4">
           <Button 
             onClick={() => setShowSessionModal(true)}
             className="w-full h-14 text-lg bg-gradient-to-r from-primary to-accent hover:opacity-90 text-primary-foreground shadow-lg"
