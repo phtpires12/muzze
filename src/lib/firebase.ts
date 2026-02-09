@@ -67,9 +67,9 @@ export const getFCMToken = async (): Promise<string | null> => {
 
     const messagingModule = await loadMessaging();
 
-    // Register service worker
-    const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-    console.log('Service Worker registered:', registration);
+    // Use the existing Workbox SW (which already imports firebase-messaging-sw.js)
+    const registration = await navigator.serviceWorker.ready;
+    console.log('Using existing Service Worker:', registration);
 
     const token = await messagingModule.getToken(messaging, {
       vapidKey: VAPID_KEY,
