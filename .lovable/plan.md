@@ -1,231 +1,185 @@
 
-# Plano: Correção Global de Safe Areas para iPhones
+# Timer Inteligente: Início por Primeira Ação
 
-## Problema Identificado
+## Contexto e Problema
 
-Atualmente, cada página aplica safe areas de forma **inconsistente**:
-- Algumas usam inline styles (`paddingTop: 'env(safe-area-inset-top)'`)
-- Algumas usam classes CSS existentes (`.safe-area-top`)
-- Algumas não aplicam nada
+Atualmente, quando o usuário inicia uma sessão criativa, o timer começa a contar imediatamente, mesmo que ele ainda não tenha começado a trabalhar de fato. Isso significa que o tempo registrado inclui:
+- Tempo lendo o roteiro antes de editar
+- Tempo decidindo o que escrever
+- Distrações antes de começar
 
-Isso resulta em elementos "colados" no notch/Dynamic Island e na barra home do iPhone.
+O resultado é que o **tempo cronometrado não reflete o tempo real de trabalho criativo**.
 
 ## Solução Proposta
 
-Criar um **wrapper global** no `App.tsx` que aplique safe areas automaticamente em **todas as rotas**, eliminando a necessidade de ajustes individuais por página.
+Implementar um **modo de timer congelado** que aguarda a primeira ação do usuário antes de começar a contar. Duas abordagens foram consideradas:
+
+| Abordagem | Prós | Contras |
+|-----------|------|---------|
+| **Detectar primeiro input** | Mede tempo real de trabalho | Complexo de implementar em todas as páginas |
+| **Contagem regressiva de 3s** | Simples, visual claro | Adiciona atrito desnecessário |
+
+**Recomendação**: Implementar a **Abordagem 1** (detectar primeiro input) com fallback para início automático em páginas sem input (ex: Edição).
 
 ## Arquitetura da Solução
 
 ```text
-┌─────────────────────────────────────────────────────────────┐
-│                         App.tsx                              │
-├─────────────────────────────────────────────────────────────┤
-│  <div className="safe-app">  ← Novo wrapper global          │
-│    ├── RootLayout                                            │
-│    │   └── <Outlet /> (todas as rotas)                      │
-│    └── ProtectedRoute (loading state)                       │
-│                                                              │
-│  CSS aplica:                                                 │
-│  ├── padding-top: env(safe-area-inset-top)                  │
-│  ├── padding-bottom: env(safe-area-inset-bottom)            │
-│  └── min-height: 100dvh                                     │
-└─────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────┐
-│                   AppLayout (com bottom nav)                 │
-├─────────────────────────────────────────────────────────────┤
-│  .safe-app.with-bottom-nav                                  │
-│  └── padding-bottom extra para acomodar nav fixa            │
-│      (safe-area-inset-bottom + --bottom-nav-height)         │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│                           SessionContext                                 │
+├─────────────────────────────────────────────────────────────────────────┤
+│  TimerState                                                              │
+│  ├── isActive: boolean                                                  │
+│  ├── isPaused: boolean                                                  │
+│  ├── isFrozen: boolean  ← NOVO: timer ativo mas não conta               │
+│  ├── frozenSince: Date | null  ← NOVO: quando congelou                  │
+│  └── ...                                                                 │
+│                                                                          │
+│  Funções                                                                 │
+│  ├── startTimer(stage, frozen?: boolean)  ← MODIFICADO                  │
+│  ├── unfreezeTimer()  ← NOVO: descongelar na primeira ação              │
+│  └── ...                                                                 │
+└─────────────────────────────────────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    useFirstInputTrigger (novo hook)                      │
+├─────────────────────────────────────────────────────────────────────────┤
+│  Detecta primeira interação do usuário:                                  │
+│  - keydown (digitação)                                                   │
+│  - paste (colar texto)                                                   │
+│  - input (mudança em campos)                                             │
+│  - change (seleções, toggles)                                            │
+│                                                                          │
+│  Quando detecta → chama unfreezeTimer()                                  │
+│  Auto-remove listeners após descongelar                                  │
+└─────────────────────────────────────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│              DraggableSessionTimer (modificado)                          │
+├─────────────────────────────────────────────────────────────────────────┤
+│  Quando isFrozen:                                                        │
+│  - Mostra "00:00" ou "Pronto para começar"                              │
+│  - Animação pulsante indicando espera                                    │
+│  - Ícone de play/pausa diferenciado                                      │
+│                                                                          │
+│  Quando descongelar:                                                     │
+│  - Transição suave para contagem normal                                  │
+│  - Toast opcional: "Timer iniciado!"                                     │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Fase 1: CSS Global (index.css)
+## Configuração do Usuário
 
-Adicionar as seguintes classes ao `src/index.css`:
+Nova preferência em `profiles`:
 
-```css
-/* ===== GLOBAL SAFE AREA WRAPPER ===== */
-:root {
-  --bottom-nav-height: 5rem; /* 80px - altura da BottomNav */
-}
+| Campo | Tipo | Default | Descrição |
+|-------|------|---------|-----------|
+| `timer_start_mode` | `text` | `'auto'` | `'auto'` (inicia imediatamente) ou `'on_input'` (espera primeira ação) |
 
-.safe-app {
-  min-height: 100vh;
-  min-height: 100dvh;
-  /* Fallback para iOS antigo */
-  padding-top: constant(safe-area-inset-top);
-  padding-bottom: constant(safe-area-inset-bottom);
-  padding-left: constant(safe-area-inset-left);
-  padding-right: constant(safe-area-inset-right);
-  /* iOS moderno */
-  padding-top: env(safe-area-inset-top, 0px);
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-  padding-left: env(safe-area-inset-left, 0px);
-  padding-right: env(safe-area-inset-right, 0px);
-}
+Essa configuração aparecerá na página de **Configurações** como:
 
-/* Variante com bottom nav fixa (rotas que usam AppLayout) */
-.safe-app.with-bottom-nav {
-  padding-bottom: calc(
-    env(safe-area-inset-bottom, 0px) + 
-    var(--bottom-nav-height)
-  );
-}
-
-/* Fallback iOS antigo para variante com bottom nav */
-@supports (padding: constant(safe-area-inset-bottom)) {
-  .safe-app.with-bottom-nav {
-    padding-bottom: calc(
-      constant(safe-area-inset-bottom) + 
-      var(--bottom-nav-height)
-    );
-  }
-}
+```
+Início do Timer
+○ Automático (padrão) - Começa assim que você abre o conteúdo
+○ Na primeira ação - Espera você começar a digitar ou interagir
 ```
 
-## Fase 2: Modificar App.tsx
+## Páginas Afetadas
 
-### 2.1 RootLayout - Adicionar wrapper global
+| Página | Tipo de Input | Comportamento |
+|--------|---------------|---------------|
+| **Session (Ideação)** | Título, descrição, referência | Espera input |
+| **Session (Roteiro)** | Rich text editor (TipTap) | Espera input |
+| **Session (Revisão)** | Rich text editor | Espera input |
+| **ShotListRecord** | Checkboxes, notas | Espera input |
+| **ShotListReview** | Similar ao Record | Espera input |
+| **EditingWorkspace** | Links, checkboxes | **Início automático** (sem input contundente) |
 
-```typescript
-// Root layout component that wraps all routes with providers
-const RootLayout = () => (
-  <AppNavigationProvider>
-    <WorkspaceContextProvider>
-      <PlanContextProvider>
-        <TutorialProvider>
-          <GlobalCelebrations />
-          <LevelUpModal />
-          <TrophyUnlockedModal />
-          <TutorialOverlay />
-          {/* ✅ NOVO: Wrapper global com safe areas */}
-          <div className="safe-app">
-            <Outlet />
-          </div>
-        </TutorialProvider>
-      </PlanContextProvider>
-    </WorkspaceContextProvider>
-  </AppNavigationProvider>
-);
+## Implementação
+
+### Fase 1: Banco de Dados
+Adicionar coluna `timer_start_mode` na tabela `profiles` com default `'auto'`.
+
+```sql
+ALTER TABLE profiles 
+ADD COLUMN timer_start_mode text DEFAULT 'auto';
 ```
 
-### 2.2 ProtectedRoute - Aplicar safe-app no loading
+### Fase 2: SessionContext
+Modificar o estado do timer para suportar o modo "congelado":
 
-```typescript
-if (loading) {
-  return (
-    <div className="safe-app min-h-screen flex items-center justify-center bg-background">
-      <div className="animate-pulse text-xl text-foreground">Carregando...</div>
-    </div>
-  );
-}
-```
+- Adicionar `isFrozen` e `frozenSince` ao `TimerState`
+- Modificar `startTimer` para aceitar parâmetro `frozen?: boolean`
+- Criar função `unfreezeTimer()` que inicia a contagem real
+- O interval de 1s só incrementa se `!isFrozen`
 
-## Fase 3: Modificar AppLayout (AppNavigation.tsx)
+### Fase 3: Hook useFirstInputTrigger
+Novo hook que:
+1. Recebe `enabled: boolean` (baseado em `timer_start_mode === 'on_input'` e `timer.isFrozen`)
+2. Adiciona listeners de input ao `document`
+3. Chama `unfreezeTimer()` na primeira interação
+4. Remove listeners após descongelar
 
-O AppLayout precisa indicar quando há bottom nav para aplicar padding extra:
+### Fase 4: DraggableSessionTimer
+Adicionar estado visual para timer congelado:
+- Mostrar indicador visual de "aguardando"
+- Animação sutil (pulso no ícone de play)
+- Transição suave ao descongelar
 
-```typescript
-export const AppLayout = ({ children, className }: AppLayoutProps) => {
-  const { effectivePosition, isSidebarCollapsed } = useNavPosition();
-  const hasSidebar = effectivePosition === 'side';
-  const hasBottomNav = effectivePosition === 'bottom';
+### Fase 5: Páginas de Sessão
+Integrar o hook em cada página:
+- Session.tsx
+- ShotListRecord.tsx
+- ShotListReview.tsx
+- ScriptEditor.tsx
 
-  return (
-    <div 
-      className={cn(
-        "min-h-screen bg-background transition-all duration-300",
-        hasSidebar 
-          ? (isSidebarCollapsed ? "pl-16" : "pl-56") 
-          : "", // Remover pb-20 - agora controlado globalmente
-        className
-      )}
-      // ✅ Indicar ao wrapper pai que tem bottom nav
-      data-has-bottom-nav={hasBottomNav}
-    >
-      <main className="h-full overflow-auto">{children}</main>
-      <AppNavigation />
-    </div>
-  );
-};
-```
+### Fase 6: Settings
+Adicionar toggle para preferência do usuário.
 
-**Alternativa mais simples**: Como o RootLayout envolve o Outlet, podemos usar uma abordagem diferente - detectar se estamos numa rota com Layout e aplicar a classe condicionalmente via CSS ou contexto.
+## Arquivos a Criar
 
-**Solução mais robusta**: Criar um hook/contexto que comunica ao wrapper se há bottom nav presente.
-
-## Fase 4: Ajustar BottomNav.tsx
-
-A BottomNav já usa `env(safe-area-inset-bottom)` no seu posicionamento:
-```tsx
-style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' }}
-```
-
-Isso está correto. A nav se posiciona acima da home bar. O conteúdo da página precisa ter padding-bottom suficiente para não ficar escondido atrás dela.
-
-## Fase 5: Limpeza de Safe Areas Duplicadas
-
-Após a implementação global, podemos **opcionalmente** remover safe areas inline de páginas individuais como:
-- `Session.tsx` (linha 365): `paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)'`
-- `Ofensiva.tsx` (linha 386-388): inline styles no header
-- `Index.tsx` (linha 423): `paddingTop: 'calc(env(safe-area-inset-top, 0px) + 2rem)'`
-- `Levels.tsx` (linha 34, 38): inline styles duplicados
-
-**Recomendação**: Manter essas páginas como estão inicialmente, pois elas adicionam padding **extra** além do safe area básico. O wrapper global garante o mínimo; páginas podem adicionar mais se necessário.
+| Arquivo | Descrição |
+|---------|-----------|
+| `src/hooks/useFirstInputTrigger.ts` | Hook para detectar primeira interação |
 
 ## Arquivos a Modificar
 
-| Arquivo | Ação | Descrição |
-|---------|------|-----------|
-| `src/index.css` | Modificar | Adicionar `.safe-app` e `.safe-app.with-bottom-nav` |
-| `src/App.tsx` | Modificar | Envolver Outlet com div.safe-app no RootLayout |
-| `src/App.tsx` | Modificar | Aplicar safe-app no loading do ProtectedRoute |
-| `src/components/AppNavigation.tsx` | Modificar | Ajustar AppLayout para não duplicar padding |
+| Arquivo | Modificação |
+|---------|-------------|
+| `src/contexts/SessionContext.tsx` | Adicionar `isFrozen`, `frozenSince`, `unfreezeTimer()` |
+| `src/components/DraggableSessionTimer.tsx` | UI para estado congelado |
+| `src/pages/Session.tsx` | Integrar hook |
+| `src/pages/ShotListRecord.tsx` | Integrar hook |
+| `src/components/ScriptEditor.tsx` | Integrar hook |
+| `src/pages/Settings.tsx` | Adicionar preferência |
+| `src/hooks/useSession.ts` | Expor `unfreezeTimer` |
 
-## Detalhes Técnicos
+## Fluxo de Uso
 
-### Variável CSS para altura da bottom nav
+1. Usuário ativa "Na primeira ação" nas Configurações
+2. Abre um conteúdo para trabalhar (ex: roteiro)
+3. Timer aparece mostrando "00:00" com animação pulsante
+4. Usuário lê o roteiro, pensa...
+5. Usuário começa a digitar
+6. Timer detecta e começa a contar do zero
+7. Toast sutil: "⏱️ Timer iniciado!"
 
-```css
-:root {
-  --bottom-nav-height: 5rem; /* 80px */
-}
-```
+## Considerações de UX
 
-Esta variável permite ajustar a altura da nav em um só lugar se necessário.
+- **EditingWorkspace**: Mantém início automático (não há ação de input clara)
+- **Timeout de segurança**: Se usuário não interagir em 30min, considera sessão abandonada
+- **Som opcional**: Pode tocar som sutil ao descongelar (reutilizar `resume.mp3`)
+- **Mobile**: Funciona igual, detecta touch/tap em inputs
 
-### Fallback para iOS antigo (iOS < 11.4)
+## Estimativa de Complexidade
 
-O CSS usa `constant()` como fallback antes de `env()`:
-```css
-padding-top: constant(safe-area-inset-top);
-padding-top: env(safe-area-inset-top, 0px);
-```
-
-### Suporte a viewport-fit=cover
-
-O `index.html` já tem:
-```html
-<meta name="viewport" content="..., viewport-fit=cover" />
-```
-
-Isso é necessário para que `env(safe-area-inset-*)` funcione.
-
-## Resultado Esperado
-
-Após a implementação:
-
-1. **Botão de voltar e headers** não ficam colados no notch/Dynamic Island
-2. **CTAs e botões no rodapé** não encostam na home bar
-3. **Funciona em todos os iPhones**: SE/8 (sem notch), X-14 (com notch), 14 Pro-17 Pro (Dynamic Island)
-4. **Sem ajustes manuais por página** - o wrapper global cuida de tudo
-5. **Rotas públicas** (`/onboarding`, `/auth`, `/install`) também protegidas
-
-## Testes Recomendados
-
-Verificar nos seguintes dispositivos/simuladores:
-- iPhone SE (3rd gen) - sem notch
-- iPhone 14 - com notch
-- iPhone 15 Pro - com Dynamic Island
-- iPhone em modo landscape (safe areas laterais)
+| Fase | Esforço |
+|------|---------|
+| Banco de dados | Baixo |
+| SessionContext | Médio |
+| Hook useFirstInputTrigger | Médio |
+| DraggableSessionTimer | Baixo |
+| Integração nas páginas | Médio |
+| Settings | Baixo |
+| **Total** | ~4-5 horas |
