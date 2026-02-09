@@ -657,7 +657,7 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
         intervalRef.current = null;
       }
     };
-  }, [timer.isActive, timer.isPaused]);
+  }, [timer.isActive, timer.isPaused, timer.isFrozen]);
 
   // Auto-save incremental a cada 30 segundos
   // FIX: Version guard pattern - nunca cria interval duplicado
