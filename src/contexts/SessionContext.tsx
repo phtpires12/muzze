@@ -8,6 +8,8 @@ export type SessionStage = "idea" | "ideation" | "script" | "review" | "record" 
 export interface TimerState {
   isActive: boolean;
   isPaused: boolean;
+  isFrozen: boolean; // NOVO: timer ativo mas aguardando primeira ação do usuário
+  frozenSince: Date | null; // NOVO: quando o timer foi congelado
   stage: SessionStage;
   elapsedSeconds: number; // Timer GLOBAL - não reseta ao mudar de etapa
   stageElapsedSeconds: number; // Timer da etapa atual - reseta ao mudar
