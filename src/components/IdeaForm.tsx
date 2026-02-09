@@ -13,6 +13,8 @@ import { useProfileContext } from "@/contexts/ProfileContext";
 import { Paywall } from "@/components/Paywall";
 import { getDayKey, isDateInCurrentWeek } from "@/lib/timezone-utils";
 import { ArrowRight } from "lucide-react";
+import { getWorkflowTemplate } from "@/lib/workflow-templates";
+import { MusicInput, buildMusicReference } from "@/components/brainstorm/MusicInput";
 
 const CONTENT_TYPES = [
   { value: "Reels", label: "Reels" },
