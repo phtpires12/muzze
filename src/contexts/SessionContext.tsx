@@ -35,7 +35,7 @@ export interface MuzzeSessionType {
 interface SessionContextValue {
   // Novo timer global
   timer: TimerState;
-  startTimer: (stage: SessionStage) => Promise<void>;
+  startTimer: (stage: SessionStage, frozen?: boolean) => Promise<void>; // MODIFICADO: aceita frozen opcional
   pauseTimer: () => void;
   resumeTimer: () => void;
   resetTimer: () => void;
@@ -43,7 +43,8 @@ interface SessionContextValue {
   setContentId: (id: string | null) => void;
   saveStageTime: () => Promise<void>;
   validateSessionFreshness: () => boolean;
-  autoEndSession: () => Promise<void>; // Novo: encerramento automático com verificação de streak
+  autoEndSession: () => Promise<void>; // Encerramento automático com verificação de streak
+  unfreezeTimer: () => void; // NOVO: descongelar timer na primeira ação
   
   // Backward compatibility
   muzzeSession: MuzzeSessionType;
