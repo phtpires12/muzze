@@ -232,6 +232,9 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
   const handleDelete = async () => {
     setDeleting(true);
     try {
+      // Reset timer first to unblock navigation
+      resetTimer();
+      
       const { error } = await supabase
         .from("scripts")
         .delete()
