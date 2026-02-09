@@ -73,6 +73,7 @@ export const DraggableSessionTimer = ({
   isStreakMode,
   dailyGoalMinutes,
   isPaused,
+  isFrozen = false, // NOVO
   onPause,
   onResume,
   onStop,

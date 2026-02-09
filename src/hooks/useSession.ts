@@ -311,6 +311,8 @@ export const useSession = (options: UseSessionOptions = {}) => {
     session: {
       isActive: timer.isActive,
       isPaused: timer.isPaused,
+      isFrozen: timer.isFrozen, // NOVO: estado congelado
+      frozenSince: timer.frozenSince, // NOVO: quando congelou
       stage: timer.stage,
       elapsedSeconds: timer.elapsedSeconds,
       stageElapsedSeconds: timer.stageElapsedSeconds,
