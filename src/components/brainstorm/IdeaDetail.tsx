@@ -380,18 +380,27 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
             </div>
           </div>
 
-          {/* Central Idea */}
+          {/* Central Idea / Message */}
           <div className="space-y-2">
-            <Label htmlFor="central-idea">Ideia Central</Label>
+            <Label htmlFor="central-idea">{centralIdeaLabel} <span className="text-destructive">*</span></Label>
             <Textarea
               id="central-idea"
               value={centralIdea}
               onChange={(e) => setCentralIdea(e.target.value)}
-              placeholder="Descreva a ideia central do seu conteúdo..."
+              placeholder={centralIdeaPlaceholder}
               rows={4}
               className="bg-background/50 resize-none"
             />
           </div>
+
+          {/* Music Reference */}
+          <MusicInput
+            url={musicUrl}
+            name={musicName}
+            onUrlChange={setMusicUrl}
+            onNameChange={setMusicName}
+            required={musicRequired}
+          />
 
           {/* Reference URL */}
           <div className="space-y-2">
