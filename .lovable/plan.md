@@ -1,83 +1,35 @@
 
-# Ideacao Adaptativa por Workflow
+# Correção: Botão "Excluir Ideia" e Texto do Workflow
 
-## Resumo
+## Problema 1: Botão "Excluir Ideia" não funciona
 
-Adaptar os formularios de ideacao (IdeaForm, IdeaDetail, IdeaCard) para exibir campos diferentes conforme o workflow selecionado:
+O `handleDelete` no `IdeaDetail.tsx` navega para `/calendario` após excluir, mas **não encerra a sessão ativa**. O `useNavigationBlocker` intercepta a navegação porque há um timer rodando, impedindo o redirecionamento.
 
-- **Minimalista (edits/montagens)**: Campo "Musica" obrigatorio + "Mensagem a ser passada" (renomeia "Ideia Central") obrigatoria
-- **Classic e Freestyle**: Campo "Musica" aparece mas e opcional. "Ideia Central" permanece como esta
+**Solução**: Antes de excluir, encerrar a sessão silenciosamente (sem celebrações/resumo) e só depois deletar e navegar.
 
-## O que muda por workflow
+### Arquivo: `src/components/brainstorm/IdeaDetail.tsx`
 
-| Campo | Minimalista | Classic / Freestyle |
-|-------|-------------|---------------------|
-| Tipo de Conteudo | Obrigatorio | Obrigatorio |
-| Ideia Central / Mensagem | Obrigatorio (label: "Mensagem a ser passada") | Obrigatorio (label: "Ideia Central") |
-| Musica (link) | Obrigatorio | Opcional (visivel) |
-| Titulo | Opcional | Opcional |
-| Referencia | Opcional | Opcional |
+- Importar `useSessionContext` do `SessionContext`
+- No `handleDelete`:
+  1. Chamar `resetTimer()` para encerrar o timer sem disparar celebrações
+  2. Deletar o script do banco
+  3. Navegar para `/calendario`
 
-## Dados
+## Problema 2: Texto quebrado no WorkflowSelector
 
-O campo `music_reference` (jsonb) ja existe na tabela `scripts`. Nenhuma migracao de banco de dados e necessaria.
+O `SelectItem` do Radix usa `div` com `flex-col` para mostrar nome + descrição. Isso causa layout quebrado porque o Radix Select renderiza o conteúdo selecionado inline no trigger, e blocos `flex-col` com texto secundário ficam deformados.
 
-## Arquivos a Modificar
+**Solução**: Simplificar o conteúdo visivel no trigger — mostrar apenas o emoji + nome (sem descrição) no `SelectTrigger`, mantendo a descrição completa apenas nos itens do dropdown.
 
-### 1. `src/lib/workflow-templates.ts`
-- Adicionar metadata ao template indicando campos da ideacao:
-  - `ideationFields.musicRequired: boolean`
-  - `ideationFields.centralIdeaLabel: string` (ex: "Mensagem a ser passada" vs "Ideia Central")
+### Arquivo: `src/components/workflows/WorkflowSelector.tsx`
 
-### 2. `src/components/brainstorm/IdeaDetail.tsx`
-- Importar o workflow template efetivo do script
-- Adicionar campo de musica (link simplificado: URL + nome da musica) abaixo da ideia central
-- Marcar musica como obrigatoria quando `musicRequired === true`
-- Trocar label de "Ideia Central" conforme o workflow
-- Bloquear botao "Avancar" se musica obrigatoria e nao preenchida (no minimalist)
+- Trocar o conteúdo do `SelectItem` para usar `<span>` inline em vez de `div flex-col`
+- Formato: `{icon} {nome}` no valor selecionado
+- A descrição aparece apenas dentro do dropdown (via estilo condicional ou usando `SelectItem` com texto simples + tooltip)
 
-### 3. `src/components/brainstorm/IdeaCard.tsx`
-- Adicionar campo de musica (Input simplificado para link) no card compacto do brainstorm
-- O card usa o workflow global do perfil (ja que cards nao tem workflow individual atribuido ainda)
-- Trocar placeholder da ideia central conforme workflow
+## Resumo de Alteracoes
 
-### 4. `src/components/IdeaForm.tsx`
-- Adicionar campo de musica (URL + nome)
-- Trocar label/placeholder de "Ideia Central" conforme workflow
-- Validacao: musica obrigatoria no minimalist
-- Salvar `music_reference` no insert/update do script
-
-## Detalhes Tecnicos
-
-### Estrutura do campo musica nos formularios
-Um campo simplificado (diferente do MusicPanel completo do EditingWorkspace):
-- Input para URL da musica (Spotify, YouTube, etc)
-- Input para nome da musica (opcional nos outros workflows)
-- Auto-detecta tipo via URL (reutiliza `detectMusicType` do MusicPanel)
-
-### Template metadata (workflow-templates.ts)
-```typescript
-// Adicionar ao WorkflowTemplate
-ideationConfig: {
-  centralIdeaLabel: string;  // "Ideia Central" ou "Mensagem a ser passada"
-  musicRequired: boolean;
-}
-```
-
-Valores:
-- classic: `{ centralIdeaLabel: "Ideia Central", musicRequired: false }`
-- freestyle: `{ centralIdeaLabel: "Ideia Central", musicRequired: false }`
-- minimalist: `{ centralIdeaLabel: "Mensagem a ser passada", musicRequired: true }`
-
-### Validacao de avanco
-No IdeaDetail e IdeaForm, o botao de avancar so fica habilitado se:
-- Tipo de conteudo preenchido
-- Ideia central/mensagem preenchida (min 20 chars)
-- Musica preenchida (apenas se `musicRequired === true`)
-
-### Salvamento da musica
-Reutiliza o formato `MusicReference` ja existente:
-```typescript
-{ url: string, name?: string, type: 'spotify' | 'youtube' | 'soundcloud' | 'other' }
-```
-Salvo em `scripts.music_reference` (jsonb).
+| Arquivo | Mudanca |
+|---------|---------|
+| `src/components/brainstorm/IdeaDetail.tsx` | Chamar `resetTimer()` antes de deletar para desbloquear navegacao |
+| `src/components/workflows/WorkflowSelector.tsx` | Simplificar texto do `SelectItem` para nao quebrar no trigger |
