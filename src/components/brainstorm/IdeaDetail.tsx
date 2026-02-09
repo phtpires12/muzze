@@ -94,13 +94,16 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
       if (error) throw error;
 
       if (data) {
-        setIdea(data);
+        setIdea(data as Idea);
         setTitle(data.title || "");
         setContentType(data.content_type || "");
         setCentralIdea(data.central_idea || "");
         setReferenceUrl(data.reference_url || "");
         setThumbnailUrl(data.thumbnail_url);
         setWorkflowTemplate(data.workflow_template as WorkflowTemplateId | null);
+        const musicRef = data.music_reference as any;
+        setMusicUrl(musicRef?.url || "");
+        setMusicName(musicRef?.name || "");
         isInitialLoad.current = false;
       }
     } catch (error) {
