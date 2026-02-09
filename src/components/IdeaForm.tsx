@@ -130,6 +130,7 @@ export const IdeaForm = ({ scriptId }: IdeaFormProps) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
+      const musicRef = buildMusicReference(musicUrl, musicName);
       const scriptData: any = {
         title: title.trim() || "Nova Ideia",
         content_type: contentType,
@@ -139,6 +140,7 @@ export const IdeaForm = ({ scriptId }: IdeaFormProps) => {
         publish_date: publishDate,
         workspace_id: activeWorkspace?.id,
         workflow_template: profile?.current_workflow || 'classic',
+        music_reference: musicRef,
       };
 
       let savedScriptId = currentScriptId;
