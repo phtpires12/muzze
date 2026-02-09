@@ -173,7 +173,7 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [title, contentType, centralIdea, referenceUrl, thumbnailUrl, workflowTemplate, loading, idea, autoSave]);
+  }, [title, contentType, centralIdea, referenceUrl, thumbnailUrl, workflowTemplate, musicUrl, musicName, loading, idea, autoSave]);
 
   const handleAdvanceToNextStage = async () => {
     // Save any pending changes first
