@@ -615,34 +615,44 @@ export const DraggableSessionTimer = ({
             "flex items-center",
             isMobile ? "gap-2" : "gap-4"
           )}>
-            {/* Icon - Menor em mobile */}
+            {/* Icon - Menor em mobile, com animação pulsante quando congelado */}
             <div className={cn(
               "rounded-full flex items-center justify-center shadow-lg flex-shrink-0 transition-all duration-1000",
-              isStreakMode
-                ? "bg-orange-100/20 animate-wiggle"
-                : isBonusMode
-                  ? "bg-white/20"
-                  : "bg-gradient-to-br from-accent to-primary",
+              isFrozen
+                ? "bg-muted animate-pulse"
+                : isStreakMode
+                  ? "bg-orange-100/20 animate-wiggle"
+                  : isBonusMode
+                    ? "bg-white/20"
+                    : "bg-gradient-to-br from-accent to-primary",
               isMobile ? "w-10 h-10" : "w-12 h-12"
             )}>
-              <Icon className={cn(
-                "transition-colors duration-1000",
-                isStreakMode ? "text-orange-100" : isBonusMode ? "text-white" : "text-white",
-                isMobile ? "w-5 h-5" : "w-6 h-6"
-              )} />
+              {isFrozen ? (
+                <Play className={cn(
+                  "text-muted-foreground",
+                  isMobile ? "w-5 h-5" : "w-6 h-6"
+                )} />
+              ) : (
+                <Icon className={cn(
+                  "transition-colors duration-1000",
+                  isStreakMode ? "text-orange-100" : isBonusMode ? "text-white" : "text-white",
+                  isMobile ? "w-5 h-5" : "w-6 h-6"
+                )} />
+              )}
             </div>
             
             <div className={cn(isMobile ? "min-w-[100px]" : "min-w-[140px]")}>
               <div className={cn(
                 "font-bold tabular-nums transition-colors duration-1000",
-                isStreakMode ? "text-orange-100" : isBonusMode ? "text-white" : "text-foreground",
+                isFrozen ? "text-muted-foreground" : isStreakMode ? "text-orange-100" : isBonusMode ? "text-white" : "text-foreground",
+                isFrozen && "animate-pulse",
                 isMobile ? "text-xl" : "text-2xl"
               )}>
-                {formatTime(elapsedSeconds)}
+                {isFrozen ? "00:00" : formatTime(elapsedSeconds)}
               </div>
               <div className={cn(
                 "transition-colors duration-1000",
-                isStreakMode ? "text-orange-100/70" : isBonusMode ? "text-purple-100/70" : "text-muted-foreground",
+                isFrozen ? "text-muted-foreground" : isStreakMode ? "text-orange-100/70" : isBonusMode ? "text-purple-100/70" : "text-muted-foreground",
                 isMobile ? "text-[10px]" : "text-xs"
               )}>
                 {goalText}
