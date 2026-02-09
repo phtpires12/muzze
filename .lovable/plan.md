@@ -1,88 +1,70 @@
 
 
-# Fix: Service Worker Conflict Causing Stale Versions
+# Fix: Erro "Should have a queue" causando tela branca
 
-## Root Cause
+## Problema
 
-Two service workers fight for control of the same scope (`/`):
+O hook `useRegisterSW` do `vite-plugin-pwa` crasha no ambiente de preview do Lovable porque service workers nao funcionam dentro do iframe. O erro "Should have a queue" e um bug interno do React disparado quando o `useRegisterSW` tenta usar `useState` em um contexto invalido.
 
-1. Workbox SW (`/sw.js`) - handles all PWA caching and updates
-2. Firebase Messaging SW (`/firebase-messaging-sw.js`) - registered separately by `getFCMToken()`
+Como `usePWAUpdate` e chamado diretamente no componente `App`, o crash derruba o app inteiro (tela branca).
 
-When `getFCMToken()` calls `navigator.serviceWorker.register('/firebase-messaging-sw.js')`, it **replaces** the Workbox SW. After that, all update logic stops — users get stuck on old cached versions permanently.
+## Solucao
 
-The Workbox config also imports firebase-messaging-sw.js via `importScripts`, creating a double conflict where the same firebase code runs in both SWs, with conflicting `install`/`activate` lifecycle handlers.
+Tornar o `usePWAUpdate` resiliente: verificar se service workers estao disponiveis antes de chamar `useRegisterSW`. Se nao estiverem, retornar valores default sem registrar nada.
 
-## Solution
+## Mudanca
 
-Consolidate into a **single service worker** (the Workbox-generated one). Firebase messaging will run inside it via `importScripts`, but without conflicting lifecycle handlers.
+### `src/hooks/usePWAUpdate.ts`
 
-## Changes
+Separar em dois componentes internos:
 
-### 1. `public/firebase-messaging-sw.js`
+1. Um hook `usePWAUpdateInternal` que contem toda a logica atual (com `useRegisterSW`)
+2. O hook `usePWAUpdate` exportado que verifica se o ambiente suporta SW:
+   - Se `navigator.serviceWorker` nao existe: retorna valores neutros (sem crash)
+   - Se existe: delega para `usePWAUpdateInternal`
 
-Remove the `install` and `activate` event listeners (lines 4-11). These conflict with Workbox's own lifecycle management. Keep only the Firebase initialization and message handling code.
+**Problema**: Nao podemos chamar hooks condicionalmente em React. Entao a solucao correta e criar um **componente wrapper** ou usar um pattern diferente.
 
-Before:
-```js
-self.addEventListener('install', (event) => { self.skipWaiting(); });
-self.addEventListener('activate', (event) => { event.waitUntil(clients.claim()); });
-importScripts(...)
+**Abordagem escolhida**: Envolver a chamada a `useRegisterSW` em um `try-catch` nao funciona com hooks. Entao vamos:
+
+1. Criar um componente `PWAUpdateProvider` que renderiza condicionalmente
+2. Ou, mais simples: mover o `usePWAUpdate` para dentro de um componente filho que so monta quando SW esta disponivel
+
+**Abordagem final (mais simples e sem quebrar a arquitetura)**:
+
+No `App.tsx`, envolver o uso de `usePWAUpdate` em um componente separado que so monta se service workers estao disponiveis. Isso evita que o `useRegisterSW` seja chamado em ambientes sem suporte.
+
+### Arquivo: `src/App.tsx`
+
+- Extrair a logica de PWA update para um componente `PWAManager` separado
+- Esse componente so renderiza o `UpdateOverlay` se necessario
+- No `App`, renderizar `<PWAManager />` em vez de chamar `usePWAUpdate()` diretamente
+- O `PWAManager` faz a verificacao de suporte a SW antes de montar
+
+```tsx
+const PWAManager = () => {
+  // Only run in environments that support service workers
+  if (!('serviceWorker' in navigator)) {
+    return null;
+  }
+  return <PWAManagerInner />;
+};
+
+const PWAManagerInner = () => {
+  const { needRefresh } = usePWAUpdate();
+  return <UpdateOverlay isVisible={needRefresh} />;
+};
 ```
 
-After:
-```js
-// No install/activate listeners — Workbox handles lifecycle
-importScripts(...)
-```
+**Nota**: O check condicional antes de renderizar `PWAManagerInner` garante que `useRegisterSW` nunca e chamado em ambientes sem SW.
 
-### 2. `src/lib/firebase.ts`
+### Arquivo: `src/hooks/usePWAUpdate.ts`
 
-In `getFCMToken()`, stop registering a separate SW. Instead, use the **existing** Workbox SW registration (which already has firebase messaging loaded via `importScripts`).
+- Adicionar guard no `useEffect` de cleanup para verificar se `navigator.serviceWorker` existe antes de acessar `.getRegistrations()`
 
-Before:
-```typescript
-const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-```
+## Resultado
 
-After:
-```typescript
-const registration = await navigator.serviceWorker.ready;
-```
-
-This waits for the already-active Workbox SW (which includes the firebase messaging code) instead of registering a competing SW.
-
-### 3. `src/hooks/usePWAUpdate.ts`
-
-Add a safety mechanism: on first load, check if any rogue SWs exist at non-Workbox URLs and unregister them. This cleans up the editor's (and any other user's) browser that already has the conflicting firebase SW installed.
-
-```typescript
-// On mount: unregister any competing service workers
-useEffect(() => {
-  navigator.serviceWorker.getRegistrations().then(registrations => {
-    for (const reg of registrations) {
-      if (reg.active?.scriptURL?.includes('firebase-messaging-sw.js')) {
-        console.log('[PWA] Removing competing firebase SW');
-        reg.unregister();
-      }
-    }
-  });
-}, []);
-```
-
-## Why This Fixes It
-
-- Only ONE SW controls the app (Workbox-generated `sw.js`)
-- Firebase messaging still works because the Workbox SW imports the firebase code
-- The 30-second update checks and auto-update logic remain intact
-- Existing users with the rogue firebase SW get it cleaned up automatically
-- No lifecycle conflicts between install/activate handlers
-
-## Files Modified
-
-| File | Change |
-|------|--------|
-| `public/firebase-messaging-sw.js` | Remove conflicting install/activate listeners |
-| `src/lib/firebase.ts` | Use existing SW via `navigator.serviceWorker.ready` instead of registering a new one |
-| `src/hooks/usePWAUpdate.ts` | Add cleanup of rogue competing SWs on mount |
+- No preview do Lovable (sem SW): app carrega normalmente, sem crash
+- Em producao (com SW): comportamento identico ao atual
+- Tela branca eliminada
 
