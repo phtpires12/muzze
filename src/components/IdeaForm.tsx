@@ -13,6 +13,8 @@ import { useProfileContext } from "@/contexts/ProfileContext";
 import { Paywall } from "@/components/Paywall";
 import { getDayKey, isDateInCurrentWeek } from "@/lib/timezone-utils";
 import { ArrowRight } from "lucide-react";
+import { getWorkflowTemplate } from "@/lib/workflow-templates";
+import { MusicInput, buildMusicReference } from "@/components/brainstorm/MusicInput";
 
 const CONTENT_TYPES = [
   { value: "Reels", label: "Reels" },
@@ -42,6 +44,13 @@ export const IdeaForm = ({ scriptId }: IdeaFormProps) => {
   const [paywallAction, setPaywallAction] = useState<'create_script' | 'schedule_future'>('create_script');
   const [loading, setLoading] = useState(false);
   const [currentScriptId, setCurrentScriptId] = useState<string | undefined>(scriptId);
+  const [musicUrl, setMusicUrl] = useState("");
+  const [musicName, setMusicName] = useState("");
+
+  // Workflow-aware ideation config
+  const currentWorkflow = profile?.current_workflow || 'classic';
+  const template = getWorkflowTemplate(currentWorkflow);
+  const { centralIdeaLabel, centralIdeaPlaceholder, musicRequired } = template.ideationConfig;
 
   useEffect(() => {
     const dateParam = searchParams.get("publishDate");
@@ -74,6 +83,9 @@ export const IdeaForm = ({ scriptId }: IdeaFormProps) => {
         // @ts-ignore - central_idea will be available after types regenerate
         setCentralIdea(data.central_idea || "");
         setReferenceUrl(data.reference_url || "");
+        const musicRef = data.music_reference as any;
+        setMusicUrl(musicRef?.url || "");
+        setMusicName(musicRef?.name || "");
         if (data.publish_date) {
           setPublishDate(data.publish_date);
         }
@@ -92,7 +104,16 @@ export const IdeaForm = ({ scriptId }: IdeaFormProps) => {
     if (!contentType || !centralIdea.trim()) {
       toast({
         title: "Campos obrigatórios",
-        description: "Preencha o tipo de conteúdo e a ideia central para continuar.",
+        description: `Preencha o tipo de conteúdo e ${centralIdeaLabel.toLowerCase()} para continuar.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (musicRequired && !musicUrl.trim()) {
+      toast({
+        title: "Música obrigatória",
+        description: "No workflow Minimalista, a música é obrigatória.",
         variant: "destructive",
       });
       return;
@@ -118,6 +139,7 @@ export const IdeaForm = ({ scriptId }: IdeaFormProps) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
+      const musicRef = buildMusicReference(musicUrl, musicName);
       const scriptData: any = {
         title: title.trim() || "Nova Ideia",
         content_type: contentType,
@@ -127,6 +149,7 @@ export const IdeaForm = ({ scriptId }: IdeaFormProps) => {
         publish_date: publishDate,
         workspace_id: activeWorkspace?.id,
         workflow_template: profile?.current_workflow || 'classic',
+        music_reference: musicRef,
       };
 
       let savedScriptId = currentScriptId;
@@ -171,7 +194,7 @@ export const IdeaForm = ({ scriptId }: IdeaFormProps) => {
     }
   };
 
-  const canAdvance = contentType && centralIdea.trim();
+  const canAdvance = contentType && centralIdea.trim() && (!musicRequired || musicUrl.trim());
 
   return (
     <>
@@ -211,20 +234,28 @@ export const IdeaForm = ({ scriptId }: IdeaFormProps) => {
 
       <div className="space-y-2">
         <Label htmlFor="central-idea">
-          Ideia Central <span className="text-destructive">*</span>
+          {centralIdeaLabel} <span className="text-destructive">*</span>
         </Label>
         <Textarea
           id="central-idea"
-          placeholder="Descreva brevemente sua ideia central..."
+          placeholder={centralIdeaPlaceholder}
           value={centralIdea}
           onChange={(e) => setCentralIdea(e.target.value)}
           rows={6}
           className="resize-none"
         />
         <p className="text-sm text-muted-foreground">
-          Explique minimamente sua ideia para poder avançar para o roteiro.
+          Explique minimamente sua ideia para poder avançar.
         </p>
       </div>
+
+      <MusicInput
+        url={musicUrl}
+        name={musicName}
+        onUrlChange={setMusicUrl}
+        onNameChange={setMusicName}
+        required={musicRequired}
+      />
 
       <div className="space-y-2">
         <Label htmlFor="reference-url">

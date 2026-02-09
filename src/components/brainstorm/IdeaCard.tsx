@@ -13,6 +13,9 @@ import { useDeviceType } from "@/hooks/useDeviceType";
 import { ThumbnailUploader } from "@/components/ThumbnailUploader";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useProfileContext } from "@/contexts/ProfileContext";
+import { getWorkflowTemplate } from "@/lib/workflow-templates";
+import { MusicInput, buildMusicReference } from "@/components/brainstorm/MusicInput";
 
 const CONTENT_TYPES = [
   { value: "Reels", label: "Reels", icon: Clapperboard },
@@ -28,7 +31,7 @@ interface IdeaCardProps {
   centralIdea?: string;
   referenceUrl?: string;
   thumbnailUrl?: string;
-  onUpdate: (id: string, data: { title?: string; content_type?: string; central_idea?: string; reference_url?: string; thumbnail_url?: string }) => void;
+  onUpdate: (id: string, data: { title?: string; content_type?: string; central_idea?: string; reference_url?: string; thumbnail_url?: string; music_reference?: any }) => void;
   onDelete: (id: string) => void;
   onSchedule?: () => void;
   isDragging?: boolean;
@@ -50,12 +53,18 @@ export const IdeaCard = ({
 }: IdeaCardProps) => {
   const { toast } = useToast();
   const deviceType = useDeviceType();
+  const { profile } = useProfileContext();
+  const template = getWorkflowTemplate(profile?.current_workflow);
+  const { centralIdeaLabel, centralIdeaPlaceholder, musicRequired } = template.ideationConfig;
+
   const [localTitle, setLocalTitle] = useState(title || "");
   const [localContentType, setLocalContentType] = useState(contentType || "");
   const [localCentralIdea, setLocalCentralIdea] = useState(centralIdea || "");
   const [localReferenceUrl, setLocalReferenceUrl] = useState(referenceUrl || "");
   const [localThumbnailUrl, setLocalThumbnailUrl] = useState<string | null>(thumbnailUrl || null);
   const [isUploadingThumb, setIsUploadingThumb] = useState(false);
+  const [localMusicUrl, setLocalMusicUrl] = useState("");
+  const [localMusicName, setLocalMusicName] = useState("");
 
   const {
     attributes,
@@ -77,7 +86,7 @@ export const IdeaCard = ({
     onUpdate(id, { [field]: value });
   };
 
-  const isComplete = !!localContentType && !!localCentralIdea && localCentralIdea.length >= 20;
+  const isComplete = !!localContentType && !!localCentralIdea && localCentralIdea.length >= 20 && (!musicRequired || !!localMusicUrl.trim());
   const ContentIcon = CONTENT_TYPES.find(t => t.value === localContentType)?.icon || FileText;
   const isMobile = deviceType === "mobile";
 
@@ -253,7 +262,7 @@ export const IdeaCard = ({
 
           <div className="flex-1 flex flex-col">
             <Textarea
-              placeholder="Descreva sua ideia central... (mínimo 20 caracteres) *"
+              placeholder={`${centralIdeaPlaceholder} (mínimo 20 caracteres) *`}
               value={localCentralIdea}
               onChange={(e) => setLocalCentralIdea(e.target.value)}
               onBlur={(e) => handleBlur("central_idea", e.target.value)}
@@ -266,6 +275,21 @@ export const IdeaCard = ({
             )}>
               {localCentralIdea.length}/20 caracteres
             </span>
+          </div>
+
+          {/* Music input */}
+          <div className={cn("space-y-1.5", compact && "space-y-1")}>
+            <Input
+              placeholder={`Link da música${musicRequired ? ' *' : ' (opcional)'}`}
+              value={localMusicUrl}
+              onChange={(e) => setLocalMusicUrl(e.target.value)}
+              onBlur={() => {
+                const ref = buildMusicReference(localMusicUrl, localMusicName);
+                onUpdate(id, { music_reference: ref });
+              }}
+              className={cn(compact ? "h-8 text-xs" : "h-9")}
+              type="url"
+            />
           </div>
 
           <Input

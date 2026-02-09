@@ -2,6 +2,12 @@ import { CreativeStage, CREATIVE_STAGES } from "@/types/workspace";
 
 export type WorkflowTemplateId = 'classic' | 'freestyle' | 'minimalist';
 
+export interface IdeationConfig {
+  centralIdeaLabel: string;
+  centralIdeaPlaceholder: string;
+  musicRequired: boolean;
+}
+
 export interface WorkflowTemplate {
   id: WorkflowTemplateId;
   name: string;
@@ -9,6 +15,7 @@ export interface WorkflowTemplate {
   stages: CreativeStage[];
   icon: string;
   gradient: string;
+  ideationConfig: IdeationConfig;
 }
 
 export const WORKFLOW_TEMPLATES: Record<WorkflowTemplateId, WorkflowTemplate> = {
@@ -19,6 +26,7 @@ export const WORKFLOW_TEMPLATES: Record<WorkflowTemplateId, WorkflowTemplate> = 
     stages: ['ideation', 'script', 'review', 'recording', 'editing'],
     icon: '🎬',
     gradient: 'from-blue-500 to-cyan-500',
+    ideationConfig: { centralIdeaLabel: 'Ideia Central', centralIdeaPlaceholder: 'Descreva a ideia central do seu conteúdo...', musicRequired: false },
   },
   freestyle: {
     id: 'freestyle',
@@ -27,6 +35,7 @@ export const WORKFLOW_TEMPLATES: Record<WorkflowTemplateId, WorkflowTemplate> = 
     stages: ['ideation', 'recording', 'editing'],
     icon: '🎤',
     gradient: 'from-orange-500 to-yellow-500',
+    ideationConfig: { centralIdeaLabel: 'Ideia Central', centralIdeaPlaceholder: 'Descreva a ideia central do seu conteúdo...', musicRequired: false },
   },
   minimalist: {
     id: 'minimalist',
@@ -35,6 +44,7 @@ export const WORKFLOW_TEMPLATES: Record<WorkflowTemplateId, WorkflowTemplate> = 
     stages: ['ideation', 'editing'],
     icon: '✂️',
     gradient: 'from-purple-500 to-pink-500',
+    ideationConfig: { centralIdeaLabel: 'Mensagem a ser passada', centralIdeaPlaceholder: 'Qual a mensagem que você quer passar nesse edit?', musicRequired: true },
   },
 };
 

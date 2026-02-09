@@ -18,8 +18,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ThumbnailUploader } from "@/components/ThumbnailUploader";
 import { WorkflowSelector } from "@/components/workflows/WorkflowSelector";
-import { WorkflowTemplateId, getStageLabel } from "@/lib/workflow-templates";
+import { WorkflowTemplateId, getStageLabel, getWorkflowTemplate } from "@/lib/workflow-templates";
 import { useWorkflowTemplate, CREATIVE_TO_SESSION } from "@/hooks/useWorkflowTemplate";
+import { MusicInput, buildMusicReference } from "@/components/brainstorm/MusicInput";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,6 +43,7 @@ interface Idea {
   publish_date: string | null;
   thumbnail_url: string | null;
   workflow_template: string | null;
+  music_reference: any;
 }
 
 interface IdeaDetailProps {
@@ -65,6 +67,8 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
   const [referenceUrl, setReferenceUrl] = useState("");
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
   const [workflowTemplate, setWorkflowTemplate] = useState<WorkflowTemplateId | null>(null);
+  const [musicUrl, setMusicUrl] = useState("");
+  const [musicName, setMusicName] = useState("");
 
   // Auto-save state
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -83,20 +87,23 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
     try {
       const { data, error } = await supabase
         .from("scripts")
-        .select("id, title, content_type, central_idea, reference_url, status, publish_date, thumbnail_url, workflow_template")
+        .select("id, title, content_type, central_idea, reference_url, status, publish_date, thumbnail_url, workflow_template, music_reference")
         .eq("id", scriptId)
         .single();
 
       if (error) throw error;
 
       if (data) {
-        setIdea(data);
+        setIdea(data as Idea);
         setTitle(data.title || "");
         setContentType(data.content_type || "");
         setCentralIdea(data.central_idea || "");
         setReferenceUrl(data.reference_url || "");
         setThumbnailUrl(data.thumbnail_url);
         setWorkflowTemplate(data.workflow_template as WorkflowTemplateId | null);
+        const musicRef = data.music_reference as any;
+        setMusicUrl(musicRef?.url || "");
+        setMusicName(musicRef?.name || "");
         isInitialLoad.current = false;
       }
     } catch (error) {
@@ -111,10 +118,15 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
     }
   };
 
+  // Get ideation config from effective workflow
+  const effectiveTemplate = getWorkflowTemplate(workflowTemplate);
+  const { centralIdeaLabel, centralIdeaPlaceholder, musicRequired } = effectiveTemplate.ideationConfig;
+
   // Auto-save function
   const autoSave = useCallback(async () => {
     setSaving(true);
     try {
+      const musicRef = buildMusicReference(musicUrl, musicName);
       const { error } = await supabase
         .from("scripts")
         .update({
@@ -124,6 +136,7 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
           reference_url: referenceUrl || null,
           thumbnail_url: thumbnailUrl,
           workflow_template: workflowTemplate,
+          music_reference: musicRef as any,
         })
         .eq("id", scriptId);
 
@@ -136,7 +149,7 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
     } finally {
       setSaving(false);
     }
-  }, [title, contentType, centralIdea, referenceUrl, thumbnailUrl, workflowTemplate, scriptId]);
+  }, [title, contentType, centralIdea, referenceUrl, thumbnailUrl, workflowTemplate, musicUrl, musicName, scriptId]);
 
   // Debounced auto-save effect
   useEffect(() => {
@@ -160,7 +173,7 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [title, contentType, centralIdea, referenceUrl, thumbnailUrl, workflowTemplate, loading, idea, autoSave]);
+  }, [title, contentType, centralIdea, referenceUrl, thumbnailUrl, workflowTemplate, musicUrl, musicName, loading, idea, autoSave]);
 
   const handleAdvanceToNextStage = async () => {
     // Save any pending changes first
@@ -367,18 +380,27 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
             </div>
           </div>
 
-          {/* Central Idea */}
+          {/* Central Idea / Message */}
           <div className="space-y-2">
-            <Label htmlFor="central-idea">Ideia Central</Label>
+            <Label htmlFor="central-idea">{centralIdeaLabel} <span className="text-destructive">*</span></Label>
             <Textarea
               id="central-idea"
               value={centralIdea}
               onChange={(e) => setCentralIdea(e.target.value)}
-              placeholder="Descreva a ideia central do seu conteúdo..."
+              placeholder={centralIdeaPlaceholder}
               rows={4}
               className="bg-background/50 resize-none"
             />
           </div>
+
+          {/* Music Reference */}
+          <MusicInput
+            url={musicUrl}
+            name={musicName}
+            onUrlChange={setMusicUrl}
+            onNameChange={setMusicName}
+            required={musicRequired}
+          />
 
           {/* Reference URL */}
           <div className="space-y-2">
@@ -410,7 +432,7 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
           <div className="flex flex-col gap-3 pt-4">
             <Button
               onClick={handleAdvanceToNextStage}
-              disabled={saving}
+              disabled={saving || (musicRequired && !musicUrl.trim())}
               className="w-full bg-primary hover:bg-primary/90"
               size="lg"
             >
