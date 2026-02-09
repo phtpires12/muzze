@@ -262,7 +262,7 @@ export const IdeaCard = ({
 
           <div className="flex-1 flex flex-col">
             <Textarea
-              placeholder="Descreva sua ideia central... (mínimo 20 caracteres) *"
+              placeholder={`${centralIdeaPlaceholder} (mínimo 20 caracteres) *`}
               value={localCentralIdea}
               onChange={(e) => setLocalCentralIdea(e.target.value)}
               onBlur={(e) => handleBlur("central_idea", e.target.value)}
@@ -275,6 +275,21 @@ export const IdeaCard = ({
             )}>
               {localCentralIdea.length}/20 caracteres
             </span>
+          </div>
+
+          {/* Music input */}
+          <div className={cn("space-y-1.5", compact && "space-y-1")}>
+            <Input
+              placeholder={`Link da música${musicRequired ? ' *' : ' (opcional)'}`}
+              value={localMusicUrl}
+              onChange={(e) => setLocalMusicUrl(e.target.value)}
+              onBlur={() => {
+                const ref = buildMusicReference(localMusicUrl, localMusicName);
+                onUpdate(id, { music_reference: ref });
+              }}
+              className={cn(compact ? "h-8 text-xs" : "h-9")}
+              type="url"
+            />
           </div>
 
           <Input
