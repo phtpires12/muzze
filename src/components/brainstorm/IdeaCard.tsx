@@ -53,12 +53,18 @@ export const IdeaCard = ({
 }: IdeaCardProps) => {
   const { toast } = useToast();
   const deviceType = useDeviceType();
+  const { profile } = useProfileContext();
+  const template = getWorkflowTemplate(profile?.current_workflow);
+  const { centralIdeaLabel, centralIdeaPlaceholder, musicRequired } = template.ideationConfig;
+
   const [localTitle, setLocalTitle] = useState(title || "");
   const [localContentType, setLocalContentType] = useState(contentType || "");
   const [localCentralIdea, setLocalCentralIdea] = useState(centralIdea || "");
   const [localReferenceUrl, setLocalReferenceUrl] = useState(referenceUrl || "");
   const [localThumbnailUrl, setLocalThumbnailUrl] = useState<string | null>(thumbnailUrl || null);
   const [isUploadingThumb, setIsUploadingThumb] = useState(false);
+  const [localMusicUrl, setLocalMusicUrl] = useState("");
+  const [localMusicName, setLocalMusicName] = useState("");
 
   const {
     attributes,
