@@ -83,6 +83,11 @@ const ShotListReview = () => {
 
   // Global celebration context (for hiding timer during celebrations)
   const { isShowingAnyCelebration } = useCelebration();
+  
+  // First input trigger hook - detecta primeira ação e descongela o timer
+  useFirstInputTrigger({
+    enabled: session.isActive && !isShowingAnyCelebration,
+  });
 
   // State para modal de confirmação de encerramento
   const [showEndConfirmation, setShowEndConfirmation] = useState(false);
