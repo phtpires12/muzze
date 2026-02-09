@@ -31,7 +31,7 @@ interface IdeaCardProps {
   centralIdea?: string;
   referenceUrl?: string;
   thumbnailUrl?: string;
-  onUpdate: (id: string, data: { title?: string; content_type?: string; central_idea?: string; reference_url?: string; thumbnail_url?: string }) => void;
+  onUpdate: (id: string, data: { title?: string; content_type?: string; central_idea?: string; reference_url?: string; thumbnail_url?: string; music_reference?: any }) => void;
   onDelete: (id: string) => void;
   onSchedule?: () => void;
   isDragging?: boolean;
