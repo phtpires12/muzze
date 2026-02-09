@@ -13,6 +13,9 @@ import { useDeviceType } from "@/hooks/useDeviceType";
 import { ThumbnailUploader } from "@/components/ThumbnailUploader";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useProfileContext } from "@/contexts/ProfileContext";
+import { getWorkflowTemplate } from "@/lib/workflow-templates";
+import { MusicInput, buildMusicReference } from "@/components/brainstorm/MusicInput";
 
 const CONTENT_TYPES = [
   { value: "Reels", label: "Reels", icon: Clapperboard },
