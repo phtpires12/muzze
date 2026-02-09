@@ -2,6 +2,12 @@ import { CreativeStage, CREATIVE_STAGES } from "@/types/workspace";
 
 export type WorkflowTemplateId = 'classic' | 'freestyle' | 'minimalist';
 
+export interface IdeationConfig {
+  centralIdeaLabel: string;
+  centralIdeaPlaceholder: string;
+  musicRequired: boolean;
+}
+
 export interface WorkflowTemplate {
   id: WorkflowTemplateId;
   name: string;
@@ -9,6 +15,7 @@ export interface WorkflowTemplate {
   stages: CreativeStage[];
   icon: string;
   gradient: string;
+  ideationConfig: IdeationConfig;
 }
 
 export const WORKFLOW_TEMPLATES: Record<WorkflowTemplateId, WorkflowTemplate> = {
