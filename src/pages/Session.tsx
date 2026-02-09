@@ -82,17 +82,17 @@ const Session = () => {
   // Timer permission check
   const { canUseTimer } = useTimerPermission(scriptId, currentCreativeStage);
   
-  // First input trigger hook - detecta primeira ação e descongela o timer
-  const { isWaitingForInput } = useFirstInputTrigger({
-    enabled: session.isActive && !isShowingAnyCelebration,
-  });
-  
   // Global celebration system
   const { 
     triggerFullCelebration,
     triggerCelebration,
     isShowingAnyCelebration,
   } = useCelebration();
+  
+  // First input trigger hook - detecta primeira ação e descongela o timer
+  const { isWaitingForInput } = useFirstInputTrigger({
+    enabled: session.isActive && !isShowingAnyCelebration,
+  });
 
   // State para modal de confirmação de encerramento
   const [showEndConfirmation, setShowEndConfirmation] = useState(false);
