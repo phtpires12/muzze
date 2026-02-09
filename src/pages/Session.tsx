@@ -497,6 +497,7 @@ const Session = () => {
           isStreakMode={session.isStreakMode}
           dailyGoalMinutes={session.dailyGoalMinutes}
           isPaused={session.isPaused}
+          isFrozen={session.isFrozen}
           onPause={pauseSession}
           onResume={resumeSession}
           onStop={handleEnd}
