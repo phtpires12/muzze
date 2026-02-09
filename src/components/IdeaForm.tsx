@@ -83,6 +83,9 @@ export const IdeaForm = ({ scriptId }: IdeaFormProps) => {
         // @ts-ignore - central_idea will be available after types regenerate
         setCentralIdea(data.central_idea || "");
         setReferenceUrl(data.reference_url || "");
+        const musicRef = data.music_reference as any;
+        setMusicUrl(musicRef?.url || "");
+        setMusicName(musicRef?.name || "");
         if (data.publish_date) {
           setPublishDate(data.publish_date);
         }
