@@ -136,7 +136,7 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
           reference_url: referenceUrl || null,
           thumbnail_url: thumbnailUrl,
           workflow_template: workflowTemplate,
-          music_reference: musicRef,
+          music_reference: musicRef as any,
         })
         .eq("id", scriptId);
 
