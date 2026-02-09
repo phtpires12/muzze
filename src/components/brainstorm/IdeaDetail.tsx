@@ -16,6 +16,7 @@ import {
 import { FileText, ExternalLink, Loader2, Check, Trash2, Video, Scissors } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useSessionContext } from "@/contexts/SessionContext";
 import { ThumbnailUploader } from "@/components/ThumbnailUploader";
 import { WorkflowSelector } from "@/components/workflows/WorkflowSelector";
 import { WorkflowTemplateId, getStageLabel, getWorkflowTemplate } from "@/lib/workflow-templates";
@@ -55,6 +56,7 @@ const CONTENT_TYPES = ["Reels", "YouTube", "TikTok", "X (Twitter)"];
 export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { resetTimer } = useSessionContext();
   const [idea, setIdea] = useState<Idea | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -230,6 +232,9 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
   const handleDelete = async () => {
     setDeleting(true);
     try {
+      // Reset timer first to unblock navigation
+      resetTimer();
+      
       const { error } = await supabase
         .from("scripts")
         .delete()

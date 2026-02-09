@@ -51,28 +51,12 @@ export function WorkflowSelector({
       <SelectContent>
         {showInheritOption && (
           <SelectItem value="inherit">
-            <div className="flex items-center gap-2">
-              <span className="opacity-60">🔗</span>
-              <div className="flex flex-col">
-                <span>Herdar do sistema</span>
-                <span className="text-xs text-muted-foreground">
-                  Usando: {currentGlobalTemplate.icon} {currentGlobalTemplate.name}
-                </span>
-              </div>
-            </div>
+            <span className="opacity-60">🔗</span> Herdar do sistema ({currentGlobalTemplate.icon} {currentGlobalTemplate.name})
           </SelectItem>
         )}
         {WORKFLOW_TEMPLATES_LIST.map((template) => (
           <SelectItem key={template.id} value={template.id}>
-            <div className="flex items-center gap-2">
-              <span>{template.icon}</span>
-              <div className="flex flex-col">
-                <span>{template.name}</span>
-                <span className="text-xs text-muted-foreground">
-                  {template.description}
-                </span>
-              </div>
-            </div>
+            <span>{template.icon}</span> {template.name}
           </SelectItem>
         ))}
       </SelectContent>
