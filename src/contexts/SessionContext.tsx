@@ -71,6 +71,8 @@ const DEFAULT_STREAK_GOAL_MINUTES = 25;
 const defaultTimerState: TimerState = {
   isActive: false,
   isPaused: false,
+  isFrozen: false, // NOVO
+  frozenSince: null, // NOVO
   stage: "idea",
   elapsedSeconds: 0,
   stageElapsedSeconds: 0,
