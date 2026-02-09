@@ -241,7 +241,9 @@ export const DraggableSessionTimer = ({
   
   // Gerar texto dinâmico baseado no progresso
   let goalText: string;
-  if (remainingSeconds > 0) {
+  if (isFrozen) {
+    goalText = "Aguardando você começar...";
+  } else if (remainingSeconds > 0) {
     goalText = `Falta: ${formatTime(remainingSeconds)}`;
   } else {
     goalText = `🔥 Bônus: +${formatTime(bonusSeconds)} além da meta`;
