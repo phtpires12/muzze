@@ -104,7 +104,16 @@ export const IdeaForm = ({ scriptId }: IdeaFormProps) => {
     if (!contentType || !centralIdea.trim()) {
       toast({
         title: "Campos obrigatórios",
-        description: "Preencha o tipo de conteúdo e a ideia central para continuar.",
+        description: `Preencha o tipo de conteúdo e ${centralIdeaLabel.toLowerCase()} para continuar.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (musicRequired && !musicUrl.trim()) {
+      toast({
+        title: "Música obrigatória",
+        description: "No workflow Minimalista, a música é obrigatória.",
         variant: "destructive",
       });
       return;
