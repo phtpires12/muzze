@@ -55,6 +55,7 @@ interface DraggableSessionTimerProps {
   isStreakMode: boolean;
   dailyGoalMinutes: number;
   isPaused: boolean;
+  isFrozen?: boolean; // NOVO: estado congelado (aguardando primeira ação)
   onPause: () => void;
   onResume: () => void;
   onStop: () => void;
