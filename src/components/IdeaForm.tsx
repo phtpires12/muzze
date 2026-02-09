@@ -44,6 +44,13 @@ export const IdeaForm = ({ scriptId }: IdeaFormProps) => {
   const [paywallAction, setPaywallAction] = useState<'create_script' | 'schedule_future'>('create_script');
   const [loading, setLoading] = useState(false);
   const [currentScriptId, setCurrentScriptId] = useState<string | undefined>(scriptId);
+  const [musicUrl, setMusicUrl] = useState("");
+  const [musicName, setMusicName] = useState("");
+
+  // Workflow-aware ideation config
+  const currentWorkflow = profile?.current_workflow || 'classic';
+  const template = getWorkflowTemplate(currentWorkflow);
+  const { centralIdeaLabel, centralIdeaPlaceholder, musicRequired } = template.ideationConfig;
 
   useEffect(() => {
     const dateParam = searchParams.get("publishDate");

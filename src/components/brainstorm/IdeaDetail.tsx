@@ -432,7 +432,7 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
           <div className="flex flex-col gap-3 pt-4">
             <Button
               onClick={handleAdvanceToNextStage}
-              disabled={saving}
+              disabled={saving || (musicRequired && !musicUrl.trim())}
               className="w-full bg-primary hover:bg-primary/90"
               size="lg"
             >
