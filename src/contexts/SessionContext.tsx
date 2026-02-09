@@ -672,7 +672,8 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
       return;
     }
     
-    if (timer.isActive && !timer.isPaused) {
+    // MODIFICADO: Não auto-salvar se timer está congelado
+    if (timer.isActive && !timer.isPaused && !timer.isFrozen) {
       autoSaveCreateCountRef.current += 1;
       const currentCount = autoSaveCreateCountRef.current;
       
