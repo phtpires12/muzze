@@ -27,6 +27,9 @@ const Settings = () => {
   const { navPosition, setNavPosition } = useNavPosition();
   const isMobile = useIsMobile();
   
+  // Timer start mode preference
+  const timerStartMode = (profile as any)?.timer_start_mode || 'auto';
+  
   const notificationsEnabled = profile?.notifications_enabled ?? false;
 
   useEffect(() => {
