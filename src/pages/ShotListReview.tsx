@@ -898,6 +898,7 @@ const ShotListReview = () => {
             ? session.dailyGoalMinutes * 60 
             : session.targetSeconds}
           isPaused={session.isPaused}
+          isFrozen={session.isFrozen}
           isStreakMode={session.isStreakMode}
           dailyGoalMinutes={session.dailyGoalMinutes}
           onPause={pauseSession}
