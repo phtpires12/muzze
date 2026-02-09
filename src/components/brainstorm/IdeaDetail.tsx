@@ -16,6 +16,7 @@ import {
 import { FileText, ExternalLink, Loader2, Check, Trash2, Video, Scissors } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useSessionContext } from "@/contexts/SessionContext";
 import { ThumbnailUploader } from "@/components/ThumbnailUploader";
 import { WorkflowSelector } from "@/components/workflows/WorkflowSelector";
 import { WorkflowTemplateId, getStageLabel, getWorkflowTemplate } from "@/lib/workflow-templates";
