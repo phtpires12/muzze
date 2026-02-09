@@ -194,7 +194,7 @@ export const IdeaForm = ({ scriptId }: IdeaFormProps) => {
     }
   };
 
-  const canAdvance = contentType && centralIdea.trim();
+  const canAdvance = contentType && centralIdea.trim() && (!musicRequired || musicUrl.trim());
 
   return (
     <>
