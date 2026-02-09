@@ -118,10 +118,15 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
     }
   };
 
+  // Get ideation config from effective workflow
+  const effectiveTemplate = getWorkflowTemplate(workflowTemplate);
+  const { centralIdeaLabel, centralIdeaPlaceholder, musicRequired } = effectiveTemplate.ideationConfig;
+
   // Auto-save function
   const autoSave = useCallback(async () => {
     setSaving(true);
     try {
+      const musicRef = buildMusicReference(musicUrl, musicName);
       const { error } = await supabase
         .from("scripts")
         .update({
@@ -131,6 +136,7 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
           reference_url: referenceUrl || null,
           thumbnail_url: thumbnailUrl,
           workflow_template: workflowTemplate,
+          music_reference: musicRef,
         })
         .eq("id", scriptId);
 
@@ -143,7 +149,7 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
     } finally {
       setSaving(false);
     }
-  }, [title, contentType, centralIdea, referenceUrl, thumbnailUrl, workflowTemplate, scriptId]);
+  }, [title, contentType, centralIdea, referenceUrl, thumbnailUrl, workflowTemplate, musicUrl, musicName, scriptId]);
 
   // Debounced auto-save effect
   useEffect(() => {
