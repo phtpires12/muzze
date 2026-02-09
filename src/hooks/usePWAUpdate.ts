@@ -6,6 +6,7 @@ export function usePWAUpdate() {
 
   // Cleanup rogue competing service workers (e.g. firebase-messaging-sw.js registered separately)
   useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
     navigator.serviceWorker.getRegistrations().then(registrations => {
       for (const reg of registrations) {
         if (reg.active?.scriptURL?.includes('firebase-messaging-sw.js')) {

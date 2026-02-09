@@ -12,7 +12,6 @@ import { PlanContextProvider } from "@/contexts/PlanContext";
 import { GlobalCelebrations } from "@/components/GlobalCelebrations";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { setupGlobalErrorHandlers } from "@/lib/error-logger";
-import { PWAUpdatePrompt } from "@/components/PWAUpdatePrompt";
 import { UpdateOverlay } from "@/components/UpdateOverlay";
 import { usePWAUpdate } from "@/hooks/usePWAUpdate";
 import Onboarding from "./pages/NewOnboarding";
