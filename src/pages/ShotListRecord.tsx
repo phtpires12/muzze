@@ -21,6 +21,7 @@ import { useSession } from "@/hooks/useSession";
 import { useDailyGoalProgress } from "@/hooks/useDailyGoalProgress";
 import { useTimerPermission } from "@/hooks/useTimerPermission";
 import { useProfileWithLevel } from "@/hooks/useProfileWithLevel";
+import { useFirstInputTrigger } from "@/hooks/useFirstInputTrigger";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useStreakCelebration } from "@/hooks/useStreakCelebration";
