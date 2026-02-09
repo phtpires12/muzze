@@ -86,7 +86,7 @@ export const IdeaCard = ({
     onUpdate(id, { [field]: value });
   };
 
-  const isComplete = !!localContentType && !!localCentralIdea && localCentralIdea.length >= 20;
+  const isComplete = !!localContentType && !!localCentralIdea && localCentralIdea.length >= 20 && (!musicRequired || !!localMusicUrl.trim());
   const ContentIcon = CONTENT_TYPES.find(t => t.value === localContentType)?.icon || FileText;
   const isMobile = deviceType === "mobile";
 
