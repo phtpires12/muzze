@@ -12,7 +12,6 @@ import { PlanContextProvider } from "@/contexts/PlanContext";
 import { GlobalCelebrations } from "@/components/GlobalCelebrations";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { setupGlobalErrorHandlers } from "@/lib/error-logger";
-import { PWAUpdatePrompt } from "@/components/PWAUpdatePrompt";
 import { UpdateOverlay } from "@/components/UpdateOverlay";
 import { usePWAUpdate } from "@/hooks/usePWAUpdate";
 import Onboarding from "./pages/NewOnboarding";
@@ -185,29 +184,33 @@ const router = createBrowserRouter([
   },
 ]);
 
-const App = () => {
+const PWAManager = () => {
+  if (!('serviceWorker' in navigator)) return null;
+  return <PWAManagerInner />;
+};
+
+const PWAManagerInner = () => {
   const { needRefresh } = usePWAUpdate();
+  return <UpdateOverlay isVisible={needRefresh} />;
+};
 
-  // Mostrar overlay apenas quando PWA detecta nova versão
-  const showUpdateOverlay = needRefresh;
-
+const App = () => {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <SessionContextProvider>
-      <ProfileContextProvider>
+          <ProfileContextProvider>
             <CelebrationContextProvider>
-                <TooltipProvider>
-                  <Toaster />
-                  <Sonner />
-                  <PWAUpdatePrompt />
-                  <UpdateOverlay isVisible={showUpdateOverlay} />
-                  <RouterProvider router={router} />
-                </TooltipProvider>
-              </CelebrationContextProvider>
+              <TooltipProvider>
+                <Toaster />
+                <Sonner />
+                <PWAManager />
+                <RouterProvider router={router} />
+              </TooltipProvider>
+            </CelebrationContextProvider>
           </ProfileContextProvider>
         </SessionContextProvider>
-        </QueryClientProvider>
+      </QueryClientProvider>
     </ErrorBoundary>
   );
 };
