@@ -946,7 +946,8 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
         setContentId,
         saveStageTime,
         validateSessionFreshness,
-        autoEndSession, // NOVO: encerramento automático com verificação de streak
+        autoEndSession,
+        unfreezeTimer, // NOVO: descongelar timer na primeira ação
         muzzeSession,
         setMuzzeSession,
         resetMuzzeSession,
