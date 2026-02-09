@@ -701,7 +701,7 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
         autoSaveIntervalRef.current = null;
       }
     };
-  }, [timer.isActive, timer.isPaused]);
+  }, [timer.isActive, timer.isPaused, timer.isFrozen]);
 
   // Iniciar timer
   const startTimer = useCallback(async (initialStage: SessionStage) => {
