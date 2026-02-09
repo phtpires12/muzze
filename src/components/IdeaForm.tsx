@@ -234,20 +234,28 @@ export const IdeaForm = ({ scriptId }: IdeaFormProps) => {
 
       <div className="space-y-2">
         <Label htmlFor="central-idea">
-          Ideia Central <span className="text-destructive">*</span>
+          {centralIdeaLabel} <span className="text-destructive">*</span>
         </Label>
         <Textarea
           id="central-idea"
-          placeholder="Descreva brevemente sua ideia central..."
+          placeholder={centralIdeaPlaceholder}
           value={centralIdea}
           onChange={(e) => setCentralIdea(e.target.value)}
           rows={6}
           className="resize-none"
         />
         <p className="text-sm text-muted-foreground">
-          Explique minimamente sua ideia para poder avançar para o roteiro.
+          Explique minimamente sua ideia para poder avançar.
         </p>
       </div>
+
+      <MusicInput
+        url={musicUrl}
+        name={musicName}
+        onUrlChange={setMusicUrl}
+        onNameChange={setMusicName}
+        required={musicRequired}
+      />
 
       <div className="space-y-2">
         <Label htmlFor="reference-url">
