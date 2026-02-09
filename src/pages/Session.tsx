@@ -7,6 +7,7 @@ import { useDailyGoalProgress } from "@/hooks/useDailyGoalProgress";
 import { useTimerPermission } from "@/hooks/useTimerPermission";
 import { useCelebration } from "@/contexts/CelebrationContext";
 import { useProfileWithLevel } from "@/hooks/useProfileWithLevel";
+import { useFirstInputTrigger } from "@/hooks/useFirstInputTrigger";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
