@@ -1,14 +1,6 @@
 // Firebase Cloud Messaging Service Worker
-// This file handles background notifications when the app is not in focus
-
-// Force immediate activation for faster updates
-self.addEventListener('install', (event) => {
-  self.skipWaiting();
-});
-
-self.addEventListener('activate', (event) => {
-  event.waitUntil(clients.claim());
-});
+// This file is imported by the Workbox SW via importScripts.
+// No install/activate listeners here — Workbox handles lifecycle.
 
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js');
@@ -52,14 +44,12 @@ self.addEventListener('notificationclick', (event) => {
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then((clientList) => {
-        // If a window is already open, focus it
         for (let i = 0; i < clientList.length; i++) {
           const client = clientList[i];
           if (client.url === '/' && 'focus' in client) {
             return client.focus();
           }
         }
-        // Otherwise, open a new window
         if (clients.openWindow) {
           return clients.openWindow('/');
         }
