@@ -541,7 +541,8 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
       return;
     }
     
-    if (timer.isActive && !timer.isPaused) {
+    // MODIFICADO: Não incrementar se timer está congelado (isFrozen)
+    if (timer.isActive && !timer.isPaused && !timer.isFrozen) {
       intervalCreateCountRef.current += 1;
       const currentCount = intervalCreateCountRef.current;
       
