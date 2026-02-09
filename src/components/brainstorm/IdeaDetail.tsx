@@ -18,8 +18,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ThumbnailUploader } from "@/components/ThumbnailUploader";
 import { WorkflowSelector } from "@/components/workflows/WorkflowSelector";
-import { WorkflowTemplateId, getStageLabel } from "@/lib/workflow-templates";
+import { WorkflowTemplateId, getStageLabel, getWorkflowTemplate } from "@/lib/workflow-templates";
 import { useWorkflowTemplate, CREATIVE_TO_SESSION } from "@/hooks/useWorkflowTemplate";
+import { MusicInput, buildMusicReference } from "@/components/brainstorm/MusicInput";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,6 +43,7 @@ interface Idea {
   publish_date: string | null;
   thumbnail_url: string | null;
   workflow_template: string | null;
+  music_reference: any;
 }
 
 interface IdeaDetailProps {
