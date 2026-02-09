@@ -4,6 +4,18 @@ import { useEffect, useRef } from 'react';
 export function usePWAUpdate() {
   const autoUpdateTriggeredRef = useRef(false);
 
+  // Cleanup rogue competing service workers (e.g. firebase-messaging-sw.js registered separately)
+  useEffect(() => {
+    navigator.serviceWorker.getRegistrations().then(registrations => {
+      for (const reg of registrations) {
+        if (reg.active?.scriptURL?.includes('firebase-messaging-sw.js')) {
+          console.log('[PWA] Removing competing firebase SW');
+          reg.unregister();
+        }
+      }
+    });
+  }, []);
+
   const {
     needRefresh: [needRefresh, setNeedRefresh],
     offlineReady: [offlineReady, setOfflineReady],
