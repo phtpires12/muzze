@@ -67,6 +67,8 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
   const [referenceUrl, setReferenceUrl] = useState("");
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
   const [workflowTemplate, setWorkflowTemplate] = useState<WorkflowTemplateId | null>(null);
+  const [musicUrl, setMusicUrl] = useState("");
+  const [musicName, setMusicName] = useState("");
 
   // Auto-save state
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
