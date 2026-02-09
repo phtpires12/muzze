@@ -147,6 +147,7 @@ export type Database = {
           preferred_session_minutes: number | null
           reminder_time: string | null
           streak_freezes: number | null
+          timer_start_mode: string | null
           timezone: string
           tutorial_progress: Json | null
           user_id: string
@@ -172,6 +173,7 @@ export type Database = {
           preferred_session_minutes?: number | null
           reminder_time?: string | null
           streak_freezes?: number | null
+          timer_start_mode?: string | null
           timezone?: string
           tutorial_progress?: Json | null
           user_id: string
@@ -197,6 +199,7 @@ export type Database = {
           preferred_session_minutes?: number | null
           reminder_time?: string | null
           streak_freezes?: number | null
+          timer_start_mode?: string | null
           timezone?: string
           tutorial_progress?: Json | null
           user_id?: string
