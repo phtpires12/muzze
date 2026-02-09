@@ -1,35 +1,88 @@
 
-# Correção: Botão "Excluir Ideia" e Texto do Workflow
 
-## Problema 1: Botão "Excluir Ideia" não funciona
+# Fix: Service Worker Conflict Causing Stale Versions
 
-O `handleDelete` no `IdeaDetail.tsx` navega para `/calendario` após excluir, mas **não encerra a sessão ativa**. O `useNavigationBlocker` intercepta a navegação porque há um timer rodando, impedindo o redirecionamento.
+## Root Cause
 
-**Solução**: Antes de excluir, encerrar a sessão silenciosamente (sem celebrações/resumo) e só depois deletar e navegar.
+Two service workers fight for control of the same scope (`/`):
 
-### Arquivo: `src/components/brainstorm/IdeaDetail.tsx`
+1. Workbox SW (`/sw.js`) - handles all PWA caching and updates
+2. Firebase Messaging SW (`/firebase-messaging-sw.js`) - registered separately by `getFCMToken()`
 
-- Importar `useSessionContext` do `SessionContext`
-- No `handleDelete`:
-  1. Chamar `resetTimer()` para encerrar o timer sem disparar celebrações
-  2. Deletar o script do banco
-  3. Navegar para `/calendario`
+When `getFCMToken()` calls `navigator.serviceWorker.register('/firebase-messaging-sw.js')`, it **replaces** the Workbox SW. After that, all update logic stops — users get stuck on old cached versions permanently.
 
-## Problema 2: Texto quebrado no WorkflowSelector
+The Workbox config also imports firebase-messaging-sw.js via `importScripts`, creating a double conflict where the same firebase code runs in both SWs, with conflicting `install`/`activate` lifecycle handlers.
 
-O `SelectItem` do Radix usa `div` com `flex-col` para mostrar nome + descrição. Isso causa layout quebrado porque o Radix Select renderiza o conteúdo selecionado inline no trigger, e blocos `flex-col` com texto secundário ficam deformados.
+## Solution
 
-**Solução**: Simplificar o conteúdo visivel no trigger — mostrar apenas o emoji + nome (sem descrição) no `SelectTrigger`, mantendo a descrição completa apenas nos itens do dropdown.
+Consolidate into a **single service worker** (the Workbox-generated one). Firebase messaging will run inside it via `importScripts`, but without conflicting lifecycle handlers.
 
-### Arquivo: `src/components/workflows/WorkflowSelector.tsx`
+## Changes
 
-- Trocar o conteúdo do `SelectItem` para usar `<span>` inline em vez de `div flex-col`
-- Formato: `{icon} {nome}` no valor selecionado
-- A descrição aparece apenas dentro do dropdown (via estilo condicional ou usando `SelectItem` com texto simples + tooltip)
+### 1. `public/firebase-messaging-sw.js`
 
-## Resumo de Alteracoes
+Remove the `install` and `activate` event listeners (lines 4-11). These conflict with Workbox's own lifecycle management. Keep only the Firebase initialization and message handling code.
 
-| Arquivo | Mudanca |
-|---------|---------|
-| `src/components/brainstorm/IdeaDetail.tsx` | Chamar `resetTimer()` antes de deletar para desbloquear navegacao |
-| `src/components/workflows/WorkflowSelector.tsx` | Simplificar texto do `SelectItem` para nao quebrar no trigger |
+Before:
+```js
+self.addEventListener('install', (event) => { self.skipWaiting(); });
+self.addEventListener('activate', (event) => { event.waitUntil(clients.claim()); });
+importScripts(...)
+```
+
+After:
+```js
+// No install/activate listeners — Workbox handles lifecycle
+importScripts(...)
+```
+
+### 2. `src/lib/firebase.ts`
+
+In `getFCMToken()`, stop registering a separate SW. Instead, use the **existing** Workbox SW registration (which already has firebase messaging loaded via `importScripts`).
+
+Before:
+```typescript
+const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+```
+
+After:
+```typescript
+const registration = await navigator.serviceWorker.ready;
+```
+
+This waits for the already-active Workbox SW (which includes the firebase messaging code) instead of registering a competing SW.
+
+### 3. `src/hooks/usePWAUpdate.ts`
+
+Add a safety mechanism: on first load, check if any rogue SWs exist at non-Workbox URLs and unregister them. This cleans up the editor's (and any other user's) browser that already has the conflicting firebase SW installed.
+
+```typescript
+// On mount: unregister any competing service workers
+useEffect(() => {
+  navigator.serviceWorker.getRegistrations().then(registrations => {
+    for (const reg of registrations) {
+      if (reg.active?.scriptURL?.includes('firebase-messaging-sw.js')) {
+        console.log('[PWA] Removing competing firebase SW');
+        reg.unregister();
+      }
+    }
+  });
+}, []);
+```
+
+## Why This Fixes It
+
+- Only ONE SW controls the app (Workbox-generated `sw.js`)
+- Firebase messaging still works because the Workbox SW imports the firebase code
+- The 30-second update checks and auto-update logic remain intact
+- Existing users with the rogue firebase SW get it cleaned up automatically
+- No lifecycle conflicts between install/activate handlers
+
+## Files Modified
+
+| File | Change |
+|------|--------|
+| `public/firebase-messaging-sw.js` | Remove conflicting install/activate listeners |
+| `src/lib/firebase.ts` | Use existing SW via `navigator.serviceWorker.ready` instead of registering a new one |
+| `src/hooks/usePWAUpdate.ts` | Add cleanup of rogue competing SWs on mount |
+
