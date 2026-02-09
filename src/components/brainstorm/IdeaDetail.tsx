@@ -56,6 +56,7 @@ const CONTENT_TYPES = ["Reels", "YouTube", "TikTok", "X (Twitter)"];
 export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { resetTimer } = useSessionContext();
   const [idea, setIdea] = useState<Idea | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
