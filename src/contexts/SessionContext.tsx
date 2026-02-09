@@ -8,6 +8,8 @@ export type SessionStage = "idea" | "ideation" | "script" | "review" | "record" 
 export interface TimerState {
   isActive: boolean;
   isPaused: boolean;
+  isFrozen: boolean; // NOVO: timer ativo mas aguardando primeira ação do usuário
+  frozenSince: Date | null; // NOVO: quando o timer foi congelado
   stage: SessionStage;
   elapsedSeconds: number; // Timer GLOBAL - não reseta ao mudar de etapa
   stageElapsedSeconds: number; // Timer da etapa atual - reseta ao mudar
@@ -33,7 +35,7 @@ export interface MuzzeSessionType {
 interface SessionContextValue {
   // Novo timer global
   timer: TimerState;
-  startTimer: (stage: SessionStage) => Promise<void>;
+  startTimer: (stage: SessionStage, frozen?: boolean) => Promise<void>; // MODIFICADO: aceita frozen opcional
   pauseTimer: () => void;
   resumeTimer: () => void;
   resetTimer: () => void;
@@ -41,7 +43,8 @@ interface SessionContextValue {
   setContentId: (id: string | null) => void;
   saveStageTime: () => Promise<void>;
   validateSessionFreshness: () => boolean;
-  autoEndSession: () => Promise<void>; // Novo: encerramento automático com verificação de streak
+  autoEndSession: () => Promise<void>; // Encerramento automático com verificação de streak
+  unfreezeTimer: () => void; // NOVO: descongelar timer na primeira ação
   
   // Backward compatibility
   muzzeSession: MuzzeSessionType;
@@ -68,6 +71,8 @@ const DEFAULT_STREAK_GOAL_MINUTES = 25;
 const defaultTimerState: TimerState = {
   isActive: false,
   isPaused: false,
+  isFrozen: false, // NOVO
+  frozenSince: null, // NOVO
   stage: "idea",
   elapsedSeconds: 0,
   stageElapsedSeconds: 0,
@@ -536,7 +541,8 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
       return;
     }
     
-    if (timer.isActive && !timer.isPaused) {
+    // MODIFICADO: Não incrementar se timer está congelado (isFrozen)
+    if (timer.isActive && !timer.isPaused && !timer.isFrozen) {
       intervalCreateCountRef.current += 1;
       const currentCount = intervalCreateCountRef.current;
       
@@ -651,7 +657,7 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
         intervalRef.current = null;
       }
     };
-  }, [timer.isActive, timer.isPaused]);
+  }, [timer.isActive, timer.isPaused, timer.isFrozen]);
 
   // Auto-save incremental a cada 30 segundos
   // FIX: Version guard pattern - nunca cria interval duplicado
@@ -666,7 +672,8 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
       return;
     }
     
-    if (timer.isActive && !timer.isPaused) {
+    // MODIFICADO: Não auto-salvar se timer está congelado
+    if (timer.isActive && !timer.isPaused && !timer.isFrozen) {
       autoSaveCreateCountRef.current += 1;
       const currentCount = autoSaveCreateCountRef.current;
       
@@ -694,10 +701,10 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
         autoSaveIntervalRef.current = null;
       }
     };
-  }, [timer.isActive, timer.isPaused]);
+  }, [timer.isActive, timer.isPaused, timer.isFrozen]);
 
   // Iniciar timer
-  const startTimer = useCallback(async (initialStage: SessionStage) => {
+  const startTimer = useCallback(async (initialStage: SessionStage, frozen: boolean = false) => {
     try {
       // NORMALIZAR: "ideation" é sinônimo de "idea"
       const normalizedStage: SessionStage = initialStage === "ideation" ? "idea" : initialStage;
@@ -710,14 +717,14 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
       if (!user) throw new Error("Usuário não autenticado");
 
       const now = new Date();
-      stageStartRef.current = now;
+      stageStartRef.current = frozen ? null : now; // Se congelado, não iniciar contagem
       stageElapsedRef.current = 0;
       lastRealInteractionRef.current = Date.now();
 
-      // Buscar meta diária do perfil, timezone e nível para meta dinâmica
+      // Buscar meta diária do perfil, timezone, nível e timer_start_mode
       const { data: profile } = await supabase
         .from('profiles')
-        .select('daily_goal_minutes, timezone, xp_points, highest_level')
+        .select('daily_goal_minutes, timezone, xp_points, highest_level, timer_start_mode')
         .eq('user_id', user.id)
         .single();
 
@@ -725,6 +732,10 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
       const effectiveLevel = getEffectiveLevel(profile?.xp_points || 0, profile?.highest_level || 1);
       const streakGoalMinutes = getDailyGoalMinutesForLevel(effectiveLevel);
       console.log(`[SessionContext] Nível efetivo: ${effectiveLevel}, Meta de ofensiva: ${streakGoalMinutes}min`);
+
+      // Determinar se deve iniciar congelado baseado na preferência do usuário
+      const timerStartMode = (profile as any)?.timer_start_mode || 'auto';
+      const shouldFreeze = frozen || timerStartMode === 'on_input';
 
       const timezone = profile?.timezone || 'America/Sao_Paulo';
 
@@ -746,15 +757,17 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
         (sum, s) => sum + (s.duration_seconds || 0), 0
       );
 
-      console.log(`[SessionContext] dailyBaselineSeconds capturado: ${dailyBaselineSeconds}s (${Math.floor(dailyBaselineSeconds / 60)}min)`);
+      console.log(`[SessionContext] dailyBaselineSeconds capturado: ${dailyBaselineSeconds}s (${Math.floor(dailyBaselineSeconds / 60)}min), frozen: ${shouldFreeze}`);
 
       setTimer({
         isActive: true,
         isPaused: false,
+        isFrozen: shouldFreeze, // NOVO: iniciar congelado se preferência do usuário
+        frozenSince: shouldFreeze ? now : null, // NOVO: marcar quando congelou
         stage: normalizedStage,
         elapsedSeconds: 0,
         stageElapsedSeconds: 0,
-        startedAt: now,
+        startedAt: shouldFreeze ? null : now, // Só marcar startedAt se não congelado
         lastActivityAt: now,
         sessionId: crypto.randomUUID(),
         targetSeconds: streakGoalMinutes * 60, // Meta dinâmica baseada no nível
@@ -769,10 +782,10 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
       await supabase.from('analytics_events').insert({
         user_id: user.id,
         event: 'session_started',
-        payload: { stage: normalizedStage, dailyBaselineSeconds }
+        payload: { stage: normalizedStage, dailyBaselineSeconds, frozen: shouldFreeze }
       });
 
-      console.log(`[SessionContext] ✅ Timer iniciado na etapa ${normalizedStage}`);
+      console.log(`[SessionContext] ✅ Timer iniciado na etapa ${normalizedStage}${shouldFreeze ? ' (congelado)' : ''}`);
     } catch (error: any) {
       console.error('[SessionContext] Erro ao iniciar timer:', error);
       toast({
@@ -782,6 +795,27 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
       });
     }
   }, [toast]);
+
+  // NOVO: Descongelar timer (chamado pelo useFirstInputTrigger)
+  const unfreezeTimer = useCallback(() => {
+    const now = new Date();
+    stageStartRef.current = now;
+    lastRealInteractionRef.current = Date.now();
+    
+    setTimer(prev => {
+      if (!prev.isFrozen) return prev; // Já descongelado
+      
+      console.log('[SessionContext] ⏱️ Timer descongelado pela primeira ação do usuário');
+      
+      return {
+        ...prev,
+        isFrozen: false,
+        frozenSince: null,
+        startedAt: now, // Agora sim marca o início real
+        lastActivityAt: now,
+      };
+    });
+  }, []);
 
   // Pausar timer
   const pauseTimer = useCallback(() => {
@@ -912,7 +946,8 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
         setContentId,
         saveStageTime,
         validateSessionFreshness,
-        autoEndSession, // NOVO: encerramento automático com verificação de streak
+        autoEndSession,
+        unfreezeTimer, // NOVO: descongelar timer na primeira ação
         muzzeSession,
         setMuzzeSession,
         resetMuzzeSession,

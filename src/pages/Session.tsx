@@ -7,6 +7,7 @@ import { useDailyGoalProgress } from "@/hooks/useDailyGoalProgress";
 import { useTimerPermission } from "@/hooks/useTimerPermission";
 import { useCelebration } from "@/contexts/CelebrationContext";
 import { useProfileWithLevel } from "@/hooks/useProfileWithLevel";
+import { useFirstInputTrigger } from "@/hooks/useFirstInputTrigger";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -87,6 +88,11 @@ const Session = () => {
     triggerCelebration,
     isShowingAnyCelebration,
   } = useCelebration();
+  
+  // First input trigger hook - detecta primeira ação e descongela o timer
+  const { isWaitingForInput } = useFirstInputTrigger({
+    enabled: session.isActive && !isShowingAnyCelebration,
+  });
 
   // State para modal de confirmação de encerramento
   const [showEndConfirmation, setShowEndConfirmation] = useState(false);
@@ -491,6 +497,7 @@ const Session = () => {
           isStreakMode={session.isStreakMode}
           dailyGoalMinutes={session.dailyGoalMinutes}
           isPaused={session.isPaused}
+          isFrozen={session.isFrozen}
           onPause={pauseSession}
           onResume={resumeSession}
           onStop={handleEnd}
@@ -545,6 +552,7 @@ const Session = () => {
           isStreakMode={session.isStreakMode}
           dailyGoalMinutes={session.dailyGoalMinutes}
           isPaused={session.isPaused}
+          isFrozen={session.isFrozen}
           onPause={pauseSession}
           onResume={resumeSession}
           onStop={handleEnd}

@@ -16,6 +16,7 @@ import { useSession } from "@/hooks/useSession";
 import { useDailyGoalProgress } from "@/hooks/useDailyGoalProgress";
 import { useTimerPermission } from "@/hooks/useTimerPermission";
 import { useProfileWithLevel } from "@/hooks/useProfileWithLevel";
+import { useFirstInputTrigger } from "@/hooks/useFirstInputTrigger";
 import { cn } from "@/lib/utils";
 import { useStreakCelebration } from "@/hooks/useStreakCelebration";
 import { useCelebration } from "@/contexts/CelebrationContext";
@@ -82,6 +83,11 @@ const ShotListReview = () => {
 
   // Global celebration context (for hiding timer during celebrations)
   const { isShowingAnyCelebration } = useCelebration();
+  
+  // First input trigger hook - detecta primeira ação e descongela o timer
+  useFirstInputTrigger({
+    enabled: session.isActive && !isShowingAnyCelebration,
+  });
 
   // State para modal de confirmação de encerramento
   const [showEndConfirmation, setShowEndConfirmation] = useState(false);
@@ -892,6 +898,7 @@ const ShotListReview = () => {
             ? session.dailyGoalMinutes * 60 
             : session.targetSeconds}
           isPaused={session.isPaused}
+          isFrozen={session.isFrozen}
           isStreakMode={session.isStreakMode}
           dailyGoalMinutes={session.dailyGoalMinutes}
           onPause={pauseSession}
