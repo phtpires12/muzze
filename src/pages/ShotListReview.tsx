@@ -16,6 +16,7 @@ import { useSession } from "@/hooks/useSession";
 import { useDailyGoalProgress } from "@/hooks/useDailyGoalProgress";
 import { useTimerPermission } from "@/hooks/useTimerPermission";
 import { useProfileWithLevel } from "@/hooks/useProfileWithLevel";
+import { useFirstInputTrigger } from "@/hooks/useFirstInputTrigger";
 import { cn } from "@/lib/utils";
 import { useStreakCelebration } from "@/hooks/useStreakCelebration";
 import { useCelebration } from "@/contexts/CelebrationContext";
