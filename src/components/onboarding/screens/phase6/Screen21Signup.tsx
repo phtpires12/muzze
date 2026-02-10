@@ -23,8 +23,16 @@ const translateAuthError = (error: string): string => {
     'Password should be at least 6 characters': 'A senha deve ter no mínimo 6 caracteres.',
     'Signup requires a valid password': 'A senha deve ter no mínimo 6 caracteres.',
     'Unable to validate email address: invalid format': 'Formato de email inválido.',
+    'Database error saving new user': 'Erro temporário ao criar sua conta. Por favor, tente novamente em alguns segundos.',
+    'Database error creating new user': 'Erro temporário ao criar sua conta. Por favor, tente novamente em alguns segundos.',
   };
-  return errorMap[error] || error || 'Ocorreu um erro. Tente novamente.';
+  // Check for partial matches (e.g. "Database error" prefix)
+  const exactMatch = errorMap[error];
+  if (exactMatch) return exactMatch;
+  if (error?.toLowerCase().includes('database error')) {
+    return 'Erro temporário ao criar sua conta. Por favor, tente novamente em alguns segundos.';
+  }
+  return error || 'Ocorreu um erro. Tente novamente.';
 };
 
 interface Screen21SignupProps {
