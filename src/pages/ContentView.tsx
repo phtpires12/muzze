@@ -371,6 +371,14 @@ export default function ContentView() {
                 <span className="text-sm text-muted-foreground font-medium">Modo Visualização</span>
               </div>
             </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-muted-foreground hover:text-destructive"
+              onClick={() => setShowDeleteConfirm(true)}
+            >
+              <Trash2 className="w-5 h-5" />
+            </Button>
           </div>
         </div>
       </div>
