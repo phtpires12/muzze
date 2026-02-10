@@ -33,28 +33,28 @@
   <meta name="twitter:title" content="Muzze">
   <meta property="og:description" content="Organize sua Criatividade e não pare de criar, nunca mais.">
   <meta name="twitter:description" content="Organize sua Criatividade e não pare de criar, nunca mais.">
-  <script>
-// Emergency SW cleanup v1 - runs before ANY JS modules
-(function(){
-  if(!('serviceWorker' in navigator))return;
-  navigator.serviceWorker.getRegistrations().then(function(regs){
-    var dominated=false;
-    for(var i=0;i<regs.length;i++){
-      if(regs[i].active&&regs[i].active.scriptURL&&
-         regs[i].active.scriptURL.indexOf('firebase-messaging-sw.js')!==-1){
-        dominated=true;regs[i].unregister();
-      }
-    }
-    if(dominated&&'caches' in window){
-      caches.keys().then(function(n){
-        return Promise.all(n.map(function(k){return caches.delete(k);}));
-      }).then(function(){location.reload();});
-    }else if(dominated){location.reload();}
-  });
-})();
-  </script>
 </head>
   <body>
+    <script>
+    // Emergency SW cleanup v1 - runs before ANY JS modules
+    (function(){
+      if(!('serviceWorker' in navigator))return;
+      navigator.serviceWorker.getRegistrations().then(function(regs){
+        var dominated=false;
+        for(var i=0;i<regs.length;i++){
+          if(regs[i].active&&regs[i].active.scriptURL&&
+             regs[i].active.scriptURL.indexOf('firebase-messaging-sw.js')!==-1){
+            dominated=true;regs[i].unregister();
+          }
+        }
+        if(dominated&&'caches' in window){
+          caches.keys().then(function(n){
+            return Promise.all(n.map(function(k){return caches.delete(k);}));
+          }).then(function(){location.reload();});
+        }else if(dominated){location.reload();}
+      });
+    })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
