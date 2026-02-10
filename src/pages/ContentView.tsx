@@ -645,6 +645,49 @@ export default function ContentView() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir conteúdo?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Você tem certeza que deseja excluir "{script.title}"? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isDeleting}
+              onClick={async (e) => {
+                e.preventDefault();
+                setIsDeleting(true);
+                try {
+                  const { error } = await supabase
+                    .from('scripts')
+                    .delete()
+                    .eq('id', script.id);
+                  if (error) throw error;
+                  toast({ title: "Conteúdo excluído com sucesso" });
+                  navigate('/calendario');
+                } catch (error) {
+                  console.error('Error deleting script:', error);
+                  toast({
+                    title: "Erro ao excluir",
+                    description: "Não foi possível excluir o conteúdo.",
+                    variant: "destructive",
+                  });
+                  setIsDeleting(false);
+                  setShowDeleteConfirm(false);
+                }
+              }}
+            >
+              {isDeleting ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
