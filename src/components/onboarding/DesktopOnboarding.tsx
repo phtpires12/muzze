@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { ArrowRight, ArrowLeft, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import muzzeLogoRounded from "@/assets/muzze-logo-rounded.png";
+import { SocialLoginButtons } from "@/components/auth/SocialLoginButtons";
 
 // Platform icons
 import instagramLogo from "@/assets/instagram-logo.png";
