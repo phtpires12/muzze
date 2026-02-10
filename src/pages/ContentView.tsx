@@ -137,6 +137,8 @@ export default function ContentView() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [resolvedUrls, setResolvedUrls] = useState<Map<string, string>>(new Map());
   const [showPaywall, setShowPaywall] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   const planCapabilities = usePlanCapabilitiesOptional();
 
