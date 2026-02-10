@@ -465,20 +465,6 @@ export function CalendarDay({
                           {isPosted ? "✅" : "📄"}
                         </div>
                         <div className="flex-1 min-w-0 overflow-hidden">
-                        </div>
-                        <button
-                          className={`opacity-0 group-hover/card:opacity-100 transition-opacity rounded hover:bg-destructive/20 flex-shrink-0 ${
-                            compactCard ? "p-0.5" : "p-1"
-                          }`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setScriptToDelete(script);
-                          }}
-                        >
-                          <Trash2 className={`text-muted-foreground hover:text-destructive ${
-                            compactCard ? "w-2.5 h-2.5" : "w-3 h-3"
-                          }`} />
-                        </button>
                           <div className={`font-medium truncate ${
                             script.title?.trim() ? "text-foreground" : "text-muted-foreground"
                           } ${compactCard ? "mb-0.5" : "mb-1"}`}>
@@ -500,6 +486,19 @@ export function CalendarDay({
                             )}
                           </div>
                         </div>
+                        <button
+                          className={`opacity-0 group-hover/card:opacity-100 transition-opacity rounded hover:bg-destructive/20 flex-shrink-0 ${
+                            compactCard ? "p-0.5" : "p-1"
+                          }`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setScriptToDelete(script);
+                          }}
+                        >
+                          <Trash2 className={`text-muted-foreground hover:text-destructive ${
+                            compactCard ? "w-2.5 h-2.5" : "w-3 h-3"
+                          }`} />
+                        </button>
                       </div>
                     </div>
                   </div>
