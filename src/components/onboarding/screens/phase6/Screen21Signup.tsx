@@ -64,14 +64,23 @@ export const Screen21Signup = ({ onSuccess }: Screen21SignupProps) => {
 
     setLoading(true);
 
-    try {
-      const { error } = await supabase.auth.signUp({
+    const signupWithRetry = async (retries = 1): Promise<{ data: any; error: any }> => {
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/`,
         },
       });
+      if (error && error.message?.toLowerCase().includes('database error') && retries > 0) {
+        await new Promise(r => setTimeout(r, 2000));
+        return signupWithRetry(retries - 1);
+      }
+      return { data, error };
+    };
+
+    try {
+      const { error } = await signupWithRetry();
 
       if (error) throw error;
 
@@ -83,6 +92,11 @@ export const Screen21Signup = ({ onSuccess }: Screen21SignupProps) => {
       onSuccess();
     } catch (error: any) {
       console.error("Signup error:", error);
+      logError("signup_failed", {
+        message: error.message,
+        stack: error.stack,
+        context: { email, source: 'Screen21Signup' },
+      });
       toast({
         title: "Erro ao criar conta",
         description: translateAuthError(error.message),
