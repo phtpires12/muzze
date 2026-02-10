@@ -265,6 +265,7 @@ export function DesktopOnboarding({ onComplete }: DesktopOnboardingProps) {
               </p>
             </div>
             <div className="space-y-4 max-w-sm mx-auto">
+              <SocialLoginButtons showSeparator separatorText="ou continue com email" />
               <Input
                 type="email"
                 value={email}

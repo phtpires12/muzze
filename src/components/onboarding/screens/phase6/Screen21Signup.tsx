@@ -97,6 +97,8 @@ export const Screen21Signup = ({ onSuccess }: Screen21SignupProps) => {
       </div>
 
       <Card className="p-8 max-w-md mx-auto">
+        <SocialLoginButtons showSeparator separatorText="ou continue com email" />
+
         <form onSubmit={handleSignup} className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
