@@ -1,130 +1,67 @@
 
-# Diagnóstico e Melhorias no Fluxo de Criação de Conta
+# Correcao do icone de lixeira no calendario + botao de excluir no Modo Visualizacao
 
-## O que aconteceu
+## Problema 1: Icone de lixeira inconsistente no calendario
 
-O email `guilhermebagatini@hotmail.com` **nao existe** no banco de dados — nem na tabela de autenticacao, nem na de perfis. Isso significa que a conta nunca foi criada com sucesso.
+O botao de exclusao (lixeira) nos cards do calendario usa `opacity-0 group-hover/card:opacity-100`, o que deveria funcionar no hover. O problema provavel e que o container do carousel tem `overflow: hidden`, e o botao de lixeira esta posicionado com `position: absolute` no canto do card. Em celulas estreitas do calendario mensal, o icone pode estar sendo cortado pelo overflow do container pai.
 
-### Causa provavel
+### Solucao
 
-O trigger `handle_new_user` (que cria perfil, streak, settings e workspace automaticamente) esta tecnicamente correto. Todas as tabelas tem valores padrao adequados. O cenario mais provavel e:
+- Mover o botao de lixeira para DENTRO do fluxo do card (nao absoluto), ou ajustar o posicionamento para garantir que fique visivel dentro da area do card sem ser cortado pelo overflow.
+- Alternativa mais simples: trocar de `absolute` para inline no header do card (ao lado do titulo), garantindo que nunca seja cortado.
 
-1. **Instabilidade temporaria na conexao** — Um erro 503 foi detectado nos logs de rede recentes, indicando que o banco estava temporariamente indisponivel no momento do signup.
-2. **Rollback automatico** — Quando o trigger falha por qualquer motivo (timeout, conexao perdida), o sistema de autenticacao faz rollback completo e o usuario nao e criado em nenhuma tabela.
+**Arquivo**: `src/components/calendar/CalendarDay.tsx`
 
-### O que NAO foi a causa
-- Nao ha limite de usuarios no banco
-- Nao ha campo obrigatorio sem valor padrao
-- Nao ha constraint violada
-- O trigger esta sintaticamente correto
+Mudancas especificas:
+- Reposicionar o botao de lixeira de `absolute top-1 right-1` para inline no layout do card, ao lado do emoji/titulo
+- Manter o comportamento de `opacity-0 group-hover/card:opacity-100` para aparecer apenas no hover
 
-## Plano de melhorias
+## Problema 2: Botao de excluir na pagina Modo Visualizacao (ContentView)
 
-### 1. Melhorar tratamento de erros no signup (Screen21Signup e DesktopOnboarding)
+Adicionar um botao de lixeira no canto superior direito do header da pagina `/content/view/:scriptId`, conforme indicado pelo quadrado verde na screenshot.
 
-Traduzir mensagens de erro genéricas como "Database error saving new user" para mensagens claras em portugues, com orientacao para o usuario tentar novamente.
+### Solucao
 
-**Arquivos**: 
-- `src/components/onboarding/screens/phase6/Screen21Signup.tsx`
-- `src/components/onboarding/DesktopOnboarding.tsx`
+- Adicionar um botao com icone `Trash2` no header, ao lado direito (onde esta o espaco vazio atualmente)
+- Ao clicar, abrir um `AlertDialog` de confirmacao (mesmo padrao usado no CalendarDay)
+- Ao confirmar, deletar o script do banco de dados e redirecionar para `/calendario`
 
-Adicionar na funcao `translateAuthError`:
-```
-'Database error saving new user': 'Erro temporario ao criar sua conta. Por favor, tente novamente em alguns segundos.'
-```
+**Arquivo**: `src/pages/ContentView.tsx`
 
-### 2. Adicionar retry automatico no signup
-
-Quando o erro for do tipo "Database error", tentar automaticamente mais uma vez apos 2 segundos antes de mostrar o erro ao usuario.
-
-**Arquivos**:
-- `src/components/onboarding/screens/phase6/Screen21Signup.tsx`
-- `src/components/onboarding/DesktopOnboarding.tsx`
-
-### 3. Tornar o trigger handle_new_user mais resiliente
-
-Adicionar tratamento de excecao (`EXCEPTION`) dentro do trigger para que, se uma das insercoes secundarias falhar (ex: workspace), as insercoes essenciais (perfil) ainda sejam salvas.
-
-**Mudanca no banco**: Migration SQL para atualizar a funcao `handle_new_user` com bloco `BEGIN...EXCEPTION`.
-
-### 4. Registrar erros de signup no error-logger
-
-Usar o `logJavaScriptError` existente para registrar erros de signup na tabela `analytics_events`, facilitando debug futuro.
-
-**Arquivo**: `src/components/onboarding/screens/phase6/Screen21Signup.tsx`, `src/components/onboarding/DesktopOnboarding.tsx`
+Mudancas especificas:
+1. Importar `Trash2` do lucide-react
+2. Adicionar estado `showDeleteConfirm` 
+3. Adicionar botao de lixeira no header (linha 362-373), posicionado no flex-1 div ou apos ele
+4. Adicionar AlertDialog de confirmacao com logica de exclusao (delete do supabase + toast + navigate)
 
 ## Detalhes tecnicos
 
-### Trigger atualizado (handle_new_user)
+### CalendarDay.tsx - Reposicionamento da lixeira
 
-```sql
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS trigger
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path TO 'public'
-AS $function$
-BEGIN
-  -- Essencial: criar perfil
-  INSERT INTO public.profiles (user_id, timezone)
-  VALUES (NEW.id, COALESCE(NEW.raw_user_meta_data->>'timezone', 'America/Sao_Paulo'));
+A lixeira vai sair de posicao absoluta para ficar inline no header do card, dentro do flex layout existente:
 
-  -- Secundarios: se falharem, nao impedem a criacao do usuario
-  BEGIN
-    INSERT INTO public.streaks (user_id) VALUES (NEW.id);
-  EXCEPTION WHEN OTHERS THEN NULL;
-  END;
+```text
+Antes:  [emoji] [titulo............] 
+         [lixeira absoluta no canto]
 
-  BEGIN
-    INSERT INTO public.settings (user_id) VALUES (NEW.id);
-  EXCEPTION WHEN OTHERS THEN NULL;
-  END;
-
-  BEGIN
-    INSERT INTO public.workspaces (owner_id, name) VALUES (NEW.id, 'Meu Workspace');
-  EXCEPTION WHEN OTHERS THEN NULL;
-  END;
-
-  RETURN NEW;
-END;
-$function$
+Depois: [emoji] [titulo...] [lixeira]
 ```
 
-### Retry no signup
+### ContentView.tsx - Botao de excluir no header
 
-```typescript
-// Logica de retry: se o erro for "Database error", tentar mais uma vez
-const signupWithRetry = async (email, password, retries = 1) => {
-  const { data, error } = await supabase.auth.signUp({ email, password });
-  if (error && error.message.includes('Database error') && retries > 0) {
-    await new Promise(r => setTimeout(r, 2000));
-    return signupWithRetry(email, password, retries - 1);
-  }
-  return { data, error };
-};
+```text
+[ <- ] [ Modo Visualizacao ] ............. [ lixeira ]
 ```
 
-### Mapa de erros expandido
+A logica de exclusao:
+1. Mostrar AlertDialog de confirmacao
+2. Chamar `supabase.from('scripts').delete().eq('id', scriptId)`
+3. Toast de sucesso
+4. `navigate('/calendario')`
 
-```typescript
-const translateAuthError = (error: string): string => {
-  const errorMap: Record<string, string> = {
-    'User already registered': 'Este email ja esta cadastrado. Tente fazer login.',
-    'Database error saving new user': 'Erro temporario. Tente novamente em alguns segundos.',
-    'Database error creating new user': 'Erro temporario. Tente novamente em alguns segundos.',
-    // ... demais erros existentes
-  };
-};
-```
-
-## Resumo dos arquivos afetados
+## Arquivos afetados
 
 | Arquivo | Mudanca |
 |---------|---------|
-| `src/components/onboarding/screens/phase6/Screen21Signup.tsx` | Retry automatico + erros traduzidos + log de erro |
-| `src/components/onboarding/DesktopOnboarding.tsx` | Retry automatico + erros traduzidos + log de erro |
-| Migration SQL | Trigger `handle_new_user` com tratamento de excecao |
-
-## Sobre o usuario afetado
-
-O usuario `guilhermebagatini@hotmail.com` pode simplesmente tentar criar a conta novamente — como nenhum registro foi salvo, nao ha conflito. Com as melhorias acima, se o mesmo erro temporario acontecer, o sistema vai tentar automaticamente de novo.
+| `src/components/calendar/CalendarDay.tsx` | Reposicionar lixeira de absoluto para inline no card |
+| `src/pages/ContentView.tsx` | Adicionar botao de excluir no header + AlertDialog de confirmacao |
