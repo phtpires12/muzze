@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { Eye, EyeOff } from "lucide-react";
 import muzzeLogo from "@/assets/muzze-logo.png";
+import { SocialLoginButtons } from "@/components/auth/SocialLoginButtons";
 
 const loginSchema = z.object({
   email: z.string().trim().email('Email inválido'),
