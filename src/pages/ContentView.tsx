@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowLeft, FileText, ExternalLink, Calendar, Play, Eye, Image, Check, ImageOff } from "lucide-react";
+import { ArrowLeft, FileText, ExternalLink, Calendar, Play, Eye, Image, Check, ImageOff, Trash2 } from "lucide-react";
 import { ShotItem } from "@/lib/shotlist-generator";
 import { generateSignedUrlsBatch } from "@/lib/storage-helpers";
 import { Button } from "@/components/ui/button";
@@ -137,6 +137,8 @@ export default function ContentView() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [resolvedUrls, setResolvedUrls] = useState<Map<string, string>>(new Map());
   const [showPaywall, setShowPaywall] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   const planCapabilities = usePlanCapabilitiesOptional();
 
@@ -369,6 +371,14 @@ export default function ContentView() {
                 <span className="text-sm text-muted-foreground font-medium">Modo Visualização</span>
               </div>
             </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-muted-foreground hover:text-destructive"
+              onClick={() => setShowDeleteConfirm(true)}
+            >
+              <Trash2 className="w-5 h-5" />
+            </Button>
           </div>
         </div>
       </div>
@@ -635,6 +645,49 @@ export default function ContentView() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir conteúdo?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Você tem certeza que deseja excluir "{script.title}"? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isDeleting}
+              onClick={async (e) => {
+                e.preventDefault();
+                setIsDeleting(true);
+                try {
+                  const { error } = await supabase
+                    .from('scripts')
+                    .delete()
+                    .eq('id', script.id);
+                  if (error) throw error;
+                  toast({ title: "Conteúdo excluído com sucesso" });
+                  navigate('/calendario');
+                } catch (error) {
+                  console.error('Error deleting script:', error);
+                  toast({
+                    title: "Erro ao excluir",
+                    description: "Não foi possível excluir o conteúdo.",
+                    variant: "destructive",
+                  });
+                  setIsDeleting(false);
+                  setShowDeleteConfirm(false);
+                }
+              }}
+            >
+              {isDeleting ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
