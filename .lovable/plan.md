@@ -1,94 +1,130 @@
 
+# Diagnóstico e Melhorias no Fluxo de Criação de Conta
 
-# Login com Google e Apple no Onboarding
+## O que aconteceu
 
-## Resumo
+O email `guilhermebagatini@hotmail.com` **nao existe** no banco de dados — nem na tabela de autenticacao, nem na de perfis. Isso significa que a conta nunca foi criada com sucesso.
 
-Adicionar botoes de "Entrar com Google" e "Entrar com Apple" em 3 lugares:
-1. **Tela de Welcome (mobile)** - Screen0Welcome
-2. **Tela de Signup (mobile)** - Screen21Signup
-3. **Tela de Signup (desktop)** - DesktopOnboarding
-4. **Pagina de Login** - Auth.tsx
+### Causa provavel
 
-## O que precisa acontecer
+O trigger `handle_new_user` (que cria perfil, streak, settings e workspace automaticamente) esta tecnicamente correto. Todas as tabelas tem valores padrao adequados. O cenario mais provavel e:
 
-### Passo 1 - Configurar OAuth no Lovable Cloud
+1. **Instabilidade temporaria na conexao** — Um erro 503 foi detectado nos logs de rede recentes, indicando que o banco estava temporariamente indisponivel no momento do signup.
+2. **Rollback automatico** — Quando o trigger falha por qualquer motivo (timeout, conexao perdida), o sistema de autenticacao faz rollback completo e o usuario nao e criado em nenhuma tabela.
 
-Usar a ferramenta `configure-social-auth` para ativar Google e Apple. Isso gera automaticamente o modulo `src/integrations/lovable/` com a funcao `lovable.auth.signInWithOAuth()`.
+### O que NAO foi a causa
+- Nao ha limite de usuarios no banco
+- Nao ha campo obrigatorio sem valor padrao
+- Nao ha constraint violada
+- O trigger esta sintaticamente correto
 
-### Passo 2 - Criar componente reutilizavel `SocialLoginButtons`
+## Plano de melhorias
 
-Um componente simples com dois botoes (Google e Apple) que pode ser reaproveitado em todas as telas.
+### 1. Melhorar tratamento de erros no signup (Screen21Signup e DesktopOnboarding)
 
+Traduzir mensagens de erro genéricas como "Database error saving new user" para mensagens claras em portugues, com orientacao para o usuario tentar novamente.
+
+**Arquivos**: 
+- `src/components/onboarding/screens/phase6/Screen21Signup.tsx`
+- `src/components/onboarding/DesktopOnboarding.tsx`
+
+Adicionar na funcao `translateAuthError`:
 ```
-src/components/auth/SocialLoginButtons.tsx
+'Database error saving new user': 'Erro temporario ao criar sua conta. Por favor, tente novamente em alguns segundos.'
 ```
 
-- Botao "Continuar com Google" com icone do Google
-- Botao "Continuar com Apple" com icone da Apple
-- Separador visual "ou" entre os botoes sociais e o formulario de email/senha
-- Tratamento de erro com toast em portugues
-- Apos login social bem-sucedido: verificar se o perfil ja existe e redirecionar adequadamente
+### 2. Adicionar retry automatico no signup
 
-### Passo 3 - Integrar nas telas
+Quando o erro for do tipo "Database error", tentar automaticamente mais uma vez apos 2 segundos antes de mostrar o erro ao usuario.
 
-#### Screen0Welcome (mobile)
-- Adicionar os botoes sociais abaixo do botao "Comecar"
-- Manter o fluxo atual: quem usa login social pula direto para a home (se ja tem perfil completo) ou vai para a tela de username (se e novo)
+**Arquivos**:
+- `src/components/onboarding/screens/phase6/Screen21Signup.tsx`
+- `src/components/onboarding/DesktopOnboarding.tsx`
 
-#### Screen21Signup (mobile)
-- Adicionar os botoes sociais acima do formulario de email/senha
-- Separador "ou continue com email"
+### 3. Tornar o trigger handle_new_user mais resiliente
 
-#### DesktopOnboarding (step 'signup')
-- Adicionar os botoes sociais acima do formulario de email/senha
+Adicionar tratamento de excecao (`EXCEPTION`) dentro do trigger para que, se uma das insercoes secundarias falhar (ex: workspace), as insercoes essenciais (perfil) ainda sejam salvas.
 
-#### Auth.tsx (pagina de login)
-- Adicionar os botoes sociais acima do formulario de login
+**Mudanca no banco**: Migration SQL para atualizar a funcao `handle_new_user` com bloco `BEGIN...EXCEPTION`.
 
-### Passo 4 - Logica pos-login social
+### 4. Registrar erros de signup no error-logger
 
-Quando o usuario faz login via Google/Apple:
-- Se e um usuario novo: o trigger `handle_new_user` ja cria o perfil automaticamente. Redirecionar para o onboarding na tela de username para completar os dados.
-- Se e um usuario existente com `first_login = false`: redirecionar para a home.
-- Se e um usuario existente com `first_login = true`: redirecionar para o onboarding.
+Usar o `logJavaScriptError` existente para registrar erros de signup na tabela `analytics_events`, facilitando debug futuro.
+
+**Arquivo**: `src/components/onboarding/screens/phase6/Screen21Signup.tsx`, `src/components/onboarding/DesktopOnboarding.tsx`
 
 ## Detalhes tecnicos
 
-### Chamada de OAuth
+### Trigger atualizado (handle_new_user)
+
+```sql
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $function$
+BEGIN
+  -- Essencial: criar perfil
+  INSERT INTO public.profiles (user_id, timezone)
+  VALUES (NEW.id, COALESCE(NEW.raw_user_meta_data->>'timezone', 'America/Sao_Paulo'));
+
+  -- Secundarios: se falharem, nao impedem a criacao do usuario
+  BEGIN
+    INSERT INTO public.streaks (user_id) VALUES (NEW.id);
+  EXCEPTION WHEN OTHERS THEN NULL;
+  END;
+
+  BEGIN
+    INSERT INTO public.settings (user_id) VALUES (NEW.id);
+  EXCEPTION WHEN OTHERS THEN NULL;
+  END;
+
+  BEGIN
+    INSERT INTO public.workspaces (owner_id, name) VALUES (NEW.id, 'Meu Workspace');
+  EXCEPTION WHEN OTHERS THEN NULL;
+  END;
+
+  RETURN NEW;
+END;
+$function$
+```
+
+### Retry no signup
 
 ```typescript
-import { lovable } from "@/integrations/lovable/index";
-
-const handleGoogleLogin = async () => {
-  const { error } = await lovable.auth.signInWithOAuth("google", {
-    redirect_uri: window.location.origin,
-  });
-  if (error) { /* toast de erro */ }
-};
-
-const handleAppleLogin = async () => {
-  const { error } = await lovable.auth.signInWithOAuth("apple", {
-    redirect_uri: window.location.origin,
-  });
-  if (error) { /* toast de erro */ }
+// Logica de retry: se o erro for "Database error", tentar mais uma vez
+const signupWithRetry = async (email, password, retries = 1) => {
+  const { data, error } = await supabase.auth.signUp({ email, password });
+  if (error && error.message.includes('Database error') && retries > 0) {
+    await new Promise(r => setTimeout(r, 2000));
+    return signupWithRetry(email, password, retries - 1);
+  }
+  return { data, error };
 };
 ```
 
-### Fluxo de redirecionamento
+### Mapa de erros expandido
 
-Apos o OAuth, o usuario retorna para a raiz (`/`). O `App.tsx` ja verifica a sessao e redireciona conforme o estado do perfil:
-- `first_login = true` -> onboarding
-- `first_login = false` -> home
+```typescript
+const translateAuthError = (error: string): string => {
+  const errorMap: Record<string, string> = {
+    'User already registered': 'Este email ja esta cadastrado. Tente fazer login.',
+    'Database error saving new user': 'Erro temporario. Tente novamente em alguns segundos.',
+    'Database error creating new user': 'Erro temporario. Tente novamente em alguns segundos.',
+    // ... demais erros existentes
+  };
+};
+```
 
-### Arquivos modificados
+## Resumo dos arquivos afetados
 
 | Arquivo | Mudanca |
 |---------|---------|
-| (auto-gerado) `src/integrations/lovable/` | Modulo de auth social (gerado pela ferramenta) |
-| (novo) `src/components/auth/SocialLoginButtons.tsx` | Componente reutilizavel com botoes Google + Apple |
-| `src/components/onboarding/screens/phase1/Screen0Welcome.tsx` | Adicionar botoes sociais |
-| `src/components/onboarding/screens/phase6/Screen21Signup.tsx` | Adicionar botoes sociais acima do form |
-| `src/components/onboarding/DesktopOnboarding.tsx` | Adicionar botoes sociais no step signup |
-| `src/pages/Auth.tsx` | Adicionar botoes sociais acima do form de login |
+| `src/components/onboarding/screens/phase6/Screen21Signup.tsx` | Retry automatico + erros traduzidos + log de erro |
+| `src/components/onboarding/DesktopOnboarding.tsx` | Retry automatico + erros traduzidos + log de erro |
+| Migration SQL | Trigger `handle_new_user` com tratamento de excecao |
 
+## Sobre o usuario afetado
+
+O usuario `guilhermebagatini@hotmail.com` pode simplesmente tentar criar a conta novamente — como nenhum registro foi salvo, nao ha conflito. Com as melhorias acima, se o mesmo erro temporario acontecer, o sistema vai tentar automaticamente de novo.
