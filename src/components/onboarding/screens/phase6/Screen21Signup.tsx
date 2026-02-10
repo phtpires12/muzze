@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { SocialLoginButtons } from "@/components/auth/SocialLoginButtons";
+import { logError } from "@/lib/error-logger";
 
 const signupSchema = z.object({
   email: z.string().trim().email('Email inválido'),
