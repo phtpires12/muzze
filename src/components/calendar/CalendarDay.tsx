@@ -464,7 +464,7 @@ export function CalendarDay({
                         <div className={`text-muted-foreground flex-shrink-0 ${compactCard ? "text-[8px]" : "mt-0.5"}`}>
                           {isPosted ? "✅" : "📄"}
                         </div>
-                        <div className="flex-1 min-w-0 overflow-hidden">
+                        <div className={`flex-1 min-w-0 overflow-hidden ${compactCard ? "pr-4" : "pr-5"}`}>
                           <div className={`font-medium truncate ${
                             script.title?.trim() ? "text-foreground" : "text-muted-foreground"
                           } ${compactCard ? "mb-0.5" : "mb-1"}`}>
@@ -486,21 +486,21 @@ export function CalendarDay({
                             )}
                           </div>
                         </div>
-                        <button
-                          className={`opacity-0 group-hover/card:opacity-100 transition-opacity rounded hover:bg-destructive/20 flex-shrink-0 ${
-                            compactCard ? "p-0.5" : "p-1"
-                          }`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setScriptToDelete(script);
-                          }}
-                        >
-                          <Trash2 className={`text-muted-foreground hover:text-destructive ${
-                            compactCard ? "w-2.5 h-2.5" : "w-3 h-3"
-                          }`} />
-                        </button>
                       </div>
                     </div>
+                    <button
+                      className={`absolute z-10 opacity-0 group-hover/card:opacity-100 transition-opacity rounded hover:bg-destructive/20 ${
+                        compactCard ? "top-0.5 right-0.5 p-0.5" : "top-1 right-1 p-1"
+                      }`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setScriptToDelete(script);
+                      }}
+                    >
+                      <Trash2 className={`text-muted-foreground hover:text-destructive ${
+                        compactCard ? "w-2.5 h-2.5" : "w-3 h-3"
+                      }`} />
+                    </button>
                   </div>
                 </div>
               );
