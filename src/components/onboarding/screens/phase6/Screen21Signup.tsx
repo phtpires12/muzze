@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
+import { SocialLoginButtons } from "@/components/auth/SocialLoginButtons";
 
 const signupSchema = z.object({
   email: z.string().trim().email('Email inválido'),
@@ -96,6 +97,8 @@ export const Screen21Signup = ({ onSuccess }: Screen21SignupProps) => {
       </div>
 
       <Card className="p-8 max-w-md mx-auto">
+        <SocialLoginButtons showSeparator separatorText="ou continue com email" />
+
         <form onSubmit={handleSignup} className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>

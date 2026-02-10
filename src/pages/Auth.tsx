@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { Eye, EyeOff } from "lucide-react";
 import muzzeLogo from "@/assets/muzze-logo.png";
+import { SocialLoginButtons } from "@/components/auth/SocialLoginButtons";
 
 const loginSchema = z.object({
   email: z.string().trim().email('Email inválido'),
@@ -196,6 +197,7 @@ const Auth = () => {
             </form>
           ) : (
             <>
+              <SocialLoginButtons showSeparator separatorText="ou entre com email" />
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="email">E-mail</Label>
