@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { logError } from "@/lib/error-logger";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -64,7 +65,7 @@ export function DesktopOnboarding({ onComplete }: DesktopOnboardingProps) {
 
     setIsLoading(true);
 
-    try {
+    const signupWithRetry = async (retries = 1): Promise<{ data: any; error: any }> => {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -76,18 +77,26 @@ export function DesktopOnboarding({ onComplete }: DesktopOnboardingProps) {
           }
         }
       });
+      if (error && error.message?.toLowerCase().includes('database error') && retries > 0) {
+        await new Promise(r => setTimeout(r, 2000));
+        return signupWithRetry(retries - 1);
+      }
+      return { data, error };
+    };
+
+    try {
+      const { data, error } = await signupWithRetry();
 
       if (error) throw error;
 
       if (data.user) {
-        // Update profile with onboarding data
         await supabase
           .from('profiles')
           .update({
             username,
             preferred_platform: selectedPlatforms.join(','),
             first_login: false,
-            desktop_tutorial_completed: false, // Will show tutorial
+            desktop_tutorial_completed: false,
             onboarding_data: {
               username,
               preferred_platform: selectedPlatforms.join(','),
@@ -101,7 +110,6 @@ export function DesktopOnboarding({ onComplete }: DesktopOnboardingProps) {
         
         toast.success("Conta criada com sucesso! 🎉");
         
-        // Check for pending invite
         const pendingInviteId = localStorage.getItem("pendingInviteId");
         if (pendingInviteId) {
           localStorage.removeItem("pendingInviteId");
@@ -112,9 +120,16 @@ export function DesktopOnboarding({ onComplete }: DesktopOnboardingProps) {
       }
     } catch (error: any) {
       console.error('Signup error:', error);
+      logError("signup_failed", {
+        message: error.message,
+        stack: error.stack,
+        context: { email, source: 'DesktopOnboarding' },
+      });
       
       if (error.message?.includes('already registered')) {
         toast.error("Este email já está registrado. Tente fazer login.");
+      } else if (error.message?.toLowerCase().includes('database error')) {
+        toast.error("Erro temporário ao criar sua conta. Por favor, tente novamente em alguns segundos.");
       } else {
         toast.error(error.message || "Erro ao criar conta");
       }

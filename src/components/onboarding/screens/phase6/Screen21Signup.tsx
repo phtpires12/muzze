@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { SocialLoginButtons } from "@/components/auth/SocialLoginButtons";
+import { logError } from "@/lib/error-logger";
 
 const signupSchema = z.object({
   email: z.string().trim().email('Email inválido'),
@@ -23,8 +24,16 @@ const translateAuthError = (error: string): string => {
     'Password should be at least 6 characters': 'A senha deve ter no mínimo 6 caracteres.',
     'Signup requires a valid password': 'A senha deve ter no mínimo 6 caracteres.',
     'Unable to validate email address: invalid format': 'Formato de email inválido.',
+    'Database error saving new user': 'Erro temporário ao criar sua conta. Por favor, tente novamente em alguns segundos.',
+    'Database error creating new user': 'Erro temporário ao criar sua conta. Por favor, tente novamente em alguns segundos.',
   };
-  return errorMap[error] || error || 'Ocorreu um erro. Tente novamente.';
+  // Check for partial matches (e.g. "Database error" prefix)
+  const exactMatch = errorMap[error];
+  if (exactMatch) return exactMatch;
+  if (error?.toLowerCase().includes('database error')) {
+    return 'Erro temporário ao criar sua conta. Por favor, tente novamente em alguns segundos.';
+  }
+  return error || 'Ocorreu um erro. Tente novamente.';
 };
 
 interface Screen21SignupProps {
@@ -55,14 +64,23 @@ export const Screen21Signup = ({ onSuccess }: Screen21SignupProps) => {
 
     setLoading(true);
 
-    try {
-      const { error } = await supabase.auth.signUp({
+    const signupWithRetry = async (retries = 1): Promise<{ data: any; error: any }> => {
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/`,
         },
       });
+      if (error && error.message?.toLowerCase().includes('database error') && retries > 0) {
+        await new Promise(r => setTimeout(r, 2000));
+        return signupWithRetry(retries - 1);
+      }
+      return { data, error };
+    };
+
+    try {
+      const { error } = await signupWithRetry();
 
       if (error) throw error;
 
@@ -74,6 +92,11 @@ export const Screen21Signup = ({ onSuccess }: Screen21SignupProps) => {
       onSuccess();
     } catch (error: any) {
       console.error("Signup error:", error);
+      logError("signup_failed", {
+        message: error.message,
+        stack: error.stack,
+        context: { email, source: 'Screen21Signup' },
+      });
       toast({
         title: "Erro ao criar conta",
         description: translateAuthError(error.message),
