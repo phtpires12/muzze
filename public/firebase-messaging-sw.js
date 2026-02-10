@@ -1,19 +1,19 @@
-// Self-destruct: if this file is running as a standalone SW
-// (not imported by Workbox), unregister and reload to let
-// the Workbox SW take control.
-// v2 - self-destruct enabled
+// Self-destruct v3 - aggressive cache cleanup
+// Clears ALL CacheStorage + unregisters + force-reloads clients
 if (self.registration && self.registration.active &&
     self.registration.active.scriptURL.includes('firebase-messaging-sw.js')) {
+  self.addEventListener('install', () => self.skipWaiting());
   self.addEventListener('activate', (event) => {
     event.waitUntil(
-      self.registration.unregister().then(() => {
-        return self.clients.matchAll().then((clients) => {
-          clients.forEach((client) => client.navigate(client.url));
-        });
-      })
+      caches.keys()
+        .then(names => Promise.all(names.map(n => caches.delete(n))))
+        .then(() => self.registration.unregister())
+        .then(() => self.clients.matchAll())
+        .then(clients => {
+          clients.forEach(client => client.navigate(client.url));
+        })
     );
   });
-  self.addEventListener('install', () => self.skipWaiting());
   // Stop here — don't initialize Firebase as standalone SW
 } else {
   // Normal Firebase initialization (imported by Workbox)
