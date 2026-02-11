@@ -110,12 +110,11 @@ export const Screen21Signup = ({ onSuccess, onBack, showDevSkip, onDevSkip }: Sc
 
   return (
     <div className="min-h-[100dvh] bg-violet-50 dark:bg-background flex flex-col">
-      {/* Header with back + progress */}
-      <div className="flex items-center gap-3 px-4 pt-4 pb-2">
+      {/* Header with back */}
+      <div className="flex items-center px-4 pt-4 pb-2">
         <button onClick={onBack} className="p-1 -ml-1 text-foreground/70 hover:text-foreground transition-colors">
           <ChevronLeft className="w-6 h-6" />
         </button>
-        <GradientProgressBar progress={progress} />
       </div>
 
       {/* Scrollable content */}
