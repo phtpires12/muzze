@@ -250,6 +250,7 @@ const NewOnboarding = () => {
             </span>
           </div>
         )}
+        {devNav}
         <Screen4StartQuestionnaire onContinue={handleContinue} onBack={handleBack} />
       </>
     );
