@@ -354,7 +354,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
 
   const handleBackClick = () => {
     // Se não tem publish_date e tem scriptId, mostra alerta de agendamento
-    if (!publishDate && scriptId) {
+    if (!publishDate && effectiveScriptId) {
       setShowScheduleAlert(true);
       return;
     }
