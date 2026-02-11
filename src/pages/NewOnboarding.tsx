@@ -408,6 +408,7 @@ const NewOnboarding = () => {
             </span>
           </div>
         )}
+        {devNav}
         <Screen9Constancia
           value={state.data.posting_frequency || ""}
           onChange={handleConstanciaChange}
