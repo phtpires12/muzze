@@ -1,34 +1,19 @@
 
-# Ajuste minimo: subir CTA do rodape com safe area
+## Limpar a tela Welcome do Onboarding
 
-## Mudanca unica
+### Problema
+A tela inicial (Screen0Welcome) exibe botões de login social (Google/Apple) que são redundantes, pois:
+- O botao "Comecar" ja leva novos usuarios ao fluxo de cadastro
+- O link "Ja tem uma conta? Entrar" redireciona para a pagina Auth, onde as opcoes de login social ja existem
 
-No arquivo `src/components/onboarding/screens/phase6/Screen25Paywall.tsx`, na Area 3 (linhas 107-125):
+Esses botoes extras empurram o layout para cima e poluem a tela.
 
-- Adicionar ao `<section>` do CTA um `style` com `paddingBottom` usando safe area e um `translateY(-12px)` para levantar o bloco inteiro levemente acima do home indicator.
-- Remover o `paddingBottom` do container raiz (linha 41) ja que o footer cuida do seu proprio safe area agora.
+### Mudanca
 
-### Antes (linha 107):
-```tsx
-<section className="flex-none relative z-10 bg-violet-50 dark:bg-background rounded-t-2xl space-y-2 pt-3 pb-1">
-```
+**Arquivo: `src/components/onboarding/screens/phase1/Screen0Welcome.tsx`**
 
-### Depois:
-```tsx
-<section
-  className="flex-none relative z-10 bg-violet-50 dark:bg-background rounded-t-2xl space-y-2 pt-3"
-  style={{
-    paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)',
-    transform: 'translateY(-12px)',
-  }}
->
-```
+- Remover o import do `SocialLoginButtons`
+- Remover o bloco do separador "ou" e o componente `<SocialLoginButtons />`
+- Manter apenas: botao "Comecar" e link "Ja tem uma conta? Entrar"
 
-### Container raiz (linha 41):
-Remover `paddingBottom: 'env(safe-area-inset-bottom, 0px)'` do style do root, pois a Area 3 agora gerencia seu proprio safe area.
-
-## O que NAO muda
-- Tamanho do mockup (Area 2 intacta)
-- Header e titulo (Area 1 intacta)
-- Proporcoes gerais da tela
-- Zero scroll (overflow-hidden + 100dvh mantidos)
+O resultado sera um layout mais limpo com mais espaco para o mockup do iPhone e o texto respirarem.
