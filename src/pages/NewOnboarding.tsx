@@ -346,6 +346,7 @@ const NewOnboarding = () => {
             </span>
           </div>
         )}
+        {devNav}
         <Screen7Diferencial
           onContinue={handleContinue}
           onSkip={handleContinue}
