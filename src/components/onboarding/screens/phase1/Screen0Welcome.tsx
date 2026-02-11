@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { PhoneMockup } from "@/components/onboarding/PhoneMockup";
-import { SocialLoginButtons } from "@/components/auth/SocialLoginButtons";
+
 import muzzeLeaf from "@/assets/muzze-leaf-gradient.png";
 import homePreview from "@/assets/home-preview-mobile.png";
 
@@ -50,17 +50,6 @@ export const Screen0Welcome = ({ onContinue, onLogin }: Screen0WelcomeProps) => 
         >
           Começar
         </Button>
-
-        <div className="relative my-3">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t border-gray-300 dark:border-gray-700" />
-          </div>
-          <div className="relative flex justify-center text-xs">
-            <span className="bg-violet-50 dark:bg-gray-950 px-2 text-gray-400">ou</span>
-          </div>
-        </div>
-
-        <SocialLoginButtons />
 
         <button
           onClick={onLogin}
