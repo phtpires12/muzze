@@ -134,10 +134,10 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
   const getPlainText = (html: string) => htmlToText(html);
 
   useEffect(() => {
-    if (scriptId) {
+    if (effectiveScriptId) {
       loadScript();
     }
-  }, [scriptId, isReviewMode]);
+  }, [effectiveScriptId, isReviewMode]);
 
   // Auto-save effect
   useEffect(() => {
