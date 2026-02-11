@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Check, Shield } from "lucide-react";
+import { Check } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 
 import mockupHome from "@/assets/paywall/mockup-home.png";
@@ -12,8 +12,6 @@ import muzzeLeaf from "@/assets/paywall/muzze-leaf-gradient.png";
 interface Screen25PaywallProps {
   onContinue: () => void;
   onBack?: () => void;
-  showDevSkip?: boolean;
-  onDevSkip?: () => void;
 }
 
 const MOCKUP_IMAGES = [mockupHome, mockupCalendar, mockupStats, mockupOfensiva];
@@ -21,8 +19,6 @@ const MOCKUP_IMAGES = [mockupHome, mockupCalendar, mockupStats, mockupOfensiva];
 export const Screen25Paywall = ({
   onContinue,
   onBack,
-  showDevSkip,
-  onDevSkip,
 }: Screen25PaywallProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -43,18 +39,7 @@ export const Screen25Paywall = ({
       {/* AREA 1 - Header + Title (flex-none, z-10) */}
       <div className="flex-none relative z-10 pt-4" style={{ marginTop: '10px' }}>
         {/* Header */}
-        <div className="flex items-center justify-between">
-          {showDevSkip && onDevSkip ? (
-            <button
-              className="flex items-center gap-1 text-xs text-primary underline underline-offset-2"
-              onClick={onDevSkip}
-            >
-              <Shield className="w-3 h-3" />
-              Pular (Dev)
-            </button>
-          ) : (
-            <div />
-          )}
+        <div className="flex items-center justify-end">
           <button
             className="text-xs text-muted-foreground underline underline-offset-2"
             onClick={() => {/* TODO: restore purchase logic */}}
