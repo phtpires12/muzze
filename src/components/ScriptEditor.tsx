@@ -445,7 +445,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
   };
 
   const handleScheduleAndBack = async () => {
-    if (scheduleDate && scriptId) {
+    if (scheduleDate && effectiveScriptId) {
       const formattedDate = format(scheduleDate, "yyyy-MM-dd");
       await supabase
         .from('scripts')
@@ -453,7 +453,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
           publish_date: formattedDate,
           publish_status: 'planejado'
         })
-        .eq('id', scriptId);
+        .eq('id', effectiveScriptId);
       
       // Atualiza state local
       setPublishDate(formattedDate);
