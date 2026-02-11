@@ -557,13 +557,6 @@ export function CalendarDay({
           </>
         )}
 
-
-        {/* Extra scripts indicator */}
-        {scripts.length > maxScripts && (
-          <div className={`text-muted-foreground ${compactCard ? "text-[9px] pl-1" : "text-xs pl-2"} mt-1`}>
-            +{scripts.length - maxScripts} mais
-          </div>
-        )}
       </div>
 
       <AlertDialog open={!!scriptToDelete} onOpenChange={(open) => !open && setScriptToDelete(null)}>
