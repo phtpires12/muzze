@@ -87,7 +87,7 @@ export const Screen25Paywall = ({
             style={{
               position: 'absolute',
               left: '50%',
-              top: '-8%',
+              top: '-20%',
               transform: 'translateX(-50%)',
               width: '320px',
               maxHeight: '110%',
