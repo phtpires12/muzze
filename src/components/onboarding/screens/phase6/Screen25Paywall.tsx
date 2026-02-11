@@ -9,7 +9,15 @@ import mockupStats from "@/assets/paywall/mockup-stats.png";
 import mockupOfensiva from "@/assets/paywall/mockup-ofensiva.png";
 import muzzeLeaf from "@/assets/paywall/muzze-leaf-gradient.png";
 
+interface Screen25PaywallProps {
+  onContinue: () => void;
+  onBack?: () => void;
+  showDevSkip?: boolean;
+  onDevSkip?: () => void;
+}
+
 const MOCKUP_IMAGES = [mockupHome, mockupCalendar, mockupStats, mockupOfensiva];
+
 export const Screen25Paywall = ({
   onContinue,
   onBack,
