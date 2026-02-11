@@ -28,6 +28,7 @@ import { Screen21Signup } from "@/components/onboarding/screens/phase6/Screen21S
 import { Screen25Paywall } from "@/components/onboarding/screens/phase6/Screen25Paywall";
 import { Screen26Install } from "@/components/onboarding/screens/phase6/Screen26Install";
 import { DesktopOnboarding } from "@/components/onboarding/DesktopOnboarding";
+import { DevNavigationBar } from "@/components/onboarding/DevNavigationBar";
 
 const NewOnboarding = () => {
   const navigate = useNavigate();
@@ -40,6 +41,7 @@ const NewOnboarding = () => {
     updateData,
     nextScreen,
     prevScreen,
+    goToScreen,
     getProgress,
     calculateLostPosts,
     completeOnboarding,
@@ -186,6 +188,17 @@ const NewOnboarding = () => {
   // No continue button needed - all screens handle their own navigation
   const showContinueButton = false;
 
+  // Dev navigation bar - rendered on all screens for devs/admins
+  const devNav = (isDeveloper || isAdmin) ? (
+    <DevNavigationBar
+      phase={state.phase}
+      screen={state.screen}
+      onPrev={handleBack}
+      onNext={handleContinue}
+      onGoTo={goToScreen}
+    />
+  ) : null;
+
   // Tela de Welcome renderiza fora do OnboardingLayout para controle total do layout
   if (state.phase === 0 && state.screen === 0) {
     return (
@@ -199,6 +212,7 @@ const NewOnboarding = () => {
             </span>
           </div>
         )}
+        {devNav}
         <Screen0Welcome onContinue={handleContinue} onLogin={handleLogin} />
       </>
     );
@@ -217,6 +231,7 @@ const NewOnboarding = () => {
             </span>
           </div>
         )}
+        {devNav}
         <HowWeHelpSection onComplete={handleContinue} onBack={handleBack} />
       </>
     );
@@ -235,6 +250,7 @@ const NewOnboarding = () => {
             </span>
           </div>
         )}
+        {devNav}
         <Screen4StartQuestionnaire onContinue={handleContinue} onBack={handleBack} />
       </>
     );
@@ -253,6 +269,7 @@ const NewOnboarding = () => {
             </span>
           </div>
         )}
+        {devNav}
         <Screen2Username
           value={state.data.username || ""}
           onChange={(value) => updateData({ username: value })}
@@ -277,6 +294,7 @@ const NewOnboarding = () => {
             </span>
           </div>
         )}
+        {devNav}
         <Screen5ContentGoal
           value={state.data.content_goal || ""}
           onChange={(value) => updateData({ content_goal: value })}
@@ -302,6 +320,7 @@ const NewOnboarding = () => {
             </span>
           </div>
         )}
+        {devNav}
         <Screen6StickingPoints
           value={state.data.sticking_points || []}
           onChange={(value) => updateData({ sticking_points: value })}
@@ -327,6 +346,7 @@ const NewOnboarding = () => {
             </span>
           </div>
         )}
+        {devNav}
         <Screen7Diferencial
           onContinue={handleContinue}
           onSkip={handleContinue}
@@ -350,6 +370,7 @@ const NewOnboarding = () => {
             </span>
           </div>
         )}
+        {devNav}
         <Screen8MonthsTrying
           value={state.data.months_trying || 0}
           onChange={(value) => updateData({ months_trying: value })}
@@ -387,6 +408,7 @@ const NewOnboarding = () => {
             </span>
           </div>
         )}
+        {devNav}
         <Screen9Constancia
           value={state.data.posting_frequency || ""}
           onChange={handleConstanciaChange}
@@ -412,6 +434,7 @@ const NewOnboarding = () => {
             </span>
           </div>
         )}
+        {devNav}
         <Screen10ClusterFeedback
           variant={state.data.screen12_variant || "hurt"}
           onContinue={handleContinue}
@@ -434,6 +457,7 @@ const NewOnboarding = () => {
             </span>
           </div>
         )}
+        {devNav}
         <Screen11BehavioralScience
           onContinue={handleContinue}
           onBack={handleBack}
@@ -455,6 +479,7 @@ const NewOnboarding = () => {
             </span>
           </div>
         )}
+        {devNav}
         <Screen12DailyTime
           value={state.data.daily_available_time || ""}
           onChange={(value) => updateData({ daily_available_time: value })}
@@ -480,6 +505,7 @@ const NewOnboarding = () => {
             </span>
           </div>
         )}
+        {devNav}
         <Screen13CreationTime
           value={state.data.preferred_creation_time || "09:00"}
           onChange={(value) => updateData({ preferred_creation_time: value })}
@@ -505,6 +531,7 @@ const NewOnboarding = () => {
             </span>
           </div>
         )}
+        {devNav}
         <Screen21Signup
           onSuccess={handleSignupSuccess}
           onBack={handleBack}
@@ -518,12 +545,15 @@ const NewOnboarding = () => {
   // Paywall renderiza fora do OnboardingLayout - layout fullscreen próprio
   if (state.phase === 2 && state.screen === 1) {
     return (
-      <Screen25Paywall
-        onContinue={handlePaywallComplete}
-        onBack={handleBack}
-        showDevSkip={isDeveloper || isAdmin}
-        onDevSkip={handleContinue}
-      />
+      <>
+        {devNav}
+        <Screen25Paywall
+          onContinue={handlePaywallComplete}
+          onBack={handleBack}
+          showDevSkip={isDeveloper || isAdmin}
+          onDevSkip={handleContinue}
+        />
+      </>
     );
   }
 
