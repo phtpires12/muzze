@@ -49,6 +49,9 @@ interface ScriptEditorProps {
 }
 
 export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: ScriptEditorProps) => {
+  // Estado local para rastrear o ID após a primeira criação (corrige duplicação no auto-save)
+  const [createdScriptId, setCreatedScriptId] = useState<string | null>(null);
+  const effectiveScriptId = scriptId || createdScriptId;
   const { toast } = useToast();
   const navigate = useNavigate();
   const { timer, setMuzzeSession } = useSessionContext();
