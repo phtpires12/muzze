@@ -1,109 +1,30 @@
 
-# Reconstruir tela de Paywall (Screen25Paywall) no estilo do novo onboarding
+# Corrigir "iPhone dentro de iPhone" no Paywall
 
-## Problema atual
+## Problema
+As imagens enviadas (mockup-home.png, mockup-calendar.png, etc.) ja contem o frame do iPhone embutido. O componente `PhoneMockup` adiciona um segundo frame por cima, resultando num iPhone dentro de outro iPhone.
 
-A tela de paywall atual (Screen25Paywall) tem dois botoes "Voltar" redundantes (um do OnboardingLayout e outro interno), usa animacao de logo/sino sem contexto visual do app, e nao segue o padrao de design do novo onboarding. O wireframe mostra um design completamente diferente: titulo bold no topo, PhoneMockup centralizado com imagens rotativas mostrando telas reais do app, e CTA fixo no bottom.
+## Solucao
 
-## Nova estrutura visual
+### Arquivo: `src/components/onboarding/screens/phase6/Screen25Paywall.tsx`
 
+1. **Remover o import e uso do `PhoneMockup`** -- as imagens ja tem o mockup embutido, entao basta exibi-las diretamente.
+
+2. **Substituir o bloco do PhoneMockup** por um container simples com as imagens rotativas:
+   - Container centralizado com `overflow-hidden`
+   - Imagens exibidas diretamente com `AnimatePresence` crossfade (como ja esta)
+   - Usar `object-contain` em vez de `object-cover` para mostrar a imagem inteira
+   - Aplicar margem negativa no topo (`-mt-8` ou similar) para compensar o padding excessivo que as imagens tem na parte superior, fazendo com que preencham melhor o espaco disponivel
+
+3. **Estrutura simplificada do bloco central**:
 ```text
-+----------------------------------+
-|              Restaurar compra    |  <- link discreto top-right
-|                                  |
-| Experimente a Muzze              |  <- titulo bold, centralizado
-|    gratuitamente.                |
-|                                  |
-|      +--------------------+      |
-|      |   [iPhone Mockup]  |      |  <- PhoneMockup com auto-rotate
-|      |   imagens rotativas|      |     4 imagens: Home, Calendar,
-|      |   a cada ~4s       |      |     Stats, Ofensiva
-|      +--------------------+      |
-|                                  |
-| Sem cobranca agora               |  <- check verde + texto
-|                                  |
-| [==Experimente por R$0.00===]    |  <- gradient-pill CTA
-|                                  |
-| Depois R$298,80/ano (R$24,90/mes)|  <- texto xs muted
-+----------------------------------+
+<div className="flex-1 flex items-center justify-center min-h-0 -mt-6">
+  <div className="relative w-[280px] sm:w-[320px] h-auto">
+    <AnimatePresence mode="wait">
+      <motion.img src={MOCKUP_IMAGES[currentIndex]} ... />
+    </AnimatePresence>
+  </div>
+</div>
 ```
 
-## Mudancas
-
-### 1. Copiar as 4 imagens de mockup para src/assets/paywall/
-
-As imagens enviadas pelo usuario serao copiadas para o projeto:
-- `user-uploads://Mockup_Iphone_-_Home.png` -> `src/assets/paywall/mockup-home.png`
-- `user-uploads://Mockup_Iphone_Calendar.png` -> `src/assets/paywall/mockup-calendar.png`
-- `user-uploads://Mockup_Iphone_Stats.png` -> `src/assets/paywall/mockup-stats.png`
-- `user-uploads://Mockup_Iphone_Ofensiva.png` -> `src/assets/paywall/mockup-ofensiva.png`
-
-### 2. Reescrever `src/components/onboarding/screens/phase6/Screen25Paywall.tsx`
-
-Layout completo (tela unica, sem step 1/step 2):
-
-- **Fundo**: `min-h-[100dvh] bg-violet-50 dark:bg-background` (padrao onboarding)
-- **Header**: apenas link "Restaurar compra" no canto superior direito (texto discreto, sem botao de voltar -- o paywall e a ultima barreira antes da conversao, nao deve facilitar sair)
-- **Titulo**: "Experimente a Muzze gratuitamente." centralizado, bold, text-2xl/3xl
-- **PhoneMockup**: centralizado, usando o componente PhoneMockup existente com `screenImage`. Auto-rotacao a cada 4 segundos entre as 4 imagens (Home, Calendar, Stats, Ofensiva) com transicao de opacity crossfade (framer-motion AnimatePresence)
-- **Bottom CTA fixo**:
-  - Icone check verde + "Sem cobranca agora"
-  - Botao gradient-pill "Experimente por R$0.00" (chama `onContinue`)
-  - Texto xs "Depois R$298,80 por ano (R$24,90/mes)"
-
-- **Props**: manter `onContinue` e `onBack` (onBack sera usado pelo botao dev skip). Adicionar `showDevSkip` e `onDevSkip` para admin bypass.
-
-- **Auto-rotacao**: `useEffect` com `setInterval(4000)` incrementando um indice, `useState` para `currentImageIndex`. As imagens fazem crossfade com framer-motion `AnimatePresence` + `motion.img` com opacity transition.
-
-### 3. Atualizar `src/pages/NewOnboarding.tsx`
-
-A tela de paywall (phase 2, screen 1) atualmente renderiza dentro do OnboardingLayout (que adiciona o botao "Voltar" extra). Mover para renderizar fora do OnboardingLayout, como as demais telas, passando `showDevSkip` e `onDevSkip`.
-
-## Detalhes tecnicos
-
-### Interface atualizada:
-```typescript
-interface Screen25PaywallProps {
-  onContinue: () => void;
-  onBack?: () => void;
-  showDevSkip?: boolean;
-  onDevSkip?: () => void;
-}
-```
-
-### Auto-rotacao de imagens:
-```typescript
-const images = [mockupHome, mockupCalendar, mockupStats, mockupOfensiva];
-const [currentIndex, setCurrentIndex] = useState(0);
-
-useEffect(() => {
-  const interval = setInterval(() => {
-    setCurrentIndex((prev) => (prev + 1) % images.length);
-  }, 4000);
-  return () => clearInterval(interval);
-}, []);
-```
-
-### Crossfade no PhoneMockup:
-Usar `AnimatePresence` com `motion.img` dentro do PhoneMockup via `children` prop, para que as imagens facam crossfade suave dentro do mockup sem recriar o frame.
-
-### Renderizacao no NewOnboarding.tsx:
-Adicionar bloco condicional antes do `return <OnboardingLayout>`:
-```typescript
-if (state.phase === 2 && state.screen === 1) {
-  return (
-    <>
-      {/* Developer Badge */}
-      ...
-      <Screen25Paywall
-        onContinue={handlePaywallComplete}
-        onBack={handleBack}
-        showDevSkip={isDeveloper || isAdmin}
-        onDevSkip={handleContinue}
-      />
-    </>
-  );
-}
-```
-
-E remover a renderizacao do Screen25Paywall de dentro do `renderScreen()`.
+A imagem vai aparecer grande e centralizada, mostrando o iPhone que ja vem dentro dela, sem duplicacao de frames. O margin-top negativo compensa o padding superior das imagens para que fiquem visualmente maiores e preencham melhor a area central da tela.
