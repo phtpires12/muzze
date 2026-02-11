@@ -22,6 +22,7 @@ import { Screen11BehavioralScience } from "@/components/onboarding/screens/phase
 import { Screen12DailyTime } from "@/components/onboarding/screens/phase1/Screen12DailyTime";
 import { Screen13CreationTime } from "@/components/onboarding/screens/phase1/Screen13CreationTime";
 import { Screen14PreviousTools } from "@/components/onboarding/screens/phase1/Screen14PreviousTools";
+import { Screen15Notifications } from "@/components/onboarding/screens/phase1/Screen15Notifications";
 import { ConsistencyCluster, Screen12Variant } from "@/types/onboarding";
 import { Screen3Platform } from "@/components/onboarding/screens/phase1/Screen3Platform";
 import { Screen4StartQuestionnaire } from "@/components/onboarding/screens/phase1/Screen4StartQuestionnaire";
@@ -147,12 +148,13 @@ const NewOnboarding = () => {
       if (screen === 9) return false; // ClusterFeedback - internal button handles
     }
 
-    // Phase 1 (Behavioral Science + Configuration - 3 screens)
+    // Phase 1 (Behavioral Science + Configuration - 5 screens)
     if (phase === 1) {
       if (screen === 0) return true; // BehavioralScience - transition screen
       if (screen === 1) return !!data.daily_available_time; // DailyTime
       if (screen === 2) return true; // CreationTime - always can continue (has default)
-      if (screen === 3) return (data.previous_tools?.length ?? 0) > 0; // PreviousTools
+      if (screen === 3) return false; // Notifications - internal buttons handle navigation
+      if (screen === 4) return (data.previous_tools?.length ?? 0) > 0; // PreviousTools
     }
 
     // Phase 2 (Signup + Paywall + Install - 3 screens)
@@ -177,10 +179,10 @@ const NewOnboarding = () => {
       if (screen >= 3 && screen <= 9) return null;
     }
 
-    // Phase 1: Behavioral Science + Configuration (3 screens)
+    // Phase 1: Behavioral Science + Configuration (5 screens)
     if (phase === 1) {
       // All screens render outside OnboardingLayout
-      if (screen >= 0 && screen <= 3) return null;
+      if (screen >= 0 && screen <= 4) return null;
     }
 
     // Phase 2: Signup + Paywall + Install (3 screens)
@@ -501,8 +503,28 @@ const NewOnboarding = () => {
     );
   }
 
-  // PreviousTools renderiza fora do OnboardingLayout - multi-select com limite de 3
+  // Notifications renderiza fora do OnboardingLayout - tela de ação sem progress bar
   if (state.phase === 1 && state.screen === 3) {
+    return withDevBar(
+      <>
+        {isDevUser && (
+          <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-full">
+            <Shield className="w-4 h-4 text-primary" />
+            <span className="text-xs font-medium text-primary">
+              {isAdmin ? "Admin" : "Developer"}
+            </span>
+          </div>
+        )}
+        <Screen15Notifications
+          onContinue={handleContinue}
+          onBack={handleBack}
+        />
+      </>
+    );
+  }
+
+  // PreviousTools renderiza fora do OnboardingLayout - multi-select com limite de 3
+  if (state.phase === 1 && state.screen === 4) {
     return withDevBar(
       <>
         {isDevUser && (
