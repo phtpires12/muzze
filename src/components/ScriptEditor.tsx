@@ -49,6 +49,9 @@ interface ScriptEditorProps {
 }
 
 export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: ScriptEditorProps) => {
+  // Estado local para rastrear o ID após a primeira criação (corrige duplicação no auto-save)
+  const [createdScriptId, setCreatedScriptId] = useState<string | null>(null);
+  const effectiveScriptId = scriptId || createdScriptId;
   const { toast } = useToast();
   const navigate = useNavigate();
   const { timer, setMuzzeSession } = useSessionContext();
@@ -100,12 +103,12 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
   // Memoizar callback para evitar recriações desnecessárias
   const handleNavigationBlocked = useCallback(() => {
     // Mostrar o mesmo modal de confirmação que o botão "Voltar" mostra
-    if (!publishDate && scriptId) {
+    if (!publishDate && effectiveScriptId) {
       setShowScheduleAlert(true);
     } else {
       setShowEndSessionConfirmation(true);
     }
-  }, [publishDate, scriptId]);
+  }, [publishDate, effectiveScriptId]);
 
   // Interceptar navegação via swipe/browser back quando há sessão ativa
   const blocker = useNavigationBlocker({
@@ -131,10 +134,10 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
   const getPlainText = (html: string) => htmlToText(html);
 
   useEffect(() => {
-    if (scriptId) {
+    if (effectiveScriptId) {
       loadScript();
     }
-  }, [scriptId, isReviewMode]);
+  }, [effectiveScriptId, isReviewMode]);
 
   // Auto-save effect
   useEffect(() => {
@@ -161,7 +164,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
       const { data, error } = await supabase
         .from('scripts')
         .select('*')
-        .eq('id', scriptId)
+        .eq('id', effectiveScriptId)
         .single();
 
       if (error) throw error;
@@ -264,13 +267,13 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
 
   const handleAutoSave = async () => {
     // PROTEÇÃO: Não salvar se os dados ainda não foram carregados (evita sobrescrever com defaults)
-    if (!isLoaded && scriptId) {
+    if (!isLoaded && effectiveScriptId) {
       console.log('[DEBUG - ScriptEditor] ⚠️ Auto-save bloqueado: dados ainda não carregados');
       return;
     }
     
     console.log('[DEBUG - ScriptEditor] Auto-save iniciado', {
-      scriptId,
+      effectiveScriptId,
       hasContent: !!(content.gancho || content.setup || content.desenvolvimento || content.conclusao),
       contentPreview: {
         gancho: content.gancho?.substring(0, 50),
@@ -313,15 +316,15 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
       }
 
       // Se é um novo script, salvar o workflow_template atual
-      if (!scriptId) {
+      if (!effectiveScriptId) {
         scriptData.workflow_template = profile?.current_workflow || 'classic';
       }
 
-      if (scriptId) {
+      if (effectiveScriptId) {
         const { error } = await supabase
           .from('scripts')
           .update(scriptData)
-          .eq('id', scriptId);
+          .eq('id', effectiveScriptId);
 
         if (error) throw error;
         console.log('[DEBUG - ScriptEditor] ✅ Script atualizado com sucesso');
@@ -336,8 +339,9 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
         
         console.log('[DEBUG - ScriptEditor] ✅ Novo script criado com sucesso', data?.id);
         
-        // Update URL with new script ID without reloading
+        // Salvar o ID criado no state local para que o próximo auto-save faça UPDATE
         if (data?.id) {
+          setCreatedScriptId(data.id);
           window.history.replaceState({}, '', `/session?stage=script&scriptId=${data.id}`);
         }
       }
@@ -350,7 +354,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
 
   const handleBackClick = () => {
     // Se não tem publish_date e tem scriptId, mostra alerta de agendamento
-    if (!publishDate && scriptId) {
+    if (!publishDate && effectiveScriptId) {
       setShowScheduleAlert(true);
       return;
     }
@@ -418,7 +422,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
 
   const proceedWithBack = async (shouldAutoSchedule = false) => {
     // Auto-agendar para hoje com status "perdido" se não tiver publish_date
-    if (shouldAutoSchedule && !publishDate && scriptId) {
+    if (shouldAutoSchedule && !publishDate && effectiveScriptId) {
       const today = format(new Date(), "yyyy-MM-dd");
       await supabase
         .from('scripts')
@@ -426,7 +430,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
           publish_date: today,
           publish_status: 'perdido'
         })
-        .eq('id', scriptId);
+        .eq('id', effectiveScriptId);
     }
     
     // Se há sessão ativa, mostrar popup de confirmação de encerramento
@@ -441,7 +445,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
   };
 
   const handleScheduleAndBack = async () => {
-    if (scheduleDate && scriptId) {
+    if (scheduleDate && effectiveScriptId) {
       const formattedDate = format(scheduleDate, "yyyy-MM-dd");
       await supabase
         .from('scripts')
@@ -449,7 +453,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
           publish_date: formattedDate,
           publish_status: 'planejado'
         })
-        .eq('id', scriptId);
+        .eq('id', effectiveScriptId);
       
       // Atualiza state local
       setPublishDate(formattedDate);
@@ -469,7 +473,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
   const handleNextStage = async () => {
     console.log('[DEBUG - ScriptEditor] handleNextStage called');
     console.log('[DEBUG - ScriptEditor] Current mode:', isReviewMode ? 'review' : 'script');
-    console.log('[DEBUG - ScriptEditor] Current scriptId:', scriptId);
+    console.log('[DEBUG - ScriptEditor] Current scriptId:', effectiveScriptId);
     
     // Validate that script has content before advancing to review
     if (!isReviewMode) {
@@ -522,7 +526,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
     
     // Preserve scriptId in the URL
     const params = new URLSearchParams(window.location.search);
-    const currentScriptId = scriptId || params.get('scriptId');
+    const currentScriptId = effectiveScriptId || params.get('scriptId');
     
     if (!currentScriptId) {
       toast({
@@ -658,7 +662,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
           <ThumbnailUploader
             thumbnailUrl={thumbnailUrl}
             onThumbnailChange={setThumbnailUrl}
-            scriptId={scriptId}
+            scriptId={effectiveScriptId}
           />
         )}
 
@@ -839,7 +843,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                   variant="outline"
                   onClick={async () => {
                     const params = new URLSearchParams(window.location.search);
-                    const currentScriptId = scriptId || params.get('scriptId');
+                    const currentScriptId = effectiveScriptId || params.get('scriptId');
                     
                     if (!currentScriptId) {
                       toast({
