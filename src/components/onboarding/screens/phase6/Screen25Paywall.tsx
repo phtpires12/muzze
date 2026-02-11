@@ -35,13 +35,14 @@ export const Screen25Paywall = ({
 
   return (
     <div
-      className="relative h-[100dvh] w-full overflow-hidden bg-violet-50 dark:bg-background px-6"
+      className="h-[100dvh] bg-violet-50 dark:bg-background flex flex-col px-6 overflow-hidden"
       style={{
         paddingTop: 'env(safe-area-inset-top, 0px)',
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
       }}
     >
-      {/* AREA 1 - Header + Title (z-20, above everything) */}
-      <div className="relative z-20 pt-4">
+      {/* AREA 1 - Header + Title (flex-none, z-10) */}
+      <div className="flex-none relative z-10 pt-4">
         {/* Header */}
         <div className="flex items-center justify-between">
           {showDevSkip && onDevSkip ? (
@@ -76,16 +77,22 @@ export const Screen25Paywall = ({
         </div>
       </div>
 
-      {/* AREA 2 - Mockup (z-10, responsive size, pb reserves footer space) */}
-      <section className="relative z-10 flex justify-center mt-2 pb-28">
+      {/* AREA 2 - Mockup (flex-1, relative, overflow-hidden, z-0) */}
+      <section className="flex-1 relative overflow-hidden min-h-0 z-0">
         <AnimatePresence mode="wait">
           <motion.img
             key={currentIndex}
             src={MOCKUP_IMAGES[currentIndex]}
             alt="App preview"
-            className="pointer-events-none select-none h-auto w-auto object-contain"
+            className="pointer-events-none select-none"
             style={{
-              maxHeight: '56dvh',
+              position: 'absolute',
+              left: '50%',
+              top: '-8%',
+              transform: 'translateX(-50%)',
+              width: '280px',
+              maxHeight: '110%',
+              objectFit: 'contain',
             }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -96,19 +103,11 @@ export const Screen25Paywall = ({
         </AnimatePresence>
       </section>
 
-      {/* AREA 3 - Footer CTA (absolute bottom, z-30, with safe area) */}
-      <section
-        className="absolute left-0 right-0 bottom-0 z-30 bg-violet-50 dark:bg-background px-6 pt-3 space-y-2"
-        style={{
-          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)',
-        }}
-      >
-        {/* Masked pill for "Sem cobrança agora" */}
-        <div className="flex justify-center">
-          <div className="relative z-40 inline-flex items-center gap-2 rounded-full px-4 py-1.5 bg-violet-50 dark:bg-background">
-            <Check className="w-4 h-4 text-primary" />
-            <span className="text-sm text-muted-foreground">Sem cobrança agora</span>
-          </div>
+      {/* AREA 3 - CTA with mask (flex-none, z-10, solid bg) */}
+      <section className="flex-none relative z-10 bg-violet-50 dark:bg-background rounded-t-2xl space-y-2 pt-3 pb-1">
+        <div className="flex items-center justify-center gap-2 text-muted-foreground">
+          <Check className="w-4 h-4 text-primary" />
+          <span className="text-sm">Sem cobrança agora</span>
         </div>
 
         <Button
