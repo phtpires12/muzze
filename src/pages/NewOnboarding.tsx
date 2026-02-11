@@ -163,9 +163,7 @@ const NewOnboarding = () => {
 
     // Phase 2: Signup + Paywall + Install (3 screens)
     if (phase === 2) {
-      if (screen === 0) {
-        return <Screen21Signup onSuccess={handleSignupSuccess} />;
-      }
+      if (screen === 0) return null; // Rendered outside OnboardingLayout
       if (screen === 1) {
         return <Screen25Paywall onContinue={handlePaywallComplete} onBack={handleBack} />;
       }
