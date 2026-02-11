@@ -41,6 +41,7 @@ const NewOnboarding = () => {
     updateData,
     nextScreen,
     prevScreen,
+    goToScreen,
     getProgress,
     calculateLostPosts,
     completeOnboarding,
