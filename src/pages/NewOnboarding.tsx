@@ -269,6 +269,7 @@ const NewOnboarding = () => {
             </span>
           </div>
         )}
+        {devNav}
         <Screen2Username
           value={state.data.username || ""}
           onChange={(value) => updateData({ username: value })}
