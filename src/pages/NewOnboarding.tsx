@@ -41,10 +41,29 @@ const NewOnboarding = () => {
     updateData,
     nextScreen,
     prevScreen,
+    goToScreen,
     getProgress,
     calculateLostPosts,
     completeOnboarding,
   } = useOnboarding();
+
+  const isDevUser = isDeveloper || isAdmin;
+
+  // Wrapper that appends dev navigation bar to any screen content
+  const withDevBar = (content: React.ReactNode) => (
+    <>
+      {content}
+      {isDevUser && (
+        <DevNavigationBar
+          phase={state.phase}
+          screen={state.screen}
+          onPrev={prevScreen}
+          onNext={nextScreen}
+          onGoTo={goToScreen}
+        />
+      )}
+    </>
+  );
 
   useEffect(() => {
     const checkAuth = async () => {
