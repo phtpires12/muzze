@@ -479,6 +479,7 @@ const NewOnboarding = () => {
             </span>
           </div>
         )}
+        {devNav}
         <Screen12DailyTime
           value={state.data.daily_available_time || ""}
           onChange={(value) => updateData({ daily_available_time: value })}
