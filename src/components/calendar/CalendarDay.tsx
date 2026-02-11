@@ -219,7 +219,7 @@ export function CalendarDay({
     // Card transition
     const transitionInterval = setInterval(() => {
       setCurrentCardIndex(prev => {
-        const maxIndex = Math.min(scripts.length, maxScripts) - 1;
+        const maxIndex = scripts.length - 1;
         return prev >= maxIndex ? 0 : prev + 1;
       });
       setAutoplayProgress(0); // Reset progress on card change
