@@ -505,6 +505,7 @@ const NewOnboarding = () => {
             </span>
           </div>
         )}
+        {devNav}
         <Screen13CreationTime
           value={state.data.preferred_creation_time || "09:00"}
           onChange={(value) => updateData({ preferred_creation_time: value })}
