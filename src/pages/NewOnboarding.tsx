@@ -531,6 +531,7 @@ const NewOnboarding = () => {
             </span>
           </div>
         )}
+        {devNav}
         <Screen21Signup
           onSuccess={handleSignupSuccess}
           onBack={handleBack}
