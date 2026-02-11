@@ -526,7 +526,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
     
     // Preserve scriptId in the URL
     const params = new URLSearchParams(window.location.search);
-    const currentScriptId = scriptId || params.get('scriptId');
+    const currentScriptId = effectiveScriptId || params.get('scriptId');
     
     if (!currentScriptId) {
       toast({
