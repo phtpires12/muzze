@@ -51,25 +51,23 @@ export const Screen25Paywall = ({
         </h1>
       </div>
 
-      {/* Phone Mockup with auto-rotating images */}
-      <div className="flex-1 flex items-center justify-center min-h-0">
-        <PhoneMockup className="w-[220px] sm:w-[260px]">
-          <div className="relative w-full h-full">
-            <AnimatePresence mode="wait">
-              <motion.img
-                key={currentIndex}
-                src={MOCKUP_IMAGES[currentIndex]}
-                alt="App preview"
-                className="absolute inset-0 w-full h-full object-cover"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.6 }}
-                draggable={false}
-              />
-            </AnimatePresence>
-          </div>
-        </PhoneMockup>
+      {/* Mockup images (already contain iPhone frame) */}
+      <div className="flex-1 flex items-center justify-center min-h-0 -mt-6">
+        <div className="relative w-[280px] sm:w-[320px]">
+          <AnimatePresence mode="wait">
+            <motion.img
+              key={currentIndex}
+              src={MOCKUP_IMAGES[currentIndex]}
+              alt="App preview"
+              className="w-full h-auto object-contain"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.6 }}
+              draggable={false}
+            />
+          </AnimatePresence>
+        </div>
       </div>
 
       {/* Bottom CTA */}
