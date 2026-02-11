@@ -107,7 +107,7 @@ export const Screen25Paywall = ({
         className="flex-none relative z-10 bg-violet-50 dark:bg-background rounded-t-2xl space-y-2 pt-3"
         style={{
           paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)',
-          transform: 'translateY(-32px)',
+          transform: 'translateY(-50px)',
         }}
       >
         <div className="flex items-center justify-center gap-2 text-muted-foreground">
