@@ -90,7 +90,7 @@ export function SocialLoginButtons({
             <span className="w-full border-t" />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">
+            <span className="bg-violet-50 dark:bg-background px-2 text-muted-foreground">
               {separatorText}
             </span>
           </div>
