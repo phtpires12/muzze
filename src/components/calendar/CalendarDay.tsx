@@ -229,7 +229,7 @@ export function CalendarDay({
       clearInterval(progressInterval);
       clearInterval(transitionInterval);
     };
-  }, [hasMultipleCards, isHovered, weekMobile, compact, scripts.length, maxScripts, currentCardIndex]);
+  }, [hasMultipleCards, isHovered, weekMobile, compact, scripts.length, currentCardIndex]);
 
   // Carousel navigation handlers
   const goToPrevCard = (e: React.MouseEvent) => {
