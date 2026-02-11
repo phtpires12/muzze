@@ -434,6 +434,7 @@ const NewOnboarding = () => {
             </span>
           </div>
         )}
+        {devNav}
         <Screen10ClusterFeedback
           variant={state.data.screen12_variant || "hurt"}
           onContinue={handleContinue}
