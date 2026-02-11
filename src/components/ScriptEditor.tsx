@@ -273,7 +273,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
     }
     
     console.log('[DEBUG - ScriptEditor] Auto-save iniciado', {
-      scriptId,
+      effectiveScriptId,
       hasContent: !!(content.gancho || content.setup || content.desenvolvimento || content.conclusao),
       contentPreview: {
         gancho: content.gancho?.substring(0, 50),
