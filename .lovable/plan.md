@@ -1,30 +1,40 @@
 
-# Corrigir "iPhone dentro de iPhone" no Paywall
 
-## Problema
-As imagens enviadas (mockup-home.png, mockup-calendar.png, etc.) ja contem o frame do iPhone embutido. O componente `PhoneMockup` adiciona um segundo frame por cima, resultando num iPhone dentro de outro iPhone.
+# Ajustes de layout e logo no Paywall
 
-## Solucao
+## Mudancas no arquivo `src/components/onboarding/screens/phase6/Screen25Paywall.tsx`
 
-### Arquivo: `src/components/onboarding/screens/phase6/Screen25Paywall.tsx`
+### 1. Adicionar logo da Muzze
+- Copiar a imagem `user-uploads://2-3.png` para `src/assets/paywall/muzze-leaf-gradient.png`
+- Importar e exibir a logo centralizada entre o link "Restaurar compra" e o titulo, com tamanho pequeno (~40px)
 
-1. **Remover o import e uso do `PhoneMockup`** -- as imagens ja tem o mockup embutido, entao basta exibi-las diretamente.
+### 2. Aumentar margem negativa no mockup
+- Trocar `-mt-6` por `-mt-16` (ou valor similar) no container das imagens para compensar o padding superior grande das imagens de mockup
+- Isso vai "puxar" o iPhone para mais perto do titulo, como na referencia
 
-2. **Substituir o bloco do PhoneMockup** por um container simples com as imagens rotativas:
-   - Container centralizado com `overflow-hidden`
-   - Imagens exibidas diretamente com `AnimatePresence` crossfade (como ja esta)
-   - Usar `object-contain` em vez de `object-cover` para mostrar a imagem inteira
-   - Aplicar margem negativa no topo (`-mt-8` ou similar) para compensar o padding excessivo que as imagens tem na parte superior, fazendo com que preencham melhor o espaco disponivel
+### 3. Garantir que tudo cabe na tela sem scroll
+- Reduzir espacamentos entre elementos:
+  - `mt-4 mb-6` do titulo para `mt-1 mb-1` (titulo quase encostando no mockup)
+  - `space-y-3 pt-4` do bottom CTA para `space-y-2 pt-2`
+  - `py-6` do container principal para `py-4`
+- O container flex-col com `min-h-[100dvh]` ja garante distribuicao vertical; o mockup ocupa o `flex-1` restante
 
-3. **Estrutura simplificada do bloco central**:
+### Estrutura visual final:
 ```text
-<div className="flex-1 flex items-center justify-center min-h-0 -mt-6">
-  <div className="relative w-[280px] sm:w-[320px] h-auto">
-    <AnimatePresence mode="wait">
-      <motion.img src={MOCKUP_IMAGES[currentIndex]} ... />
-    </AnimatePresence>
-  </div>
-</div>
++----------------------------------+
+|              Restaurar compra    |
+|          [logo folha ~40px]      |
+| Experimente a Muzze              |
+|    gratuitamente.                |
+|      +--------------------+      |
+|      |   [iPhone Mockup]  |      |  <- margem negativa grande
+|      |   bem proximo ao   |      |     para compensar padding
+|      |   titulo acima     |      |     interno das imagens
+|      +--------------------+      |
+| Sem cobranca agora               |
+| [==Experimente por R$0.00===]    |
+| Depois R$298,80/ano (R$24,90/mes)|
++----------------------------------+
 ```
 
-A imagem vai aparecer grande e centralizada, mostrando o iPhone que ja vem dentro dela, sem duplicacao de frames. O margin-top negativo compensa o padding superior das imagens para que fiquem visualmente maiores e preencham melhor a area central da tela.
+Tudo visivel sem scroll em telas de iPhone padrao (375x812 e similares).
