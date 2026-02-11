@@ -187,7 +187,7 @@ export function CalendarDay({
   const isDragOver = dragOverDate === format(day, "yyyy-MM-dd");
   
   // Define limits based on card mode
-  const maxScripts = compactCard ? 2 : 4;
+  // No limit - carousel shows ALL scripts
   const hasMultipleCards = scripts.length > 1;
 
   const AUTOPLAY_INTERVAL = 3500; // 3.5 seconds between transitions
