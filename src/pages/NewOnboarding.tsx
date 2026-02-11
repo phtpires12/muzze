@@ -148,12 +148,13 @@ const NewOnboarding = () => {
       if (screen === 9) return false; // ClusterFeedback - internal button handles
     }
 
-    // Phase 1 (Behavioral Science + Configuration - 3 screens)
+    // Phase 1 (Behavioral Science + Configuration - 5 screens)
     if (phase === 1) {
       if (screen === 0) return true; // BehavioralScience - transition screen
       if (screen === 1) return !!data.daily_available_time; // DailyTime
       if (screen === 2) return true; // CreationTime - always can continue (has default)
-      if (screen === 3) return (data.previous_tools?.length ?? 0) > 0; // PreviousTools
+      if (screen === 3) return false; // Notifications - internal buttons handle navigation
+      if (screen === 4) return (data.previous_tools?.length ?? 0) > 0; // PreviousTools
     }
 
     // Phase 2 (Signup + Paywall + Install - 3 screens)
