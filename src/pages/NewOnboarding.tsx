@@ -179,10 +179,10 @@ const NewOnboarding = () => {
       if (screen >= 3 && screen <= 9) return null;
     }
 
-    // Phase 1: Behavioral Science + Configuration (3 screens)
+    // Phase 1: Behavioral Science + Configuration (5 screens)
     if (phase === 1) {
       // All screens render outside OnboardingLayout
-      if (screen >= 0 && screen <= 3) return null;
+      if (screen >= 0 && screen <= 4) return null;
     }
 
     // Phase 2: Signup + Paywall + Install (3 screens)
