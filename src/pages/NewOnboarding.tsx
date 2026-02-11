@@ -457,6 +457,7 @@ const NewOnboarding = () => {
             </span>
           </div>
         )}
+        {devNav}
         <Screen11BehavioralScience
           onContinue={handleContinue}
           onBack={handleBack}
