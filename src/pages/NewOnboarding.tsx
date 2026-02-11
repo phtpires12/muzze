@@ -548,11 +548,12 @@ const NewOnboarding = () => {
       <>
         {devNav}
         <Screen25Paywall
-        onContinue={handlePaywallComplete}
-        onBack={handleBack}
-        showDevSkip={isDeveloper || isAdmin}
-        onDevSkip={handleContinue}
-      />
+          onContinue={handlePaywallComplete}
+          onBack={handleBack}
+          showDevSkip={isDeveloper || isAdmin}
+          onDevSkip={handleContinue}
+        />
+      </>
     );
   }
 
