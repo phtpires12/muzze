@@ -7,16 +7,9 @@ import mockupHome from "@/assets/paywall/mockup-home.png";
 import mockupCalendar from "@/assets/paywall/mockup-calendar.png";
 import mockupStats from "@/assets/paywall/mockup-stats.png";
 import mockupOfensiva from "@/assets/paywall/mockup-ofensiva.png";
-
-interface Screen25PaywallProps {
-  onContinue: () => void;
-  onBack?: () => void;
-  showDevSkip?: boolean;
-  onDevSkip?: () => void;
-}
+import muzzeLeaf from "@/assets/paywall/muzze-leaf-gradient.png";
 
 const MOCKUP_IMAGES = [mockupHome, mockupCalendar, mockupStats, mockupOfensiva];
-
 export const Screen25Paywall = ({
   onContinue,
   onBack,
