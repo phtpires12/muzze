@@ -461,17 +461,28 @@ export function CalendarDay({
                     } ${isPosted ? "opacity-75" : ""} ${compactCard ? "text-[10px]" : "text-xs"}`}
                     onClick={() => onViewScript?.(script.id)}
                   >
-                    <div className={compactCard ? "p-1.5" : "p-2"}>
-                      <div className="grid grid-cols-[auto_1fr_auto] gap-1.5 items-start">
+                    <div className={compactCard ? "p-1.5 pr-5" : "p-2 pr-6"}>
+                      <div className="flex items-start gap-1.5">
                         <div className={`text-muted-foreground flex-shrink-0 ${compactCard ? "text-[8px]" : "mt-0.5"}`}>
                           {isPosted ? "✅" : "📄"}
                         </div>
-                        <div className="min-w-0">
-                          <div className={`font-medium truncate ${
-                            script.title?.trim() ? "text-foreground" : "text-muted-foreground"
-                          } ${compactCard ? "mb-0.5" : "mb-1"}`}>
-                            {script.title?.trim() || "Sem título"}
-                          </div>
+                        <div className="flex-1 min-w-0">
+                          <TooltipProvider delayDuration={400}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className={`font-medium truncate ${
+                                  script.title?.trim() ? "text-foreground" : "text-muted-foreground"
+                                } ${compactCard ? "mb-0.5" : "mb-1"}`}>
+                                  {script.title?.trim() || "Sem título"}
+                                </div>
+                              </TooltipTrigger>
+                              {script.title?.trim() && (
+                                <TooltipContent side="top" className="max-w-[200px]">
+                                  <p className="text-xs">{script.title}</p>
+                                </TooltipContent>
+                              )}
+                            </Tooltip>
+                          </TooltipProvider>
                           <div className="flex flex-wrap gap-0.5">
                             {stageLabel && (
                               <Badge 
@@ -488,22 +499,23 @@ export function CalendarDay({
                             )}
                           </div>
                         </div>
-                        <button
-                          aria-label="Excluir conteúdo"
-                          className={`z-10 pointer-events-auto opacity-0 group-hover/card:opacity-100 focus:opacity-100 transition-opacity rounded hover:bg-destructive/20 ${
-                            compactCard ? "p-0.5 min-w-[20px] min-h-[20px]" : "p-1 min-w-[24px] min-h-[24px]"
-                          } flex items-center justify-center`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setScriptToDelete(script);
-                          }}
-                        >
-                          <Trash2 className={`text-muted-foreground hover:text-destructive ${
-                            compactCard ? "w-2.5 h-2.5" : "w-3 h-3"
-                          }`} />
-                        </button>
                       </div>
                     </div>
+                    {/* Absolute delete button - appears on card hover */}
+                    <button
+                      aria-label="Excluir conteúdo"
+                      className={`absolute z-10 pointer-events-auto opacity-0 group-hover/card:opacity-100 focus:opacity-100 transition-all duration-150 rounded p-1 hover:bg-destructive/15 ${
+                        compactCard ? "top-0.5 right-0.5" : "top-1 right-1"
+                      }`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setScriptToDelete(script);
+                      }}
+                    >
+                      <Trash2 className={`text-muted-foreground/60 hover:text-destructive transition-colors ${
+                        compactCard ? "w-3 h-3" : "w-3.5 h-3.5"
+                      }`} />
+                    </button>
                   </div>
                 </div>
               );
