@@ -39,10 +39,11 @@ const translateAuthError = (error: string): string => {
 interface Screen21SignupProps {
   onSuccess: () => void;
   onBack: () => void;
-  progress: number;
+  showDevSkip?: boolean;
+  onDevSkip?: () => void;
 }
 
-export const Screen21Signup = ({ onSuccess, onBack, progress }: Screen21SignupProps) => {
+export const Screen21Signup = ({ onSuccess, onBack, showDevSkip, onDevSkip }: Screen21SignupProps) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
