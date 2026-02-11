@@ -12,8 +12,6 @@ import muzzeLeaf from "@/assets/paywall/muzze-leaf-gradient.png";
 interface Screen25PaywallProps {
   onContinue: () => void;
   onBack?: () => void;
-  showDevSkip?: boolean;
-  onDevSkip?: () => void;
 }
 
 const MOCKUP_IMAGES = [mockupHome, mockupCalendar, mockupStats, mockupOfensiva];
