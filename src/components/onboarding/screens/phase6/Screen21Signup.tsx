@@ -189,7 +189,7 @@ export const Screen21Signup = ({ onSuccess, onBack, showDevSkip, onDevSkip }: Sc
               <a href="/privacy" className="underline">Política de Privacidade</a>.
             </p>
 
-            <div className="text-center pt-1">
+            <div className="text-center pt-1 space-y-3">
               <button
                 type="button"
                 onClick={() => navigate("/auth")}
@@ -198,6 +198,17 @@ export const Screen21Signup = ({ onSuccess, onBack, showDevSkip, onDevSkip }: Sc
               >
                 Já tem uma conta? <span className="underline font-medium">Entrar</span>
               </button>
+
+              {showDevSkip && (
+                <button
+                  type="button"
+                  onClick={onDevSkip}
+                  className="flex items-center justify-center gap-2 mx-auto px-4 py-2 text-sm font-medium text-primary border border-primary/50 rounded-full hover:bg-primary/10 transition-colors"
+                >
+                  <Shield className="w-4 h-4" />
+                  Pular (Dev)
+                </button>
+              )}
             </div>
           </form>
         </motion.div>

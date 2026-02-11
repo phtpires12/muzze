@@ -510,7 +510,8 @@ const NewOnboarding = () => {
         <Screen21Signup
           onSuccess={handleSignupSuccess}
           onBack={handleBack}
-          progress={getProgress()}
+          showDevSkip={isDeveloper || isAdmin}
+          onDevSkip={handleContinue}
         />
       </>
     );
