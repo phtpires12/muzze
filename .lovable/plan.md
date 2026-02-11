@@ -1,74 +1,63 @@
 
-# Correcao definitiva: truncar titulos + lixeira visivel
 
-## Causa raiz identificada
+# Correcao definitiva: CSS Grid no header do card + width constraint
 
-O botao de lixeira esta posicionado com `absolute` dentro do card, mas o card esta dentro de um container com `overflow: hidden` (necessario para o carousel). Como o card ocupa 100% da largura, o botao no `right-1` fica dentro dos limites do card, porem o titulo longo empurra o conteudo e a area do botao fica visualmente sobreposta pelo texto truncado via CSS `truncate` -- mas o botao em si fica invisivel porque o `overflow-hidden` do container pai corta qualquer conteudo que extrapole.
+## Causa raiz real
 
-O verdadeiro problema: o `truncate` do titulo funciona, mas o `pr-5` adicionado nao esta criando espaco real porque o `overflow-hidden` do container do carousel esta cortando tudo no limite da celula.
-
-## Solucao
-
-Remover o `overflow-hidden` do container do carousel para cards unicos (quando nao ha carousel) e, para todos os casos, garantir que o botao de lixeira fique DENTRO do fluxo visual do card usando `overflow-visible` no card em si.
-
-Abordagem concreta em duas partes:
-
-### Parte 1: Garantir overflow visivel no card
-
-O card (`div` com `group/card relative`) precisa ter `overflow-visible` (que ja e o padrao). O problema e o container pai `overflow-hidden`. A solucao e aplicar `overflow-hidden` apenas no eixo X do track do carousel (para o slide funcionar), mas permitir que os cards internos mostrem seus elementos absolutos.
-
-Na pratica, trocar `overflow-hidden` por `overflow-x-hidden overflow-y-visible` nao funciona bem. A alternativa mais robusta:
-
-**Mover o botao de lixeira para FORA do carousel `overflow-hidden`, posicionando-o como overlay no container `relative` pai.**
-
-### Parte 2: Truncar todos os titulos igualmente
-
-Aplicar truncamento com reticencias em todos os titulos, nao apenas quando ha multiplos cards. O titulo ja usa `truncate` do Tailwind, que adiciona `text-overflow: ellipsis`. O padding-right (`pr-5`/`pr-4`) garante espaco para a lixeira. Isso ja esta implementado, mas nao funciona por causa do overflow do carousel.
-
-## Mudanca tecnica final
-
-**Arquivo**: `src/components/calendar/CalendarDay.tsx`
-
-### Estrategia: Clip apenas no eixo horizontal
-
-Trocar o container `overflow-hidden` (linha 435) por `overflow-x-clip` que corta apenas no eixo X (necessario para o carousel) mas permite que elementos com `position: absolute` dentro dos cards sejam visiveis verticalmente. Porem, como a lixeira esta no eixo X (right), isso tambem nao resolve.
-
-### Estrategia definitiva: Padding interno no card
-
-A solucao real e garantir que o botao de lixeira fique DENTRO da area visivel do card, nao no limite. Isso se faz:
-
-1. Remover `pr-5`/`pr-4` do container do titulo (linha 467)
-2. Mover a lixeira para ser um elemento INLINE no final do flex row, mas com `position: relative` e nao `absolute`
-3. Usar `flex-shrink-0` na lixeira e dar ao titulo container `min-w-0` + `truncate` (que ja tem)
-4. O titulo sera truncado automaticamente pelo flex layout, deixando espaco para a lixeira
-
+No `CalendarDay.tsx`, linha 450-451:
 ```
-Layout final:
-[emoji] [titulo truncado com...] [lixeira]
-         ^-- flex-1 min-w-0       ^-- flex-shrink-0, sempre visivel
+className={cn(hasMultipleCards && "w-full flex-shrink-0")}
 ```
 
-A diferenca da tentativa anterior (que falhou) e que desta vez o botao NAO tera `flex-shrink-0` dentro de um container com `overflow-hidden`. Ele ficara dentro do `flex` row principal do card, que TEM espaco garantido pelo `min-w-0` + `truncate` no titulo.
+Quando ha apenas 1 conteudo no dia, o container do slide NAO recebe `w-full`. Isso significa que ele pode crescer livremente com o conteudo, e o `truncate` do titulo nunca ativa -- o botao de lixeira e empurrado para fora da area visivel e cortado pelo `overflow-hidden` do carousel.
 
-O problema anterior era que a lixeira estava dentro do `div.flex-1.min-w-0.overflow-hidden` -- o container do titulo. Desta vez, ela fica FORA desse container, como irmao direto no flex row `div.flex.items-start.gap-1.5`:
+Quando ha multiplos conteudos, `w-full flex-shrink-0` e aplicado, forcando o slide a ocupar 100% da largura, e ai o truncate funciona. Por isso a lixeira so aparece em cards com titulo curto ou em dias com multiplos conteudos.
+
+## Solucao em 2 partes
+
+### Parte 1: Sempre aplicar `w-full` no slide container
+
+Trocar a linha 450-451 para SEMPRE aplicar `w-full`, independente de `hasMultipleCards`. O `flex-shrink-0` so e necessario para o carousel.
+
+**Antes**: `cn(hasMultipleCards && "w-full flex-shrink-0")`
+**Depois**: `cn("w-full", hasMultipleCards && "flex-shrink-0")`
+
+### Parte 2: CSS Grid no header do card
+
+Trocar o `flex items-start gap-1.5` (linha 463) por CSS Grid com 3 colunas:
 
 ```
-div.flex.items-start.gap-1.5
-  [emoji] flex-shrink-0
-  div.flex-1.min-w-0 (SEM overflow-hidden)
-    titulo (truncate)
-    badges
-  button.flex-shrink-0 (lixeira, opacity no hover)
+grid grid-cols-[auto_1fr_auto] gap-1.5 items-start
 ```
 
-A chave e remover `overflow-hidden` do container do titulo (linha 467). O `truncate` no titulo ja cuida de esconder texto excedente sem precisar de `overflow-hidden` no container pai. E sem `overflow-hidden` no container pai, o flex layout consegue calcular corretamente o espaco para a lixeira.
+- Coluna 1 (`auto`): emoji/icone
+- Coluna 2 (`1fr`): titulo + badges, com `min-w-0` e `truncate`
+- Coluna 3 (`auto`): botao de lixeira, sempre com espaco reservado
 
-## Resumo das mudancas
+### Parte 3: Melhorar o botao de lixeira
 
-| Linha | Antes | Depois |
+- Adicionar `aria-label="Excluir conteudo"`
+- Adicionar `min-w-[24px] min-h-[24px]` (area minima de toque, compactCard: `min-w-[20px] min-h-[20px]`)
+- Adicionar `focus-within` visibility: `focus:opacity-100`
+- Manter `z-10 pointer-events-auto`
+
+## Arquivo afetado
+
+`src/components/calendar/CalendarDay.tsx`
+
+## Mudancas especificas
+
+| Local | Antes | Depois |
 |-------|-------|--------|
-| 467 | `flex-1 min-w-0 overflow-hidden pr-4/pr-5` | `flex-1 min-w-0` (sem overflow-hidden, sem pr) |
-| 491-503 | `button` com `absolute z-10 top-1 right-1` | `button` inline com `flex-shrink-0 ml-auto`, sem position absolute |
-| 463 | `flex items-start gap-1.5` | Sem mudanca |
+| Linha 450-451 | `cn(hasMultipleCards && "w-full flex-shrink-0")` | `cn("w-full", hasMultipleCards && "flex-shrink-0")` |
+| Linha 463 | `flex items-start gap-1.5` | `grid grid-cols-[auto_1fr_auto] gap-1.5 items-start` |
+| Linha 489-501 | button com flex-shrink-0, sem aria-label | button com z-10, pointer-events-auto, aria-label, min-w/h, focus:opacity-100 |
 
-O botao de lixeira sai de absolute e volta para inline, mas desta vez no nivel correto do flex (como irmao do container do titulo, nao dentro dele).
+## Por que vai funcionar desta vez
+
+1. `w-full` no slide garante que o card SEMPRE tem largura maxima definida pelo container pai
+2. CSS Grid com `1fr` garante que a coluna do titulo NUNCA ultrapassa o espaco disponivel
+3. A coluna `auto` da lixeira SEMPRE reserva espaco, independente do tamanho do titulo
+4. O titulo trunca deterministicamente porque `1fr` + `min-w-0` + `truncate` funciona de forma previsivel no Grid
+5. Nenhuma dependencia de absolute, padding-right ou overflow -- tudo e resolvido pelo layout do Grid
+
