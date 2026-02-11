@@ -21,6 +21,7 @@ import { Screen10ClusterFeedback } from "@/components/onboarding/screens/phase1/
 import { Screen11BehavioralScience } from "@/components/onboarding/screens/phase1/Screen11BehavioralScience";
 import { Screen12DailyTime } from "@/components/onboarding/screens/phase1/Screen12DailyTime";
 import { Screen13CreationTime } from "@/components/onboarding/screens/phase1/Screen13CreationTime";
+import { Screen14Notifications } from "@/components/onboarding/screens/phase1/Screen14Notifications";
 import { ConsistencyCluster, Screen12Variant } from "@/types/onboarding";
 import { Screen3Platform } from "@/components/onboarding/screens/phase1/Screen3Platform";
 import { Screen4StartQuestionnaire } from "@/components/onboarding/screens/phase1/Screen4StartQuestionnaire";
