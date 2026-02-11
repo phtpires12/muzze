@@ -473,7 +473,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
   const handleNextStage = async () => {
     console.log('[DEBUG - ScriptEditor] handleNextStage called');
     console.log('[DEBUG - ScriptEditor] Current mode:', isReviewMode ? 'review' : 'script');
-    console.log('[DEBUG - ScriptEditor] Current scriptId:', scriptId);
+    console.log('[DEBUG - ScriptEditor] Current scriptId:', effectiveScriptId);
     
     // Validate that script has content before advancing to review
     if (!isReviewMode) {
