@@ -448,7 +448,8 @@ export function CalendarDay({
                 <div 
                   key={script.id} 
                   className={cn(
-                    hasMultipleCards && "w-full flex-shrink-0"
+                    "w-full",
+                    hasMultipleCards && "flex-shrink-0"
                   )}
                 >
                   <div
@@ -460,11 +461,11 @@ export function CalendarDay({
                     onClick={() => onViewScript?.(script.id)}
                   >
                     <div className={compactCard ? "p-1.5" : "p-2"}>
-                      <div className="flex items-start gap-1.5">
+                      <div className="grid grid-cols-[auto_1fr_auto] gap-1.5 items-start">
                         <div className={`text-muted-foreground flex-shrink-0 ${compactCard ? "text-[8px]" : "mt-0.5"}`}>
                           {isPosted ? "✅" : "📄"}
                         </div>
-                        <div className="flex-1 min-w-0">
+                        <div className="min-w-0">
                           <div className={`font-medium truncate ${
                             script.title?.trim() ? "text-foreground" : "text-muted-foreground"
                           } ${compactCard ? "mb-0.5" : "mb-1"}`}>
@@ -487,9 +488,10 @@ export function CalendarDay({
                           </div>
                         </div>
                         <button
-                          className={`flex-shrink-0 opacity-0 group-hover/card:opacity-100 transition-opacity rounded hover:bg-destructive/20 ${
-                            compactCard ? "p-0.5" : "p-1"
-                          }`}
+                          aria-label="Excluir conteúdo"
+                          className={`z-10 pointer-events-auto opacity-0 group-hover/card:opacity-100 focus:opacity-100 transition-opacity rounded hover:bg-destructive/20 ${
+                            compactCard ? "p-0.5 min-w-[20px] min-h-[20px]" : "p-1 min-w-[24px] min-h-[24px]"
+                          } flex items-center justify-center`}
                           onClick={(e) => {
                             e.stopPropagation();
                             setScriptToDelete(script);
