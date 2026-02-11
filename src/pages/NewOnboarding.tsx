@@ -370,6 +370,7 @@ const NewOnboarding = () => {
             </span>
           </div>
         )}
+        {devNav}
         <Screen8MonthsTrying
           value={state.data.months_trying || 0}
           onChange={(value) => updateData({ months_trying: value })}
