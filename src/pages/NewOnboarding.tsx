@@ -545,7 +545,9 @@ const NewOnboarding = () => {
   // Paywall renderiza fora do OnboardingLayout - layout fullscreen próprio
   if (state.phase === 2 && state.screen === 1) {
     return (
-      <Screen25Paywall
+      <>
+        {devNav}
+        <Screen25Paywall
         onContinue={handlePaywallComplete}
         onBack={handleBack}
         showDevSkip={isDeveloper || isAdmin}
