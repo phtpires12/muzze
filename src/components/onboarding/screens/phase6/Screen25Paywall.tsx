@@ -35,8 +35,19 @@ export const Screen25Paywall = ({
 
   return (
     <div className="h-[100dvh] bg-violet-50 dark:bg-background flex flex-col px-6 py-4 safe-area-inset overflow-hidden">
-      {/* Header - Restaurar compra */}
-      <div className="flex items-center justify-end">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        {showDevSkip && onDevSkip ? (
+          <button
+            className="flex items-center gap-1 text-xs text-primary underline underline-offset-2"
+            onClick={onDevSkip}
+          >
+            <Shield className="w-3 h-3" />
+            Pular (Dev)
+          </button>
+        ) : (
+          <div />
+        )}
         <button
           className="text-xs text-muted-foreground underline underline-offset-2"
           onClick={() => {/* TODO: restore purchase logic */}}
@@ -77,7 +88,7 @@ export const Screen25Paywall = ({
       </div>
 
       {/* Bottom CTA */}
-      <div className="space-y-2 pt-2 pb-1">
+      <div className="relative z-10 space-y-2 pt-2 pb-1">
         <div className="flex items-center justify-center gap-2 text-muted-foreground">
           <Check className="w-4 h-4 text-primary" />
           <span className="text-sm">Sem cobrança agora</span>
@@ -95,19 +106,6 @@ export const Screen25Paywall = ({
         <p className="text-xs text-center text-muted-foreground">
           Depois R$298,80 por ano (R$24,90/mês)
         </p>
-
-        {/* Dev skip button */}
-        {showDevSkip && onDevSkip && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onDevSkip}
-            className="w-full border-primary/50 text-primary hover:bg-primary/10 mt-1"
-          >
-            <Shield className="w-4 h-4 mr-2" />
-            Pular (Dev)
-          </Button>
-        )}
       </div>
     </div>
   );
