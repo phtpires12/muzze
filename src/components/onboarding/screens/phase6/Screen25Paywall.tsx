@@ -26,7 +26,7 @@ export const Screen25Paywall = ({
   }, []);
 
   return (
-    <div className="min-h-[100dvh] bg-violet-50 dark:bg-background flex flex-col px-6 py-6 safe-area-inset">
+    <div className="h-[100dvh] bg-violet-50 dark:bg-background flex flex-col px-6 py-4 safe-area-inset overflow-hidden">
       {/* Header - Restaurar compra */}
       <div className="flex items-center justify-end">
         <button
@@ -37,15 +37,20 @@ export const Screen25Paywall = ({
         </button>
       </div>
 
+      {/* Logo */}
+      <div className="flex justify-center mt-1">
+        <img src={muzzeLeaf} alt="Muzze" className="w-10 h-10 object-contain" />
+      </div>
+
       {/* Title */}
-      <div className="text-center mt-4 mb-6">
+      <div className="text-center mt-1 mb-0">
         <h1 className="text-2xl sm:text-3xl font-bold text-foreground leading-tight">
           Experimente a Muzze<br />gratuitamente.
         </h1>
       </div>
 
-      {/* Mockup images (already contain iPhone frame) */}
-      <div className="flex-1 flex items-center justify-center min-h-0 -mt-6">
+      {/* Mockup images */}
+      <div className="flex-1 flex items-center justify-center min-h-0 -mt-16">
         <div className="relative w-[280px] sm:w-[320px]">
           <AnimatePresence mode="wait">
             <motion.img
@@ -64,7 +69,7 @@ export const Screen25Paywall = ({
       </div>
 
       {/* Bottom CTA */}
-      <div className="space-y-3 pt-4 pb-2">
+      <div className="space-y-2 pt-2 pb-1">
         <div className="flex items-center justify-center gap-2 text-muted-foreground">
           <Check className="w-4 h-4 text-primary" />
           <span className="text-sm">Sem cobrança agora</span>
@@ -89,7 +94,7 @@ export const Screen25Paywall = ({
             variant="outline"
             size="sm"
             onClick={onDevSkip}
-            className="w-full border-primary/50 text-primary hover:bg-primary/10 mt-2"
+            className="w-full border-primary/50 text-primary hover:bg-primary/10 mt-1"
           >
             <Shield className="w-4 h-4 mr-2" />
             Pular (Dev)
