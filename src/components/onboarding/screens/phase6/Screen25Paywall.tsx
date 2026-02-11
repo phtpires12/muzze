@@ -38,7 +38,6 @@ export const Screen25Paywall = ({
       className="h-[100dvh] bg-violet-50 dark:bg-background flex flex-col px-6 overflow-hidden"
       style={{
         paddingTop: 'env(safe-area-inset-top, 0px)',
-        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
       }}
     >
       {/* AREA 1 - Header + Title (flex-none, z-10) */}
