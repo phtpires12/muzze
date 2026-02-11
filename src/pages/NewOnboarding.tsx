@@ -231,6 +231,7 @@ const NewOnboarding = () => {
             </span>
           </div>
         )}
+        {devNav}
         <HowWeHelpSection onComplete={handleContinue} onBack={handleBack} />
       </>
     );
