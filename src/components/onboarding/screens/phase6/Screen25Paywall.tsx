@@ -41,7 +41,7 @@ export const Screen25Paywall = ({
       }}
     >
       {/* AREA 1 - Header + Title (flex-none, z-10) */}
-      <div className="flex-none relative z-10 pt-4">
+      <div className="flex-none relative z-10 pt-4" style={{ marginTop: '10px' }}>
         {/* Header */}
         <div className="flex items-center justify-between">
           {showDevSkip && onDevSkip ? (
