@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Check, Shield } from "lucide-react";
+import { Check } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 
 import mockupHome from "@/assets/paywall/mockup-home.png";
