@@ -494,7 +494,7 @@ const NewOnboarding = () => {
     );
   }
 
-  // Signup renderiza fora do OnboardingLayout - layout próprio com progress bar
+  // Signup renderiza fora do OnboardingLayout - layout próprio sem progress bar
   if (state.phase === 2 && state.screen === 0) {
     return (
       <>
@@ -509,6 +509,29 @@ const NewOnboarding = () => {
         )}
         <Screen21Signup
           onSuccess={handleSignupSuccess}
+          onBack={handleBack}
+          showDevSkip={isDeveloper || isAdmin}
+          onDevSkip={handleContinue}
+        />
+      </>
+    );
+  }
+
+  // Paywall renderiza fora do OnboardingLayout - layout fullscreen próprio
+  if (state.phase === 2 && state.screen === 1) {
+    return (
+      <>
+        {/* Developer Badge */}
+        {(isDeveloper || isAdmin) && (
+          <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-full">
+            <Shield className="w-4 h-4 text-primary" />
+            <span className="text-xs font-medium text-primary">
+              {isAdmin ? "Admin" : "Developer"}
+            </span>
+          </div>
+        )}
+        <Screen25Paywall
+          onContinue={handlePaywallComplete}
           onBack={handleBack}
           showDevSkip={isDeveloper || isAdmin}
           onDevSkip={handleContinue}
