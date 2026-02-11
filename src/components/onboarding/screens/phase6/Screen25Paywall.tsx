@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Check, Shield } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import { PhoneMockup } from "@/components/onboarding/PhoneMockup";
 
 import mockupHome from "@/assets/paywall/mockup-home.png";
 import mockupCalendar from "@/assets/paywall/mockup-calendar.png";
