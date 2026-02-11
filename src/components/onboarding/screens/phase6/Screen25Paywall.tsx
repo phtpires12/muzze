@@ -68,8 +68,8 @@ export const Screen25Paywall = ({
         </h1>
       </div>
 
-      {/* Mockup images */}
-      <div className="flex-1 flex items-center justify-center min-h-0 -mt-16">
+      {/* Mockup images - section with controlled height, overflow clips naturally */}
+      <section className="flex-1 max-h-[55vh] overflow-hidden relative z-0 flex items-center justify-center min-h-0 -mt-16">
         <div className="relative w-[280px] sm:w-[320px]">
           <AnimatePresence mode="wait">
             <motion.img
@@ -85,10 +85,10 @@ export const Screen25Paywall = ({
             />
           </AnimatePresence>
         </div>
-      </div>
+      </section>
 
-      {/* Bottom CTA */}
-      <div className="relative z-10 space-y-2 pt-2 pb-1">
+      {/* Bottom CTA - solid background, always above mockup */}
+      <section className="relative z-10 bg-violet-50 dark:bg-background space-y-2 pt-3 pb-1">
         <div className="flex items-center justify-center gap-2 text-muted-foreground">
           <Check className="w-4 h-4 text-primary" />
           <span className="text-sm">Sem cobrança agora</span>
@@ -106,7 +106,7 @@ export const Screen25Paywall = ({
         <p className="text-xs text-center text-muted-foreground">
           Depois R$298,80 por ano (R$24,90/mês)
         </p>
-      </div>
+      </section>
     </div>
   );
 };
