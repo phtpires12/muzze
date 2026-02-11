@@ -447,7 +447,7 @@ export function CalendarDay({
               transform: hasMultipleCards ? `translateX(-${currentCardIndex * 100}%)` : undefined 
             }}
           >
-            {scripts.slice(0, maxScripts).map((script) => {
+            {scripts.map((script) => {
               const cardBackground = getCardBackground(script);
               const stageLabel = getStageLabel(script);
               const isPosted = script.publish_status === "postado";
