@@ -1,40 +1,32 @@
 
 
-# Ajustes de layout e logo no Paywall
+# Ajustar layout do Paywall: mover "Pular (Dev)" e garantir CTA acima do mockup
 
-## Mudancas no arquivo `src/components/onboarding/screens/phase6/Screen25Paywall.tsx`
+## Problema
+O botao "Pular (Dev)" no rodape esta empurrando todos os elementos (CTA, texto de preco) para cima, fazendo o mockup do iPhone invadir o titulo "gratuitamente.". Alem disso, o badge "Admin" fixo no canto superior direito e redundante com o botao "Pular (Dev)".
 
-### 1. Adicionar logo da Muzze
-- Copiar a imagem `user-uploads://2-3.png` para `src/assets/paywall/muzze-leaf-gradient.png`
-- Importar e exibir a logo centralizada entre o link "Restaurar compra" e o titulo, com tamanho pequeno (~40px)
+## Mudancas
 
-### 2. Aumentar margem negativa no mockup
-- Trocar `-mt-6` por `-mt-16` (ou valor similar) no container das imagens para compensar o padding superior grande das imagens de mockup
-- Isso vai "puxar" o iPhone para mais perto do titulo, como na referencia
+### 1. `src/pages/NewOnboarding.tsx` (linhas 520-538)
+- Remover o bloco do Developer Badge (`fixed top-4 right-4`) que renderiza acima do Screen25Paywall. O botao "Pular (Dev)" dentro da propria tela ja cumpre essa funcao.
 
-### 3. Garantir que tudo cabe na tela sem scroll
-- Reduzir espacamentos entre elementos:
-  - `mt-4 mb-6` do titulo para `mt-1 mb-1` (titulo quase encostando no mockup)
-  - `space-y-3 pt-4` do bottom CTA para `space-y-2 pt-2`
-  - `py-6` do container principal para `py-4`
-- O container flex-col com `min-h-[100dvh]` ja garante distribuicao vertical; o mockup ocupa o `flex-1` restante
+### 2. `src/components/onboarding/screens/phase6/Screen25Paywall.tsx`
 
-### Estrutura visual final:
+- **Mover o botao "Pular (Dev)"** do rodape (apos o texto de preco) para o header, substituindo o badge Admin. Posicionar como um botao pequeno/link no canto superior direito, ao lado do "Restaurar compra".
+
+- **Garantir z-index no bottom CTA**: adicionar `relative z-10` no container do bottom CTA para que fique sempre acima do mockup caso haja sobreposicao.
+
+- **Estrutura do header atualizada**:
 ```text
-+----------------------------------+
-|              Restaurar compra    |
-|          [logo folha ~40px]      |
-| Experimente a Muzze              |
-|    gratuitamente.                |
-|      +--------------------+      |
-|      |   [iPhone Mockup]  |      |  <- margem negativa grande
-|      |   bem proximo ao   |      |     para compensar padding
-|      |   titulo acima     |      |     interno das imagens
-|      +--------------------+      |
-| Sem cobranca agora               |
-| [==Experimente por R$0.00===]    |
-| Depois R$298,80/ano (R$24,90/mes)|
-+----------------------------------+
+[Pular (Dev)]          [Restaurar compra]
+```
+Ambos como links discretos no topo. O "Pular (Dev)" so aparece para devs/admins.
+
+- **Bottom CTA simplificado** (sem o botao Pular):
+```text
+  Sem cobranca agora
+  [Experimente por R$0,00]
+  Depois R$298,80/ano (R$24,90/mes)
 ```
 
-Tudo visivel sem scroll em telas de iPhone padrao (375x812 e similares).
+Isso libera espaco vertical no rodape, permitindo que o mockup e o titulo nao conflitem.
