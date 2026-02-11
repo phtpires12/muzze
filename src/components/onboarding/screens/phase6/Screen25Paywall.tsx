@@ -88,7 +88,7 @@ export const Screen25Paywall = ({
       </div>
 
       {/* Bottom CTA */}
-      <div className="space-y-2 pt-2 pb-1">
+      <div className="relative z-10 space-y-2 pt-2 pb-1">
         <div className="flex items-center justify-center gap-2 text-muted-foreground">
           <Check className="w-4 h-4 text-primary" />
           <span className="text-sm">Sem cobrança agora</span>
@@ -106,19 +106,6 @@ export const Screen25Paywall = ({
         <p className="text-xs text-center text-muted-foreground">
           Depois R$298,80 por ano (R$24,90/mês)
         </p>
-
-        {/* Dev skip button */}
-        {showDevSkip && onDevSkip && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onDevSkip}
-            className="w-full border-primary/50 text-primary hover:bg-primary/10 mt-1"
-          >
-            <Shield className="w-4 h-4 mr-2" />
-            Pular (Dev)
-          </Button>
-        )}
       </div>
     </div>
   );
