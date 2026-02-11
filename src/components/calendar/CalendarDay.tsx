@@ -391,28 +391,34 @@ export function CalendarDay({
               </div>
             )}
             
-            {/* Navigation dots - proportional size */}
+            {/* Navigation dots or counter */}
             <div className="flex items-center gap-1 flex-shrink-0">
-              {scripts.slice(0, maxScripts).map((_, idx) => (
-                <button
-                  key={idx}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setCurrentCardIndex(idx);
-                  }}
-                  className={cn(
-                    "w-1.5 h-1.5 rounded-full transition-all",
-                    idx === currentCardIndex 
-                      ? "bg-primary scale-110" 
-                      : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
-                  )}
-                />
-              ))}
-              
-              {/* Counter - readable size */}
-              <span className="text-[9px] text-muted-foreground ml-0.5 tabular-nums">
-                {currentCardIndex + 1}/{Math.min(scripts.length, maxScripts)}
-              </span>
+              {scripts.length <= 6 ? (
+                <>
+                  {scripts.map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCurrentCardIndex(idx);
+                      }}
+                      className={cn(
+                        "w-1.5 h-1.5 rounded-full transition-all",
+                        idx === currentCardIndex 
+                          ? "bg-primary scale-110" 
+                          : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
+                      )}
+                    />
+                  ))}
+                  <span className="text-[9px] text-muted-foreground ml-0.5 tabular-nums">
+                    {currentCardIndex + 1}/{scripts.length}
+                  </span>
+                </>
+              ) : (
+                <span className="text-[9px] text-muted-foreground tabular-nums">
+                  {currentCardIndex + 1}/{scripts.length}
+                </span>
+              )}
             </div>
           </div>
         )}
