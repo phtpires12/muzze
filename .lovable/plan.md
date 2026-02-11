@@ -1,41 +1,34 @@
 
-# Tela 17 - Notificacoes
+# Ajuste minimo: subir CTA do rodape com safe area
 
-## O que sera construido
-Uma tela de permissao de notificacoes, posicionada entre "Melhor horario pra criar" (CreationTime) e "App Antigo" (PreviousTools). Layout educacional sem barra de progresso (tela de transicao/acao, nao questionario).
+## Mudanca unica
 
-## Posicao no fluxo
-- **Phase 1, Screen 3** (nova tela)
-- PreviousTools passa de Screen 3 para Screen 4
-- `SCREENS_PER_PHASE` muda de `[10, 4, 3]` para `[10, 5, 3]`
+No arquivo `src/components/onboarding/screens/phase6/Screen25Paywall.tsx`, na Area 3 (linhas 107-125):
 
-## Layout da tela
-- Fundo violet-50 (padrao do onboarding)
-- Botao voltar (ChevronLeft) no header
-- Titulo: "Podemos te mandar notificacoes nesse horario e/ou em outros?"
-- Dois botoes de acao:
-  - "Ativar notificacoes" (gradient-pill, chama `requestPermission` do hook `useNotifications`)
-  - "Pular por enquanto" (ghost/outline, avanca sem ativar)
-- Card informativo "Por que ativar notificacoes?" com 4 bullets:
-  - Lembrete no horario que voce escolheu
-  - Avisos de ofensivas em risco
-  - Celebracao de conquistas e marcos
-  - Voce pode desativar a qualquer momento
+- Adicionar ao `<section>` do CTA um `style` com `paddingBottom` usando safe area e um `translateY(-12px)` para levantar o bloco inteiro levemente acima do home indicator.
+- Remover o `paddingBottom` do container raiz (linha 41) ja que o footer cuida do seu proprio safe area agora.
 
-## Mudancas tecnicas
+### Antes (linha 107):
+```tsx
+<section className="flex-none relative z-10 bg-violet-50 dark:bg-background rounded-t-2xl space-y-2 pt-3 pb-1">
+```
 
-### 1. Novo componente: `src/components/onboarding/screens/phase1/Screen15Notifications.tsx`
-- Props: `onContinue`, `onBack`
-- Usa `useNotifications()` para chamar `requestPermission()`
-- Ao clicar "Ativar", chama requestPermission e depois onContinue independente do resultado
-- Ao clicar "Pular por enquanto", chama onContinue direto
+### Depois:
+```tsx
+<section
+  className="flex-none relative z-10 bg-violet-50 dark:bg-background rounded-t-2xl space-y-2 pt-3"
+  style={{
+    paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)',
+    transform: 'translateY(-12px)',
+  }}
+>
+```
 
-### 2. `src/types/onboarding.ts`
-- Atualizar `SCREENS_PER_PHASE` de `[10, 4, 3]` para `[10, 5, 3]`
-- Atualizar comentarios
+### Container raiz (linha 41):
+Remover `paddingBottom: 'env(safe-area-inset-bottom, 0px)'` do style do root, pois a Area 3 agora gerencia seu proprio safe area.
 
-### 3. `src/pages/NewOnboarding.tsx`
-- Importar `Screen15Notifications`
-- Adicionar bloco para `phase === 1 && screen === 3` com a nova tela
-- Mover o bloco existente de PreviousTools de `screen === 3` para `screen === 4`
-- Atualizar `canContinue()`: phase 1 screen 3 retorna false (botoes internos), screen 4 requer selecao
+## O que NAO muda
+- Tamanho do mockup (Area 2 intacta)
+- Header e titulo (Area 1 intacta)
+- Proporcoes gerais da tela
+- Zero scroll (overflow-hidden + 100dvh mantidos)

@@ -21,8 +21,6 @@ import { Screen10ClusterFeedback } from "@/components/onboarding/screens/phase1/
 import { Screen11BehavioralScience } from "@/components/onboarding/screens/phase1/Screen11BehavioralScience";
 import { Screen12DailyTime } from "@/components/onboarding/screens/phase1/Screen12DailyTime";
 import { Screen13CreationTime } from "@/components/onboarding/screens/phase1/Screen13CreationTime";
-import { Screen14PreviousTools } from "@/components/onboarding/screens/phase1/Screen14PreviousTools";
-import { Screen15Notifications } from "@/components/onboarding/screens/phase1/Screen15Notifications";
 import { ConsistencyCluster, Screen12Variant } from "@/types/onboarding";
 import { Screen3Platform } from "@/components/onboarding/screens/phase1/Screen3Platform";
 import { Screen4StartQuestionnaire } from "@/components/onboarding/screens/phase1/Screen4StartQuestionnaire";
@@ -30,7 +28,6 @@ import { Screen21Signup } from "@/components/onboarding/screens/phase6/Screen21S
 import { Screen25Paywall } from "@/components/onboarding/screens/phase6/Screen25Paywall";
 import { Screen26Install } from "@/components/onboarding/screens/phase6/Screen26Install";
 import { DesktopOnboarding } from "@/components/onboarding/DesktopOnboarding";
-import { DevNavigationBar } from "@/components/onboarding/DevNavigationBar";
 
 const NewOnboarding = () => {
   const navigate = useNavigate();
@@ -43,29 +40,10 @@ const NewOnboarding = () => {
     updateData,
     nextScreen,
     prevScreen,
-    goToScreen,
     getProgress,
     calculateLostPosts,
     completeOnboarding,
   } = useOnboarding();
-
-  const isDevUser = isDeveloper || isAdmin;
-
-  // Wrapper that appends dev navigation bar to any screen content
-  const withDevBar = (content: React.ReactNode) => (
-    <>
-      {content}
-      {isDevUser && (
-        <DevNavigationBar
-          phase={state.phase}
-          screen={state.screen}
-          onPrev={prevScreen}
-          onNext={nextScreen}
-          onGoTo={goToScreen}
-        />
-      )}
-    </>
-  );
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -148,13 +126,11 @@ const NewOnboarding = () => {
       if (screen === 9) return false; // ClusterFeedback - internal button handles
     }
 
-    // Phase 1 (Behavioral Science + Configuration - 5 screens)
+    // Phase 1 (Behavioral Science + Configuration - 3 screens)
     if (phase === 1) {
       if (screen === 0) return true; // BehavioralScience - transition screen
       if (screen === 1) return !!data.daily_available_time; // DailyTime
       if (screen === 2) return true; // CreationTime - always can continue (has default)
-      if (screen === 3) return false; // Notifications - internal buttons handle navigation
-      if (screen === 4) return (data.previous_tools?.length ?? 0) > 0; // PreviousTools
     }
 
     // Phase 2 (Signup + Paywall + Install - 3 screens)
@@ -179,10 +155,10 @@ const NewOnboarding = () => {
       if (screen >= 3 && screen <= 9) return null;
     }
 
-    // Phase 1: Behavioral Science + Configuration (5 screens)
+    // Phase 1: Behavioral Science + Configuration (3 screens)
     if (phase === 1) {
       // All screens render outside OnboardingLayout
-      if (screen >= 0 && screen <= 4) return null;
+      if (screen >= 0 && screen <= 2) return null;
     }
 
     // Phase 2: Signup + Paywall + Install (3 screens)
@@ -212,9 +188,10 @@ const NewOnboarding = () => {
 
   // Tela de Welcome renderiza fora do OnboardingLayout para controle total do layout
   if (state.phase === 0 && state.screen === 0) {
-    return withDevBar(
+    return (
       <>
-        {isDevUser && (
+        {/* Developer Badge */}
+        {(isDeveloper || isAdmin) && (
           <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-full">
             <Shield className="w-4 h-4 text-primary" />
             <span className="text-xs font-medium text-primary">
@@ -229,9 +206,10 @@ const NewOnboarding = () => {
 
   // Mini-seção "Como vamos te ajudar" renderiza fora do OnboardingLayout
   if (state.phase === 0 && state.screen === 1) {
-    return withDevBar(
+    return (
       <>
-        {isDevUser && (
+        {/* Developer Badge */}
+        {(isDeveloper || isAdmin) && (
           <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-full">
             <Shield className="w-4 h-4 text-primary" />
             <span className="text-xs font-medium text-primary">
@@ -246,9 +224,10 @@ const NewOnboarding = () => {
 
   // StartQuestionnaire também renderiza fora do OnboardingLayout (tela de transição)
   if (state.phase === 0 && state.screen === 2) {
-    return withDevBar(
+    return (
       <>
-        {isDevUser && (
+        {/* Developer Badge */}
+        {(isDeveloper || isAdmin) && (
           <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-full">
             <Shield className="w-4 h-4 text-primary" />
             <span className="text-xs font-medium text-primary">
@@ -263,9 +242,10 @@ const NewOnboarding = () => {
 
   // Username renderiza fora do OnboardingLayout - tem layout próprio com progress bar gradiente
   if (state.phase === 0 && state.screen === 3) {
-    return withDevBar(
+    return (
       <>
-        {isDevUser && (
+        {/* Developer Badge */}
+        {(isDeveloper || isAdmin) && (
           <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-full">
             <Shield className="w-4 h-4 text-primary" />
             <span className="text-xs font-medium text-primary">
@@ -286,9 +266,10 @@ const NewOnboarding = () => {
 
   // ContentGoal renderiza fora do OnboardingLayout - tem layout próprio com toggle expansível
   if (state.phase === 0 && state.screen === 4) {
-    return withDevBar(
+    return (
       <>
-        {isDevUser && (
+        {/* Developer Badge */}
+        {(isDeveloper || isAdmin) && (
           <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-full">
             <Shield className="w-4 h-4 text-primary" />
             <span className="text-xs font-medium text-primary">
@@ -310,9 +291,10 @@ const NewOnboarding = () => {
 
   // StickingPoints renderiza fora do OnboardingLayout - tem layout próprio com multi-select
   if (state.phase === 0 && state.screen === 5) {
-    return withDevBar(
+    return (
       <>
-        {isDevUser && (
+        {/* Developer Badge */}
+        {(isDeveloper || isAdmin) && (
           <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-full">
             <Shield className="w-4 h-4 text-primary" />
             <span className="text-xs font-medium text-primary">
@@ -334,9 +316,10 @@ const NewOnboarding = () => {
 
   // Diferencial renderiza fora do OnboardingLayout - tem layout próprio com comparação
   if (state.phase === 0 && state.screen === 6) {
-    return withDevBar(
+    return (
       <>
-        {isDevUser && (
+        {/* Developer Badge */}
+        {(isDeveloper || isAdmin) && (
           <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-full">
             <Shield className="w-4 h-4 text-primary" />
             <span className="text-xs font-medium text-primary">
@@ -356,9 +339,10 @@ const NewOnboarding = () => {
 
   // MonthsTrying renderiza fora do OnboardingLayout - tem layout próprio com input numérico
   if (state.phase === 0 && state.screen === 7) {
-    return withDevBar(
+    return (
       <>
-        {isDevUser && (
+        {/* Developer Badge */}
+        {(isDeveloper || isAdmin) && (
           <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-full">
             <Shield className="w-4 h-4 text-primary" />
             <span className="text-xs font-medium text-primary">
@@ -392,9 +376,10 @@ const NewOnboarding = () => {
 
   // Constancia renderiza fora do OnboardingLayout - tem layout próprio com single-select
   if (state.phase === 0 && state.screen === 8) {
-    return withDevBar(
+    return (
       <>
-        {isDevUser && (
+        {/* Developer Badge */}
+        {(isDeveloper || isAdmin) && (
           <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-full">
             <Shield className="w-4 h-4 text-primary" />
             <span className="text-xs font-medium text-primary">
@@ -416,9 +401,10 @@ const NewOnboarding = () => {
 
   // ClusterFeedback renderiza fora do OnboardingLayout - tela de transição personalizada
   if (state.phase === 0 && state.screen === 9) {
-    return withDevBar(
+    return (
       <>
-        {isDevUser && (
+        {/* Developer Badge */}
+        {(isDeveloper || isAdmin) && (
           <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-full">
             <Shield className="w-4 h-4 text-primary" />
             <span className="text-xs font-medium text-primary">
@@ -437,9 +423,10 @@ const NewOnboarding = () => {
 
   // BehavioralScience renderiza fora do OnboardingLayout - tela educacional com imagem hero
   if (state.phase === 1 && state.screen === 0) {
-    return withDevBar(
+    return (
       <>
-        {isDevUser && (
+        {/* Developer Badge */}
+        {(isDeveloper || isAdmin) && (
           <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-full">
             <Shield className="w-4 h-4 text-primary" />
             <span className="text-xs font-medium text-primary">
@@ -457,9 +444,10 @@ const NewOnboarding = () => {
 
   // DailyTime renderiza fora do OnboardingLayout - tela de questionário com layout próprio
   if (state.phase === 1 && state.screen === 1) {
-    return withDevBar(
+    return (
       <>
-        {isDevUser && (
+        {/* Developer Badge */}
+        {(isDeveloper || isAdmin) && (
           <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-full">
             <Shield className="w-4 h-4 text-primary" />
             <span className="text-xs font-medium text-primary">
@@ -481,9 +469,10 @@ const NewOnboarding = () => {
 
   // CreationTime renderiza fora do OnboardingLayout - tela com time input
   if (state.phase === 1 && state.screen === 2) {
-    return withDevBar(
+    return (
       <>
-        {isDevUser && (
+        {/* Developer Badge */}
+        {(isDeveloper || isAdmin) && (
           <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-full">
             <Shield className="w-4 h-4 text-primary" />
             <span className="text-xs font-medium text-primary">
@@ -503,54 +492,12 @@ const NewOnboarding = () => {
     );
   }
 
-  // Notifications renderiza fora do OnboardingLayout - tela de ação sem progress bar
-  if (state.phase === 1 && state.screen === 3) {
-    return withDevBar(
-      <>
-        {isDevUser && (
-          <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-full">
-            <Shield className="w-4 h-4 text-primary" />
-            <span className="text-xs font-medium text-primary">
-              {isAdmin ? "Admin" : "Developer"}
-            </span>
-          </div>
-        )}
-        <Screen15Notifications
-          onContinue={handleContinue}
-          onBack={handleBack}
-        />
-      </>
-    );
-  }
-
-  // PreviousTools renderiza fora do OnboardingLayout - multi-select com limite de 3
-  if (state.phase === 1 && state.screen === 4) {
-    return withDevBar(
-      <>
-        {isDevUser && (
-          <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-full">
-            <Shield className="w-4 h-4 text-primary" />
-            <span className="text-xs font-medium text-primary">
-              {isAdmin ? "Admin" : "Developer"}
-            </span>
-          </div>
-        )}
-        <Screen14PreviousTools
-          value={state.data.previous_tools || []}
-          onChange={(value) => updateData({ previous_tools: value })}
-          onContinue={handleContinue}
-          onBack={handleBack}
-          progress={getProgress()}
-        />
-      </>
-    );
-  }
-
   // Signup renderiza fora do OnboardingLayout - layout próprio sem progress bar
   if (state.phase === 2 && state.screen === 0) {
-    return withDevBar(
+    return (
       <>
-        {isDevUser && (
+        {/* Developer Badge */}
+        {(isDeveloper || isAdmin) && (
           <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-full">
             <Shield className="w-4 h-4 text-primary" />
             <span className="text-xs font-medium text-primary">
@@ -561,6 +508,8 @@ const NewOnboarding = () => {
         <Screen21Signup
           onSuccess={handleSignupSuccess}
           onBack={handleBack}
+          showDevSkip={isDeveloper || isAdmin}
+          onDevSkip={handleContinue}
         />
       </>
     );
@@ -568,15 +517,17 @@ const NewOnboarding = () => {
 
   // Paywall renderiza fora do OnboardingLayout - layout fullscreen próprio
   if (state.phase === 2 && state.screen === 1) {
-    return withDevBar(
+    return (
       <Screen25Paywall
         onContinue={handlePaywallComplete}
         onBack={handleBack}
+        showDevSkip={isDeveloper || isAdmin}
+        onDevSkip={handleContinue}
       />
     );
   }
 
-  return withDevBar(
+  return (
     <OnboardingLayout
       showBack={showBack}
       onBack={handleBack}
@@ -586,7 +537,7 @@ const NewOnboarding = () => {
       totalPhases={state.totalPhases}
     >
       {/* Developer Badge */}
-      {isDevUser && (
+      {(isDeveloper || isAdmin) && (
         <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-full">
           <Shield className="w-4 h-4 text-primary" />
           <span className="text-xs font-medium text-primary">
@@ -614,6 +565,20 @@ const NewOnboarding = () => {
         </div>
       )}
 
+      {/* Developer bypass button - appears when normal continue button is hidden */}
+      {(isDeveloper || isAdmin) && !showContinueButton && (
+        <div className="flex justify-center pt-6">
+          <Button 
+            variant="outline" 
+            size="lg"
+            onClick={handleContinue}
+            className="min-w-[200px] border-primary/50 text-primary hover:bg-primary/10"
+          >
+            <Shield className="w-4 h-4 mr-2" />
+            Pular (Dev)
+          </Button>
+        </div>
+      )}
     </OnboardingLayout>
   );
 };

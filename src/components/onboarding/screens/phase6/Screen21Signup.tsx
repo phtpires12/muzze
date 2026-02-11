@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Loader2, Eye, EyeOff } from "lucide-react";
+import { ChevronLeft, Loader2, Eye, EyeOff, Shield } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -39,9 +39,11 @@ const translateAuthError = (error: string): string => {
 interface Screen21SignupProps {
   onSuccess: () => void;
   onBack: () => void;
+  showDevSkip?: boolean;
+  onDevSkip?: () => void;
 }
 
-export const Screen21Signup = ({ onSuccess, onBack }: Screen21SignupProps) => {
+export const Screen21Signup = ({ onSuccess, onBack, showDevSkip, onDevSkip }: Screen21SignupProps) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -196,6 +198,17 @@ export const Screen21Signup = ({ onSuccess, onBack }: Screen21SignupProps) => {
               >
                 Já tem uma conta? <span className="underline font-medium">Entrar</span>
               </button>
+
+              {showDevSkip && (
+                <button
+                  type="button"
+                  onClick={onDevSkip}
+                  className="flex items-center justify-center gap-2 mx-auto px-4 py-2 text-sm font-medium text-primary border border-primary/50 rounded-full hover:bg-primary/10 transition-colors"
+                >
+                  <Shield className="w-4 h-4" />
+                  Pular (Dev)
+                </button>
+              )}
             </div>
           </form>
         </motion.div>
