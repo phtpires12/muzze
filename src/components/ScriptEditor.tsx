@@ -267,7 +267,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
 
   const handleAutoSave = async () => {
     // PROTEÇÃO: Não salvar se os dados ainda não foram carregados (evita sobrescrever com defaults)
-    if (!isLoaded && scriptId) {
+    if (!isLoaded && effectiveScriptId) {
       console.log('[DEBUG - ScriptEditor] ⚠️ Auto-save bloqueado: dados ainda não carregados');
       return;
     }
