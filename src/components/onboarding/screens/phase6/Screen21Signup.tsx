@@ -196,17 +196,6 @@ export const Screen21Signup = ({ onSuccess, onBack }: Screen21SignupProps) => {
               >
                 Já tem uma conta? <span className="underline font-medium">Entrar</span>
               </button>
-
-              {showDevSkip && (
-                <button
-                  type="button"
-                  onClick={onDevSkip}
-                  className="flex items-center justify-center gap-2 mx-auto px-4 py-2 text-sm font-medium text-primary border border-primary/50 rounded-full hover:bg-primary/10 transition-colors"
-                >
-                  <Shield className="w-4 h-4" />
-                  Pular (Dev)
-                </button>
-              )}
             </div>
           </form>
         </motion.div>
