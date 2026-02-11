@@ -662,7 +662,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
           <ThumbnailUploader
             thumbnailUrl={thumbnailUrl}
             onThumbnailChange={setThumbnailUrl}
-            scriptId={scriptId}
+            scriptId={effectiveScriptId}
           />
         )}
 
