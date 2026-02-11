@@ -1,63 +1,42 @@
 
-# Correcao: Scripts duplicados criados pelo auto-save do ScriptEditor
+# Remover limite de scripts no carrossel do calendario
 
-## Problema identificado
+## Problema
 
-Quando voce cria um "Novo Roteiro" pelo botao central da navbar (sem scriptId), o **auto-save do ScriptEditor cria um novo script a cada 5 segundos** em vez de atualizar o mesmo.
+O carrossel dentro de cada dia do calendario limita a exibicao a `maxScripts` (4 normal, 2 compact). Scripts alem desse limite ficam escondidos atras de um indicador "+N mais" que nao e clicavel. Isso impede o usuario de navegar por todos os seus conteudos.
 
-### Causa raiz
+## Solucao
 
-No `ScriptEditor.tsx`, o auto-save (linha 265-349) funciona assim:
+Remover o conceito de `maxScripts` por completo. O carrossel deve iterar por TODOS os scripts do dia, sem corte.
 
-1. Se tem `scriptId` -> faz UPDATE (correto)
-2. Se NAO tem `scriptId` -> faz INSERT (cria novo script)
+## Mudancas no arquivo `src/components/calendar/CalendarDay.tsx`
 
-Apos o INSERT, o componente atualiza a URL com `window.history.replaceState()` (linha 341), mas isso **nao atualiza o prop `scriptId`** que vem do componente pai (`Session.tsx`). O React Router nao detecta `replaceState` manual.
+### 1. Remover a constante `maxScripts` (linha 190)
 
-Resultado: a cada 5 segundos, o auto-save roda, ve que `scriptId` ainda e `undefined`, e cria OUTRO script. Isso explica os 15 scripts duplicados que encontrei no banco de dados de hoje.
+Excluir `const maxScripts = compactCard ? 2 : 4;` -- ela nao sera mais usada.
 
-### Evidencia no banco
+### 2. Substituir todas as referencias a `maxScripts`
 
-15 scripts "Novo Roteiro" criados hoje entre 14:08 e 14:13, com intervalos de ~5 segundos entre eles. Todos sem `publish_date`, todos com status "draft".
+| Local | Antes | Depois |
+|-------|-------|--------|
+| Linha 222 | `Math.min(scripts.length, maxScripts) - 1` | `scripts.length - 1` |
+| Linha 232 | dep array com `maxScripts` | remover da dep array |
+| Linha 396 | `scripts.slice(0, maxScripts).map` | `scripts.map` |
+| Linha 414 | `Math.min(scripts.length, maxScripts)` | `scripts.length` |
+| Linha 444 | `scripts.slice(0, maxScripts).map` | `scripts.map` |
+| Linha 540 | `Math.min(scripts.length, maxScripts) - 1` | `scripts.length - 1` |
 
-## Solucao (Parte 1 - Duplicacao)
+### 3. Remover o indicador "+N mais" (linhas 556-560)
 
-**Arquivo**: `src/components/ScriptEditor.tsx`
+Esse bloco inteiro sera removido, ja que nao havera mais scripts escondidos.
 
-Adicionar um `state` local para rastrear o ID do script apos a primeira criacao:
+### 4. Dots de navegacao: limitar visualmente se muitos
 
-1. Criar `const [createdScriptId, setCreatedScriptId] = useState<string | null>(null)`
-2. Usar `const effectiveScriptId = scriptId || createdScriptId` em todo o componente
-3. Apos o INSERT bem-sucedido, chamar `setCreatedScriptId(data.id)` -- isso garante que o proximo auto-save fara UPDATE em vez de INSERT
-4. Manter o `replaceState` para que a URL tambem fique correta
+Para evitar que 15 dots ocupem espaco demais, quando houver mais de 6 scripts, os dots serao substituidos apenas pelo contador numerico ("3/15"). Abaixo de 6, os dots continuam normais.
 
-Mudancas especificas:
-- Linha ~51: adicionar state `createdScriptId`
-- Linha ~87: criar `effectiveScriptId` derivado
-- Linha ~133-137: usar `effectiveScriptId` no `loadScript`
-- Linha ~267: usar `effectiveScriptId` na protecao de auto-save
-- Linha ~316-342: usar `effectiveScriptId` no fluxo de save (if/else)
-- Linha ~340: adicionar `setCreatedScriptId(data.id)` apos INSERT
-- Todas as outras referencias a `scriptId` no componente devem usar `effectiveScriptId`
+## Resultado esperado
 
-## Solucao (Parte 2 - Limite de 4 conteudos por dia)
-
-**Arquivo**: `src/components/ScriptEditor.tsx` e `src/components/brainstorm/BrainstormWorkspace.tsx`
-
-Antes de criar um novo script, verificar quantos scripts ja existem para aquele dia (hoje, se nao tem `publish_date`):
-
-1. No `handleAutoSave` do ScriptEditor, antes do INSERT: consultar `scripts` filtrando por `publish_date = hoje` e contar. Se >= 4, mostrar toast e nao criar.
-2. No `createIdea` do BrainstormWorkspace: mesma verificacao antes do INSERT.
-
-**Arquivo**: `src/pages/CalendarioEditorial.tsx` (se existir logica de criacao la tambem)
-
-Mesma verificacao de limite.
-
-## Ordem de implementacao
-
-Como voce pediu para ir aos poucos:
-
-1. **Primeiro**: corrigir a duplicacao no ScriptEditor (causa raiz do bug principal)
-2. **Depois**: adicionar limite de 4 conteudos por dia
-
-Este plano cobre apenas a Parte 1 (correcao da duplicacao). A Parte 2 (limite de 4) sera feita em um proximo passo.
+- O carrossel passa por todos os scripts do dia, sem corte
+- Nenhuma mensagem "+N mais" aparece
+- A navegacao (setas, dots/contador, autoplay) funciona para qualquer quantidade
+- Layout permanece limpo mesmo com muitos conteudos
