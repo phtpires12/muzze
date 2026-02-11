@@ -188,6 +188,17 @@ const NewOnboarding = () => {
   // No continue button needed - all screens handle their own navigation
   const showContinueButton = false;
 
+  // Dev navigation bar - rendered on all screens for devs/admins
+  const devNav = (isDeveloper || isAdmin) ? (
+    <DevNavigationBar
+      phase={state.phase}
+      screen={state.screen}
+      onPrev={handleBack}
+      onNext={handleContinue}
+      onGoTo={goToScreen}
+    />
+  ) : null;
+
   // Tela de Welcome renderiza fora do OnboardingLayout para controle total do layout
   if (state.phase === 0 && state.screen === 0) {
     return (
@@ -201,6 +212,7 @@ const NewOnboarding = () => {
             </span>
           </div>
         )}
+        {devNav}
         <Screen0Welcome onContinue={handleContinue} onLogin={handleLogin} />
       </>
     );
