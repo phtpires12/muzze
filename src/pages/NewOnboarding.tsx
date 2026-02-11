@@ -294,6 +294,7 @@ const NewOnboarding = () => {
             </span>
           </div>
         )}
+        {devNav}
         <Screen5ContentGoal
           value={state.data.content_goal || ""}
           onChange={(value) => updateData({ content_goal: value })}
