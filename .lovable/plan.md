@@ -1,32 +1,42 @@
 
-
-# Ajustar layout do Paywall: mover "Pular (Dev)" e garantir CTA acima do mockup
+# Corrigir sobreposicao do mockup sobre "Sem cobranca agora"
 
 ## Problema
-O botao "Pular (Dev)" no rodape esta empurrando todos os elementos (CTA, texto de preco) para cima, fazendo o mockup do iPhone invadir o titulo "gratuitamente.". Alem disso, o badge "Admin" fixo no canto superior direito e redundante com o botao "Pular (Dev)".
+O mockup do iPhone (com `flex-1` e `-mt-16`) esta se expandindo e sobrepondo o texto "Sem cobranca agora" no rodape. O CTA tem `z-10` mas o fundo e transparente, entao o mockup aparece por baixo do texto visualmente.
 
-## Mudancas
+## Solucao: hierarquia estrutural via layout
 
-### 1. `src/pages/NewOnboarding.tsx` (linhas 520-538)
-- Remover o bloco do Developer Badge (`fixed top-4 right-4`) que renderiza acima do Screen25Paywall. O botao "Pular (Dev)" dentro da propria tela ja cumpre essa funcao.
+### Arquivo: `src/components/onboarding/screens/phase6/Screen25Paywall.tsx`
 
-### 2. `src/components/onboarding/screens/phase6/Screen25Paywall.tsx`
+**1. Mockup em section propria com altura controlada**
+- Envolver o bloco do mockup em uma section com `max-h-[55vh]` e `overflow-hidden`
+- Adicionar `relative z-0` para garantir camada inferior
+- Isso "corta" o mockup naturalmente na parte inferior, sem overlay
 
-- **Mover o botao "Pular (Dev)"** do rodape (apos o texto de preco) para o header, substituindo o badge Admin. Posicionar como um botao pequeno/link no canto superior direito, ao lado do "Restaurar compra".
+**2. Bottom CTA em section separada com fundo solido**
+- Adicionar `bg-violet-50 dark:bg-background` ao container do CTA para criar fundo opaco que cobre qualquer parte do mockup que possa "vazar"
+- Manter `relative z-10` ja existente
+- Adicionar `pt-3` para separacao visual entre o corte do mockup e o texto
 
-- **Garantir z-index no bottom CTA**: adicionar `relative z-10` no container do bottom CTA para que fique sempre acima do mockup caso haja sobreposicao.
-
-- **Estrutura do header atualizada**:
+**3. Estrutura final**:
 ```text
-[Pular (Dev)]          [Restaurar compra]
-```
-Ambos como links discretos no topo. O "Pular (Dev)" so aparece para devs/admins.
+<div h-[100dvh] flex flex-col overflow-hidden>
+  <header>  Pular (Dev) | Restaurar compra  </header>
+  <logo>    folha Muzze                      </logo>
+  <title>   Experimente a Muzze...           </title>
 
-- **Bottom CTA simplificado** (sem o botao Pular):
-```text
-  Sem cobranca agora
-  [Experimente por R$0,00]
-  Depois R$298,80/ano (R$24,90/mes)
+  <!-- Section do mockup: altura limitada, overflow cortado -->
+  <section flex-1 max-h-[55vh] overflow-hidden relative z-0>
+    <AnimatePresence> mockup images </AnimatePresence>
+  </section>
+
+  <!-- Section do CTA: fundo solido, z-10, nunca sobreposta -->
+  <section relative z-10 bg-violet-50 dark:bg-background pt-3>
+    Sem cobranca agora
+    [Experimente por R$0,00]
+    Depois R$298,80/ano
+  </section>
+</div>
 ```
 
-Isso libera espaco vertical no rodape, permitindo que o mockup e o titulo nao conflitem.
+Nenhum `position: absolute` sera usado. O mockup sera cortado naturalmente pelo `overflow-hidden` da sua section, e o CTA tera fundo opaco garantindo que nunca seja visualmente sobreposto.
