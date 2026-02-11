@@ -316,15 +316,15 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
       }
 
       // Se é um novo script, salvar o workflow_template atual
-      if (!scriptId) {
+      if (!effectiveScriptId) {
         scriptData.workflow_template = profile?.current_workflow || 'classic';
       }
 
-      if (scriptId) {
+      if (effectiveScriptId) {
         const { error } = await supabase
           .from('scripts')
           .update(scriptData)
-          .eq('id', scriptId);
+          .eq('id', effectiveScriptId);
 
         if (error) throw error;
         console.log('[DEBUG - ScriptEditor] ✅ Script atualizado com sucesso');
@@ -339,8 +339,9 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
         
         console.log('[DEBUG - ScriptEditor] ✅ Novo script criado com sucesso', data?.id);
         
-        // Update URL with new script ID without reloading
+        // Salvar o ID criado no state local para que o próximo auto-save faça UPDATE
         if (data?.id) {
+          setCreatedScriptId(data.id);
           window.history.replaceState({}, '', `/session?stage=script&scriptId=${data.id}`);
         }
       }
