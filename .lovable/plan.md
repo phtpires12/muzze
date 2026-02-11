@@ -1,15 +1,25 @@
 
-# Remover botoes sociais da tela inicial do onboarding
+# Remover botoes "Pular (Dev)" redundantes
 
-## Problema
-A tela Welcome (Screen0Welcome) esta exibindo os botoes "Continuar com Google" e "Continuar com Apple" via o componente `SocialLoginButtons`, o que empurra todos os elementos para cima e desordena o layout. Essas opcoes sao redundantes aqui, pois o usuario que ja tem conta pode clicar em "Ja tem uma conta? Entrar" e ser redirecionado para `/auth`, onde tera acesso a todos os metodos de login.
+## Contexto
+Com a barra de navegacao dev (`DevNavigationBar`) presente em todas as telas, os botoes "Pular (Dev)" espalhados nas telas individuais sao completamente redundantes. A barra ja permite avancar, voltar e pular para qualquer tela.
 
-## Solucao
-Editar `src/components/onboarding/screens/phase1/Screen0Welcome.tsx`:
+## Mudancas
 
-1. Remover o import do `SocialLoginButtons`
-2. Remover o separador "ou" (divider com a linha horizontal)
-3. Remover o componente `<SocialLoginButtons />`
-4. Manter apenas o botao "Comecar" e o link "Ja tem uma conta? Entrar"
+### 1. `src/components/onboarding/screens/phase6/Screen21Signup.tsx`
+- Remover as props `showDevSkip` e `onDevSkip` da interface `Screen21SignupProps`
+- Remover o bloco condicional que renderiza o botao "Pular (Dev)"
+- Remover o import de `Shield` (se nao for mais usado)
 
-Resultado: a tela volta ao layout original limpo, com apenas dois elementos de acao no rodape.
+### 2. `src/components/onboarding/screens/phase6/Screen25Paywall.tsx`
+- Remover as props `showDevSkip` e `onDevSkip` da interface `Screen25PaywallProps`
+- Remover o bloco condicional do botao "Pular (Dev)" no header
+- Simplificar o header (remover a logica ternaria que verifica `showDevSkip`)
+- Remover o import de `Shield`
+
+### 3. `src/pages/NewOnboarding.tsx`
+- Remover `showDevSkip` e `onDevSkip` das chamadas de `Screen21Signup` e `Screen25Paywall`
+- Remover o bloco do botao "Pular (Dev)" no final do `OnboardingLayout` (linhas ~575-586)
+- Remover o import de `Shield` se nao for mais usado em nenhum outro lugar do arquivo (verificar os badges de dev que ainda usam)
+
+Resultado: interface mais limpa, sem botoes duplicados. A navegacao dev fica centralizada na `DevNavigationBar`.
