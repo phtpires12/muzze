@@ -1,68 +1,79 @@
 
-# Reestruturar layout do Paywall com mockup absoluto e mascara no CTA
 
-## Problema
-O mockup usa `-mt-16` e `flex-1` que causa invasao no titulo e sobreposicao no texto "Sem cobranca agora". A estrutura atual nao isola corretamente as 3 areas.
+# Correcao de camadas e safe area no Paywall
 
-## Mudancas em `src/components/onboarding/screens/phase6/Screen25Paywall.tsx`
+## Problema atual
+O mockup do iPhone (absolute dentro de flex-1) ainda pode sobrepor o texto "Sem cobranca agora" porque a Area 3 (CTA) usa flex-none mas nao tem protecao suficiente. Alem disso, o padding-bottom com safe area nao esta garantindo espaco para o home indicator.
 
-### Nova estrutura de 3 areas
+## Mudancas em `Screen25Paywall.tsx`
+
+### Estrutura: trocar flex-col para relative com footer absolute
+
+O container raiz continua `h-[100dvh] overflow-hidden` mas agora o footer CTA sera **absolute bottom-0** em vez de flex-none. Isso garante que ele flutua sobre o mockup sem depender do flex para posicionamento.
 
 ```text
-<div h-[100dvh] overflow-hidden flex flex-col>
-  style: paddingTop env(safe-area-inset-top), paddingBottom env(safe-area-inset-bottom)
+<div relative h-[100dvh] w-full overflow-hidden bg-violet-50 dark:bg-background px-6>
+  style: paddingTop env(safe-area-inset-top)
+  (sem paddingBottom no root - o footer cuida do seu proprio safe area)
 
-  AREA 1 - Header + Titulo (flex-none)
-  ├── Header: Pular (Dev) | Restaurar compra
-  ├── Logo folha Muzze
-  └── Titulo "Experimente a Muzze gratuitamente."
-      (posicao exatamente igual, relative z-10 para ficar acima do mockup)
+  AREA 1 - Header + Titulo (relative z-20, pt-4)
+  ├── Pular (Dev) | Restaurar compra
+  ├── Logo Muzze
+  └── Titulo (mesma posicao visual)
 
-  AREA 2 - Mockup (flex-1 relative overflow-hidden)
-  ├── Container: relative, overflow-hidden, min-h-0
-  └── Mockup: position absolute, inset-x-0, top com ajuste,
-      centralizado, max-h-full, width controlada
-      z-0 para ficar abaixo do titulo e do CTA
+  AREA 2 - Mockup (relative z-10, flex justify-center, mt-2)
+  ├── motion.img com:
+  │   max-height: 56dvh
+  │   width: auto, object-fit: contain
+  │   pb-28 no wrapper para reservar espaco do footer
+  └── Nao usa position absolute - usa tamanho responsivo controlado
 
-  AREA 3 - CTA (flex-none)
-  ├── Mascara/faixa com bg igual ao fundo (bg-violet-50 / dark:bg-background)
-  │   relative z-10, rounded-t-2xl, pt-3
-  ├── "Sem cobranca agora" (dentro da mascara, sempre visivel)
+  AREA 3 - Footer CTA (absolute left-0 right-0 bottom-0 z-30)
+  ├── padding: px-6 pt-3 pb-[calc(env(safe-area-inset-bottom)+16px)]
+  ├── "Sem cobranca agora" com:
+  │   relative z-40
+  │   inline-flex rounded-full px-4 py-1.5
+  │   bg-violet-50 dark:bg-background (mascara opaca)
   ├── Botao "Experimente por R$0,00"
-  └── Texto "Depois R$298,80/ano"
+  └── Texto preco
 </div>
 ```
 
 ### Detalhes tecnicos
 
-**Area 1 (Header + Titulo)** - sem mudancas visuais:
-- Adicionar `relative z-10` no container do titulo para garantir que fique acima do mockup
-- Remover `mb-0` e manter espacamento minimo
-- `flex-none` (nao encolhe, nao cresce)
+**Container raiz**:
+- Trocar `flex flex-col` por apenas `relative`
+- Manter `h-[100dvh] overflow-hidden bg-violet-50 dark:bg-background px-6`
+- paddingTop: `env(safe-area-inset-top, 0px)` (manter)
+- Remover paddingBottom do root (footer cuida)
 
-**Area 2 (Mockup)** - principal mudanca:
-- Trocar de `flex items-center justify-center` para `relative overflow-hidden`
-- Remover `-mt-16` do container
-- O mockup passa a ser `absolute` dentro dessa area:
-  - `position: absolute`
-  - `left: 50%, transform: translateX(-50%)` para centralizar
-  - `top: -10%` (ou valor similar) para puxar a imagem pra cima e compensar o padding interno do asset
-  - `max-height: 110%` e `width: 280px / sm:320px`
-- Isso garante que o mockup NUNCA empurre outros elementos, apenas ocupa o espaco disponivel
+**Area 1 (Header + Titulo)**:
+- Adicionar `relative z-20` (acima do mockup E do footer)
+- Manter todo o conteudo igual
 
-**Area 3 (CTA com mascara)**:
-- Container com `relative z-10` e fundo solido opaco (`bg-violet-50 dark:bg-background`)
-- Adicionar `rounded-t-2xl` para cantos arredondados no topo da mascara, criando separacao suave
-- O fundo solido cobre qualquer parte do mockup que possa aparecer atras
-- Texto "Sem cobranca agora" fica dentro, sempre legivel
-- `flex-none` (nao encolhe)
+**Area 2 (Mockup)**:
+- Trocar de `flex-1 relative overflow-hidden` para `relative z-10 flex justify-center`
+- Mockup deixa de ser absolute e passa a ser inline com tamanho controlado:
+  - `style={{ maxHeight: '56dvh' }}` no img
+  - `width: auto, height: auto, objectFit: contain`
+- Adicionar `pb-28` no wrapper para reservar espaco para o footer absolute
+- O `overflow-hidden` do root ja corta qualquer excesso
 
-### Safe areas
-- Trocar a classe `safe-area-inset` por inline style com `paddingTop: env(safe-area-inset-top, 0px)` e `paddingBottom: env(safe-area-inset-bottom, 0px)` para garantir compatibilidade com Dynamic Island e home bar
+**Area 3 (Footer CTA)**:
+- Trocar de `flex-none relative z-10` para `absolute left-0 right-0 bottom-0 z-30`
+- Adicionar `bg-violet-50 dark:bg-background` (ja tem)
+- padding: `px-6 pt-3` + `paddingBottom: calc(env(safe-area-inset-bottom, 0px) + 16px)` via style
+- Remover `rounded-t-2xl` (footer ja ocupa toda a largura)
+
+**Mascara do "Sem cobranca agora"**:
+- Envolver o texto em div com `relative z-40 inline-flex items-center gap-2 rounded-full px-4 py-1.5 bg-violet-50 dark:bg-background mx-auto`
+- Isso cria uma "pilula" opaca atras do texto que cobre o mockup visualmente
 
 ### Resultado
-- Titulo nunca coberto pelo mockup (z-10 vs z-0)
-- Mockup grande e bonito, limitado ao espaco do meio via absolute + overflow-hidden
-- "Sem cobranca agora" legivel gracas a mascara com fundo solido e z-10
-- Zero scroll em qualquer iPhone (100dvh + overflow-hidden)
-- Header e titulo na mesma posicao visual
+- Header e titulo: z-20, sempre acima de tudo
+- Mockup: z-10, tamanho controlado por dvh, nunca causa scroll
+- Footer CTA: z-30 absolute, colado no bottom com safe area
+- Texto "Sem cobranca agora": z-40 com mascara opaca, nunca coberto
+- Zero scroll: root overflow-hidden + mockup com max-height em dvh
+- Safe area: footer tem padding-bottom com env(safe-area-inset-bottom) + 16px
+
