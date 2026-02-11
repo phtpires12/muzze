@@ -9,6 +9,7 @@ export interface OnboardingData {
   preferred_platform?: string;
   daily_available_time?: string;
   preferred_creation_time?: string; // Format "HH:MM"
+  previous_tools?: string[];
   
   // Phase 0: Pain Diagnosis
   sticking_points?: string[];
@@ -66,7 +67,7 @@ export const ONBOARDING_PHASES = {
 // Phase 0: 10 screens (Welcome through ClusterFeedback)
 // Phase 1: 3 screens (BehavioralScience, DailyTime, CreationTime)
 // Phase 2: 3 screens (Signup, Paywall, Install)
-export const SCREENS_PER_PHASE = [10, 3, 3];
+export const SCREENS_PER_PHASE = [10, 4, 3];
 
 // Posting frequency options with cluster mapping
 // Cluster 1: No consistency - focus on reducing pressure, starting small
