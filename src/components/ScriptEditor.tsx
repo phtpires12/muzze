@@ -164,7 +164,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
       const { data, error } = await supabase
         .from('scripts')
         .select('*')
-        .eq('id', scriptId)
+        .eq('id', effectiveScriptId)
         .single();
 
       if (error) throw error;
