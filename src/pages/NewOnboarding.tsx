@@ -21,6 +21,7 @@ import { Screen10ClusterFeedback } from "@/components/onboarding/screens/phase1/
 import { Screen11BehavioralScience } from "@/components/onboarding/screens/phase1/Screen11BehavioralScience";
 import { Screen12DailyTime } from "@/components/onboarding/screens/phase1/Screen12DailyTime";
 import { Screen13CreationTime } from "@/components/onboarding/screens/phase1/Screen13CreationTime";
+import { Screen14Notifications } from "@/components/onboarding/screens/phase1/Screen14Notifications";
 import { ConsistencyCluster, Screen12Variant } from "@/types/onboarding";
 import { Screen3Platform } from "@/components/onboarding/screens/phase1/Screen3Platform";
 import { Screen4StartQuestionnaire } from "@/components/onboarding/screens/phase1/Screen4StartQuestionnaire";
@@ -128,11 +129,12 @@ const NewOnboarding = () => {
       if (screen === 9) return false; // ClusterFeedback - internal button handles
     }
 
-    // Phase 1 (Behavioral Science + Configuration - 3 screens)
+    // Phase 1 (Behavioral Science + Configuration - 4 screens)
     if (phase === 1) {
       if (screen === 0) return true; // BehavioralScience - transition screen
       if (screen === 1) return !!data.daily_available_time; // DailyTime
       if (screen === 2) return true; // CreationTime - always can continue (has default)
+      if (screen === 3) return false; // Notifications - internal buttons handle navigation
     }
 
     // Phase 2 (Signup + Paywall + Install - 3 screens)
@@ -157,10 +159,10 @@ const NewOnboarding = () => {
       if (screen >= 3 && screen <= 9) return null;
     }
 
-    // Phase 1: Behavioral Science + Configuration (3 screens)
+    // Phase 1: Behavioral Science + Configuration (4 screens)
     if (phase === 1) {
       // All screens render outside OnboardingLayout
-      if (screen >= 0 && screen <= 2) return null;
+      if (screen >= 0 && screen <= 3) return null;
     }
 
     // Phase 2: Signup + Paywall + Install (3 screens)
@@ -518,7 +520,31 @@ const NewOnboarding = () => {
     );
   }
 
-  // Signup renderiza fora do OnboardingLayout - layout próprio sem progress bar
+  // Notifications renderiza fora do OnboardingLayout - tela com permissão de push
+  if (state.phase === 1 && state.screen === 3) {
+    return (
+      <>
+        {/* Developer Badge */}
+        {(isDeveloper || isAdmin) && (
+          <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-full">
+            <Shield className="w-4 h-4 text-primary" />
+            <span className="text-xs font-medium text-primary">
+              {isAdmin ? "Admin" : "Developer"}
+            </span>
+          </div>
+        )}
+        {devNav}
+        <Screen14Notifications
+          onContinue={handleContinue}
+          onBack={handleBack}
+          progress={getProgress()}
+          username={state.data.username || ""}
+        />
+      </>
+    );
+  }
+
+   // Signup renderiza fora do OnboardingLayout - layout próprio sem progress bar
   if (state.phase === 2 && state.screen === 0) {
     return (
       <>
