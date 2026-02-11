@@ -1,32 +1,15 @@
 
-
-# Navegacao Dev no Onboarding
+# Remover botoes sociais da tela inicial do onboarding
 
 ## Problema
-Voce esta preso na tela 25 (Paywall) porque nao ha botao de voltar visivel, mesmo que a prop `onBack` seja passada para o componente.
+A tela Welcome (Screen0Welcome) esta exibindo os botoes "Continuar com Google" e "Continuar com Apple" via o componente `SocialLoginButtons`, o que empurra todos os elementos para cima e desordena o layout. Essas opcoes sao redundantes aqui, pois o usuario que ja tem conta pode clicar em "Ja tem uma conta? Entrar" e ser redirecionado para `/auth`, onde tera acesso a todos os metodos de login.
 
 ## Solucao
-Adicionar uma **barra de navegacao flutuante para devs** (fixed bottom) que aparece em TODAS as telas do onboarding quando o usuario e developer ou admin. Essa barra permite:
+Editar `src/components/onboarding/screens/phase1/Screen0Welcome.tsx`:
 
-1. **Voltar** (seta esquerda) - chama `prevScreen()`
-2. **Avancar** (seta direita) - chama `nextScreen()`
-3. **Indicador de posicao** - mostra "Fase X / Tela Y" para saber onde esta
-4. **Pular para qualquer tela** - campo numerico para digitar fase e tela diretamente
+1. Remover o import do `SocialLoginButtons`
+2. Remover o separador "ou" (divider com a linha horizontal)
+3. Remover o componente `<SocialLoginButtons />`
+4. Manter apenas o botao "Comecar" e o link "Ja tem uma conta? Entrar"
 
-## Mudancas tecnicas
-
-### 1. `src/pages/NewOnboarding.tsx`
-- Adicionar um componente inline `DevNavigationBar` que renderiza uma barra fixa no rodape (fixed bottom-0, z-[60]) com:
-  - Botoes de seta esquerda/direita para `prevScreen`/`nextScreen`
-  - Texto central mostrando `P{phase} S{screen}`
-  - Botao para abrir um mini-painel com inputs numericos para pular direto para fase/tela especifica via `goToScreen(phase, screen)`
-- Renderizar esse componente FORA de todos os blocos condicionais, como ultimo elemento do return, apenas quando `isDeveloper || isAdmin`
-- Isso garante que a barra apareca em TODAS as telas, incluindo Paywall, Signup, Install, etc.
-
-### 2. Nenhuma mudanca nos componentes de tela individuais
-- Os componentes como `Screen25Paywall`, `Screen21Signup`, etc. nao precisam de alteracao
-- A barra de dev e renderizada no nivel da pagina (`NewOnboarding`), sobrepondo qualquer tela
-
-## Visual
-A barra sera compacta, semi-transparente (backdrop-blur), com estilo similar ao badge de dev ja existente (bg-primary/10, border-primary/20), posicionada no rodape para nao interferir com o conteudo.
-
+Resultado: a tela volta ao layout original limpo, com apenas dois elementos de acao no rodape.
