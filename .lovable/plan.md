@@ -1,34 +1,32 @@
 
-# Ajuste minimo: subir CTA do rodape com safe area
 
-## Mudanca unica
+# Navegacao Dev no Onboarding
 
-No arquivo `src/components/onboarding/screens/phase6/Screen25Paywall.tsx`, na Area 3 (linhas 107-125):
+## Problema
+Voce esta preso na tela 25 (Paywall) porque nao ha botao de voltar visivel, mesmo que a prop `onBack` seja passada para o componente.
 
-- Adicionar ao `<section>` do CTA um `style` com `paddingBottom` usando safe area e um `translateY(-12px)` para levantar o bloco inteiro levemente acima do home indicator.
-- Remover o `paddingBottom` do container raiz (linha 41) ja que o footer cuida do seu proprio safe area agora.
+## Solucao
+Adicionar uma **barra de navegacao flutuante para devs** (fixed bottom) que aparece em TODAS as telas do onboarding quando o usuario e developer ou admin. Essa barra permite:
 
-### Antes (linha 107):
-```tsx
-<section className="flex-none relative z-10 bg-violet-50 dark:bg-background rounded-t-2xl space-y-2 pt-3 pb-1">
-```
+1. **Voltar** (seta esquerda) - chama `prevScreen()`
+2. **Avancar** (seta direita) - chama `nextScreen()`
+3. **Indicador de posicao** - mostra "Fase X / Tela Y" para saber onde esta
+4. **Pular para qualquer tela** - campo numerico para digitar fase e tela diretamente
 
-### Depois:
-```tsx
-<section
-  className="flex-none relative z-10 bg-violet-50 dark:bg-background rounded-t-2xl space-y-2 pt-3"
-  style={{
-    paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)',
-    transform: 'translateY(-12px)',
-  }}
->
-```
+## Mudancas tecnicas
 
-### Container raiz (linha 41):
-Remover `paddingBottom: 'env(safe-area-inset-bottom, 0px)'` do style do root, pois a Area 3 agora gerencia seu proprio safe area.
+### 1. `src/pages/NewOnboarding.tsx`
+- Adicionar um componente inline `DevNavigationBar` que renderiza uma barra fixa no rodape (fixed bottom-0, z-[60]) com:
+  - Botoes de seta esquerda/direita para `prevScreen`/`nextScreen`
+  - Texto central mostrando `P{phase} S{screen}`
+  - Botao para abrir um mini-painel com inputs numericos para pular direto para fase/tela especifica via `goToScreen(phase, screen)`
+- Renderizar esse componente FORA de todos os blocos condicionais, como ultimo elemento do return, apenas quando `isDeveloper || isAdmin`
+- Isso garante que a barra apareca em TODAS as telas, incluindo Paywall, Signup, Install, etc.
 
-## O que NAO muda
-- Tamanho do mockup (Area 2 intacta)
-- Header e titulo (Area 1 intacta)
-- Proporcoes gerais da tela
-- Zero scroll (overflow-hidden + 100dvh mantidos)
+### 2. Nenhuma mudanca nos componentes de tela individuais
+- Os componentes como `Screen25Paywall`, `Screen21Signup`, etc. nao precisam de alteracao
+- A barra de dev e renderizada no nivel da pagina (`NewOnboarding`), sobrepondo qualquer tela
+
+## Visual
+A barra sera compacta, semi-transparente (backdrop-blur), com estilo similar ao badge de dev ja existente (bg-primary/10, border-primary/20), posicionada no rodape para nao interferir com o conteudo.
+
