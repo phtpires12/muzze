@@ -422,7 +422,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
 
   const proceedWithBack = async (shouldAutoSchedule = false) => {
     // Auto-agendar para hoje com status "perdido" se não tiver publish_date
-    if (shouldAutoSchedule && !publishDate && scriptId) {
+    if (shouldAutoSchedule && !publishDate && effectiveScriptId) {
       const today = format(new Date(), "yyyy-MM-dd");
       await supabase
         .from('scripts')
@@ -430,7 +430,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
           publish_date: today,
           publish_status: 'perdido'
         })
-        .eq('id', scriptId);
+        .eq('id', effectiveScriptId);
     }
     
     // Se há sessão ativa, mostrar popup de confirmação de encerramento
