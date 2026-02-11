@@ -187,7 +187,7 @@ export function CalendarDay({
   const isDragOver = dragOverDate === format(day, "yyyy-MM-dd");
   
   // Define limits based on card mode
-  const maxScripts = compactCard ? 2 : 4;
+  // No limit - carousel shows ALL scripts
   const hasMultipleCards = scripts.length > 1;
 
   const AUTOPLAY_INTERVAL = 3500; // 3.5 seconds between transitions
@@ -219,7 +219,7 @@ export function CalendarDay({
     // Card transition
     const transitionInterval = setInterval(() => {
       setCurrentCardIndex(prev => {
-        const maxIndex = Math.min(scripts.length, maxScripts) - 1;
+        const maxIndex = scripts.length - 1;
         return prev >= maxIndex ? 0 : prev + 1;
       });
       setAutoplayProgress(0); // Reset progress on card change
@@ -229,7 +229,7 @@ export function CalendarDay({
       clearInterval(progressInterval);
       clearInterval(transitionInterval);
     };
-  }, [hasMultipleCards, isHovered, weekMobile, compact, scripts.length, maxScripts, currentCardIndex]);
+  }, [hasMultipleCards, isHovered, weekMobile, compact, scripts.length, currentCardIndex]);
 
   // Carousel navigation handlers
   const goToPrevCard = (e: React.MouseEvent) => {
@@ -391,28 +391,34 @@ export function CalendarDay({
               </div>
             )}
             
-            {/* Navigation dots - proportional size */}
+            {/* Navigation dots or counter */}
             <div className="flex items-center gap-1 flex-shrink-0">
-              {scripts.slice(0, maxScripts).map((_, idx) => (
-                <button
-                  key={idx}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setCurrentCardIndex(idx);
-                  }}
-                  className={cn(
-                    "w-1.5 h-1.5 rounded-full transition-all",
-                    idx === currentCardIndex 
-                      ? "bg-primary scale-110" 
-                      : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
-                  )}
-                />
-              ))}
-              
-              {/* Counter - readable size */}
-              <span className="text-[9px] text-muted-foreground ml-0.5 tabular-nums">
-                {currentCardIndex + 1}/{Math.min(scripts.length, maxScripts)}
-              </span>
+              {scripts.length <= 6 ? (
+                <>
+                  {scripts.map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCurrentCardIndex(idx);
+                      }}
+                      className={cn(
+                        "w-1.5 h-1.5 rounded-full transition-all",
+                        idx === currentCardIndex 
+                          ? "bg-primary scale-110" 
+                          : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
+                      )}
+                    />
+                  ))}
+                  <span className="text-[9px] text-muted-foreground ml-0.5 tabular-nums">
+                    {currentCardIndex + 1}/{scripts.length}
+                  </span>
+                </>
+              ) : (
+                <span className="text-[9px] text-muted-foreground tabular-nums">
+                  {currentCardIndex + 1}/{scripts.length}
+                </span>
+              )}
             </div>
           </div>
         )}
@@ -441,7 +447,7 @@ export function CalendarDay({
               transform: hasMultipleCards ? `translateX(-${currentCardIndex * 100}%)` : undefined 
             }}
           >
-            {scripts.slice(0, maxScripts).map((script) => {
+            {scripts.map((script) => {
               const cardBackground = getCardBackground(script);
               const stageLabel = getStageLabel(script);
               const isPosted = script.publish_status === "postado";
@@ -537,7 +543,7 @@ export function CalendarDay({
                 <ChevronLeft className="w-3 h-3" />
               </button>
             )}
-            {currentCardIndex < Math.min(scripts.length, maxScripts) - 1 && (
+            {currentCardIndex < scripts.length - 1 && (
               <button
                 onClick={goToNextCard}
                 className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1 z-20 
@@ -551,13 +557,6 @@ export function CalendarDay({
           </>
         )}
 
-
-        {/* Extra scripts indicator */}
-        {scripts.length > maxScripts && (
-          <div className={`text-muted-foreground ${compactCard ? "text-[9px] pl-1" : "text-xs pl-2"} mt-1`}>
-            +{scripts.length - maxScripts} mais
-          </div>
-        )}
       </div>
 
       <AlertDialog open={!!scriptToDelete} onOpenChange={(open) => !open && setScriptToDelete(null)}>
