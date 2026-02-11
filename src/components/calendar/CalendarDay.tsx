@@ -543,7 +543,7 @@ export function CalendarDay({
                 <ChevronLeft className="w-3 h-3" />
               </button>
             )}
-            {currentCardIndex < Math.min(scripts.length, maxScripts) - 1 && (
+            {currentCardIndex < scripts.length - 1 && (
               <button
                 onClick={goToNextCard}
                 className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1 z-20 
