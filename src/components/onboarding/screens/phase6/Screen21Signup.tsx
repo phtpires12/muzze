@@ -9,7 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { SocialLoginButtons } from "@/components/auth/SocialLoginButtons";
 import { logError } from "@/lib/error-logger";
-import { GradientProgressBar } from "@/components/onboarding/shared/GradientProgressBar";
+
 import { motion } from "framer-motion";
 
 const signupSchema = z.object({
