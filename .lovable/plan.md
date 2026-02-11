@@ -1,63 +1,72 @@
 
 
-# Correcao definitiva: CSS Grid no header do card + width constraint
+# Refinamento visual dos cards do calendario - Estilo Notion/Linear
 
-## Causa raiz real
+## Resumo
 
-No `CalendarDay.tsx`, linha 450-451:
-```
-className={cn(hasMultipleCards && "w-full flex-shrink-0")}
-```
+Tornar os cards do calendario mais limpos e premium: botao de excluir menor e absoluto (sem ocupar espaco no grid), titulo ocupando 100% da largura, tooltip com titulo completo, e padding otimizado.
 
-Quando ha apenas 1 conteudo no dia, o container do slide NAO recebe `w-full`. Isso significa que ele pode crescer livremente com o conteudo, e o `truncate` do titulo nunca ativa -- o botao de lixeira e empurrado para fora da area visivel e cortado pelo `overflow-hidden` do carousel.
+## Mudancas tecnicas
 
-Quando ha multiplos conteudos, `w-full flex-shrink-0` e aplicado, forcando o slide a ocupar 100% da largura, e ai o truncate funciona. Por isso a lixeira so aparece em cards com titulo curto ou em dias com multiplos conteudos.
+**Arquivo**: `src/components/calendar/CalendarDay.tsx`
 
-## Solucao em 2 partes
+### 1. Voltar o layout do header para flex (removendo grid)
 
-### Parte 1: Sempre aplicar `w-full` no slide container
-
-Trocar a linha 450-451 para SEMPRE aplicar `w-full`, independente de `hasMultipleCards`. O `flex-shrink-0` so e necessario para o carousel.
-
-**Antes**: `cn(hasMultipleCards && "w-full flex-shrink-0")`
-**Depois**: `cn("w-full", hasMultipleCards && "flex-shrink-0")`
-
-### Parte 2: CSS Grid no header do card
-
-Trocar o `flex items-start gap-1.5` (linha 463) por CSS Grid com 3 colunas:
+O grid atual reserva uma coluna fixa para a lixeira, reduzindo a largura util do titulo. A solucao e voltar para `flex` no header, mas com o botao em `position: absolute` dentro do card (`relative`). Como o card agora tem `w-full` garantido (correcao anterior), o truncate funciona corretamente.
 
 ```
-grid grid-cols-[auto_1fr_auto] gap-1.5 items-start
+Antes:  grid grid-cols-[auto_1fr_auto] -> titulo perde espaco para coluna da lixeira
+Depois: flex items-start gap-1.5       -> titulo ocupa 100%, lixeira absoluta por cima
 ```
 
-- Coluna 1 (`auto`): emoji/icone
-- Coluna 2 (`1fr`): titulo + badges, com `min-w-0` e `truncate`
-- Coluna 3 (`auto`): botao de lixeira, sempre com espaco reservado
+### 2. Botao de excluir - absoluto, menor, sem fundo
 
-### Parte 3: Melhorar o botao de lixeira
+- Posicao: `absolute top-1 right-1` (compactCard: `top-0.5 right-0.5`)
+- Icone: `w-3.5 h-3.5` (14px) para normal, `w-3 h-3` (12px) para compact
+- Fundo: transparente por padrao, `hover:bg-destructive/15` apenas no hover
+- Cor do icone: `text-muted-foreground/60` por padrao, `hover:text-destructive` no hover
+- Area clicavel: `p-1` (proporcional, sem min-w/min-h fixos grandes)
+- Visibilidade: `opacity-0 group-hover/card:opacity-100 focus:opacity-100`
+- Transicao: `transition-all duration-150` (fade-in suave)
+- `z-10 pointer-events-auto`
 
-- Adicionar `aria-label="Excluir conteudo"`
-- Adicionar `min-w-[24px] min-h-[24px]` (area minima de toque, compactCard: `min-w-[20px] min-h-[20px]`)
-- Adicionar `focus-within` visibility: `focus:opacity-100`
-- Manter `z-10 pointer-events-auto`
+### 3. Titulo - 100% da largura com tooltip
 
-## Arquivo afetado
+- Container do titulo volta para `flex-1 min-w-0` (sem coluna grid)
+- Texto com `truncate` (reticencias quando necessario)
+- Envolver o titulo em `Tooltip` do Radix para mostrar titulo completo no hover
+- Importar `Tooltip, TooltipTrigger, TooltipContent, TooltipProvider` de `@/components/ui/tooltip`
 
-`src/components/calendar/CalendarDay.tsx`
+### 4. Padding otimizado
 
-## Mudancas especificas
+- Card normal: manter `p-2` mas adicionar `pr-6` para dar espaco ao botao absoluto sem cortar
+- Card compact: manter `p-1.5` mas adicionar `pr-5`
+- Isso garante que o titulo trunca ANTES de chegar na area do botao
 
-| Local | Antes | Depois |
-|-------|-------|--------|
-| Linha 450-451 | `cn(hasMultipleCards && "w-full flex-shrink-0")` | `cn("w-full", hasMultipleCards && "flex-shrink-0")` |
-| Linha 463 | `flex items-start gap-1.5` | `grid grid-cols-[auto_1fr_auto] gap-1.5 items-start` |
-| Linha 489-501 | button com flex-shrink-0, sem aria-label | button com z-10, pointer-events-auto, aria-label, min-w/h, focus:opacity-100 |
+### 5. Importacoes
 
-## Por que vai funcionar desta vez
+Adicionar import do Tooltip:
+```typescript
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
+```
 
-1. `w-full` no slide garante que o card SEMPRE tem largura maxima definida pelo container pai
-2. CSS Grid com `1fr` garante que a coluna do titulo NUNCA ultrapassa o espaco disponivel
-3. A coluna `auto` da lixeira SEMPRE reserva espaco, independente do tamanho do titulo
-4. O titulo trunca deterministicamente porque `1fr` + `min-w-0` + `truncate` funciona de forma previsivel no Grid
-5. Nenhuma dependencia de absolute, padding-right ou overflow -- tudo e resolvido pelo layout do Grid
+## Estrutura final do card
 
+```
+div.group/card.relative (card com borda e background)
+  div.p-2.pr-6 (padding interno, pr-6 reserva espaco visual)
+    div.flex.items-start.gap-1.5
+      [emoji]
+      div.flex-1.min-w-0
+        Tooltip -> titulo truncado (mostra completo no hover)
+        badges
+  button.absolute.top-1.right-1 (lixeira, opacity-0, aparece no hover)
+```
+
+## Por que funciona
+
+- `w-full` no slide container (ja implementado) garante largura maxima
+- `flex-1 min-w-0` + `truncate` no titulo funciona porque o container tem largura definida
+- `pr-6` no padding interno garante que o texto nunca vai ate o canto onde o botao absoluto fica
+- O botao absoluto esta DENTRO do card `relative`, entao nao e cortado pelo overflow do carousel
+- Sem grid, o titulo usa 100% do espaco disponivel (descontando emoji e padding)
