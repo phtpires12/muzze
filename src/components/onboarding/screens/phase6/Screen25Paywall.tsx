@@ -89,7 +89,7 @@ export const Screen25Paywall = ({
               left: '50%',
               top: '-8%',
               transform: 'translateX(-50%)',
-              width: '280px',
+              width: '320px',
               maxHeight: '110%',
               objectFit: 'contain',
             }}
