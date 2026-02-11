@@ -242,10 +242,9 @@ const NewOnboarding = () => {
 
   // StartQuestionnaire também renderiza fora do OnboardingLayout (tela de transição)
   if (state.phase === 0 && state.screen === 2) {
-    return (
+    return withDevBar(
       <>
-        {/* Developer Badge */}
-        {(isDeveloper || isAdmin) && (
+        {isDevUser && (
           <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-full">
             <Shield className="w-4 h-4 text-primary" />
             <span className="text-xs font-medium text-primary">
