@@ -533,7 +533,7 @@ const NewOnboarding = () => {
     );
   }
 
-  return (
+  return withDevBar(
     <OnboardingLayout
       showBack={showBack}
       onBack={handleBack}
@@ -543,7 +543,7 @@ const NewOnboarding = () => {
       totalPhases={state.totalPhases}
     >
       {/* Developer Badge */}
-      {(isDeveloper || isAdmin) && (
+      {isDevUser && (
         <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-full">
           <Shield className="w-4 h-4 text-primary" />
           <span className="text-xs font-medium text-primary">
@@ -572,7 +572,7 @@ const NewOnboarding = () => {
       )}
 
       {/* Developer bypass button - appears when normal continue button is hidden */}
-      {(isDeveloper || isAdmin) && !showContinueButton && (
+      {isDevUser && !showContinueButton && (
         <div className="flex justify-center pt-6">
           <Button 
             variant="outline" 
