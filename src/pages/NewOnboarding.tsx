@@ -525,8 +525,6 @@ const NewOnboarding = () => {
       <Screen25Paywall
         onContinue={handlePaywallComplete}
         onBack={handleBack}
-        showDevSkip={isDeveloper || isAdmin}
-        onDevSkip={handleContinue}
       />
     );
   }
