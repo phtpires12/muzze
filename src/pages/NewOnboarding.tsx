@@ -320,6 +320,7 @@ const NewOnboarding = () => {
             </span>
           </div>
         )}
+        {devNav}
         <Screen6StickingPoints
           value={state.data.sticking_points || []}
           onChange={(value) => updateData({ sticking_points: value })}
