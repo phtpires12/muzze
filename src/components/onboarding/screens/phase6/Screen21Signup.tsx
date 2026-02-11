@@ -2,14 +2,14 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Loader2, Eye, EyeOff } from "lucide-react";
+import { ChevronLeft, Loader2, Eye, EyeOff, Shield } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { SocialLoginButtons } from "@/components/auth/SocialLoginButtons";
 import { logError } from "@/lib/error-logger";
-import { GradientProgressBar } from "@/components/onboarding/shared/GradientProgressBar";
+
 import { motion } from "framer-motion";
 
 const signupSchema = z.object({
@@ -39,10 +39,11 @@ const translateAuthError = (error: string): string => {
 interface Screen21SignupProps {
   onSuccess: () => void;
   onBack: () => void;
-  progress: number;
+  showDevSkip?: boolean;
+  onDevSkip?: () => void;
 }
 
-export const Screen21Signup = ({ onSuccess, onBack, progress }: Screen21SignupProps) => {
+export const Screen21Signup = ({ onSuccess, onBack, showDevSkip, onDevSkip }: Screen21SignupProps) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -109,12 +110,11 @@ export const Screen21Signup = ({ onSuccess, onBack, progress }: Screen21SignupPr
 
   return (
     <div className="min-h-[100dvh] bg-violet-50 dark:bg-background flex flex-col">
-      {/* Header with back + progress */}
-      <div className="flex items-center gap-3 px-4 pt-4 pb-2">
+      {/* Header with back */}
+      <div className="flex items-center px-4 pt-4 pb-2">
         <button onClick={onBack} className="p-1 -ml-1 text-foreground/70 hover:text-foreground transition-colors">
           <ChevronLeft className="w-6 h-6" />
         </button>
-        <GradientProgressBar progress={progress} />
       </div>
 
       {/* Scrollable content */}
@@ -189,7 +189,7 @@ export const Screen21Signup = ({ onSuccess, onBack, progress }: Screen21SignupPr
               <a href="/privacy" className="underline">Política de Privacidade</a>.
             </p>
 
-            <div className="text-center pt-1">
+            <div className="text-center pt-1 space-y-3">
               <button
                 type="button"
                 onClick={() => navigate("/auth")}
@@ -198,6 +198,17 @@ export const Screen21Signup = ({ onSuccess, onBack, progress }: Screen21SignupPr
               >
                 Já tem uma conta? <span className="underline font-medium">Entrar</span>
               </button>
+
+              {showDevSkip && (
+                <button
+                  type="button"
+                  onClick={onDevSkip}
+                  className="flex items-center justify-center gap-2 mx-auto px-4 py-2 text-sm font-medium text-primary border border-primary/50 rounded-full hover:bg-primary/10 transition-colors"
+                >
+                  <Shield className="w-4 h-4" />
+                  Pular (Dev)
+                </button>
+              )}
             </div>
           </form>
         </motion.div>
