@@ -35,8 +35,19 @@ export const Screen25Paywall = ({
 
   return (
     <div className="h-[100dvh] bg-violet-50 dark:bg-background flex flex-col px-6 py-4 safe-area-inset overflow-hidden">
-      {/* Header - Restaurar compra */}
-      <div className="flex items-center justify-end">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        {showDevSkip && onDevSkip ? (
+          <button
+            className="flex items-center gap-1 text-xs text-primary underline underline-offset-2"
+            onClick={onDevSkip}
+          >
+            <Shield className="w-3 h-3" />
+            Pular (Dev)
+          </button>
+        ) : (
+          <div />
+        )}
         <button
           className="text-xs text-muted-foreground underline underline-offset-2"
           onClick={() => {/* TODO: restore purchase logic */}}
