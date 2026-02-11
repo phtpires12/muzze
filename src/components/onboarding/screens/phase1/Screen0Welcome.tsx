@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { PhoneMockup } from "@/components/onboarding/PhoneMockup";
-import { SocialLoginButtons } from "@/components/auth/SocialLoginButtons";
+
 import muzzeLeaf from "@/assets/muzze-leaf-gradient.png";
 import homePreview from "@/assets/home-preview-mobile.png";
 
