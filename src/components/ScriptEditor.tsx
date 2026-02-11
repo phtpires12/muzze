@@ -103,12 +103,12 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
   // Memoizar callback para evitar recriações desnecessárias
   const handleNavigationBlocked = useCallback(() => {
     // Mostrar o mesmo modal de confirmação que o botão "Voltar" mostra
-    if (!publishDate && scriptId) {
+    if (!publishDate && effectiveScriptId) {
       setShowScheduleAlert(true);
     } else {
       setShowEndSessionConfirmation(true);
     }
-  }, [publishDate, scriptId]);
+  }, [publishDate, effectiveScriptId]);
 
   // Interceptar navegação via swipe/browser back quando há sessão ativa
   const blocker = useNavigationBlocker({
