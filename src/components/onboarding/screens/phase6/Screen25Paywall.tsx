@@ -19,8 +19,6 @@ const MOCKUP_IMAGES = [mockupHome, mockupCalendar, mockupStats, mockupOfensiva];
 export const Screen25Paywall = ({
   onContinue,
   onBack,
-  showDevSkip,
-  onDevSkip,
 }: Screen25PaywallProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
 
