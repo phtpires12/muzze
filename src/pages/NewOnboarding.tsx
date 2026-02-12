@@ -167,11 +167,12 @@ const NewOnboarding = () => {
       if (screen >= 0 && screen <= 3) return null;
     }
 
-    // Phase 2: Signup + Paywall + Install (3 screens)
+    // Phase 2: Signup + AppAntigo + Paywall + Install (4 screens)
     if (phase === 2) {
       if (screen === 0) return null; // Rendered outside OnboardingLayout
       if (screen === 1) return null; // Rendered outside OnboardingLayout
-      if (screen === 2) {
+      if (screen === 2) return null; // Rendered outside OnboardingLayout
+      if (screen === 3) {
         return <Screen26Install onContinue={handleComplete} onBack={handleBack} />;
       }
     }
