@@ -159,6 +159,16 @@ export const RESONATING_FEATURES = [
   "Shot list organizado",
 ] as const;
 
+export const PREVIOUS_TOOLS_OPTIONS = [
+  { id: "notion", label: "Notion" },
+  { id: "trello", label: "Trello" },
+  { id: "clickup", label: "Click-Up" },
+  { id: "obsidian", label: "Obsidian" },
+  { id: "cadernos", label: "Cadernos" },
+  { id: "monday", label: "Monday" },
+  { id: "outros", label: "Outros" },
+] as const;
+
 export const DAILY_TIME_OPTIONS = [
   { id: "15_30_min", label: "15-30 minutos", emoji: "⏱️" },
   { id: "30_60_min", label: "30-60 minutos", emoji: "⏱️" },

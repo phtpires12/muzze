@@ -28,6 +28,7 @@ import { Screen4StartQuestionnaire } from "@/components/onboarding/screens/phase
 import { Screen21Signup } from "@/components/onboarding/screens/phase6/Screen21Signup";
 import { Screen25Paywall } from "@/components/onboarding/screens/phase6/Screen25Paywall";
 import { Screen26Install } from "@/components/onboarding/screens/phase6/Screen26Install";
+import { Screen15AppAntigo } from "@/components/onboarding/screens/phase2/Screen15AppAntigo";
 import { DesktopOnboarding } from "@/components/onboarding/DesktopOnboarding";
 import { DevNavigationBar } from "@/components/onboarding/DevNavigationBar";
 
