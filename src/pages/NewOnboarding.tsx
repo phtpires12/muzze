@@ -138,11 +138,12 @@ const NewOnboarding = () => {
       if (screen === 3) return false; // Notifications - internal buttons handle navigation
     }
 
-    // Phase 2 (Signup + Paywall + Install - 3 screens)
+    // Phase 2 (Signup + AppAntigo + Paywall + Install - 4 screens)
     if (phase === 2) {
       if (screen === 0) return false; // Signup handled separately
-      if (screen === 1) return false; // Paywall (button handles)
-      if (screen === 2) return false; // Install (button handles completion)
+      if (screen === 1) return (data.previous_tools?.length ?? 0) > 0; // AppAntigo
+      if (screen === 2) return false; // Paywall (button handles)
+      if (screen === 3) return false; // Install (button handles completion)
     }
 
     return true;
