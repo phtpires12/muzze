@@ -32,6 +32,9 @@ export interface OnboardingData {
   creation_time?: string;
   commitment_level?: string;
   
+  // Referral source
+  referral_source?: string;
+  
   // Legacy fields (may be removed in future)
   calculated_lost_posts?: number;
   dream_outcome_importance?: {
@@ -63,11 +66,11 @@ export const ONBOARDING_PHASES = {
   SIGNUP_PAYWALL: 2,    // Signup, Paywall, Install (3 screens)
 } as const;
 
-// Simplified to 3 phases: [10, 4, 4]
+// Simplified to 3 phases: [10, 4, 5]
 // Phase 0: 10 screens (Welcome through ClusterFeedback)
 // Phase 1: 4 screens (BehavioralScience, DailyTime, CreationTime, Notifications)
-// Phase 2: 4 screens (Signup, AppAntigo, Paywall, Install)
-export const SCREENS_PER_PHASE = [10, 4, 4];
+// Phase 2: 5 screens (Signup, AppAntigo, ComoSoube, Paywall, Install)
+export const SCREENS_PER_PHASE = [10, 4, 5];
 
 // Posting frequency options with cluster mapping
 // Cluster 1: No consistency - focus on reducing pressure, starting small
@@ -167,6 +170,16 @@ export const PREVIOUS_TOOLS_OPTIONS = [
   { id: "cadernos", label: "Cadernos" },
   { id: "monday", label: "Monday" },
   { id: "outros", label: "Outros" },
+] as const;
+
+export const REFERRAL_SOURCE_OPTIONS = [
+  { id: "instagram", label: "Instagram" },
+  { id: "tiktok", label: "TikTok" },
+  { id: "youtube", label: "Youtube" },
+  { id: "app_store", label: "App Store" },
+  { id: "facebook", label: "Facebook" },
+  { id: "nosso_site", label: "Nosso site" },
+  { id: "amigo_familia", label: "Amigo/Família" },
 ] as const;
 
 export const DAILY_TIME_OPTIONS = [

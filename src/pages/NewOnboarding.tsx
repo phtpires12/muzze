@@ -29,6 +29,7 @@ import { Screen21Signup } from "@/components/onboarding/screens/phase6/Screen21S
 import { Screen25Paywall } from "@/components/onboarding/screens/phase6/Screen25Paywall";
 import { Screen26Install } from "@/components/onboarding/screens/phase6/Screen26Install";
 import { Screen15AppAntigo } from "@/components/onboarding/screens/phase2/Screen15AppAntigo";
+import { Screen16ComoSoube } from "@/components/onboarding/screens/phase2/Screen16ComoSoube";
 import { DesktopOnboarding } from "@/components/onboarding/DesktopOnboarding";
 import { DevNavigationBar } from "@/components/onboarding/DevNavigationBar";
 
@@ -138,12 +139,13 @@ const NewOnboarding = () => {
       if (screen === 3) return false; // Notifications - internal buttons handle navigation
     }
 
-    // Phase 2 (Signup + AppAntigo + Paywall + Install - 4 screens)
+    // Phase 2 (Signup + AppAntigo + ComoSoube + Paywall + Install - 5 screens)
     if (phase === 2) {
       if (screen === 0) return false; // Signup handled separately
       if (screen === 1) return (data.previous_tools?.length ?? 0) > 0; // AppAntigo
-      if (screen === 2) return false; // Paywall (button handles)
-      if (screen === 3) return false; // Install (button handles completion)
+      if (screen === 2) return !!data.referral_source; // ComoSoube
+      if (screen === 3) return false; // Paywall (button handles)
+      if (screen === 4) return false; // Install (button handles completion)
     }
 
     return true;
@@ -167,12 +169,13 @@ const NewOnboarding = () => {
       if (screen >= 0 && screen <= 3) return null;
     }
 
-    // Phase 2: Signup + AppAntigo + Paywall + Install (4 screens)
+    // Phase 2: Signup + AppAntigo + ComoSoube + Paywall + Install (5 screens)
     if (phase === 2) {
       if (screen === 0) return null; // Rendered outside OnboardingLayout
       if (screen === 1) return null; // Rendered outside OnboardingLayout
       if (screen === 2) return null; // Rendered outside OnboardingLayout
-      if (screen === 3) {
+      if (screen === 3) return null; // Rendered outside OnboardingLayout
+      if (screen === 4) {
         return <Screen26Install onContinue={handleComplete} onBack={handleBack} />;
       }
     }
@@ -597,8 +600,33 @@ const NewOnboarding = () => {
     );
   }
 
-  // Paywall renderiza fora do OnboardingLayout - layout fullscreen próprio
+  // ComoSoube renderiza fora do OnboardingLayout - questionário single-select
   if (state.phase === 2 && state.screen === 2) {
+    return (
+      <>
+        {/* Developer Badge */}
+        {(isDeveloper || isAdmin) && (
+          <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-full">
+            <Shield className="w-4 h-4 text-primary" />
+            <span className="text-xs font-medium text-primary">
+              {isAdmin ? "Admin" : "Developer"}
+            </span>
+          </div>
+        )}
+        {devNav}
+        <Screen16ComoSoube
+          value={state.data.referral_source || ""}
+          onChange={(value) => updateData({ referral_source: value })}
+          onContinue={handleContinue}
+          onBack={handleBack}
+          progress={getProgress()}
+        />
+      </>
+    );
+  }
+
+  // Paywall renderiza fora do OnboardingLayout - layout fullscreen próprio
+  if (state.phase === 2 && state.screen === 3) {
     return (
       <>
         {devNav}
