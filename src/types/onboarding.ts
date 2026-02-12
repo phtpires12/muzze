@@ -32,6 +32,9 @@ export interface OnboardingData {
   creation_time?: string;
   commitment_level?: string;
   
+  // Referral source
+  referral_source?: string;
+  
   // Legacy fields (may be removed in future)
   calculated_lost_posts?: number;
   dream_outcome_importance?: {
