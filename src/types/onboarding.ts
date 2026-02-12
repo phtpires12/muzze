@@ -9,6 +9,7 @@ export interface OnboardingData {
   preferred_platform?: string;
   daily_available_time?: string;
   preferred_creation_time?: string; // Format "HH:MM"
+  previous_tools?: string[];
   
   // Phase 0: Pain Diagnosis
   sticking_points?: string[];
