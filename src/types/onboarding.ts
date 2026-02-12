@@ -66,11 +66,11 @@ export const ONBOARDING_PHASES = {
   SIGNUP_PAYWALL: 2,    // Signup, Paywall, Install (3 screens)
 } as const;
 
-// Simplified to 3 phases: [10, 4, 4]
+// Simplified to 3 phases: [10, 4, 5]
 // Phase 0: 10 screens (Welcome through ClusterFeedback)
 // Phase 1: 4 screens (BehavioralScience, DailyTime, CreationTime, Notifications)
-// Phase 2: 4 screens (Signup, AppAntigo, Paywall, Install)
-export const SCREENS_PER_PHASE = [10, 4, 4];
+// Phase 2: 5 screens (Signup, AppAntigo, ComoSoube, Paywall, Install)
+export const SCREENS_PER_PHASE = [10, 4, 5];
 
 // Posting frequency options with cluster mapping
 // Cluster 1: No consistency - focus on reducing pressure, starting small
