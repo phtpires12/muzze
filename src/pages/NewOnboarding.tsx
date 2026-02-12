@@ -29,6 +29,7 @@ import { Screen21Signup } from "@/components/onboarding/screens/phase6/Screen21S
 import { Screen25Paywall } from "@/components/onboarding/screens/phase6/Screen25Paywall";
 import { Screen26Install } from "@/components/onboarding/screens/phase6/Screen26Install";
 import { Screen15AppAntigo } from "@/components/onboarding/screens/phase2/Screen15AppAntigo";
+import { Screen16ComoSoube } from "@/components/onboarding/screens/phase2/Screen16ComoSoube";
 import { DesktopOnboarding } from "@/components/onboarding/DesktopOnboarding";
 import { DevNavigationBar } from "@/components/onboarding/DevNavigationBar";
 
