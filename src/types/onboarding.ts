@@ -172,6 +172,16 @@ export const PREVIOUS_TOOLS_OPTIONS = [
   { id: "outros", label: "Outros" },
 ] as const;
 
+export const REFERRAL_SOURCE_OPTIONS = [
+  { id: "instagram", label: "Instagram" },
+  { id: "tiktok", label: "TikTok" },
+  { id: "youtube", label: "Youtube" },
+  { id: "app_store", label: "App Store" },
+  { id: "facebook", label: "Facebook" },
+  { id: "nosso_site", label: "Nosso site" },
+  { id: "amigo_familia", label: "Amigo/Família" },
+] as const;
+
 export const DAILY_TIME_OPTIONS = [
   { id: "15_30_min", label: "15-30 minutos", emoji: "⏱️" },
   { id: "30_60_min", label: "30-60 minutos", emoji: "⏱️" },
