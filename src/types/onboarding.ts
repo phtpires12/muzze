@@ -9,6 +9,7 @@ export interface OnboardingData {
   preferred_platform?: string;
   daily_available_time?: string;
   preferred_creation_time?: string; // Format "HH:MM"
+  previous_tools?: string[];
   
   // Phase 0: Pain Diagnosis
   sticking_points?: string[];
@@ -62,11 +63,11 @@ export const ONBOARDING_PHASES = {
   SIGNUP_PAYWALL: 2,    // Signup, Paywall, Install (3 screens)
 } as const;
 
-// Simplified to 3 phases: [10, 4, 3]
+// Simplified to 3 phases: [10, 4, 4]
 // Phase 0: 10 screens (Welcome through ClusterFeedback)
 // Phase 1: 4 screens (BehavioralScience, DailyTime, CreationTime, Notifications)
-// Phase 2: 3 screens (Signup, Paywall, Install)
-export const SCREENS_PER_PHASE = [10, 4, 3];
+// Phase 2: 4 screens (Signup, AppAntigo, Paywall, Install)
+export const SCREENS_PER_PHASE = [10, 4, 4];
 
 // Posting frequency options with cluster mapping
 // Cluster 1: No consistency - focus on reducing pressure, starting small
@@ -156,6 +157,16 @@ export const RESONATING_FEATURES = [
   "Gamificação e streaks",
   "Calendário editorial",
   "Shot list organizado",
+] as const;
+
+export const PREVIOUS_TOOLS_OPTIONS = [
+  { id: "notion", label: "Notion" },
+  { id: "trello", label: "Trello" },
+  { id: "clickup", label: "Click-Up" },
+  { id: "obsidian", label: "Obsidian" },
+  { id: "cadernos", label: "Cadernos" },
+  { id: "monday", label: "Monday" },
+  { id: "outros", label: "Outros" },
 ] as const;
 
 export const DAILY_TIME_OPTIONS = [
