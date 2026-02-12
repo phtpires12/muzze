@@ -1,41 +1,41 @@
 
-## Tela 16: Ativar Notificacoes
+## Tela 18: "App Antigo" (Onde voce organizava seu conteudo?)
 
-### Onde ela entra
-Atualmente a estrutura e: Phase 0 (10 telas), Phase 1 (3 telas), Phase 2 (3 telas).
-A nova tela sera inserida como **Phase 1, Screen 3** -- logo apos CreationTime (Phase 1, Screen 2).
+### Posicionamento no fluxo
+A tela sera inserida logo apos "Crie sua conta" (Signup), como **Phase 2, Screen 1**.
+As telas seguintes se deslocam:
+- Paywall: Phase 2, Screen 1 → Screen 2
+- Install: Phase 2, Screen 2 → Screen 3
 
-`SCREENS_PER_PHASE` muda de `[10, 3, 3]` para `[10, 4, 3]`.
+`SCREENS_PER_PHASE` muda de `[10, 4, 3]` para `[10, 4, 4]`.
 
 ### Arquivos envolvidos
 
-**1. Novo arquivo: `src/components/onboarding/screens/phase1/Screen14Notifications.tsx`**
+**1. Novo arquivo: `src/components/onboarding/screens/phase2/Screen15AppAntigo.tsx`**
 
-- Layout segue o padrao violet-themed das outras telas do questionario (bg-violet-50, header com back + GradientProgressBar)
-- Titulo: "Podemos te mandar notificacoes nesse horario e/ou em outros?"
-- Botao principal: "Ativar notificacoes" (gradient-pill) -- chama `requestPermission()` do hook `useNotifications`, e ao concluir (sucesso ou falha) avanca com `onContinue`
-- Botao secundario: "Pular por enquanto" (ghost) -- avanca com `onContinue` sem pedir permissao
-- Card informativo "Por que ativar notificacoes?" com os 4 bullets:
-  - Lembrete no horario que voce escolheu
-  - Avisos de ofensivas em risco
-  - Celebracao de conquistas e marcos
-  - Voce pode desativar a qualquer momento
-- Props: `onContinue`, `onBack`, `progress`, `username`
+- Layout violet-themed padrao do questionario (bg-violet-50, header com back + GradientProgressBar)
+- Titulo personalizado: "{nome}, onde voce costumava organizar seu conteudo?"
+- 7 opcoes multi-select usando o componente `QuestionnaireMultiSelect` (mesmo padrao visual das StickingPoints):
+  - Notion, Trello, Click-Up, Obsidian, Cadernos, Monday, Outros
+- Limite maximo de 3 selecoes — ao atingir 3, as opcoes nao selecionadas ficam desabilitadas visualmente
+- Botao "Continuar" (gradient-pill) aparece somente quando pelo menos 1 opcao esta selecionada
+- Props: `value`, `onChange`, `onContinue`, `onBack`, `progress`, `username`
 
 **2. Editar: `src/types/onboarding.ts`**
 
-- `SCREENS_PER_PHASE` de `[10, 3, 3]` para `[10, 4, 3]`
-- Atualizar comentarios da Phase 1 para refletir 4 telas
+- Adicionar campo `previous_tools?: string[]` ao `OnboardingData`
+- Atualizar `SCREENS_PER_PHASE` de `[10, 4, 3]` para `[10, 4, 4]`
+- Adicionar constante `PREVIOUS_TOOLS_OPTIONS` com as 7 opcoes
+- Atualizar comentarios
 
 **3. Editar: `src/pages/NewOnboarding.tsx`**
 
-- Importar `Screen14Notifications`
-- Adicionar bloco de renderizacao para `phase === 1 && screen === 3` (mesmo padrao das outras telas: Developer Badge + devNav + componente)
-- Atualizar `canContinue()` para Phase 1 screen 3: retornar `false` (botoes internos controlam navegacao)
+- Importar `Screen15AppAntigo`
+- Adicionar bloco de renderizacao para `phase === 2 && screen === 1`
+- Ajustar os blocos existentes: Paywall passa para `screen === 2`, Install para `screen === 3`
+- Atualizar `canContinue()` para Phase 2: adicionar regra para screen 1 (`previous_tools?.length > 0`)
+- Atualizar `renderScreen()` para os novos indices
 
-### Detalhes tecnicos
+### Detalhe tecnico: limite de 3 selecoes
 
-- O hook `useNotifications` ja esta importado no `NewOnboarding.tsx` (linha 6) e `requestPermission` ja esta disponivel (linha 36)
-- A funcao `requestPermission` sera passada como prop para o novo componente, ou chamada diretamente dentro dele via import do hook
-- O componente usara `framer-motion` para animacoes de entrada, consistente com as outras telas
-- Icones dos bullets usarao emojis ou icones Lucide (Bell, Shield, Trophy, Settings) para manter consistencia visual
+O componente tera logica interna para desabilitar opcoes nao selecionadas quando `selected.length >= 3`. Isso sera implementado diretamente no componente, sem modificar o `QuestionnaireMultiSelect` compartilhado — o componente da tela fara o controle antes de passar ao multi-select, ou usara uma variante propria com suporte a `maxSelections`.
