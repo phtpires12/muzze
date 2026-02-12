@@ -1,41 +1,35 @@
 
-## Tela 18: "App Antigo" (Onde voce organizava seu conteudo?)
+## Tela 19: "Como nos conheceu?"
 
-### Posicionamento no fluxo
-A tela sera inserida logo apos "Crie sua conta" (Signup), como **Phase 2, Screen 1**.
-As telas seguintes se deslocam:
-- Paywall: Phase 2, Screen 1 → Screen 2
-- Install: Phase 2, Screen 2 → Screen 3
+### Posicionamento
+Sera inserida como **Phase 2, Screen 2** -- logo apos "App Antigo" (Screen 1).
+As telas seguintes se deslocam: Paywall passa para Screen 3, Install para Screen 4.
 
-`SCREENS_PER_PHASE` muda de `[10, 4, 3]` para `[10, 4, 4]`.
+`SCREENS_PER_PHASE` muda de `[10, 4, 4]` para `[10, 4, 5]`.
 
 ### Arquivos envolvidos
 
-**1. Novo arquivo: `src/components/onboarding/screens/phase2/Screen15AppAntigo.tsx`**
+**1. Novo arquivo: `src/components/onboarding/screens/phase2/Screen16ComoSoube.tsx`**
 
-- Layout violet-themed padrao do questionario (bg-violet-50, header com back + GradientProgressBar)
-- Titulo personalizado: "{nome}, onde voce costumava organizar seu conteudo?"
-- 7 opcoes multi-select usando o componente `QuestionnaireMultiSelect` (mesmo padrao visual das StickingPoints):
-  - Notion, Trello, Click-Up, Obsidian, Cadernos, Monday, Outros
-- Limite maximo de 3 selecoes — ao atingir 3, as opcoes nao selecionadas ficam desabilitadas visualmente
-- Botao "Continuar" (gradient-pill) aparece somente quando pelo menos 1 opcao esta selecionada
-- Props: `value`, `onChange`, `onContinue`, `onBack`, `progress`, `username`
+- Mesmo layout violet-themed do questionario (bg-violet-50, header com back + GradientProgressBar)
+- Titulo: "Como voce nos conheceu?"
+- 7 opcoes de selecao unica (apenas 1 pode ser selecionada por vez):
+  - Instagram, TikTok, Youtube, App Store, Facebook, Nosso site, Amigo/Familia
+- Botao "Continuar" (gradient-pill) aparece apos selecionar uma opcao
+- Props: `value`, `onChange`, `onContinue`, `onBack`, `progress`
 
 **2. Editar: `src/types/onboarding.ts`**
 
-- Adicionar campo `previous_tools?: string[]` ao `OnboardingData`
-- Atualizar `SCREENS_PER_PHASE` de `[10, 4, 3]` para `[10, 4, 4]`
-- Adicionar constante `PREVIOUS_TOOLS_OPTIONS` com as 7 opcoes
-- Atualizar comentarios
+- Adicionar campo `referral_source?: string` ao `OnboardingData`
+- Atualizar `SCREENS_PER_PHASE` de `[10, 4, 4]` para `[10, 4, 5]`
+- Adicionar constante `REFERRAL_SOURCE_OPTIONS` com as 7 opcoes
+- Atualizar comentarios da Phase 2
 
 **3. Editar: `src/pages/NewOnboarding.tsx`**
 
-- Importar `Screen15AppAntigo`
-- Adicionar bloco de renderizacao para `phase === 2 && screen === 1`
-- Ajustar os blocos existentes: Paywall passa para `screen === 2`, Install para `screen === 3`
-- Atualizar `canContinue()` para Phase 2: adicionar regra para screen 1 (`previous_tools?.length > 0`)
-- Atualizar `renderScreen()` para os novos indices
+- Importar `Screen16ComoSoube`
+- Adicionar bloco de renderizacao para `phase === 2 && screen === 2`
+- Ajustar indices: Paywall para `screen === 3`, Install para `screen === 4`
 
-### Detalhe tecnico: limite de 3 selecoes
-
-O componente tera logica interna para desabilitar opcoes nao selecionadas quando `selected.length >= 3`. Isso sera implementado diretamente no componente, sem modificar o `QuestionnaireMultiSelect` compartilhado — o componente da tela fara o controle antes de passar ao multi-select, ou usara uma variante propria com suporte a `maxSelections`.
+### Detalhe tecnico
+Diferente da tela "App Antigo" (multi-select com limite de 3), esta tela e de **selecao unica** -- ao clicar numa opcao, as demais sao desmarcadas automaticamente. O visual dos botoes segue o mesmo padrao gradient (selecionado) vs violet (nao selecionado).
