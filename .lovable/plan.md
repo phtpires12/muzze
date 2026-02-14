@@ -1,92 +1,51 @@
 
 
-## Correcao: Dupla contagem de bloqueios de ofensiva
+## Correcoes no carrossel de continuidade da Home
 
-### Causa raiz identificada
+### Problemas identificados
 
-Existem **dois sistemas independentes** consumindo bloqueios para os mesmos dias:
+**1. Conteudo ja publicado aparecendo no carrossel**
+As queries "recent" e "stalled" nao filtram conteudos com `publish_status = "postado"`. Resultado: conteudos ja publicados (como "Esposa Submissa") aparecem sugerindo que o usuario "retome a criacao".
 
-1. **Cron job (`check-streaks`)**: roda diariamente as ~05:00 UTC, verifica o dia anterior e usa 1 freeze se necessario
-2. **Frontend (`useStreakValidator`)**: roda quando o usuario abre o app, detecta dias perdidos e tambem usa freezes via `useFreezesToRecover` ou `buyFreezesAndRecover`
+**2. "-1 dias para publicar" em vez de "Publique hoje"**
+Bug de timezone na conversao de `publish_date`. Quando o codigo faz `new Date("2026-02-14")`, o JavaScript cria a data em UTC meia-noite. No fuso do Brasil (UTC-3), isso vira 13/02 as 21h. O `differenceInDays` calcula entre essa data (dia 13 local) e hoje (dia 14 local), resultando em -1.
 
-**Ambos inserem registros em `streak_freeze_usage` e ambos deduzem de `profiles.streak_freezes`, sem verificar se o outro ja cobriu aquele dia.**
-
-### Evidencia nos dados
-
-Para o usuario `12446de8`, fevereiro de 2026:
-
-| Dia perdido | Freeze #1 (cron) | Freeze #2 (frontend) |
-|---|---|---|
-| Feb 12 | `used_at: 03:00 UTC` (criado 13/02 05:00) | `used_at: 12:00 UTC` (criado 14/02 15:11) |
-| Feb 13 | `used_at: 03:00 UTC` (criado 14/02 05:00) | `used_at: 12:00 UTC` (criado 14/02 15:11) |
-
-Resultado: **4 freezes consumidos para apenas 2 dias perdidos**. O usuario comprou 5, esperava ter 3 restantes (5 - 2 = 3), mas ficou com 1 (5 - 4 = 1).
+**3. Conteudo para publicar hoje deveria vir primeiro**
+Quando existe um conteudo com publicacao para hoje, ele e mais urgente que a "ultima atividade". O carrossel deveria inverter a ordem, mostrando primeiro o slide de urgencia.
 
 ### Solucao
 
-Adicionar verificacao de idempotencia nas funcoes `useFreezesToRecover` e `buyFreezesAndRecover` dentro de `src/hooks/useStreakValidator.ts`. Antes de inserir um freeze para um dia, verificar se ja existe um registro em `streak_freeze_usage` para aquele dia (na timezone do usuario).
+**Arquivo alterado: `src/hooks/useContinuityOptions.ts`**
 
-### Detalhes tecnicos
+**Correcao 1 -- Filtrar conteudo publicado**
+- Na query "recent" (linha 72): adicionar `.neq("publish_status", "postado")`
+- Na query "stalled" (linha 140): adicionar `.neq("publish_status", "postado")`
 
-**Arquivo alterado: `src/hooks/useStreakValidator.ts`**
+**Correcao 2 -- Timezone no calculo de dias**
+- Trocar `new Date(script.publish_date)` por `new Date(script.publish_date + "T00:00:00")` na linha 109
+- Isso forca o JavaScript a interpretar a data no fuso local do usuario, nao em UTC
+- O calculo de `differenceInDays` passara a retornar 0 para "hoje", 1 para "amanha", etc.
 
-**1. Na funcao `useFreezesToRecover` (linha ~204):**
+**Correcao 3 -- Reordenar quando ha publicacao para hoje**
+- Apos montar a lista `results`, verificar se existe algum item do tipo "expiring" com `daysUntilPublish === 0`
+- Se sim, mover esse item para a posicao 0 do array (primeiro slide do carrossel)
+- Na pratica: ordenar o array colocando "expiring com urgencia hoje" em primeiro lugar
 
-Antes do loop que insere freezes, para cada dia perdido:
-- Consultar `streak_freeze_usage` para verificar se ja existe um registro com `used_at` dentro dos bounds UTC daquele dia
-- Se ja existir, pular a insercao E nao contabilizar esse dia no total de freezes a descontar
-- Descontar de `profiles.streak_freezes` apenas os freezes **realmente inseridos** (nao duplicados)
+O codigo de reordenacao ficaria assim:
 
 ```typescript
-// Antes de inserir cada freeze
-let freezesActuallyUsed = 0;
-
-for (let i = 1; i <= result.lostDaysCount; i++) {
-  const freezeDate = new Date(lastEventDate);
-  freezeDate.setDate(freezeDate.getDate() + i);
-  const freezeDayKey = `${freezeDate.getFullYear()}-${String(freezeDate.getMonth() + 1).padStart(2, '0')}-${String(freezeDate.getDate()).padStart(2, '0')}`;
-  
-  // Verificar se ja existe freeze para esse dia
-  const { startUTC, endUTC } = getDayBoundsUTC(freezeDayKey, timezone);
-  const { data: existing } = await supabase
-    .from('streak_freeze_usage')
-    .select('id')
-    .eq('user_id', user.id)
-    .gte('used_at', startUTC.toISOString())
-    .lte('used_at', endUTC.toISOString())
-    .maybeSingle();
-
-  if (!existing) {
-    await supabase.from('streak_freeze_usage').insert({
-      user_id: user.id,
-      used_at: new Date(`${freezeDayKey}T12:00:00Z`).toISOString(),
-    });
-    freezesActuallyUsed++;
-  }
+// Reordenar: publicacao para hoje vem primeiro
+const todayExpiringIndex = results.findIndex(
+  r => r.type === "expiring" && r.urgencyBadge?.label === "Publicar hoje!"
+);
+if (todayExpiringIndex > 0) {
+  const [todayItem] = results.splice(todayExpiringIndex, 1);
+  results.unshift(todayItem);
 }
-
-// Descontar apenas os realmente usados
-const newFreezeCount = (userProfile.streak_freezes || 0) - freezesActuallyUsed;
 ```
-
-**2. Na funcao `buyFreezesAndRecover` (linha ~352):**
-
-Aplicar a mesma logica de idempotencia:
-- Verificar quais dias ja tem freeze antes de inserir
-- Calcular `freezesToBuy` baseado apenas nos dias que realmente precisam de freeze
-- Descontar XP apenas pelo numero correto de freezes comprados
-
-**3. Importar `getDayBoundsUTC` no topo do arquivo:**
-
-Adicionar import de `getDayBoundsUTC` de `@/lib/timezone-utils` (ja importa `getTodayKey`, `getYesterdayKey`, `diffDays`).
 
 ### Resultado esperado
 
-- Se o cron ja usou freeze para um dia, o frontend **nao duplica**
-- Se o frontend ja usou freeze para um dia, o cron **ja tem idempotencia** (verificacao existente no edge function)
-- O usuario ve o numero correto de freezes restantes apos qualquer cenario
-
-### Arquivos alterados
-
-- `src/hooks/useStreakValidator.ts` -- adicionar verificacao de idempotencia em `useFreezesToRecover` e `buyFreezesAndRecover`
-
+- Conteudos ja postados nao aparecem mais no carrossel
+- Conteudo com publicacao para hoje mostra "Publicar hoje!" (nao "-1 dias")
+- Quando ha publicacao para hoje, esse slide aparece primeiro no carrossel
