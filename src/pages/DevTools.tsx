@@ -15,6 +15,7 @@ import { DraggableSessionTimer } from "@/components/DraggableSessionTimer";
 import { PostConfirmationPopup } from "@/components/calendar/PostConfirmationPopup";
 import { useToast } from "@/hooks/use-toast";
 import { AdminPlanSwitcher } from "@/components/dev/AdminPlanSwitcher";
+import { AdminUserManager } from "@/components/dev/AdminUserManager";
 import { BuildInfo } from "@/components/BuildInfo";
 import { useTutorial } from "@/components/tutorial/TutorialProvider";
 import { supabase } from "@/integrations/supabase/client";
@@ -535,6 +536,9 @@ const DevTools = () => {
             </Button>
           </CardContent>
         </Card>
+
+        {/* User Manager Section */}
+        <AdminUserManager />
 
         {/* Plan Admin Section - Using new AdminPlanSwitcher component */}
         <AdminPlanSwitcher />

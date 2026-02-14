@@ -685,6 +685,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_list_users: {
+        Args: never
+        Returns: {
+          created_at: string
+          email: string
+          plan_type: string
+          user_id: string
+          username: string
+        }[]
+      }
       admin_set_plan_type: {
         Args: { new_plan: string; target_user: string }
         Returns: undefined
