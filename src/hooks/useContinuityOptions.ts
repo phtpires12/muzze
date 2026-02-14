@@ -73,6 +73,7 @@ export function useContinuityOptions() {
       .from("scripts")
       .select("id, title, status, updated_at, publish_date, publish_status")
       .eq("user_id", user.id)
+      .neq("publish_status", "postado")
       .gte("updated_at", sevenDaysAgo)
       .order("updated_at", { ascending: false })
       .limit(1)
@@ -106,7 +107,7 @@ export function useContinuityOptions() {
       const script = expiringScript.find((s) => !usedIds.has(s.id));
       if (script && script.publish_date) {
         usedIds.add(script.id);
-        const publishDate = startOfDay(new Date(script.publish_date));
+        const publishDate = startOfDay(new Date(script.publish_date + "T00:00:00"));
         const daysUntilPublish = differenceInDays(publishDate, today);
 
         let urgencyVariant: "warning" | "urgent" | "info" = "info";
@@ -141,6 +142,7 @@ export function useContinuityOptions() {
       .from("scripts")
       .select("id, title, status, updated_at, publish_date, publish_status")
       .eq("user_id", user.id)
+      .neq("publish_status", "postado")
       .in("status", ["draft", "draft_idea", "review", "recording", "editing"])
       .lt("updated_at", fourteenDaysAgo)
       .order("updated_at", { ascending: true })
@@ -174,6 +176,15 @@ export function useContinuityOptions() {
           scriptId: script.id,
         });
       }
+    }
+
+    // Reordenar: publicação para hoje vem primeiro
+    const todayExpiringIndex = results.findIndex(
+      (r) => r.type === "expiring" && r.urgencyBadge?.label === "Publicar hoje!"
+    );
+    if (todayExpiringIndex > 0) {
+      const [todayItem] = results.splice(todayExpiringIndex, 1);
+      results.unshift(todayItem);
     }
 
     setOptions(results);
