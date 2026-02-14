@@ -19,7 +19,13 @@ export const logError = async (
   payload: ErrorLogPayload
 ): Promise<void> => {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    let userId: string | null = null;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      userId = user?.id || null;
+    } catch {
+      // Auth may not be available (e.g. during failed signup)
+    }
     
     const enrichedPayload: ErrorLogPayload = {
       ...payload,
@@ -28,13 +34,14 @@ export const logError = async (
       timestamp: new Date().toISOString(),
     };
 
+    // Always log to console for visibility
+    console.error(`[ErrorLogger] ${errorType}:`, enrichedPayload.message, enrichedPayload);
+
     await supabase.from('analytics_events').insert({
-      user_id: user?.id || null,
+      user_id: userId,
       event: `error:${errorType}`,
       payload: enrichedPayload as Record<string, any>,
     });
-
-    console.log(`[ErrorLogger] Error logged: ${errorType}`);
   } catch (loggingError) {
     // Fail silently to avoid infinite loops
     console.error("[ErrorLogger] Failed to log error:", loggingError);
