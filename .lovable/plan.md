@@ -1,42 +1,38 @@
 
 
-## Correcao Urgente: Cadastro de Novos Usuarios Falhando
+## Painel de Gerenciamento de Usuarios no Dev Tools
 
-### Diagnostico
+### O que sera criado
+Um novo card dentro da pagina Dev Tools com uma lista de todos os usuarios cadastrados, mostrando email, username, plano atual e permitindo alterar o plano de qualquer usuario diretamente.
 
-A causa raiz foi identificada: a coluna `current_workflow` na tabela `profiles` tem um valor padrao `'A'`, mas existe uma CHECK constraint que so aceita `classic`, `freestyle` ou `minimalist`. Quando um novo usuario se cadastra, o trigger `handle_new_user` insere um perfil sem especificar `current_workflow`, e o valor padrao `'A'` viola a constraint, fazendo todo o signup falhar.
+### Abordagem tecnica
 
-### Correcoes necessarias
+**1. Nova funcao no banco de dados (SECURITY DEFINER)**
 
-**1. Corrigir o default da coluna `current_workflow` (CRITICO)**
-
-Executar uma migration SQL para alterar o valor padrao:
-
-```sql
-ALTER TABLE public.profiles 
-ALTER COLUMN current_workflow SET DEFAULT 'classic';
-```
-
-Isso garante que novos usuarios recebam um valor valido automaticamente.
-
-**2. Melhorar a resiliencia do error logger para signups**
-
-Editar `src/lib/error-logger.ts`:
-
-- Quando `user_id` for null (como durante signup falhado), inserir o log com `user_id = null` usando um fallback que nao dependa do RLS
-- Alternativa: adicionar um `console.error` explicito para que erros de signup pelo menos aparecam no console do navegador
-
-Editar a RLS policy de `analytics_events`:
+Criar `admin_list_users` -- uma funcao que retorna todos os perfis com email, username e plan_type. Apenas admins/developers podem chama-la (validacao interna via `has_role`). Isso contorna o RLS da tabela `profiles` de forma segura.
 
 ```sql
-DROP POLICY "Users can insert own analytics events" ON analytics_events;
-CREATE POLICY "Anyone can insert analytics events" ON analytics_events
-  FOR INSERT WITH CHECK (true);
+CREATE FUNCTION admin_list_users()
+RETURNS TABLE(user_id uuid, email text, username text, plan_type text, created_at timestamptz)
+SECURITY DEFINER
+-- Valida internamente que o caller e admin ou developer
 ```
 
-Isso permite que erros sejam logados mesmo sem autenticacao.
+**2. Novo componente: `src/components/dev/AdminUserManager.tsx`**
 
-### Impacto
+- Lista todos os usuarios em uma tabela compacta
+- Colunas: Email, Username, Plano Atual, Acoes
+- Campo de busca por email/username para filtrar a lista
+- Botoes inline (Free / Pro / Studio) para trocar o plano de cada usuario
+- Usa o RPC `admin_set_plan_type` ja existente para alterar planos
+- Badge colorido indicando o plano atual de cada usuario
+- Botao de refresh para atualizar a lista
 
-- A correcao principal (item 1) resolve imediatamente o problema de cadastro para todos os usuarios
-- A correcao secundaria (item 2) garante que futuros erros de signup sejam visíveis nos logs
+**3. Editar `src/pages/DevTools.tsx`**
+
+- Importar e renderizar o `AdminUserManager` como um novo card na pagina
+
+### Seguranca
+- A funcao `admin_list_users` valida que o chamador tem role `admin` ou `developer` antes de retornar dados
+- O RPC `admin_set_plan_type` ja possui essa mesma validacao
+- Nenhum dado sensivel (senha, tokens) e exposto -- apenas email, username e plan_type
