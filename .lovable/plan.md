@@ -1,91 +1,74 @@
 
 
-## Celebracao Reativa de Upgrade de Plano
+## Correcao: Calendario de Ofensiva mostrando menos dias do que o esperado
 
-### Cenario atual
+### Causa raiz identificada
 
-Hoje existe uma pagina estatica `/paywall/success` que so aparece quando o usuario navega manualmente ate ela. Nao ha deteccao automatica de mudanca de plano.
+A query de `fetchMonthProgress` na pagina Ofensiva esta retornando **exatamente 1000 registros** (limite padrao do banco de dados), mas o usuario tem **muito mais sessoes** no mes. Como cada sessao de trabalho gera dezenas de registros na tabela `stage_times` (registros curtos de 10-30 segundos), os 1000 registros cobrem apenas os primeiros 3 dias (4, 5, 6 de fevereiro), e os dias 7-14 ficam sem dados.
 
-### O que sera criado
+Evidencia dos logs do console:
+- `Total sessoes encontradas: 1000` (limite atingido)
+- Progresso do mes mostra apenas 3 dias: `2026-02-04`, `2026-02-05`, `2026-02-06`
+- O dia 6 aparece com apenas 31 min quando deveria ter 346 min (dados cortados no meio)
 
-Um sistema que **detecta automaticamente** quando o plano do usuario muda (de `free` para `pro` ou `studio`, ou de `pro` para `studio`) e exibe uma celebracao em multiplas telas -- independente de como o upgrade aconteceu.
+### Solucao
 
-### Gatilhos cobertos
-
-1. **Admin promove via DevTools** -- O PlanContext faz polling/realtime e detecta que `plan_type` mudou
-2. **Usuario restaura compra** -- O webhook Zouti atualiza o banco, e na proxima checagem o app detecta
-3. **Compra nova via Paywall** -- Fluxo existente, agora tambem reativo
-
-### Como vai funcionar
-
-```text
-+-------------------+     +------------------+     +---------------------+
-| Banco: plan_type  | --> | PlanContext       | --> | Detecta mudanca     |
-| muda (qualquer    |     | (ja carrega o     |     | free->pro, pro->    |
-| origem)           |     |  plano do user)   |     | studio, etc.        |
-+-------------------+     +------------------+     +---------------------+
-                                                            |
-                                                            v
-                                                   +---------------------+
-                                                   | Mostra celebracao   |
-                                                   | multi-telas como    |
-                                                   | overlay global      |
-                                                   +---------------------+
-```
+Alterar a query em `fetchMonthProgress` no arquivo `src/pages/Ofensiva.tsx` para **agregar os dados no proprio banco** em vez de trazer todos os registros individuais para o frontend. Isso elimina o problema do limite de 1000 linhas.
 
 ### Detalhes tecnicos
 
-**1. Hook `useUpgradeDetector` (novo arquivo: `src/hooks/useUpgradeDetector.ts`)**
+**1. Criar uma funcao RPC no banco de dados**: `get_monthly_stage_summary`
 
-- Armazena o `plan_type` anterior em `useRef`
-- A cada vez que `PlanContext.planType` muda, compara com o anterior
-- Se detecta upgrade (free->pro, free->studio, pro->studio), dispara a celebracao
-- Usa Supabase Realtime na tabela `profiles` para receber mudancas instantaneamente (sem polling)
-- Persiste em `sessionStorage` um flag `upgrade_celebrated_<planType>` para nao repetir na mesma sessao
-
-**2. Habilitar Realtime na tabela `profiles` (migration SQL)**
+Essa funcao recebe `user_id`, `start_utc` e `end_utc`, e retorna os minutos agrupados por dia ja no SQL:
 
 ```sql
-ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
+CREATE OR REPLACE FUNCTION get_monthly_stage_summary(
+  p_user_id uuid,
+  p_start_utc timestamptz,
+  p_end_utc timestamptz,
+  p_timezone text DEFAULT 'America/Sao_Paulo'
+)
+RETURNS TABLE(day_key text, total_minutes numeric) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    to_char(started_at AT TIME ZONE p_timezone, 'YYYY-MM-DD') as day_key,
+    SUM(duration_seconds) / 60.0 as total_minutes
+  FROM stage_times
+  WHERE user_id = p_user_id
+    AND started_at >= p_start_utc
+    AND started_at <= p_end_utc
+    AND started_at IS NOT NULL
+  GROUP BY day_key
+  ORDER BY day_key;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 ```
 
-Isso permite que o PlanContext receba mudancas em tempo real quando um admin ou webhook atualiza o `plan_type`.
+Isso retorna no maximo 28-31 linhas (uma por dia do mes), eliminando completamente o problema de limite.
 
-**3. Componente `UpgradeCelebration` (novo: `src/components/upgrade/UpgradeCelebration.tsx`)**
+**2. Atualizar `fetchMonthProgress` em `src/pages/Ofensiva.tsx`**
 
-Overlay global (estilo do sistema de celebracoes existente) com 4 telas em sequencia:
+Substituir a query direta na tabela `stage_times` pela chamada RPC:
 
-- **Tela 1 - Boas-vindas**: "Parabens, agora voce e Pro!" com confetti e logo animado. Diferencia Pro vs Studio no titulo.
-- **Tela 2 - Conteudos ilimitados**: Icone grande + texto curto sobre nao ter mais limite semanal.
-- **Tela 3 - Recursos avancados**: Planejamento futuro, colaboradores, workspaces. Conteudo diferenciado por plano.
-- **Tela 4 - Proximos passos**: 3 sugestoes + botao "Comecar a criar" que fecha o overlay.
+```typescript
+const { data: summary } = await supabase.rpc('get_monthly_stage_summary', {
+  p_user_id: user.id,
+  p_start_utc: monthStartUTC.toISOString(),
+  p_end_utc: monthEndUTC.toISOString(),
+  p_timezone: userTimezone,
+});
+```
 
-Cada tela tera:
-- Dots de progresso no topo
-- Animacao fade/slide com framer-motion
-- Botao "Continuar" / "Comecar a criar" (ultima tela)
+E construir o `dayProgressMap` diretamente a partir do resultado.
 
-**4. Slides internos (novo: `src/components/upgrade/UpgradeCelebrationSlides.tsx`)**
+**3. Resultado esperado**
 
-Componentes para cada slide, recebendo `planType` como prop para personalizar conteudo:
-- `UpgradeWelcomeSlide` -- confetti + parabens
-- `UpgradeUnlimitedSlide` -- conteudos ilimitados  
-- `UpgradeFeaturesSlide` -- recursos (diferente pra Pro vs Studio)
-- `UpgradeNextStepsSlide` -- CTA final
+Apos a correcao, o calendario vai mostrar corretamente:
+- Dias 4, 5, 6: fogo completo (79, 149, 346 min)
+- Dias 7-11: fogo completo (45, 50, 66, 31, 57 min - todos acima de 25 min)
+- Dias 12-13: flocos de neve (freeze)
+- Dia 14: hoje (em destaque)
 
-**5. Integracao no `App.tsx`**
-
-Renderizar `UpgradeCelebration` como overlay global dentro do `RootLayout`, ao lado do `GlobalCelebrations` e `LevelUpModal` ja existentes.
-
-**6. Atualizar PlanContext para reagir ao Realtime**
-
-Adicionar um listener de Realtime na tabela `profiles` filtrado pelo `user_id` atual, que chama `refetchProfile()` quando detecta update. Isso garante que mudancas feitas por admin ou webhook sejam captadas instantaneamente.
-
-**7. Remover/redirecionar pagina estatica `/paywall/success`**
-
-A rota `/paywall/success` passara a simplesmente redirecionar para `/` -- a celebracao sera disparada automaticamente pelo detector de upgrade, sem precisar de uma rota dedicada.
-
-### Nenhuma mudanca na logica de planos
-
-O sistema apenas observa mudancas no `plan_type` existente. Nao altera como planos sao atribuidos (admin, webhook ou qualquer outra forma).
+Isso corresponde ao streak de 7 dias mostrado no contador.
 
