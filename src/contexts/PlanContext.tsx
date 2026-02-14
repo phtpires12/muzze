@@ -178,6 +178,33 @@ export const PlanContextProvider = ({ children }: { children: ReactNode }) => {
       subscription.unsubscribe();
     };
   }, [fetchProfileData]);
+
+  // Realtime listener for profile changes (detects admin/webhook plan updates)
+  useEffect(() => {
+    if (!authUserId) return;
+
+    const channel = supabase
+      .channel(`profile-plan-${authUserId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `user_id=eq.${authUserId}`,
+        },
+        (payload) => {
+          console.log('[PlanContext] 🔄 Realtime profile update detected:', payload.new);
+          const newProfile = payload.new as unknown as ProfileWithPlanFields;
+          setProfileData(newProfile);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [authUserId]);
   
   // Determinar planType - prioridade: simulação (se tester) > plano real do banco
   const rawPlanType = (profileData?.plan_type || 'free') as 'free' | 'pro' | 'studio';
