@@ -730,6 +730,18 @@ export type Database = {
           workspace_owner_id: string
         }[]
       }
+      get_monthly_stage_summary: {
+        Args: {
+          p_end_utc: string
+          p_start_utc: string
+          p_timezone?: string
+          p_user_id: string
+        }
+        Returns: {
+          day_key: string
+          total_minutes: number
+        }[]
+      }
       get_stage_time_summary: {
         Args: never
         Returns: {
