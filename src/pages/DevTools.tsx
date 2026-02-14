@@ -20,6 +20,7 @@ import { BuildInfo } from "@/components/BuildInfo";
 import { useTutorial } from "@/components/tutorial/TutorialProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { useRecaps } from "@/hooks/useRecaps";
+import { Crown } from "lucide-react";
 const DevTools = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -329,6 +330,22 @@ const DevTools = () => {
             >
               <Trophy className="w-4 h-4 mr-2 text-yellow-500" />
               Simular Troféu Desbloqueado
+            </Button>
+            <Button
+              onClick={() => (window as any).__simulateUpgrade?.('pro')}
+              className="w-full justify-start"
+              variant="outline"
+            >
+              <Crown className="w-4 h-4 mr-2 text-primary" />
+              Simular Upgrade → Pro
+            </Button>
+            <Button
+              onClick={() => (window as any).__simulateUpgrade?.('studio')}
+              className="w-full justify-start"
+              variant="outline"
+            >
+              <Crown className="w-4 h-4 mr-2 text-primary" />
+              Simular Upgrade → Studio
             </Button>
           </CardContent>
         </Card>

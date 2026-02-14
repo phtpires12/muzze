@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -14,10 +14,16 @@ import {
 const TOTAL_STEPS = 4;
 
 export const UpgradeCelebration = () => {
-  const { upgradedTo, dismiss } = useUpgradeDetector();
+  const { upgradedTo, dismiss, simulateUpgrade } = useUpgradeDetector();
   const [step, setStep] = useState(0);
   const navigate = useNavigate();
   const { trackEvent } = useAnalytics();
+
+  // Expose simulateUpgrade on window for DevTools
+  useEffect(() => {
+    (window as any).__simulateUpgrade = simulateUpgrade;
+    return () => { delete (window as any).__simulateUpgrade; };
+  }, [simulateUpgrade]);
 
   if (!upgradedTo) return null;
 

@@ -33,5 +33,10 @@ export const useUpgradeDetector = () => {
 
   const dismiss = () => setUpgradedTo(null);
 
-  return { upgradedTo, dismiss };
+  const simulateUpgrade = (plan: 'pro' | 'studio') => {
+    console.log(`[UpgradeDetector] 🧪 Simulating upgrade → ${plan}`);
+    setUpgradedTo(plan);
+  };
+
+  return { upgradedTo, dismiss, simulateUpgrade };
 };
