@@ -5,7 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { X, Share2, ChevronLeft, ChevronRight, Snowflake, Gem, Info, TrendingUp } from "lucide-react";
+import { X, Share2, ChevronLeft, ChevronRight, Snowflake, Gem, Info, TrendingUp, ShieldCheck } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isFuture, isToday, getDaysInMonth, isSameMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -19,7 +20,7 @@ import { getDayKey, getDayBoundsUTC, getMonthStartKey, getMonthEndKey, dayKeyToL
 
 const Ofensiva = () => {
   const navigate = useNavigate();
-  const { profile, loading: profileLoading, effectiveLevel, goalMinutes, freezeCost } = useProfileWithLevel();
+  const { profile, loading: profileLoading, effectiveLevel, goalMinutes, freezeCost, refetch } = useProfileWithLevel();
   const isAppVisible = useAppVisibility();
   const cardRef = useRef<HTMLDivElement>(null);
   const [streakCount, setStreakCount] = useState(0);
@@ -31,6 +32,8 @@ const Ofensiva = () => {
   const [loading, setLoading] = useState(true);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [selectedDay, setSelectedDay] = useState<DayProgress | null>(null);
+  const [hasShownFreezeDialog, setHasShownFreezeDialog] = useState(false);
+  const [freezePurchaseInfo, setFreezePurchaseInfo] = useState<{ newTotal: number; xpSpent: number; xpRemaining: number } | null>(null);
 
   useEffect(() => {
     fetchStreakData();
@@ -260,12 +263,17 @@ const Ofensiva = () => {
       return;
     }
 
-    toast.success("Bloqueio adquirido!", {
-      description: "Sua ofensiva está protegida por mais 1 dia."
-    });
+    // Refresh profile data without reloading
+    await refetch();
 
-    // Refresh profile data
-    window.location.reload();
+    // Show dialog only on first purchase of this session
+    if (!hasShownFreezeDialog) {
+      setFreezePurchaseInfo({
+        newTotal: currentFreezes + 1,
+        xpSpent: freezeCost,
+        xpRemaining: userXP - freezeCost,
+      });
+    }
   };
 
   const getMotivationalMessage = (streak: number) => {
@@ -758,10 +766,60 @@ const Ofensiva = () => {
         goalMinutes={goalMinutes}
       />
 
-      {/* Card oculto para geração de imagem de compartilhamento */}
-      <div className="fixed -left-[9999px]" aria-hidden="true">
-        <StreakShareCard ref={cardRef} streakCount={streakCount} />
-      </div>
+      {/* Dialog de confirmação de compra de bloqueio (apenas primeira compra) */}
+      <Dialog 
+        open={freezePurchaseInfo !== null} 
+        onOpenChange={(open) => {
+          if (!open) {
+            setFreezePurchaseInfo(null);
+            setHasShownFreezeDialog(true);
+          }
+        }}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader className="items-center text-center">
+            <div className="w-14 h-14 rounded-full bg-cyan-500/10 flex items-center justify-center mx-auto mb-2">
+              <ShieldCheck className="w-7 h-7 text-cyan-500" />
+            </div>
+            <DialogTitle>Bloqueio adquirido!</DialogTitle>
+            <DialogDescription>
+              Sua ofensiva está protegida por mais 1 dia.
+            </DialogDescription>
+          </DialogHeader>
+
+          {freezePurchaseInfo && (
+            <div className="space-y-3 pt-2">
+              <div className="flex items-center justify-between px-3 py-2.5 bg-muted/50 rounded-lg">
+                <span className="text-sm text-muted-foreground">Bloqueios</span>
+                <span className="text-sm font-bold text-cyan-500">
+                  {freezePurchaseInfo.newTotal}/{MAX_STREAK_FREEZES}
+                </span>
+              </div>
+              <div className="flex items-center justify-between px-3 py-2.5 bg-muted/50 rounded-lg">
+                <span className="text-sm text-muted-foreground">XP gasto</span>
+                <span className="text-sm font-bold text-foreground">-{freezePurchaseInfo.xpSpent} XP</span>
+              </div>
+              <div className="flex items-center justify-between px-3 py-2.5 bg-muted/50 rounded-lg">
+                <span className="text-sm text-muted-foreground">XP restante</span>
+                <span className="text-sm font-bold text-foreground">{freezePurchaseInfo.xpRemaining} XP</span>
+              </div>
+              <p className="text-xs text-muted-foreground text-center pt-1">
+                Quando você não cumprir sua meta diária, o bloqueio será usado automaticamente para proteger sua ofensiva.
+              </p>
+            </div>
+          )}
+
+          <Button 
+            className="w-full mt-2" 
+            onClick={() => {
+              setFreezePurchaseInfo(null);
+              setHasShownFreezeDialog(true);
+            }}
+          >
+            Entendi
+          </Button>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
