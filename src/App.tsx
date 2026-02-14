@@ -48,8 +48,8 @@ import AcceptInvite from "./pages/AcceptInvite";
 import ContentView from "./pages/ContentView";
 import MyPlan from "./pages/MyPlan";
 import PaywallPage from "./pages/PaywallPage";
-import PaywallSuccess from "./pages/PaywallSuccess";
 import EditingWorkspace from "./pages/EditingWorkspace";
+import { UpgradeCelebration } from "./components/upgrade/UpgradeCelebration";
 import Recap from "./pages/Recap";
 import { LevelUpModal } from "./components/LevelUpModal";
 import { TrophyUnlockedModal } from "./components/TrophyUnlockedModal";
@@ -135,6 +135,7 @@ const RootLayout = () => (
           <LevelUpModal />
           <TrophyUnlockedModal />
           <TutorialOverlay />
+          <UpgradeCelebration />
           <div className="safe-app">
             <Outlet />
           </div>
@@ -164,7 +165,7 @@ const router = createBrowserRouter([
       { path: "/edit-profile", element: <ProtectedRoute><Layout><EditProfile /></Layout></ProtectedRoute> },
       { path: "/my-plan", element: <ProtectedRoute><Layout><MyPlan /></Layout></ProtectedRoute> },
       { path: "/paywall", element: <ProtectedRoute><PaywallPage /></ProtectedRoute> },
-      { path: "/paywall/success", element: <ProtectedRoute><PaywallSuccess /></ProtectedRoute> },
+      { path: "/paywall/success", element: <Navigate to="/" replace /> },
       { path: "/my-progress", element: <Navigate to="/my-plan" replace /> },
       { path: "/settings", element: <ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute> },
       { path: "/send-suggestions", element: <ProtectedRoute><Layout><SendSuggestions /></Layout></ProtectedRoute> },
