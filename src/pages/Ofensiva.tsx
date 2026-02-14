@@ -73,70 +73,31 @@ const Ofensiva = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // Usar timezone do usuário para calcular datas corretamente
     const userTimezone = profile?.timezone || 'America/Sao_Paulo';
-    
-    // Calcular bounds do mês na timezone do usuário usando utilitários centrais
     const monthStartKey = getMonthStartKey(currentMonth, userTimezone);
     const monthEndKey = getMonthEndKey(currentMonth, userTimezone);
-    
-    // Converter para UTC para queries
     const { startUTC: monthStartUTC } = getDayBoundsUTC(monthStartKey, userTimezone);
     const { endUTC: monthEndUTC } = getDayBoundsUTC(monthEndKey, userTimezone);
 
-    console.log(`[Ofensiva] Buscando sessões do mês:`, {
-      userTimezone,
-      monthStartKey,
-      monthEndKey,
-      monthStartUTC: monthStartUTC.toISOString(),
-      monthEndUTC: monthEndUTC.toISOString(),
+    // Usar RPC para agregar no banco (evita limite de 1000 linhas)
+    const { data: summary, error } = await supabase.rpc('get_monthly_stage_summary', {
+      p_user_id: user.id,
+      p_start_utc: monthStartUTC.toISOString(),
+      p_end_utc: monthEndUTC.toISOString(),
+      p_timezone: userTimezone,
     });
 
-    // CORREÇÃO: Usar started_at em vez de created_at para determinar "qual dia" a sessão pertence
-    const { data: sessions } = await supabase
-      .from('stage_times')
-      .select('started_at, duration_seconds')
-      .eq('user_id', user.id)
-      .gte('started_at', monthStartUTC.toISOString())
-      .lte('started_at', monthEndUTC.toISOString());
+    if (error) {
+      console.error('[Ofensiva] Erro ao buscar resumo mensal:', error);
+      return;
+    }
 
-    // Agrupar sessions por dayKey na timezone do usuário usando started_at
-    const dayMap = new Map<string, number>();
-    
-    console.log(`[Ofensiva] Total sessões encontradas:`, sessions?.length);
-    
-    sessions?.forEach((session, idx) => {
-      if (!session.started_at) {
-        console.log(`[Ofensiva] Sessão ${idx} sem started_at:`, session);
-        return;
-      }
-      
-      // Usar getDayKey com started_at para consistência de timezone
-      const sessionDate = new Date(session.started_at);
-      const dayKey = getDayKey(sessionDate, userTimezone);
-      
-      const minutes = (session.duration_seconds || 0) / 60;
-      dayMap.set(dayKey, (dayMap.get(dayKey) || 0) + minutes);
-      
-      // Log para debug das sessões do dia 12
-      if (dayKey === '2026-01-12') {
-        console.log(`[Ofensiva] Sessão dia 12:`, {
-          started_at: session.started_at,
-          duration_seconds: session.duration_seconds,
-          dayKey,
-          totalSoFar: dayMap.get(dayKey)
-        });
-      }
-    });
-
-    // Converter dayMap para dayProgressMap
     const progressMap = new Map<string, { minutes: number }>();
-    dayMap.forEach((minutes, dayStr) => {
-      progressMap.set(dayStr, { minutes });
+    summary?.forEach((row: { day_key: string; total_minutes: number }) => {
+      progressMap.set(row.day_key, { minutes: row.total_minutes });
     });
 
-    console.log(`[Ofensiva] Progresso do mês:`, Object.fromEntries(progressMap));
-    console.log(`[Ofensiva] Dia 12 especificamente:`, progressMap.get('2026-01-12'));
+    console.log(`[Ofensiva] Progresso do mês (via RPC):`, Object.fromEntries(progressMap));
     setDayProgressMap(progressMap);
   };
 
