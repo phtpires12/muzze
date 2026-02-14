@@ -23,8 +23,9 @@ const StreakProtectedCelebration = ({
   useEffect(() => {
     if (show) {
       setIsVisible(true);
-      // Play protection sound when celebration appears
       playSound('protect');
+    } else {
+      setIsVisible(false);
     }
   }, [show, playSound]);
 
