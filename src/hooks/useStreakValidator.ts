@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { MAX_STREAK_FREEZES } from '@/lib/gamification';
-import { getTodayKey, getYesterdayKey, diffDays } from '@/lib/timezone-utils';
+import { getTodayKey, getYesterdayKey, diffDays, getDayBoundsUTC } from '@/lib/timezone-utils';
 
 interface LostDaysResult {
   hasLostDays: boolean;
@@ -197,25 +197,40 @@ export const useStreakValidator = ({
         return false;
       }
       
-      // Insert freeze usage for each lost day usando dayKeys
+      // Insert freeze usage for each lost day usando dayKeys (com idempotência)
       const [ly, lm, ld] = lastEventDateStr.split('-').map(Number);
       const lastEventDate = new Date(ly, lm - 1, ld, 12, 0, 0);
+      let freezesActuallyUsed = 0;
       
       for (let i = 1; i <= result.lostDaysCount; i++) {
         const freezeDate = new Date(lastEventDate);
         freezeDate.setDate(freezeDate.getDate() + i);
         
-        // Gravar como meia-noite UTC do dia em questão na timezone do usuário
         const freezeDayKey = `${freezeDate.getFullYear()}-${String(freezeDate.getMonth() + 1).padStart(2, '0')}-${String(freezeDate.getDate()).padStart(2, '0')}`;
         
-        await supabase.from('streak_freeze_usage').insert({
-          user_id: user.id,
-          used_at: new Date(`${freezeDayKey}T12:00:00Z`).toISOString(),
-        });
+        // Verificar se já existe freeze para esse dia (idempotência)
+        const { startUTC, endUTC } = getDayBoundsUTC(freezeDayKey, timezone);
+        const { data: existing } = await supabase
+          .from('streak_freeze_usage')
+          .select('id')
+          .eq('user_id', user.id)
+          .gte('used_at', startUTC.toISOString())
+          .lte('used_at', endUTC.toISOString())
+          .maybeSingle();
+
+        if (!existing) {
+          await supabase.from('streak_freeze_usage').insert({
+            user_id: user.id,
+            used_at: new Date(`${freezeDayKey}T12:00:00Z`).toISOString(),
+          });
+          freezesActuallyUsed++;
+        } else {
+          console.log(`[useFreezesToRecover] Freeze already exists for ${freezeDayKey}, skipping`);
+        }
       }
 
-      // Deduct freezes from profile
-      const newFreezeCount = userProfile.streak_freezes - result.lostDaysCount;
+      // Deduct only actually used freezes from profile
+      const newFreezeCount = userProfile.streak_freezes - freezesActuallyUsed;
       await supabase
         .from('profiles')
         .update({ streak_freezes: Math.max(0, newFreezeCount) })
@@ -276,17 +291,11 @@ export const useStreakValidator = ({
         return false;
       }
 
-      // Calculate how many freezes to buy
-      const freezesToBuy = result.lostDaysCount - result.availableFreezes;
-      if (freezesToBuy <= 0) {
-        console.error('[buyFreezesAndRecover] No freezes to buy');
-        return false;
-      }
-
-      // Check limit
-      const newTotalFreezes = result.availableFreezes + freezesToBuy;
-      if (newTotalFreezes > MAX_STREAK_FREEZES) {
-        console.error('[buyFreezesAndRecover] Would exceed max freezes limit');
+      // First, check how many days already have freezes (cron may have covered some)
+      const lastEventDateStr = result.lastEventDate;
+      const lastEventDateObj = new Date(lastEventDateStr + 'T12:00:00');
+      if (isNaN(lastEventDateObj.getTime())) {
+        console.error('[buyFreezesAndRecover] Invalid lastEventDate:', lastEventDateStr);
         return false;
       }
 
@@ -302,6 +311,41 @@ export const useStreakValidator = ({
         return false;
       }
 
+      const timezone = freshProfile.timezone || 'America/Sao_Paulo';
+
+      // Count days that already have freeze coverage
+      let daysAlreadyCovered = 0;
+      for (let i = 1; i <= result.lostDaysCount; i++) {
+        const freezeDate = new Date(lastEventDateObj);
+        freezeDate.setDate(freezeDate.getDate() + i);
+        const freezeDayKey = `${freezeDate.getFullYear()}-${String(freezeDate.getMonth() + 1).padStart(2, '0')}-${String(freezeDate.getDate()).padStart(2, '0')}`;
+        const { startUTC, endUTC } = getDayBoundsUTC(freezeDayKey, timezone);
+        const { data: existing } = await supabase
+          .from('streak_freeze_usage')
+          .select('id')
+          .eq('user_id', user.id)
+          .gte('used_at', startUTC.toISOString())
+          .lte('used_at', endUTC.toISOString())
+          .maybeSingle();
+        if (existing) daysAlreadyCovered++;
+      }
+
+      const daysNeedingFreeze = result.lostDaysCount - daysAlreadyCovered;
+      const currentFreezes = freshProfile.streak_freezes || 0;
+
+      // Calculate how many freezes to buy (only for uncovered days)
+      const freezesToBuy = Math.max(0, daysNeedingFreeze - currentFreezes);
+      if (freezesToBuy <= 0 && daysNeedingFreeze <= currentFreezes) {
+        // Already have enough freezes, just use them
+        console.log('[buyFreezesAndRecover] Already have enough freezes, using existing ones');
+      }
+
+      // Check limit
+      const newTotalFreezes = currentFreezes + freezesToBuy;
+      if (newTotalFreezes > MAX_STREAK_FREEZES) {
+        console.error('[buyFreezesAndRecover] Would exceed max freezes limit');
+        return false;
+      }
       // Validar com dados FRESCOS (não cache)
       const totalCost = freezesToBuy * freezeCost;
       const freshXP = freshProfile.xp_points || 0;
@@ -311,15 +355,8 @@ export const useStreakValidator = ({
         return false;
       }
 
-      // Validar lastEventDate antes de criar Date
-      const lastEventDateStr = result.lastEventDate;
-      const lastEventDate = new Date(lastEventDateStr + 'T12:00:00');
-      if (isNaN(lastEventDate.getTime())) {
-        console.error('[buyFreezesAndRecover] Invalid lastEventDate:', lastEventDateStr);
-        return false;
-      }
+      const lastEventDate = lastEventDateObj;
 
-      const timezone = freshProfile.timezone || 'America/Sao_Paulo';
       const now = new Date();
       const userDate = new Date(now.toLocaleString('en-US', { timeZone: timezone }));
 
@@ -328,11 +365,11 @@ export const useStreakValidator = ({
         freezesToBuy,
         totalCost,
         freshXP,
-        lostDaysCount: result.lostDaysCount
+        daysNeedingFreeze,
+        daysAlreadyCovered,
       });
 
       // 1. Buy freezes: Deduct XP and add freezes to profile (operação atômica)
-      const currentFreezes = freshProfile.streak_freezes || 0;
       const newFreezesAfterBuy = currentFreezes + freezesToBuy;
       
       const { error: updateError } = await supabase
@@ -348,24 +385,41 @@ export const useStreakValidator = ({
         return false;
       }
 
-      // 2. Use all needed freezes to cover lost days
+      // 2. Use all needed freezes to cover lost days (com idempotência)
+      let freezesActuallyInserted = 0;
       for (let i = 1; i <= result.lostDaysCount; i++) {
         const freezeDate = new Date(lastEventDate);
         freezeDate.setDate(freezeDate.getDate() + i);
+        const freezeDayKey = `${freezeDate.getFullYear()}-${String(freezeDate.getMonth() + 1).padStart(2, '0')}-${String(freezeDate.getDate()).padStart(2, '0')}`;
 
-        const { error: freezeError } = await supabase.from('streak_freeze_usage').insert({
-          user_id: user.id,
-          used_at: freezeDate.toISOString(),
-        });
+        // Verificar se já existe freeze para esse dia (idempotência)
+        const { startUTC, endUTC } = getDayBoundsUTC(freezeDayKey, timezone);
+        const { data: existing } = await supabase
+          .from('streak_freeze_usage')
+          .select('id')
+          .eq('user_id', user.id)
+          .gte('used_at', startUTC.toISOString())
+          .lte('used_at', endUTC.toISOString())
+          .maybeSingle();
 
-        if (freezeError) {
-          console.error('[buyFreezesAndRecover] Failed to insert freeze usage:', freezeError);
-          // Continuar mesmo com erro (melhor ter o XP debitado e streak salvo)
+        if (!existing) {
+          const { error: freezeError } = await supabase.from('streak_freeze_usage').insert({
+            user_id: user.id,
+            used_at: new Date(`${freezeDayKey}T12:00:00Z`).toISOString(),
+          });
+
+          if (freezeError) {
+            console.error('[buyFreezesAndRecover] Failed to insert freeze usage:', freezeError);
+          } else {
+            freezesActuallyInserted++;
+          }
+        } else {
+          console.log(`[buyFreezesAndRecover] Freeze already exists for ${freezeDayKey}, skipping`);
         }
       }
 
-      // 3. Deduct all used freezes from profile
-      const finalFreezeCount = newFreezesAfterBuy - result.lostDaysCount;
+      // 3. Deduct only actually used freezes from profile
+      const finalFreezeCount = newFreezesAfterBuy - freezesActuallyInserted;
       const { error: finalUpdateError } = await supabase
         .from('profiles')
         .update({ streak_freezes: Math.max(0, finalFreezeCount) })
