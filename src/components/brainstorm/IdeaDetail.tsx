@@ -17,6 +17,9 @@ import { FileText, ExternalLink, Loader2, Check, Trash2, Video, Scissors } from 
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useSessionContext } from "@/contexts/SessionContext";
+import { useSession } from "@/hooks/useSession";
+import { useCelebration } from "@/contexts/CelebrationContext";
+import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { ThumbnailUploader } from "@/components/ThumbnailUploader";
 import { WorkflowSelector } from "@/components/workflows/WorkflowSelector";
 import { WorkflowTemplateId, getStageLabel, getWorkflowTemplate } from "@/lib/workflow-templates";
@@ -57,6 +60,9 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { resetTimer } = useSessionContext();
+  const { session, endSession, saveCurrentStageTime } = useSession();
+  const { triggerFullCelebration } = useCelebration();
+  const { playSound } = useSoundEffects(0.6);
   const [idea, setIdea] = useState<Idea | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -225,6 +231,44 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
       default:
         return { label: `Avançar para ${getStageLabel(next)}`, icon: FileText };
     }
+  };
+
+  const handleBackToCalendar = async () => {
+    // Save pending form changes first
+    if (hasUnsavedChanges) {
+      await autoSave();
+    }
+
+    if (!session.isActive) {
+      navigate("/calendario");
+      return;
+    }
+
+    playSound('complete');
+
+    const capturedDuration = session.elapsedSeconds || 0;
+    const capturedStage = session.stage || 'idea';
+
+    await saveCurrentStageTime();
+    const result = await endSession();
+
+    const sessionSummary = {
+      duration: result?.duration || capturedDuration,
+      xpGained: result?.xpGained || 0,
+      stage: capturedStage,
+      autoRedirectDestination: "/calendario",
+    };
+
+    const streakCount = result?.shouldShowCelebration && !result?.alreadyCounted
+      ? (result?.newStreak || 0)
+      : 0;
+
+    await triggerFullCelebration(
+      sessionSummary,
+      streakCount,
+      result?.xpGained || 0,
+      () => navigate("/calendario")
+    );
   };
 
   const nextStageButton = getNextStageButton();
@@ -450,7 +494,7 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
             </Button>
             <Button
               variant="outline"
-              onClick={() => navigate("/calendario")}
+              onClick={handleBackToCalendar}
               className="w-full"
             >
               Voltar ao Calendário
