@@ -65,6 +65,30 @@ export type Database = {
         }
         Relationships: []
       }
+      holiday_cache: {
+        Row: {
+          country_code: string
+          fetched_at: string | null
+          holidays: Json
+          id: string
+          year: number
+        }
+        Insert: {
+          country_code: string
+          fetched_at?: string | null
+          holidays: Json
+          id?: string
+          year: number
+        }
+        Update: {
+          country_code?: string
+          fetched_at?: string | null
+          holidays?: Json
+          id?: string
+          year?: number
+        }
+        Relationships: []
+      }
       notification_logs: {
         Row: {
           error_message: string | null
