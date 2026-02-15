@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.generate-recaps]
 verify_jwt = false
+
+[functions.get-holidays]
+verify_jwt = false

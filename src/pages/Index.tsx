@@ -27,6 +27,8 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 import { StreakRecoveryModal } from "@/components/StreakRecoveryModal";
+import { useHolidayAlert } from "@/hooks/useHolidayAlert";
+import { HolidayAlertDialog } from "@/components/HolidayAlertDialog";
 import StreakProtectedCelebration from "@/components/StreakProtectedCelebration";
 import {
   Dialog,
@@ -114,6 +116,9 @@ const Index = () => {
   
   // Streak Protection Celebration
   const [showProtectedCelebration, setShowProtectedCelebration] = useState(false);
+  
+  // Holiday alerts
+  const { alert: holidayAlert, dismiss: dismissHoliday, remindLater: remindHolidayLater } = useHolidayAlert();
   const [protectedCelebrationData, setProtectedCelebrationData] = useState({
     freezesUsed: 0,
     currentStreak: 0,
@@ -895,6 +900,15 @@ const Index = () => {
 
       {/* PWA Install Prompt */}
       <PWAInstallPrompt variant="popup" />
+
+      {/* Holiday Alert Dialog */}
+      {!isStreakRecoveryModalOpen && !showProtectedCelebration && (
+        <HolidayAlertDialog
+          alert={holidayAlert}
+          onDismiss={dismissHoliday}
+          onRemindLater={remindHolidayLater}
+        />
+      )}
 
       
     </div>
