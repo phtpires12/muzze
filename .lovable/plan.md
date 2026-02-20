@@ -1,82 +1,67 @@
 
-## Correção: Login com Google e Apple retorna 404 no domínio publicado
+## Correção: Botões de pausar e encerrar não respondem ao toque no mobile
 
-### Causa raiz
+### Causa raiz (dois problemas combinados)
 
-Dois problemas combinados causam o erro no domínio publicado:
+**Problema 1 — `e.preventDefault()` global no `handleTouchStart`**
 
-**1. Auth-bridge interceptando o redirect OAuth**
+O handler `handleTouchStart` do drag handle (linha 261) chama `e.preventDefault()` de forma incondicional. Porém, esse handler está registrado no elemento pai do Card inteiro, não apenas no drag handle. Com isso, qualquer toque em qualquer parte do timer — incluindo os botões de pausar e finalizar — tem seu comportamento padrão cancelado antes de o evento chegar ao `onClick` dos botões.
 
-O Lovable usa um "auth-bridge" interno que, em domínios customizados (como `muzze.lovable.app` ou `www.muzze.app`), não consegue redirecionar o usuário de volta corretamente após o login via Google/Apple. O resultado é um 404. No preview (`*.lovableproject.com`), o bridge funciona normalmente.
+A confirmação vem do session replay: o elemento `id: 108` recebe o toque e imediatamente fica `disabled`, indicando que o evento de touch foi "consumido" pelo sistema de drag antes de atingir o botão.
 
-A solução para domínios customizados é usar `skipBrowserRedirect: true` diretamente pelo Supabase client, contornando o bridge. Porém, como o projeto usa o módulo `lovable.auth.signInWithOAuth`, a alternativa é detectar o domínio customizado e acionar o fluxo manualmente.
+**Problema 2 — `TooltipTrigger` interceptando toque no mobile**
 
-**2. Service Worker do PWA interceptando `/~oauth`**
-
-O Workbox (configurado no `vite.config.ts`) tem uma regra de navegação `NetworkFirst` para todas as rotas SPA. Isso faz com que o Service Worker intercepte a rota `/~oauth` — que é o callback do OAuth — e sirva o `index.html` em vez de deixar a requisição ir direto para a rede. O resultado é que o token de autenticação nunca é processado corretamente.
-
-A correção obrigatória é adicionar `/~oauth` na lista `navigateFallbackDenylist` do Workbox.
+Os botões de Pausar e Encerrar estão dentro de `<TooltipTrigger asChild>`. No mobile, o Radix UI `TooltipProvider` registra listeners de pointer events nos triggers para exibir tooltips ao pressionar. Isso cria uma competição entre o tooltip e o click handler do botão — o tooltip pode absorver o touch event e o click não dispara.
 
 ### Solução
 
-**Mudança 1: `vite.config.ts` — Excluir `/~oauth` do Service Worker (crítico)**
+**1. Restringir o `e.preventDefault()` ao drag handle apenas**
 
-Adicionar `navigateFallbackDenylist` na configuração do Workbox para que o Service Worker nunca intercepte as rotas de OAuth:
+O `handleTouchStart` que chama `e.preventDefault()` deve ser aplicado **somente** no elemento do drag handle, não no wrapper geral. Atualmente o handler é aplicado diretamente no div do drag handle (`onTouchStart={handleTouchStart}`), mas o problema é que `e.preventDefault()` no início do handler cancela a propagação para os filhos antes mesmo de verificar se o toque foi no handle. Isso já ocorre com `touchstart` bubblando para cima.
 
-```typescript
-workbox: {
-  navigateFallbackDenylist: [/^\/~oauth/],
-  // ... resto da config
-}
+A correção: adicionar `e.stopPropagation()` nos `onClick` de todos os botões, e remover o `e.preventDefault()` do `handleTouchStart` dentro do timer content. O `e.preventDefault()` deve ficar **somente** no `handleMove` (durante o drag ativo), não no `touchstart`.
+
+**2. Substituir `TooltipTrigger` por wrapper simples nos botões de controle no mobile**
+
+No mobile (`isMobile === true`), remover os `Tooltip`s dos botões de controle. Tooltips não fazem sentido em touch — o usuário não tem hover. Renderizar os botões diretamente sem `TooltipTrigger`:
+
+```tsx
+// Antes (mobile):
+<Tooltip>
+  <TooltipTrigger asChild>
+    <Button onClick={handlePause} ...>
+      <Pause />
+    </Button>
+  </TooltipTrigger>
+</Tooltip>
+
+// Depois (mobile):
+<Button
+  onClick={(e) => { e.stopPropagation(); handlePause(); }}
+  ...
+>
+  <Pause />
+</Button>
 ```
 
-**Mudança 2: `SocialLoginButtons.tsx` — Detecção de domínio customizado**
+**3. Adicionar `e.stopPropagation()` em todos os botões**
 
-Modificar `handleOAuth` para detectar se o usuário está em um domínio customizado. Se sim, usar `supabase.auth.signInWithOAuth` com `skipBrowserRedirect: true` para obter a URL diretamente e redirecionar manualmente, contornando o auth-bridge:
+Garantir que nenhum clique nos botões se propague para o container do drag.
 
-```typescript
-const handleOAuth = async (provider: "google" | "apple") => {
-  const isCustomDomain =
-    !window.location.hostname.includes("lovable.app") &&
-    !window.location.hostname.includes("lovableproject.com") &&
-    !window.location.hostname.includes("localhost");
+**4. Adicionar `touch-action: manipulation` nos botões**
 
-  if (isCustomDomain) {
-    // Domínio customizado: contornar o auth-bridge
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: {
-        redirectTo: window.location.origin,
-        skipBrowserRedirect: true,
-      },
-    });
-    if (error) throw error;
-    if (data?.url) window.location.href = data.url;
-  } else {
-    // Preview/Lovable domains: usar fluxo normal com lovable.auth
-    const { error } = await lovable.auth.signInWithOAuth(provider, {
-      redirect_uri: window.location.origin,
-    });
-    if (error) throw error;
-  }
-};
-```
+Isso instrui o browser a tratar o toque como um clique imediato (sem delay de 300ms e sem tentar detectar gestos), resolvendo problemas de delay em toque no mobile.
 
 ### Arquivos alterados
 
 | Arquivo | Ação |
 |---|---|
-| `vite.config.ts` | Adicionar `navigateFallbackDenylist: [/^\/~oauth/]` no Workbox |
-| `src/components/auth/SocialLoginButtons.tsx` | Detectar domínio customizado e usar fluxo alternativo |
+| `src/components/DraggableSessionTimer.tsx` | Remover `e.preventDefault()` do `handleTouchStart` inicial; adicionar `e.stopPropagation()` nos botões; remover Tooltips no mobile; adicionar `touch-action: manipulation` |
 
-### Por que isso funciona
+### O que NÃO muda
 
-- **No preview** (`*.lovableproject.com`): o caminho normal via `lovable.auth.signInWithOAuth` continua sendo usado — sem mudança de comportamento.
-- **No publicado** (`muzze.lovable.app` / domínio customizado): o fluxo vai direto para o provider (Google/Apple) e volta para a origem correta, sem passar pelo auth-bridge.
-- **O Service Worker** não vai mais interceptar `/~oauth`, então os tokens OAuth são processados pela rede normalmente.
-
-### O que não muda
-
-- O fluxo de email/senha continua idêntico
-- A aparência e UX do componente são idênticos
-- Nenhuma outra tela é afetada
+- O drag por arrastar continua funcionando (o `e.preventDefault()` no `handleMove` permanece para evitar scroll durante drag)
+- A aparência visual é idêntica
+- No desktop, os Tooltips continuam funcionando normalmente
+- O modal de confirmação de encerramento continua idêntico
+- O modo expandido (fullscreen) não é afetado
