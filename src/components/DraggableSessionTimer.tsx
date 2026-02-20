@@ -258,7 +258,8 @@ export const DraggableSessionTimer = ({
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
-    e.preventDefault(); // Sempre prevenir scroll ao tocar no timer
+    // NÃO chamar e.preventDefault() aqui — isso bloquearia clicks nos botões filhos.
+    // O preventDefault fica apenas no handleMove durante arraste ativo.
     if (e.touches.length === 2) {
       // Pinch gesture detected - NOT drag
       setIsPinching(true);
@@ -660,61 +661,95 @@ export const DraggableSessionTimer = ({
             </div>
 
             {/* Controls - Mais compactos em mobile */}
-            <TooltipProvider delayDuration={300}>
-              <div className={cn(
-                "flex gap-2",
-                isMobile ? "flex-row" : "flex-col"
-              )}>
-                {!isPaused ? (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        onClick={handlePause}
-                        variant={isStreakMode ? "secondary" : "outline"}
-                        size={isMobile ? "icon" : "sm"}
-                        className={cn(isMobile && "h-8 w-8")}
-                      >
-                        <Pause className={cn(isMobile ? "w-3 h-3" : "w-4 h-4")} />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom">
-                      <p>Pausar sessão</p>
-                    </TooltipContent>
-                  </Tooltip>
-                ) : (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        onClick={handleResume}
-                        variant={isStreakMode ? "secondary" : "default"}
-                        size={isMobile ? "icon" : "sm"}
-                        className={cn(isMobile && "h-8 w-8")}
-                      >
-                        <Play className={cn(isMobile ? "w-3 h-3" : "w-4 h-4")} />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom">
-                      <p>Retomar sessão</p>
-                    </TooltipContent>
-                  </Tooltip>
-                )}
-                <Tooltip>
-                  <TooltipTrigger asChild>
+            <div className={cn(
+              "flex gap-2",
+              isMobile ? "flex-row" : "flex-col"
+            )}>
+              {isMobile ? (
+                // Mobile: sem Tooltip para evitar interferência com touch events
+                <>
+                  {!isPaused ? (
                     <Button
-                      onClick={() => setShowEndConfirmation(true)}
+                      onClick={(e) => { e.stopPropagation(); handlePause(); }}
                       variant={isStreakMode ? "secondary" : "outline"}
-                      size={isMobile ? "icon" : "sm"}
-                      className={cn(isMobile && "h-8 w-8")}
+                      size="icon"
+                      className="h-8 w-8"
+                      style={{ touchAction: 'manipulation' }}
                     >
-                      <Square className={cn(isMobile ? "w-3 h-3" : "w-4 h-4")} />
+                      <Pause className="w-3 h-3" />
                     </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">
-                    <p>Encerrar sessão</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-            </TooltipProvider>
+                  ) : (
+                    <Button
+                      onClick={(e) => { e.stopPropagation(); handleResume(); }}
+                      variant={isStreakMode ? "secondary" : "default"}
+                      size="icon"
+                      className="h-8 w-8"
+                      style={{ touchAction: 'manipulation' }}
+                    >
+                      <Play className="w-3 h-3" />
+                    </Button>
+                  )}
+                  <Button
+                    onClick={(e) => { e.stopPropagation(); setShowEndConfirmation(true); }}
+                    variant={isStreakMode ? "secondary" : "outline"}
+                    size="icon"
+                    className="h-8 w-8"
+                    style={{ touchAction: 'manipulation' }}
+                  >
+                    <Square className="w-3 h-3" />
+                  </Button>
+                </>
+              ) : (
+                // Desktop: Tooltips normais
+                <TooltipProvider delayDuration={300}>
+                  {!isPaused ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          onClick={(e) => { e.stopPropagation(); handlePause(); }}
+                          variant={isStreakMode ? "secondary" : "outline"}
+                          size="sm"
+                        >
+                          <Pause className="w-4 h-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">
+                        <p>Pausar sessão</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          onClick={(e) => { e.stopPropagation(); handleResume(); }}
+                          variant={isStreakMode ? "secondary" : "default"}
+                          size="sm"
+                        >
+                          <Play className="w-4 h-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">
+                        <p>Retomar sessão</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        onClick={(e) => { e.stopPropagation(); setShowEndConfirmation(true); }}
+                        variant={isStreakMode ? "secondary" : "outline"}
+                        size="sm"
+                      >
+                        <Square className="w-4 h-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>Encerrar sessão</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </div>
 
             {EndConfirmationDialog}
           </div>
