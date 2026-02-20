@@ -174,6 +174,7 @@ export type Database = {
           timer_start_mode: string | null
           timezone: string
           tutorial_progress: Json | null
+          upgrade_celebrated: Json
           user_id: string
           username: string | null
           weekly_goal_minutes: number | null
@@ -200,6 +201,7 @@ export type Database = {
           timer_start_mode?: string | null
           timezone?: string
           tutorial_progress?: Json | null
+          upgrade_celebrated?: Json
           user_id: string
           username?: string | null
           weekly_goal_minutes?: number | null
@@ -226,6 +228,7 @@ export type Database = {
           timer_start_mode?: string | null
           timezone?: string
           tutorial_progress?: Json | null
+          upgrade_celebrated?: Json
           user_id?: string
           username?: string | null
           weekly_goal_minutes?: number | null
