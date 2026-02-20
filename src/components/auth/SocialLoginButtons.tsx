@@ -23,67 +23,33 @@ export function SocialLoginButtons({
   const handleOAuth = async (provider: "google" | "apple") => {
     setLoadingProvider(provider);
     try {
-      const hostname = window.location.hostname;
       const isInIframe = window.self !== window.top;
-      const isCustomDomain =
-        !hostname.includes("lovable.app") &&
-        !hostname.includes("lovableproject.com") &&
-        !hostname.includes("localhost");
 
-      if (isInIframe || isCustomDomain) {
-        // Iframe (preview) ou domínio customizado: usar supabase direto
-        const { data, error } = await supabase.auth.signInWithOAuth({
-          provider,
-          options: {
-            redirectTo: window.location.origin,
-            skipBrowserRedirect: true,
-          },
+      if (isInIframe) {
+        // No iframe: chamar lovable.auth normalmente (usa credenciais gerenciadas)
+        // e iniciar polling para detectar quando a sessão for criada
+        lovable.auth.signInWithOAuth(provider, {
+          redirect_uri: window.location.origin,
         });
-        if (error) throw error;
-        if (!data?.url) return;
 
-        if (isInIframe) {
-          // Dentro do iframe: abrir popup e aguardar conclusão
-          const popup = window.open(data.url, "oauth", "width=500,height=650,left=200,top=100");
-          if (!popup) {
-            toast({
-              title: "Popup bloqueada",
-              description: "Permita popups para este site e tente novamente.",
-              variant: "destructive",
-            });
-            setLoadingProvider(null);
-            return;
+        // Polling: verificar a cada 1s se a sessão foi estabelecida
+        // (o popup seta a sessão no localStorage compartilhado)
+        const pollInterval = setInterval(async () => {
+          const { data } = await supabase.auth.getSession();
+          if (data.session) {
+            clearInterval(pollInterval);
+            window.location.reload();
           }
+        }, 1000);
 
-          // Listener para detectar quando o oauth concluiu (popup voltou para a mesma origem)
-          const messageHandler = (event: MessageEvent) => {
-            if (event.origin === window.location.origin) {
-              popup.close();
-              window.removeEventListener("message", messageHandler);
-              window.location.reload();
-            }
-          };
-          window.addEventListener("message", messageHandler);
+        // Cancelar polling após 5 minutos (timeout de segurança)
+        setTimeout(() => {
+          clearInterval(pollInterval);
+          setLoadingProvider(null);
+        }, 5 * 60 * 1000);
 
-          // Fallback: monitorar se a popup fechou
-          const popupCheckInterval = setInterval(() => {
-            if (popup.closed) {
-              clearInterval(popupCheckInterval);
-              window.removeEventListener("message", messageHandler);
-              setLoadingProvider(null);
-              supabase.auth.getSession().then(({ data: sessionData }) => {
-                if (sessionData.session) {
-                  window.location.reload();
-                }
-              });
-            }
-          }, 500);
-        } else {
-          // Domínio customizado: redirect direto
-          window.location.href = data.url;
-        }
       } else {
-        // Preview top-level sem iframe: usar lovable.auth normal
+        // Fora do iframe (custom domain ou preview top-level): fluxo normal
         const { error } = await lovable.auth.signInWithOAuth(provider, {
           redirect_uri: window.location.origin,
         });
