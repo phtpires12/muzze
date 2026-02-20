@@ -258,7 +258,8 @@ export const DraggableSessionTimer = ({
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
-    e.preventDefault(); // Sempre prevenir scroll ao tocar no timer
+    // NÃO chamar e.preventDefault() aqui — isso bloquearia clicks nos botões filhos.
+    // O preventDefault fica apenas no handleMove durante arraste ativo.
     if (e.touches.length === 2) {
       // Pinch gesture detected - NOT drag
       setIsPinching(true);
