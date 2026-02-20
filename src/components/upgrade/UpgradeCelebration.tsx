@@ -33,7 +33,7 @@ export const UpgradeCelebration = () => {
       trackEvent('upgrade_celebration_step', { step: step + 1, plan: upgradedTo });
     } else {
       trackEvent('upgrade_celebration_completed', { plan: upgradedTo });
-      dismiss();
+      dismiss({ persist: true });
       navigate('/');
     }
   };
