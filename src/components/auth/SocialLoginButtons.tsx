@@ -24,13 +24,14 @@ export function SocialLoginButtons({
     setLoadingProvider(provider);
     try {
       const hostname = window.location.hostname;
+      const isInIframe = window.self !== window.top;
       const isCustomDomain =
         !hostname.includes("lovable.app") &&
         !hostname.includes("lovableproject.com") &&
         !hostname.includes("localhost");
 
-      if (isCustomDomain) {
-        // Custom domain: bypass auth-bridge and redirect manually
+      if (isInIframe || isCustomDomain) {
+        // Iframe (preview) ou domínio customizado: usar supabase direto
         const { data, error } = await supabase.auth.signInWithOAuth({
           provider,
           options: {
@@ -39,9 +40,50 @@ export function SocialLoginButtons({
           },
         });
         if (error) throw error;
-        if (data?.url) window.location.href = data.url;
+        if (!data?.url) return;
+
+        if (isInIframe) {
+          // Dentro do iframe: abrir popup e aguardar conclusão
+          const popup = window.open(data.url, "oauth", "width=500,height=650,left=200,top=100");
+          if (!popup) {
+            toast({
+              title: "Popup bloqueada",
+              description: "Permita popups para este site e tente novamente.",
+              variant: "destructive",
+            });
+            setLoadingProvider(null);
+            return;
+          }
+
+          // Listener para detectar quando o oauth concluiu (popup voltou para a mesma origem)
+          const messageHandler = (event: MessageEvent) => {
+            if (event.origin === window.location.origin) {
+              popup.close();
+              window.removeEventListener("message", messageHandler);
+              window.location.reload();
+            }
+          };
+          window.addEventListener("message", messageHandler);
+
+          // Fallback: monitorar se a popup fechou
+          const popupCheckInterval = setInterval(() => {
+            if (popup.closed) {
+              clearInterval(popupCheckInterval);
+              window.removeEventListener("message", messageHandler);
+              setLoadingProvider(null);
+              supabase.auth.getSession().then(({ data: sessionData }) => {
+                if (sessionData.session) {
+                  window.location.reload();
+                }
+              });
+            }
+          }, 500);
+        } else {
+          // Domínio customizado: redirect direto
+          window.location.href = data.url;
+        }
       } else {
-        // Preview/Lovable domains: use normal lovable.auth flow
+        // Preview top-level sem iframe: usar lovable.auth normal
         const { error } = await lovable.auth.signInWithOAuth(provider, {
           redirect_uri: window.location.origin,
         });
@@ -53,7 +95,6 @@ export function SocialLoginButtons({
         description: "Algo deu errado. Tente novamente.",
         variant: "destructive",
       });
-    } finally {
       setLoadingProvider(null);
     }
   };
