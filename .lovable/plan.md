@@ -1,112 +1,67 @@
 
-## Correção: Login Google/Apple não detecta sessão no preview (iframe)
+## Diagnóstico: Erro `missing OAuth secret`
 
-### Causa raiz
+### Causa raiz definitiva
 
-O preview da Lovable roda dentro de um **`<iframe>`** embutido no editor. Quando o `lovable.auth.signInWithOAuth` é chamado, o auth-bridge abre uma popup do Google. Após o login, o auth-bridge tenta enviar os tokens de volta via `window.postMessage` — mas o destinatário da mensagem é o `window.parent` do popup. Como o app está num iframe, o `window.parent` do popup não é o app em si, mas sim o editor da Lovable. A mensagem nunca chega, `supabase.auth.setSession` nunca é chamado, e a sessão não é estabelecida.
+O fluxo OAuth do Google/Apple **só funciona via `lovable.auth.signInWithOAuth`**, pois é esse módulo que usa as credenciais do Google gerenciadas pelo Lovable Cloud. Quando chamamos `supabase.auth.signInWithOAuth` diretamente (como os fixes anteriores fizeram), a requisição vai para o Supabase puro — que não tem Google OAuth configurado — resultando em `"Unsupported provider: missing OAuth secret"`.
 
-Esse problema **só existe no preview (iframe)**. No app publicado, o app roda em top-level e o `lovable.auth` funciona corretamente. Porém, com o fix anterior para domínios customizados (`muzze.lovable.app` / `www.muzze.app`), o app publicado já usa o caminho direto via Supabase — então o fix atual só vai impactar o preview.
+O histórico de mudanças criou um conflito:
+- Fix #1: detectar domínio customizado → substituir por `supabase.auth` → QUEBROU as credenciais
+- Fix #2: detectar iframe → substituir por `supabase.auth` → QUEBROU as credenciais
 
-### Solução
+### Solução correta
 
-Adicionar uma terceira ramificação de detecção no `handleOAuth`:
+Usar `lovable.auth.signInWithOAuth` em **todos os ambientes** (preview, domínio customizado, iframe), pois só ele tem acesso às credenciais OAuth do Google/Apple.
 
-```
-1. Está dentro de iframe?  → popup com supabase.auth + postMessage listener
-2. Domínio customizado?    → redirect direto via supabase.auth (já implementado)
-3. Preview top-level?      → lovable.auth (já implementado, raramente usado)
-```
+O problema do iframe (sessão não detectada após login) deve ser resolvido com **polling de sessão** após chamar `lovable.auth`, não com a troca para `supabase.auth`.
 
-**Detecção de iframe:**
-```typescript
-const isInIframe = window.self !== window.top;
-```
+Como `lovable.auth.signInWithOAuth` funciona internamente:
+1. Abre um popup com a URL do Google (via Lovable Cloud)
+2. Usuário faz login
+3. O auth-bridge processa os tokens e chama `supabase.auth.setSession(result.tokens)` no contexto do popup
+4. O popup envia uma mensagem `postMessage` de volta
 
-**Fluxo para iframe (popup com listener):**
-1. Chamar `supabase.auth.signInWithOAuth({ provider, options: { skipBrowserRedirect: true } })` para obter a URL OAuth sem redirecionar
-2. Abrir a URL em `window.open(url, 'oauth', 'width=500,height=600')` — popup controlado pelo app
-3. Registrar um `message` event listener em `window` para capturar quando a popup retornar
-4. A Lovable Cloud envia um `postMessage` para o opener (`window.opener`) após o OAuth completo com `{ type: 'oauth-complete' }` ou simplesmente quando a popup navega de volta para a origem
-5. Ao detectar a conclusão: fechar a popup, remover o listener, e forçar `supabase.auth.getSession()` para recarregar a sessão
+O problema no iframe é que o `postMessage` do popup vai para `window.parent` (o editor da Lovable), não para o app dentro do iframe. A sessão é estabelecida localmente no popup, mas o app no iframe não fica sabendo.
 
-Como a Lovable Cloud usa seu próprio callback em `/~oauth` que processa os tokens e depois redireciona para a `redirect_uri`, o que acontece é:
-- Popup abre: `https://accounts.google.com/...`
-- Google redireciona para: `/~oauth?code=...` (processado pelo auth-bridge da Lovable)
-- Auth-bridge processa, estabelece sessão, redireciona popup para: `window.location.origin`
-- Popup agora está em `window.location.origin` — mesma origem que o app
-- Podemos detectar isso via `message` event ou verificando se a popup está na mesma origem
-- Recarregar a sessão no app com `window.location.reload()` ou `supabase.auth.getSession()`
+**Solução para o iframe:** após chamar `lovable.auth.signInWithOAuth`, iniciar um polling que verifica `supabase.auth.getSession()` a cada 1 segundo. Quando a sessão aparecer (o lovable.auth a salva no localStorage que é compartilhado), recarregar a página.
+
+Para domínio customizado (`www.muzze.app`): `lovable.auth.signInWithOAuth` deve funcionar normalmente via redirect, pois o domínio está configurado no Lovable Cloud. O erro 404 original que motivou o fix pode ter tido outra causa — testar novamente com `lovable.auth` puro.
 
 ### Implementação
 
-**`src/components/auth/SocialLoginButtons.tsx`** — nova lógica:
+**`src/components/auth/SocialLoginButtons.tsx`** — reverter para `lovable.auth` em todos os casos + polling para iframe:
 
 ```typescript
 const handleOAuth = async (provider: "google" | "apple") => {
   setLoadingProvider(provider);
   try {
-    const hostname = window.location.hostname;
     const isInIframe = window.self !== window.top;
-    const isCustomDomain =
-      !hostname.includes("lovable.app") &&
-      !hostname.includes("lovableproject.com") &&
-      !hostname.includes("localhost");
 
-    if (isInIframe || isCustomDomain) {
-      // Iframe (preview) ou domínio customizado: usar supabase direto + popup/redirect
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: window.location.origin,
-          skipBrowserRedirect: true,
-        },
+    if (isInIframe) {
+      // No iframe: chamar lovable.auth normalmente (usa credenciais gerenciadas)
+      // e iniciar polling para detectar quando a sessão for criada
+      lovable.auth.signInWithOAuth(provider, {
+        redirect_uri: window.location.origin,
       });
-      if (error) throw error;
-      if (!data?.url) return;
 
-      if (isInIframe) {
-        // Dentro do iframe: abrir popup e aguardar postMessage de conclusão
-        const popup = window.open(data.url, 'oauth', 'width=500,height=650,left=200,top=100');
-        if (!popup) {
-          toast({
-            title: "Popup bloqueada",
-            description: "Permita popups para este site e tente novamente.",
-            variant: "destructive",
-          });
-          return;
+      // Polling: verificar a cada 1s se a sessão foi estabelecida
+      // (o popup abre e seta a sessão no localStorage)
+      const pollInterval = setInterval(async () => {
+        const { data } = await supabase.auth.getSession();
+        if (data.session) {
+          clearInterval(pollInterval);
+          window.location.reload();
         }
+      }, 1000);
 
-        // Listener para detectar quando o oauth concluiu (popup voltou para a mesma origem)
-        const messageHandler = (event: MessageEvent) => {
-          if (event.origin === window.location.origin) {
-            popup.close();
-            window.removeEventListener('message', messageHandler);
-            // Recarregar para detectar a nova sessão
-            window.location.reload();
-          }
-        };
-        window.addEventListener('message', messageHandler);
+      // Cancelar polling após 5 minutos (timeout de segurança)
+      setTimeout(() => {
+        clearInterval(pollInterval);
+        setLoadingProvider(null);
+      }, 5 * 60 * 1000);
 
-        // Fallback: monitorar se a popup fechou (o usuário fechou manualmente)
-        const popupCheckInterval = setInterval(() => {
-          if (popup.closed) {
-            clearInterval(popupCheckInterval);
-            window.removeEventListener('message', messageHandler);
-            setLoadingProvider(null);
-            // Tentar detectar sessão mesmo assim (caso popup fechou após autenticar)
-            supabase.auth.getSession().then(({ data: sessionData }) => {
-              if (sessionData.session) {
-                window.location.reload();
-              }
-            });
-          }
-        }, 500);
-      } else {
-        // Domínio customizado: redirect direto
-        window.location.href = data.url;
-      }
     } else {
-      // Preview top-level sem iframe: usar lovable.auth normal
+      // Fora do iframe (custom domain ou preview top-level): fluxo normal
       const { error } = await lovable.auth.signInWithOAuth(provider, {
         redirect_uri: window.location.origin,
       });
@@ -120,8 +75,6 @@ const handleOAuth = async (provider: "google" | "apple") => {
     });
     setLoadingProvider(null);
   }
-  // Nota: setLoadingProvider(null) não é chamado no finally para o caso de popup/redirect
-  // pois a página vai recarregar de qualquer forma
 };
 ```
 
@@ -129,18 +82,24 @@ const handleOAuth = async (provider: "google" | "apple") => {
 
 | Arquivo | Ação |
 |---|---|
-| `src/components/auth/SocialLoginButtons.tsx` | Adicionar detecção de iframe e fluxo de popup com fallback de polling |
+| `src/components/auth/SocialLoginButtons.tsx` | Reverter para `lovable.auth.signInWithOAuth` em todos os casos; adicionar polling de sessão para o contexto de iframe |
 
 ### Matriz de comportamento final
 
 | Ambiente | Detecção | Fluxo |
 |---|---|---|
-| Preview no editor (iframe) | `window.self !== window.top === true` | Popup + postMessage listener + polling fallback |
-| App publicado em domínio customizado | `isCustomDomain === true` | Redirect direto via supabase |
-| Preview standalone (top-level) | nenhuma das anteriores | `lovable.auth` (raro) |
+| Preview no editor (iframe) | `window.self !== window.top === true` | `lovable.auth` (credentials OK) + polling de getSession() para detectar conclusão |
+| App publicado (`www.muzze.app`) | `isInIframe === false` | `lovable.auth` normal (redirect via Lovable Cloud) |
+| Preview standalone (top-level) | `isInIframe === false` | `lovable.auth` normal |
 
-### O que não muda
+### O que NÃO muda
 
 - Fluxo de email/senha inalterado
 - Aparência dos botões idêntica
-- No app publicado, o comportamento é exatamente igual ao já corrigido antes
+- O fix do Service Worker (`navigateFallbackDenylist`) no `vite.config.ts` permanece — ainda é necessário para evitar que o PWA intercepte rotas OAuth
+
+### Por que isso resolve
+
+- `lovable.auth.signInWithOAuth` usa as credenciais Google gerenciadas → sem mais `missing OAuth secret`
+- O polling de `getSession()` detecta a sessão criada pelo popup no localStorage compartilhado → resolve o problema do iframe
+- No domínio publicado, o `lovable.auth` usa redirect normal → deve funcionar após o fix do Service Worker já aplicado
