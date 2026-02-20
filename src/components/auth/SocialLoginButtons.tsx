@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { lovable } from "@/integrations/lovable/index";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 
@@ -22,15 +23,29 @@ export function SocialLoginButtons({
   const handleOAuth = async (provider: "google" | "apple") => {
     setLoadingProvider(provider);
     try {
-      const { error } = await lovable.auth.signInWithOAuth(provider, {
-        redirect_uri: window.location.origin,
-      });
-      if (error) {
-        toast({
-          title: "Erro ao entrar",
-          description: `Não foi possível entrar com ${provider === "google" ? "Google" : "Apple"}. Tente novamente.`,
-          variant: "destructive",
+      const hostname = window.location.hostname;
+      const isCustomDomain =
+        !hostname.includes("lovable.app") &&
+        !hostname.includes("lovableproject.com") &&
+        !hostname.includes("localhost");
+
+      if (isCustomDomain) {
+        // Custom domain: bypass auth-bridge and redirect manually
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider,
+          options: {
+            redirectTo: window.location.origin,
+            skipBrowserRedirect: true,
+          },
         });
+        if (error) throw error;
+        if (data?.url) window.location.href = data.url;
+      } else {
+        // Preview/Lovable domains: use normal lovable.auth flow
+        const { error } = await lovable.auth.signInWithOAuth(provider, {
+          redirect_uri: window.location.origin,
+        });
+        if (error) throw error;
       }
     } catch {
       toast({
