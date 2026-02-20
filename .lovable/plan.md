@@ -1,65 +1,82 @@
 
-## Correção: Comemoração de upgrade aparece em todo login
+## Correção: Login com Google e Apple retorna 404 no domínio publicado
 
 ### Causa raiz
 
-O `useUpgradeDetector` usa `sessionStorage` para evitar repetição dentro da mesma sessão. Porém o `sessionStorage` é zerado quando o usuário fecha o browser ou abre uma nova aba. Na próxima sessão, o hook detecta uma "transição" de `null → pro` (enquanto o plan carrega) e, por isso, exibe a comemoração novamente — indefinidamente, a cada novo login.
+Dois problemas combinados causam o erro no domínio publicado:
+
+**1. Auth-bridge interceptando o redirect OAuth**
+
+O Lovable usa um "auth-bridge" interno que, em domínios customizados (como `muzze.lovable.app` ou `www.muzze.app`), não consegue redirecionar o usuário de volta corretamente após o login via Google/Apple. O resultado é um 404. No preview (`*.lovableproject.com`), o bridge funciona normalmente.
+
+A solução para domínios customizados é usar `skipBrowserRedirect: true` diretamente pelo Supabase client, contornando o bridge. Porém, como o projeto usa o módulo `lovable.auth.signInWithOAuth`, a alternativa é detectar o domínio customizado e acionar o fluxo manualmente.
+
+**2. Service Worker do PWA interceptando `/~oauth`**
+
+O Workbox (configurado no `vite.config.ts`) tem uma regra de navegação `NetworkFirst` para todas as rotas SPA. Isso faz com que o Service Worker intercepte a rota `/~oauth` — que é o callback do OAuth — e sirva o `index.html` em vez de deixar a requisição ir direto para a rede. O resultado é que o token de autenticação nunca é processado corretamente.
+
+A correção obrigatória é adicionar `/~oauth` na lista `navigateFallbackDenylist` do Workbox.
 
 ### Solução
 
-Adicionar uma coluna `upgrade_celebrated` (do tipo `jsonb`, default `{}`) na tabela `profiles` para registrar, por plano, se o usuário já assistiu à comemoração. Ao exibir a celebração, grava `{ "pro": true }` ou `{ "studio": true }` no banco. Na próxima vez que o usuário logar, o hook consulta esse campo e não exibe novamente.
+**Mudança 1: `vite.config.ts` — Excluir `/~oauth` do Service Worker (crítico)**
 
-Isso é server-side, persistente e seguro, seguindo exatamente o padrão recomendado.
+Adicionar `navigateFallbackDenylist` na configuração do Workbox para que o Service Worker nunca intercepte as rotas de OAuth:
 
-### Detalhes técnicos
-
-**1. Migração de banco**
-
-Nova coluna na tabela `profiles`:
-```sql
-ALTER TABLE public.profiles 
-ADD COLUMN upgrade_celebrated JSONB NOT NULL DEFAULT '{}';
-```
-
-**2. Hook `useUpgradeDetector.ts` — reescrita da lógica**
-
-Fluxo novo:
-- Ao detectar que o `planType` é `pro` ou `studio` (ao carregar o perfil), consultar a coluna `upgrade_celebrated` do perfil
-- Se `upgrade_celebrated['pro']` for `true`, **não** disparar a celebração
-- Se for `false` ou ausente, disparar a celebração e gravar `{ pro: true }` no banco via `UPDATE profiles SET upgrade_celebrated = upgrade_celebrated || '{"pro": true}'`
-- Manter `sessionStorage` como proteção redundante (evita disparar duas vezes na mesma sessão enquanto o UPDATE ainda não chegou)
-
-Para detectar se foi um upgrade real (e não apenas o primeiro load do usuário com plano pago), o hook verifica:
-- O plano atual é `pro` ou `studio`
-- A coluna `upgrade_celebrated` NÃO contém a flag para esse plano
-- O usuário **não** é recém-cadastrado (tem `created_at` há mais de 1 minuto, por exemplo — evita disparar para contas novas que já entram como pro)
-
-**3. Lógica de dismiss no `UpgradeCelebration.tsx`**
-
-Ao clicar "Começar a criar" (último step), além do `dismiss()` atual, chamar um novo callback que grava no banco:
 ```typescript
-await supabase
-  .from('profiles')
-  .update({ upgrade_celebrated: { ...current, [planType]: true } })
-  .eq('user_id', userId);
+workbox: {
+  navigateFallbackDenylist: [/^\/~oauth/],
+  // ... resto da config
+}
 ```
 
-**4. Função `dismiss` atualizada no hook**
+**Mudança 2: `SocialLoginButtons.tsx` — Detecção de domínio customizado**
 
-O `dismiss` do hook aceitará um parâmetro `{ persist: boolean }`:
-- `persist: true` → grava no banco (clicou "Começar a criar")
-- `persist: false` → apenas fecha o overlay sem gravar (usado pelo `simulateUpgrade` do DevTools, para poder simular múltiplas vezes)
+Modificar `handleOAuth` para detectar se o usuário está em um domínio customizado. Se sim, usar `supabase.auth.signInWithOAuth` com `skipBrowserRedirect: true` para obter a URL diretamente e redirecionar manualmente, contornando o auth-bridge:
+
+```typescript
+const handleOAuth = async (provider: "google" | "apple") => {
+  const isCustomDomain =
+    !window.location.hostname.includes("lovable.app") &&
+    !window.location.hostname.includes("lovableproject.com") &&
+    !window.location.hostname.includes("localhost");
+
+  if (isCustomDomain) {
+    // Domínio customizado: contornar o auth-bridge
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: window.location.origin,
+        skipBrowserRedirect: true,
+      },
+    });
+    if (error) throw error;
+    if (data?.url) window.location.href = data.url;
+  } else {
+    // Preview/Lovable domains: usar fluxo normal com lovable.auth
+    const { error } = await lovable.auth.signInWithOAuth(provider, {
+      redirect_uri: window.location.origin,
+    });
+    if (error) throw error;
+  }
+};
+```
 
 ### Arquivos alterados
 
 | Arquivo | Ação |
 |---|---|
-| Migration SQL | Criar — coluna `upgrade_celebrated JSONB` na `profiles` |
-| `src/hooks/useUpgradeDetector.ts` | Alterar — ler e gravar `upgrade_celebrated` no banco |
-| `src/components/upgrade/UpgradeCelebration.tsx` | Alterar — chamar `dismiss({ persist: true })` no último step |
+| `vite.config.ts` | Adicionar `navigateFallbackDenylist: [/^\/~oauth/]` no Workbox |
+| `src/components/auth/SocialLoginButtons.tsx` | Detectar domínio customizado e usar fluxo alternativo |
 
-### O que NÃO muda
+### Por que isso funciona
 
-- A simulação via DevTools (`simulateUpgrade`) continua funcionando (usa `dismiss({ persist: false })`)
-- O fluxo de slides e animações é idêntico
-- Nenhuma outra parte do sistema é afetada
+- **No preview** (`*.lovableproject.com`): o caminho normal via `lovable.auth.signInWithOAuth` continua sendo usado — sem mudança de comportamento.
+- **No publicado** (`muzze.lovable.app` / domínio customizado): o fluxo vai direto para o provider (Google/Apple) e volta para a origem correta, sem passar pelo auth-bridge.
+- **O Service Worker** não vai mais interceptar `/~oauth`, então os tokens OAuth são processados pela rede normalmente.
+
+### O que não muda
+
+- O fluxo de email/senha continua idêntico
+- A aparência e UX do componente são idênticos
+- Nenhuma outra tela é afetada
