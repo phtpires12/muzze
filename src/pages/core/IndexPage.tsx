@@ -25,11 +25,11 @@ import { ContinuityCarousel } from "@/components/content/home/ContinuityCarousel
 import { Flame, Clock, Trophy, Zap, Workflow, Check, AlertCircle, Lock, Lightbulb, Film, Mic, Scissors } from "lucide-react";
 import { cn } from '@/core/utils';
 import { toast } from "sonner";
-import PWAInstallPrompt from "@/components/shared";
+import { PWAInstallPrompt } from "@/components/shared";
 import { StreakRecoveryModal } from "@/components/shared";
 import { useHolidayAlert } from '@/core/hooks';
 import { HolidayAlertDialog } from "@/components/shared";
-import StreakProtectedCelebration from "@/components/shared";
+import { StreakProtectedCelebration } from "@/components/shared";
 import { ROUTES } from "@/routes/routes";
 
 import {
@@ -60,9 +60,9 @@ interface ContentItem {
 
 const Index = () => {
   const navigate = useNavigate();
-  const { 
-    profile, 
-    loading: profileLoading, 
+  const {
+    profile,
+    loading: profileLoading,
     refetch,
     effectiveLevel,
     goalMinutes,
@@ -71,10 +71,10 @@ const Index = () => {
   const { trackEvent } = useAnalytics();
   const { muzzeSession, setMuzzeSession, resetMuzzeSession } = useSessionContext();
   const { stats } = useGamification();
-  
+
   const { isShowingAnyCelebration } = useCelebration();
-  const { 
-    result: streakValidation, 
+  const {
+    result: streakValidation,
     isLoading: streakValidationLoading,
     useFreezesToRecover,
     buyFreezesAndRecover,
@@ -82,8 +82,8 @@ const Index = () => {
     dismissCheck,
     autoUseFreezesIfAvailable,
     maxFreezes,
-  } = useStreakValidator({ 
-    profile, 
+  } = useStreakValidator({
+    profile,
     refetchProfile: refetch,
     effectiveLevel,
     goalMinutes,
@@ -96,7 +96,7 @@ const Index = () => {
   const [weeklySessionsCount, setWeeklySessionsCount] = useState(0);
   const [isWorkflowModalOpen, setIsWorkflowModalOpen] = useState(false);
   const [isStreakRecoveryModalOpen, setIsStreakRecoveryModalOpen] = useState(false);
-  
+
   // Novos estados para seleção de item
   const [isPickItemModalOpen, setIsPickItemModalOpen] = useState(false);
   const [pickListType, setPickListType] = useState<"" | "script" | "record" | "edit">("");
@@ -104,21 +104,21 @@ const Index = () => {
   const [selectedItemId, setSelectedItemId] = useState<string>("");
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [alertConfig, setAlertConfig] = useState({ title: "", description: "", action: "" });
-  
+
   // Modal de troféus
   const [isTrophiesModalOpen, setIsTrophiesModalOpen] = useState(false);
-  
+
   // Modal de tempo total
   const [isTimeModalOpen, setIsTimeModalOpen] = useState(false);
   const [recentSessions, setRecentSessions] = useState<any[]>([]);
   const [averageTimeByStage, setAverageTimeByStage] = useState<any>({});
-  
+
   // Profile Sheet
   const [isProfileSheetOpen, setIsProfileSheetOpen] = useState(false);
-  
+
   // Streak Protection Celebration
   const [showProtectedCelebration, setShowProtectedCelebration] = useState(false);
-  
+
   // Holiday alerts
   const { alert: holidayAlert, dismiss: dismissHoliday, remindLater: remindHolidayLater } = useHolidayAlert();
   const [protectedCelebrationData, setProtectedCelebrationData] = useState({
@@ -143,9 +143,9 @@ const Index = () => {
         setIsStreakRecoveryModalOpen(false);
         return;
       }
-      
+
       if (streakValidationLoading) return;
-      
+
       // Se pode usar freeze automaticamente
       if (streakValidation.canUseFreeze) {
         const result = await autoUseFreezesIfAvailable();
@@ -159,11 +159,11 @@ const Index = () => {
           return;
         }
       }
-      
+
       // Se não pode auto-usar, abre modal
       setIsStreakRecoveryModalOpen(true);
     };
-    
+
     handleStreakRecovery();
   }, [streakValidation, streakValidationLoading, autoUseFreezesIfAvailable]);
 
@@ -171,7 +171,7 @@ const Index = () => {
   useEffect(() => {
     const checkAndRecoverStreak = async () => {
       if (!profile || profileLoading) return;
-      
+
       const result = await recoverMissedStreaks();
       if (result?.corrected && result.daysRecovered > 0) {
         toast.success("Ofensiva atualizada! 🔥", {
@@ -181,7 +181,7 @@ const Index = () => {
         fetchStreakData();
       }
     };
-    
+
     checkAndRecoverStreak();
   }, [profile, profileLoading, recoverMissedStreaks]);
 
@@ -189,7 +189,7 @@ const Index = () => {
     if (profile && !profileLoading) {
       fetchStreakData();
       fetchWeeklySessions();
-      
+
       const dataInterval = setInterval(() => {
         fetchStreakData();
         fetchWeeklySessions();
@@ -256,7 +256,7 @@ const Index = () => {
       const sessions = Array.from(sessionMap.values())
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
         .slice(0, 5);
-      
+
       setRecentSessions(sessions);
     }
   };
@@ -316,7 +316,7 @@ const Index = () => {
     });
 
     setIsPickItemModalOpen(false);
-    
+
     if (pickListType === "script") {
       navigate(`/scripts?open=${selectedItemId}`);
     } else if (pickListType === "record") {
@@ -324,7 +324,7 @@ const Index = () => {
     } else if (pickListType === "edit") {
       navigate(`/scripts?detail=${selectedItemId}&tab=edit`);
     }
-    
+
     trackEvent(`session_${pickListType}_item_selected`);
   };
 
@@ -358,7 +358,7 @@ const Index = () => {
     return null;
   }
 
-  
+
   const currentLevel = stats?.level ?? 1;
   const currentLevelInfo = getLevelByXP(stats?.totalXP ?? 0);
   const xpProgress = (((stats?.totalXP ?? 0) % 1000) / 1000) * 100;
@@ -373,7 +373,7 @@ const Index = () => {
 
     switch (trophyId) {
       case 'first_script':
-        return { 
+        return {
           progress: Math.min((scriptsCreated / 1) * 100, 100),
           text: `${scriptsCreated}/1 roteiro`
         };
@@ -428,7 +428,7 @@ const Index = () => {
       <header className="px-6 pt-6 pb-4 bg-background">
         <div className="flex items-center justify-between gap-3 mb-2">
           {/* Ofensiva - lado esquerdo */}
-          <button 
+          <button
             id="tutorial-streak"
             onClick={() => navigate(ROUTES.OFENSIVA)}
             className="flex items-center gap-2 text-foreground hover:text-accent transition-colors active:scale-95 shrink-0"
@@ -436,7 +436,7 @@ const Index = () => {
             <Flame className="w-5 h-5 text-accent" />
             <span className="font-semibold">{streakData?.current_streak ?? 0} dias</span>
           </button>
-          
+
           {/* Barra de Progresso - centro */}
           <button
             id="tutorial-daily-progress"
@@ -444,8 +444,8 @@ const Index = () => {
             className="flex-1 max-w-[160px] flex items-center gap-2 group active:scale-95 transition-transform"
           >
             <div className="flex-1 relative">
-              <Progress 
-                value={Math.min(liveProgress.percentageProgress, 100)} 
+              <Progress
+                value={Math.min(liveProgress.percentageProgress, 100)}
                 className={cn(
                   "h-2 bg-secondary/50",
                   liveProgress.isAbove && "[&>div]:bg-green-500"
@@ -454,8 +454,8 @@ const Index = () => {
             </div>
             <span className={cn(
               "text-xs font-medium shrink-0 transition-colors",
-              liveProgress.isAbove 
-                ? "text-green-500" 
+              liveProgress.isAbove
+                ? "text-green-500"
                 : "text-muted-foreground group-hover:text-foreground"
             )}>
               {liveProgress.isAbove ? (
@@ -465,7 +465,7 @@ const Index = () => {
               )}
             </span>
           </button>
-          
+
           {/* Avatar - lado direito */}
           <Sheet open={isProfileSheetOpen} onOpenChange={setIsProfileSheetOpen}>
             <SheetTrigger asChild>
@@ -494,7 +494,7 @@ const Index = () => {
 
       {/* Main Panel - Continuity Carousel */}
       <div className="px-6 mt-6">
-        <ContinuityCarousel 
+        <ContinuityCarousel
           username={profile?.username || undefined}
           onStartNewSession={handleStartSession}
         />
@@ -507,7 +507,7 @@ const Index = () => {
         </h3>
 
         <div className="space-y-4">
-          <button 
+          <button
             onClick={() => navigate(ROUTES.LEVELS)}
             className="w-full p-4 bg-card rounded-xl border border-border shadow-sm hover:shadow-md active:scale-[0.98] transition-all cursor-pointer"
           >
@@ -519,14 +519,14 @@ const Index = () => {
                 {Math.floor(xpProgress)}%
               </span>
             </div>
-            <Progress 
-              value={xpProgress} 
+            <Progress
+              value={xpProgress}
               className="h-2 bg-secondary"
             />
           </button>
 
           <div className="grid grid-cols-3 gap-3">
-            <button 
+            <button
               onClick={() => setIsTrophiesModalOpen(true)}
               className="p-4 bg-card rounded-xl border border-border text-center hover:shadow-md transition-all"
             >
@@ -541,7 +541,7 @@ const Index = () => {
               </div>
             </button>
 
-            <button 
+            <button
               onClick={handleOpenTimeModal}
               className="p-4 bg-card rounded-xl border border-border text-center hover:shadow-md transition-all"
             >
@@ -556,7 +556,7 @@ const Index = () => {
               </div>
             </button>
 
-            <button 
+            <button
               onClick={() => navigate(ROUTES.WORKFLOWS)}
               className="p-4 bg-card rounded-xl border border-border text-center hover:shadow-md transition-all"
             >
@@ -690,7 +690,7 @@ const Index = () => {
 
       {/* Trophies Modal */}
       <Dialog open={isTrophiesModalOpen} onOpenChange={setIsTrophiesModalOpen}>
-        <DialogContent 
+        <DialogContent
           className="sm:max-w-2xl max-h-[80vh] overflow-y-auto"
           style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1.5rem)' }}
         >
@@ -703,7 +703,7 @@ const Index = () => {
               {stats?.trophies?.length ?? 0} de {TROPHIES.length} conquistas desbloqueadas
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4 py-4">
             {/* Unlocked Trophies */}
             {TROPHIES.filter(t => stats?.trophies?.includes(t.id)).map((trophy) => (
@@ -721,11 +721,11 @@ const Index = () => {
                 </div>
               </div>
             ))}
-            
+
             {/* Locked Trophies */}
             {TROPHIES.filter(t => !stats?.trophies?.includes(t.id)).map((trophy) => {
               const progressData = calculateTrophyProgress(trophy.id);
-              
+
               return (
                 <div
                   key={trophy.id}
@@ -738,7 +738,7 @@ const Index = () => {
                       <Lock className="w-3.5 h-3.5 text-muted-foreground" />
                     </div>
                     <p className="text-xs text-muted-foreground">{trophy.description}</p>
-                    
+
                     {progressData && (
                       <div className="space-y-2 pt-1">
                         <div className="flex items-center justify-between text-xs">
@@ -748,7 +748,7 @@ const Index = () => {
                         <Progress value={progressData.progress} className="h-2" />
                       </div>
                     )}
-                    
+
                     <Badge variant="outline" className="text-xs font-semibold">
                       +{trophy.points} XP
                     </Badge>
@@ -772,7 +772,7 @@ const Index = () => {
               Veja seu tempo de sessão preferido, histórico e médias por etapa
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-6 py-4">
             {/* Tempo de Sessão Preferido */}
             <div className="p-4 rounded-lg bg-gradient-to-r from-primary/5 to-accent/5 border border-primary/20">
@@ -833,7 +833,7 @@ const Index = () => {
                   const hours = Math.floor(avgSeconds / 3600);
                   const minutes = Math.floor((avgSeconds % 3600) / 60);
                   const seconds = avgSeconds % 60;
-                  
+
                   // Formatar tempo: mostra segundos se < 1min, minutos se >= 1min
                   const formatTime = () => {
                     if (avgSeconds === 0) return 'Sem dados';
@@ -841,7 +841,7 @@ const Index = () => {
                     if (minutes > 0) return `${minutes}min`;
                     return `${seconds}s`;
                   };
-                  
+
                   return (
                     <div
                       key={key}
@@ -912,7 +912,7 @@ const Index = () => {
         />
       )}
 
-      
+
     </div>
   );
 };
@@ -920,7 +920,7 @@ const Index = () => {
 // Componente separado para o card motivacional com frases rotativas
 function MotivationalCard({ currentStreak }: { currentStreak: number }) {
   const quote = useMemo(() => getRandomQuote(), []);
-  
+
   return (
     <div className="px-6 py-8 bg-background">
       <Card className="p-6 bg-primary text-primary-foreground border-0 rounded-xl shadow-md">

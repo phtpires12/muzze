@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Wrench, Flame, Trophy, Trash2, X } from "lucide-react";
-import { Button } from "./ui/button";
+import { Button } from "../ui/button";
 import { useUserRole } from '@/core/hooks';
 
 interface DevToolsPanelProps {

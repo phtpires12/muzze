@@ -6,7 +6,7 @@ import { RouterProvider } from "react-router-dom";
 import { SessionContextProvider } from '@/core/contexts';
 import { ProfileContextProvider } from '@/core/contexts';
 import { CelebrationContextProvider } from '@/core/contexts';
-import ErrorBoundary from "@/components/shared";
+import { ErrorBoundary } from "@/components/shared";
 import { setupGlobalErrorHandlers } from '@/core/services';
 import { UpdateOverlay } from "@/components/shared";
 import { usePWAUpdate } from '@/core/hooks';

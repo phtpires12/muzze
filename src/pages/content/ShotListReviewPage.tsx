@@ -20,7 +20,7 @@ import { useFirstInputTrigger } from '@/core/hooks';
 import { cn } from '@/core/utils';
 import { useStreakCelebration } from '@/core/hooks';
 import { useCelebration } from '@/core/contexts';
-import SessionSummary from "@/components/content";
+import { SessionSummary } from "@/components/content";
 import { StreakCelebration } from "@/components/shared";
 import { TrophyCelebration } from "@/components/shared";
 import { ImageGalleryModal } from "@/components/content/shotlist/ImageGalleryModal";

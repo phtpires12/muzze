@@ -26,7 +26,7 @@ import { cn } from '@/core/utils';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useStreakCelebration } from '@/core/hooks';
 import { useCelebration } from '@/core/contexts';
-import SessionSummary from "@/components/content";
+import { SessionSummary } from "@/components/content";
 import { StreakCelebration } from "@/components/shared";
 import { TrophyCelebration } from "@/components/shared";
 import { extractPathFromUrl, generateSignedUrlsBatch } from '@/core/utils';

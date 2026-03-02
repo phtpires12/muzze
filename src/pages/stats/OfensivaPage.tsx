@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { MAX_STREAK_FREEZES, MAX_STREAK_BONUS_DAYS } from '@/core/services';
 import { useProfileWithLevel } from '@/core/hooks';
 import * as htmlToImage from 'html-to-image';
-import StreakShareCard from "@/components/shared";
+import { StreakShareCard } from "@/components/shared";
 import FireIcon from "@/components/content/ofensiva/FireIcon";
 import DayDetailDrawer, { DayProgress } from "@/components/content/ofensiva/DayDetailDrawer";
 import { getDayKey, getDayBoundsUTC, getMonthStartKey, getMonthEndKey, dayKeyToLocalDate, getDayKeysInRange } from '@/core/utils';
@@ -111,11 +111,11 @@ const Ofensiva = () => {
     if (!user) return;
 
     const userTimezone = profile?.timezone || 'America/Sao_Paulo';
-    
+
     // Calcular bounds do mês na timezone do usuário usando utilitários centrais
     const monthStartKey = getMonthStartKey(currentMonth, userTimezone);
     const monthEndKey = getMonthEndKey(currentMonth, userTimezone);
-    
+
     // Converter para UTC para queries
     const { startUTC: monthStartUTC } = getDayBoundsUTC(monthStartKey, userTimezone);
     const { endUTC: monthEndUTC } = getDayBoundsUTC(monthEndKey, userTimezone);
@@ -136,7 +136,7 @@ const Ofensiva = () => {
       const dayKey = getDayKey(freezeDate, userTimezone);
       return dayKeyToLocalDate(dayKey);
     }) || [];
-    
+
     console.log(`[Ofensiva] Freezes usados este mês:`, freezeUsage?.length, freezeDates.map(d => format(d, 'yyyy-MM-dd')));
     setFreezeDays(freezeDates);
   };
@@ -152,7 +152,7 @@ const Ofensiva = () => {
   const handleNextMonth = () => {
     const nextMonth = new Date(currentMonth);
     nextMonth.setMonth(nextMonth.getMonth() + 1);
-    
+
     // Não permitir navegar para meses futuros
     if (nextMonth.getMonth() <= new Date().getMonth() || nextMonth.getFullYear() < new Date().getFullYear()) {
       setCurrentMonth(nextMonth);
@@ -161,7 +161,7 @@ const Ofensiva = () => {
 
   const handleShare = async () => {
     const shareText = `🔥 Estou há ${streakCount} dia${streakCount !== 1 ? 's' : ''} criando sem parar na Muzze!\n\nMantenha sua consistência criativa: muzze.app`;
-    
+
     if (!cardRef.current) {
       // Fallback para texto se card não existir
       if (navigator.share) {
@@ -174,17 +174,17 @@ const Ofensiva = () => {
     }
 
     setIsGeneratingImage(true);
-    
+
     try {
       const blob = await htmlToImage.toBlob(cardRef.current, {
         pixelRatio: 2,
         backgroundColor: '#0A0A0A',
       });
-      
+
       if (!blob) throw new Error('Falha ao gerar imagem');
-      
+
       const file = new File([blob], 'minha-ofensiva-muzze.png', { type: 'image/png' });
-      
+
       // Verificar se pode compartilhar arquivos (mobile)
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({
@@ -231,7 +231,7 @@ const Ofensiva = () => {
     if (!user || !profile) return;
 
     const currentFreezes = profile.streak_freezes || 0;
-    
+
     // Check limit before buying
     if (currentFreezes >= MAX_STREAK_FREEZES) {
       toast.error("Limite atingido", {
@@ -312,21 +312,21 @@ const Ofensiva = () => {
 
   const milestones = getCurrentMilestones(streakCount);
 
-  const canGoNext = currentMonth.getMonth() < new Date().getMonth() || 
-                    currentMonth.getFullYear() < new Date().getFullYear();
+  const canGoNext = currentMonth.getMonth() < new Date().getMonth() ||
+    currentMonth.getFullYear() < new Date().getFullYear();
 
   const daysInMonth = getDaysInMonth(currentMonth);
-  
+
   // Meta dinâmica já vem do hook useProfileWithLevel
-  
+
   // Calcular dias completos baseado no dayProgressMap
   const daysCompleted = Array.from(dayProgressMap.values()).filter(p => p.minutes >= goalMinutes).length;
   const percentComplete = (daysCompleted / daysInMonth) * 100;
 
-  const monthBadge = 
+  const monthBadge =
     percentComplete >= 80 ? "ÓTIMO" :
-    percentComplete >= 50 ? "BOM" :
-    percentComplete >= 30 ? "REGULAR" : "";
+      percentComplete >= 50 ? "BOM" :
+        percentComplete >= 30 ? "REGULAR" : "";
 
   // Criar grid do calendário
   const monthDays = eachDayOfInterval({
@@ -361,9 +361,9 @@ const Ofensiva = () => {
           >
             <X className="w-5 h-5" />
           </Button>
-          
+
           <h1 className="text-lg font-bold tracking-tight text-foreground">Ofensiva</h1>
-          
+
           <Button
             variant="ghost"
             size="icon"
@@ -383,7 +383,7 @@ const Ofensiva = () => {
             <div className="w-full h-full rounded-full bg-primary/10 flex items-center justify-center">
               <span className="text-6xl drop-shadow-[0_0_12px_rgba(251,146,60,0.6)]">🔥</span>
             </div>
-            
+
             {/* Badge do número */}
             <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-background border border-border rounded-full px-3 py-0.5 shadow-sm">
               <span className="text-xs font-bold text-foreground">{streakCount}</span>
@@ -442,7 +442,7 @@ const Ofensiva = () => {
                 {streakCount < MAX_STREAK_BONUS_DAYS && (
                   <div className="flex items-center gap-2 text-xs">
                     <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                      <div 
+                      <div
                         className="h-full bg-primary transition-all duration-500"
                         style={{ width: `${(streakCount / MAX_STREAK_BONUS_DAYS) * 100}%` }}
                       />
@@ -533,11 +533,11 @@ const Ofensiva = () => {
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              
+
               <h3 className="text-sm font-semibold text-foreground capitalize">
                 {format(currentMonth, 'MMMM yyyy', { locale: ptBR })}
               </h3>
-              
+
               <Button
                 variant="ghost"
                 size="icon"
@@ -571,11 +571,11 @@ const Ofensiva = () => {
                 const month = String(day.getMonth() + 1).padStart(2, '0');
                 const dayNum = String(day.getDate()).padStart(2, '0');
                 const dayKey = `${year}-${month}-${dayNum}`;
-                
+
                 const dayNumber = format(day, 'd');
                 const progress = dayProgressMap.get(dayKey);
                 const minutes = progress?.minutes || 0;
-                
+
                 // Debug para dia 12
                 if (dayKey === '2026-01-12') {
                   console.log(`[Ofensiva Render] Dia 12:`, {
@@ -586,7 +586,7 @@ const Ofensiva = () => {
                     isComplete: minutes >= goalMinutes
                   });
                 }
-                
+
                 // CORREÇÃO: Comparar freezes por dayKey extraído da mesma forma
                 const userTimezone = profile?.timezone || 'America/Sao_Paulo';
                 const freezeUsed = freezeDays.some(freezeDate => {
@@ -596,14 +596,14 @@ const Ofensiva = () => {
                   const freezeDayKey = `${fYear}-${fMonth}-${fDay}`;
                   return freezeDayKey === dayKey;
                 });
-                
+
                 const isDayFuture = isFuture(day) && !isToday(day);
                 const isDayToday = isToday(day);
-                
-                const status: DayProgress['status'] = 
+
+                const status: DayProgress['status'] =
                   freezeUsed ? 'freeze' :
-                  minutes >= goalMinutes ? 'complete' :
-                  minutes > 0 ? 'partial' : 'empty';
+                    minutes >= goalMinutes ? 'complete' :
+                      minutes > 0 ? 'partial' : 'empty';
 
                 const handleDayClick = () => {
                   if (!isDayFuture) {
@@ -633,9 +633,8 @@ const Ofensiva = () => {
                     <button
                       key={day.toString()}
                       onClick={handleDayClick}
-                      className={`aspect-square flex flex-col items-center justify-center gap-0.5 rounded-lg transition-colors hover:bg-muted ${
-                        isDayToday ? 'ring-1 ring-cyan-500/50' : ''
-                      }`}
+                      className={`aspect-square flex flex-col items-center justify-center gap-0.5 rounded-lg transition-colors hover:bg-muted ${isDayToday ? 'ring-1 ring-cyan-500/50' : ''
+                        }`}
                     >
                       <span className="text-lg opacity-70">❄️</span>
                       <span className="text-[10px] text-muted-foreground/50">{dayNumber}</span>
@@ -645,29 +644,26 @@ const Ofensiva = () => {
 
                 // Dia com/sem progresso - mostra FireIcon
                 const isComplete = minutes >= goalMinutes;
-                
+
                 return (
                   <button
                     key={day.toString()}
                     onClick={handleDayClick}
-                    className={`aspect-square flex flex-col items-center justify-center gap-0.5 rounded-lg transition-colors hover:bg-muted ${
-                      isDayToday ? 'ring-1 ring-primary/50' : ''
-                    } ${
-                      isComplete ? 'bg-primary/5' : ''
-                    }`}
+                    className={`aspect-square flex flex-col items-center justify-center gap-0.5 rounded-lg transition-colors hover:bg-muted ${isDayToday ? 'ring-1 ring-primary/50' : ''
+                      } ${isComplete ? 'bg-primary/5' : ''
+                      }`}
                   >
-                    <FireIcon 
-                      minutes={minutes} 
-                      goalMinutes={goalMinutes} 
+                    <FireIcon
+                      minutes={minutes}
+                      goalMinutes={goalMinutes}
                       isToday={isDayToday}
                     />
-                    <span className={`text-[10px] ${
-                      isComplete 
-                        ? 'text-primary' 
-                        : minutes > 0 
-                          ? 'text-amber-500/70' 
+                    <span className={`text-[10px] ${isComplete
+                        ? 'text-primary'
+                        : minutes > 0
+                          ? 'text-amber-500/70'
                           : 'text-muted-foreground/40'
-                    }`}>
+                      }`}>
                       {dayNumber}
                     </span>
                   </button>
@@ -722,7 +718,7 @@ const Ofensiva = () => {
                 <Button
                   onClick={handleBuyFreeze}
                   disabled={
-                    !profile || 
+                    !profile ||
                     (profile.xp_points || 0) < freezeCost ||
                     (profile.streak_freezes || 0) >= MAX_STREAK_FREEZES
                   }
@@ -762,15 +758,15 @@ const Ofensiva = () => {
       </div>
 
       {/* Drawer de detalhes do dia */}
-      <DayDetailDrawer 
+      <DayDetailDrawer
         selectedDay={selectedDay}
         onClose={() => setSelectedDay(null)}
         goalMinutes={goalMinutes}
       />
 
       {/* Dialog de confirmação de compra de bloqueio (apenas primeira compra) */}
-      <Dialog 
-        open={freezePurchaseInfo !== null} 
+      <Dialog
+        open={freezePurchaseInfo !== null}
         onOpenChange={(open) => {
           if (!open) {
             setFreezePurchaseInfo(null);
@@ -811,8 +807,8 @@ const Ofensiva = () => {
             </div>
           )}
 
-          <Button 
-            className="w-full mt-2" 
+          <Button
+            className="w-full mt-2"
             onClick={() => {
               setFreezePurchaseInfo(null);
               setHasShownFreezeDialog(true);

@@ -1,5 +1,5 @@
 import { LucideIcon } from "lucide-react";
-import { Card } from "./ui/card";
+import { Card } from "../ui/card";
 import { cn } from '@/core/utils';
 
 interface StatCardProps {
@@ -15,12 +15,12 @@ interface StatCardProps {
 export const StatCard = ({ title, value, icon: Icon, highlight, gradient, description }: StatCardProps) => {
   // Support both highlight and deprecated gradient prop
   const isHighlighted = highlight || gradient;
-  
+
   return (
     <Card className={cn(
       "p-5 border rounded-xl transition-colors",
-      isHighlighted 
-        ? "bg-primary/10 border-primary/20" 
+      isHighlighted
+        ? "bg-primary/10 border-primary/20"
         : "bg-background border-border"
     )}>
       <div className="flex items-start justify-between">

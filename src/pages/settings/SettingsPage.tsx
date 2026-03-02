@@ -11,7 +11,7 @@ import { useNotifications } from '@/core/hooks';
 import { useProfile } from '@/core/hooks';
 import { useNavPosition } from '@/core/hooks';
 import { useIsMobile } from '@/core/hooks';
-import PWAInstallPrompt from "@/components/shared";
+import { PWAInstallPrompt } from "@/components/shared";
 import { ROUTES } from "@/routes/routes";
 
 
@@ -20,18 +20,18 @@ const Settings = () => {
   const { theme, setTheme } = useTheme();
   const { profile, updateProfile } = useProfile();
   const [isInstalled, setIsInstalled] = useState(false);
-  const { 
-    isSupported, 
-    isLoading, 
-    requestPermission, 
-    removeToken 
+  const {
+    isSupported,
+    isLoading,
+    requestPermission,
+    removeToken
   } = useNotifications();
   const { navPosition, setNavPosition } = useNavPosition();
   const isMobile = useIsMobile();
-  
+
   // Timer start mode preference
   const timerStartMode = (profile as any)?.timer_start_mode || 'auto';
-  
+
   const notificationsEnabled = profile?.notifications_enabled ?? false;
 
   useEffect(() => {
@@ -39,7 +39,7 @@ const Settings = () => {
       setIsInstalled(true);
     }
   }, []);
-  
+
   const handleNotificationChange = async (checked: boolean) => {
     if (checked) {
       const granted = await requestPermission();
@@ -54,7 +54,7 @@ const Settings = () => {
     <div className="min-h-screen bg-background pb-24">
       {/* Header */}
       <div className="bg-background border-b border-border">
-        <div 
+        <div
           className="max-w-2xl mx-auto px-4 py-4"
           style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}
         >

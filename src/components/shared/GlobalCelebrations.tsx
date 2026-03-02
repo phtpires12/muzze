@@ -1,5 +1,5 @@
 import { useCelebration } from '@/core/contexts';
-import SessionSummary from "@/components/content";
+import { SessionSummary } from "@/components/content";
 import { StreakCelebration } from "@/components/shared";
 import { TrophyCelebration } from "@/components/shared";
 
@@ -13,7 +13,7 @@ export const GlobalCelebrations = () => {
 
   return (
     <>
-      <SessionSummary 
+      <SessionSummary
         show={celebrationData.showSessionSummary}
         duration={celebrationData.sessionSummary?.duration || 0}
         xpGained={celebrationData.sessionSummary?.xpGained || 0}
