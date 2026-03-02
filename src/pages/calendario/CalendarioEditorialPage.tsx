@@ -1,0 +1,936 @@
+import { useState, useEffect } from "react";
+import { useSearchParams, useNavigate, useLocation } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek, addWeeks, subWeeks } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { Plus, ChevronLeft, ChevronRight, ChevronDown, Lightbulb, Filter, CalendarIcon, LayoutGrid, Columns3, ArrowUpDown } from "lucide-react";
+import {
+  YouTubeGalleryView,
+  ProductionBoardView,
+  PublicationBoardView,
+  RescheduleDateModal,
+  CalendarDay,
+  DayContentModal,
+  MobileWeekAgendaView,
+  PostConfirmationPopup,
+  PublishStatus
+} from "@/components/calendar";
+import { Paywall, PaywallAction } from "@/components/shared";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from '@/core/hooks';
+import { useDeviceType } from '@/core/hooks';
+import { useOverdueContent } from '@/core/hooks';
+import { useWorkspaceContext } from '@/core/contexts';
+import { usePlanCapabilitiesOptional } from '@/core/contexts';
+import { useProfileContext } from '@/core/contexts';
+import { useAnalytics } from '@/core/hooks';
+import { daysUntilWeekReset } from '@/core/utils';
+
+interface Script {
+  id: string;
+  title: string;
+  content: string | null;
+  content_type: string | null;
+  publish_date: string | null;
+  created_at: string;
+  shot_list: string[];
+  status: string | null;
+  central_idea: string | null;
+  reference_url: string | null;
+  thumbnail_url?: string | null;
+  publish_status?: PublishStatus | null;
+  published_at?: string | null;
+  workflow_template?: string | null;
+}
+
+const CalendarioEditorial = () => {
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const deviceType = useDeviceType();
+  const { activeWorkspace } = useWorkspaceContext();
+  const { profile } = useProfileContext();
+  const planCapabilities = usePlanCapabilitiesOptional();
+  const { trackEvent } = useAnalytics();
+  const isIdeationMode = searchParams.get("mode") === "ideation";
+  const timezone = profile?.timezone || 'America/Sao_Paulo';
+
+  const [currentDate, setCurrentDate] = useState<Date>(new Date());
+  const [viewMode, setViewMode] = useState<"month" | "week">("month");
+  const [viewType, setViewType] = useState<"calendar" | "gallery" | "board">("calendar");
+  const [boardSubView, setBoardSubView] = useState<"production" | "publication">("production");
+  const [scripts, setScripts] = useState<Script[]>([]);
+  const [draggedScript, setDraggedScript] = useState<Script | null>(null);
+  const [dragOverDate, setDragOverDate] = useState<string | null>(null);
+  const [contentTypeFilter, setContentTypeFilter] = useState<string>("all");
+  const [stageFilter, setStageFilter] = useState<string>("all");
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
+  const [rescheduleScriptId, setRescheduleScriptId] = useState<string | null>(null);
+  const [rescheduleModalOpen, setRescheduleModalOpen] = useState(false);
+  const [paywallOpen, setPaywallOpen] = useState(false);
+  const [paywallAction, setPaywallAction] = useState<PaywallAction>('create_script');
+
+  const isMobile = deviceType === 'mobile';
+  const hasActiveFilters = contentTypeFilter !== "all" || stageFilter !== "all";
+  const activeFilterCount = (contentTypeFilter !== "all" ? 1 : 0) + (stageFilter !== "all" ? 1 : 0);
+
+  // Overdue content popup
+  const {
+    currentPopupScript,
+    isPopupOpen,
+    setIsPopupOpen,
+    markAsPosted,
+    reschedule,
+    remindLater,
+    refetch: refetchOverdue,
+  } = useOverdueContent();
+
+
+  const handlePopupMarkAsPosted = async (scriptId: string) => {
+    await markAsPosted(scriptId);
+    fetchScripts();
+    toast({
+      title: "✅ Marcado como postado!",
+      description: "Parabéns por publicar seu conteúdo!",
+    });
+  };
+
+  const handlePopupReschedule = async (scriptId: string, newDate: Date) => {
+    await reschedule(scriptId, newDate);
+    fetchScripts();
+    toast({
+      title: "Data reagendada!",
+      description: `Novo agendamento: ${format(newDate, "d 'de' MMMM", { locale: ptBR })}`,
+    });
+  };
+
+  const handlePopupRemindLater = (scriptId: string) => {
+    remindLater(scriptId);
+    toast({
+      title: "⏰ Lembrete definido",
+      description: "Vamos te lembrar novamente em 6 horas.",
+    });
+  };
+
+  const handlePopupDelete = async (scriptId: string) => {
+    // Remover imediatamente da interface
+    setScripts(scripts.filter(s => s.id !== scriptId));
+
+    // Excluir do banco de dados
+    try {
+      const { error } = await supabase
+        .from('scripts')
+        .delete()
+        .eq('id', scriptId);
+
+      if (error) throw error;
+
+      toast({
+        title: "🗑️ Conteúdo excluído",
+        description: "O conteúdo foi removido do seu calendário.",
+      });
+    } catch (error) {
+      console.error('Error deleting script:', error);
+      // Recarregar scripts em caso de erro
+      fetchScripts();
+      toast({
+        title: "Erro ao excluir",
+        description: "Não foi possível excluir o conteúdo.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const fetchScripts = async () => {
+    if (!activeWorkspace?.id) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('scripts')
+        .select('*')
+        .eq('workspace_id', activeWorkspace.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Cast publish_status to the correct type
+      const typedScripts: Script[] = (data || []).map(script => ({
+        ...script,
+        publish_status: script.publish_status as PublishStatus | null,
+      }));
+
+      setScripts(typedScripts);
+    } catch (error) {
+      console.error('Error fetching scripts:', error);
+      toast({
+        title: "Erro ao carregar roteiros",
+        description: "Não foi possível carregar os roteiros.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Refetch scripts when navigating back to this page, when tab becomes visible, or when workspace changes
+  useEffect(() => {
+    fetchScripts();
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchScripts();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [location.key, activeWorkspace?.id]);
+
+  // Cleanup: fechar todos os popups ao sair da página
+  useEffect(() => {
+    return () => {
+      setIsPopupOpen(false);
+      setModalOpen(false);
+      setRescheduleModalOpen(false);
+    };
+  }, []);
+
+  const getScriptStage = (script: Script): string => {
+    // Prioridade 1: status explícito do banco
+    if (script.status === "editing") return "edit";
+    if (script.status === "review") return "review";
+    if (script.status === "recording") return "record";
+    if (script.status === "draft") return "script";
+    // Prioridade 2: inferências como fallback
+    if (script.shot_list && script.shot_list.length > 0) return "record";
+    if (script.content && script.content.length > 100) return "script";
+    return "idea";
+  };
+
+  const getScriptsForDate = (checkDate: Date) => {
+    return scripts.filter((script) => {
+      const scriptDate = script.publish_date || script.created_at;
+      // Compare apenas a parte da data, ignorando timezone
+      const scriptDateOnly = scriptDate.split('T')[0];
+      const checkDateOnly = format(checkDate, "yyyy-MM-dd");
+      const dateMatches = scriptDateOnly === checkDateOnly;
+
+      if (!dateMatches) return false;
+
+      // Apply content type filter
+      const contentTypeMatches = contentTypeFilter === "all" || script.content_type === contentTypeFilter;
+
+      // Apply stage filter
+      const stageMatches = stageFilter === "all" || getScriptStage(script) === stageFilter;
+
+      return contentTypeMatches && stageMatches;
+    });
+  };
+
+  const handleCreateNewScript = () => {
+    navigate('/session?stage=idea');
+  };
+
+  const handleViewScript = (scriptId: string) => {
+    // Navega para modo visualização (sem iniciar sessão automaticamente)
+    navigate(`/content/view/${scriptId}`);
+  };
+
+  const handleDragStart = (e: React.DragEvent, script: Script) => {
+    setDraggedScript(script);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e: React.DragEvent, targetDate: Date) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDragOverDate(format(targetDate, "yyyy-MM-dd"));
+  };
+
+  const handleDragLeave = () => {
+    setDragOverDate(null);
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetDate: Date) => {
+    e.preventDefault();
+    setDragOverDate(null);
+
+    if (!draggedScript) return;
+
+    const newPublishDate = format(targetDate, "yyyy-MM-dd");
+
+    // Verificar limite de agendamento futuro
+    if (planCapabilities && !planCapabilities.canScheduleToDate(newPublishDate)) {
+      trackEvent('paywall_triggered', {
+        action: 'schedule_future',
+        plan: planCapabilities.planType,
+        target_date: newPublishDate,
+        context: 'calendario_drag',
+      });
+      setPaywallAction('schedule_future');
+      setPaywallOpen(true);
+      setDraggedScript(null);
+      return;
+    }
+
+    // Atualizar imediatamente a interface
+    const updatedScripts = scripts.map(s =>
+      s.id === draggedScript.id
+        ? { ...s, publish_date: newPublishDate }
+        : s
+    );
+    setScripts(updatedScripts);
+    setDraggedScript(null);
+
+    // Atualizar no banco de dados
+    try {
+      const { error } = await supabase
+        .from('scripts')
+        .update({ publish_date: newPublishDate })
+        .eq('id', draggedScript.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Data atualizada",
+        description: "A data de publicação foi alterada com sucesso!",
+      });
+    } catch (error) {
+      console.error('Error updating script date:', error);
+      toast({
+        title: "Erro ao atualizar data",
+        description: "Não foi possível alterar a data de publicação.",
+        variant: "destructive",
+      });
+
+      // Reverter mudança em caso de erro
+      fetchScripts();
+    }
+  };
+
+  const handleDayClick = (date: Date, scripts: Script[]) => {
+    setSelectedDate(date);
+    setModalOpen(true);
+  };
+
+  const handleAddScript = async (date: Date) => {
+    console.log('[CalendarioEditorial] handleAddScript called with date:', date);
+    const publishDate = format(date, "yyyy-MM-dd");
+
+    // Verificar limite semanal de criação
+    if (planCapabilities && !planCapabilities.canCreateScript()) {
+      trackEvent('paywall_triggered', {
+        action: 'create_script',
+        plan: planCapabilities.planType,
+        usage: planCapabilities.usage.scriptsThisWeek,
+        limit: planCapabilities.limits.weeklyScripts,
+        context: 'calendario',
+      });
+      setPaywallAction('create_script');
+      setPaywallOpen(true);
+      return;
+    }
+
+    // Verificar limite de agendamento futuro
+    if (planCapabilities && !planCapabilities.canScheduleToDate(publishDate)) {
+      trackEvent('paywall_triggered', {
+        action: 'schedule_future',
+        plan: planCapabilities.planType,
+        target_date: publishDate,
+        context: 'calendario',
+      });
+      setPaywallAction('schedule_future');
+      setPaywallOpen(true);
+      return;
+    }
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      console.log('[CalendarioEditorial] user:', user?.id);
+
+      if (!user) {
+        toast({
+          title: "Erro",
+          description: "Você precisa estar logado para criar conteúdo.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log('[CalendarioEditorial] Creating idea with:', {
+        user_id: user.id,
+        title: "Nova Ideia",
+        status: "draft_idea",
+        publish_date: publishDate,
+        workspace_id: activeWorkspace?.id,
+      });
+
+      const { data: newIdea, error } = await supabase
+        .from("scripts")
+        .insert({
+          user_id: user.id,
+          title: "Nova Ideia",
+          status: "draft_idea",
+          publish_date: publishDate,
+          workspace_id: activeWorkspace?.id,
+          workflow_template: profile?.current_workflow || 'classic',
+        })
+        .select("id")
+        .single();
+
+      if (error) {
+        console.error('[CalendarioEditorial] Insert error:', error);
+        throw error;
+      }
+
+      console.log('[CalendarioEditorial] Created idea:', newIdea);
+      console.log('[CalendarioEditorial] Navigating to:', `/session?stage=idea&scriptId=${newIdea.id}`);
+
+      navigate(`/session?stage=idea&scriptId=${newIdea.id}`);
+    } catch (error) {
+      console.error("[CalendarioEditorial] Error creating idea:", error);
+      toast({
+        title: "Erro ao criar ideia",
+        description: `Não foi possível criar a ideia: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteScript = async (e: React.MouseEvent, scriptId: string) => {
+    e.stopPropagation();
+
+    // Remover imediatamente da interface
+    setScripts(scripts.filter(s => s.id !== scriptId));
+
+    // Excluir do banco de dados
+    try {
+      const { error } = await supabase
+        .from('scripts')
+        .delete()
+        .eq('id', scriptId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Conteúdo excluído",
+        description: "O conteúdo foi removido com sucesso.",
+      });
+    } catch (error) {
+      console.error('Error deleting script:', error);
+      // Recarregar scripts em caso de erro
+      fetchScripts();
+      toast({
+        title: "Erro ao excluir",
+        description: "Não foi possível excluir o conteúdo.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const monthStart = startOfMonth(currentDate);
+  const monthEnd = endOfMonth(currentDate);
+  const calendarStart = startOfWeek(monthStart, { locale: ptBR });
+  const calendarEnd = endOfWeek(monthEnd, { locale: ptBR });
+
+  const monthDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
+
+  const weekStart = startOfWeek(currentDate, { locale: ptBR });
+  const weekEnd = endOfWeek(currentDate, { locale: ptBR });
+  const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
+
+  const goToPreviousMonth = () => setCurrentDate(subMonths(currentDate, 1));
+  const goToNextMonth = () => setCurrentDate(addMonths(currentDate, 1));
+  const goToPreviousWeek = () => setCurrentDate(subWeeks(currentDate, 1));
+  const goToNextWeek = () => setCurrentDate(addWeeks(currentDate, 1));
+
+  const handleGalleryClick = () => {
+    setViewType("gallery");
+    if (contentTypeFilter !== "YouTube") {
+      setContentTypeFilter("YouTube");
+      toast({
+        title: "🎬 Galeria YouTube",
+        description: "Mostrando apenas conteúdos do YouTube.",
+      });
+    }
+  };
+
+  const handleUpdateStatus = (scriptId: string, newStatus: string) => {
+    setScripts(prev =>
+      prev.map(s => (s.id === scriptId ? { ...s, status: newStatus } : s))
+    );
+  };
+
+  const handleUpdatePublishStatus = (scriptId: string, newPublishStatus: string) => {
+    setScripts(prev =>
+      prev.map(s => (s.id === scriptId ? { ...s, publish_status: newPublishStatus as PublishStatus } : s))
+    );
+  };
+
+  const handleRescheduleScript = (scriptId: string) => {
+    setRescheduleScriptId(scriptId);
+    setRescheduleModalOpen(true);
+  };
+
+  const handleRescheduleConfirm = async (newDate: Date) => {
+    if (!rescheduleScriptId) return;
+
+    const newPublishDate = format(newDate, "yyyy-MM-dd");
+
+    // Update local state optimistically
+    setScripts(prev =>
+      prev.map(s =>
+        s.id === rescheduleScriptId
+          ? { ...s, publish_date: newPublishDate, publish_status: 'planejado' as PublishStatus }
+          : s
+      )
+    );
+
+    try {
+      const { error } = await supabase
+        .from('scripts')
+        .update({ publish_date: newPublishDate, publish_status: 'planejado' })
+        .eq('id', rescheduleScriptId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Data reagendada!",
+        description: `Novo agendamento: ${format(newDate, "d 'de' MMMM", { locale: ptBR })}`,
+      });
+    } catch (error) {
+      console.error('Error rescheduling script:', error);
+      fetchScripts(); // Revert on error
+      toast({
+        title: "Erro ao reagendar",
+        description: "Não foi possível atualizar a data.",
+        variant: "destructive",
+      });
+    }
+
+    setRescheduleModalOpen(false);
+    setRescheduleScriptId(null);
+  };
+
+  const youtubeScripts = scripts.filter(s => s.content_type === "YouTube");
+
+  return (
+    <div className="min-h-screen bg-background pb-24">
+      {/* Header - Seção branca */}
+      <div className="border-b border-border bg-background">
+        <div
+          className="max-w-6xl mx-auto px-4 py-6"
+          style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1.5rem)' }}
+        >
+          <div className="flex justify-between items-center">
+            <h1 className="text-3xl font-bold tracking-tight">Calendário Editorial</h1>
+            <Button onClick={handleCreateNewScript} variant="default" className="rounded-lg">
+              <Plus className="w-4 h-4 mr-2" />
+              Nova Ideia
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {isIdeationMode && (
+        <div className="max-w-6xl mx-auto px-4 pt-4">
+          <Alert data-testid="banner-ideation" className="bg-gradient-to-r from-accent/10 to-primary/10 border-accent">
+            <Lightbulb className="h-4 w-4 text-accent" />
+            <AlertDescription className="text-foreground">
+              Modo Ideação: arraste ideias para as datas e monte sua semana.
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
+
+      {/* Seção alternada cinza para controles */}
+      <div className="bg-muted/30 py-4">
+        <div className="max-w-6xl mx-auto px-4">
+          {/* View Switcher */}
+          <div className="flex items-center gap-1 bg-background rounded-lg p-1 mb-4 w-fit border border-border">
+            <Button
+              variant={viewType === "calendar" ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setViewType("calendar")}
+              className="rounded-md"
+            >
+              <CalendarIcon className="w-4 h-4 mr-1.5" />
+              Calendário
+            </Button>
+            <Button
+              variant={viewType === "gallery" ? "secondary" : "ghost"}
+              size="sm"
+              onClick={handleGalleryClick}
+              className="rounded-md"
+            >
+              <LayoutGrid className="w-4 h-4 mr-1.5" />
+              Galeria
+            </Button>
+            <Button
+              variant={viewType === "board" ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setViewType("board")}
+              className="rounded-md"
+            >
+              <Columns3 className="w-4 h-4 mr-1.5" />
+              Quadro
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Conteúdo principal - Seção branca */}
+      <div className="max-w-6xl mx-auto px-4 py-6">
+
+        {viewType === "calendar" ? (
+          <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "month" | "week")}>
+            <div className="flex flex-col gap-3 mb-4">
+              <div className="flex justify-between items-center flex-wrap gap-4">
+                <div className="flex items-center gap-3">
+                  <TabsList>
+                    <TabsTrigger value="month">Mês</TabsTrigger>
+                    <TabsTrigger value="week">Semana</TabsTrigger>
+                  </TabsList>
+
+                  {/* Mobile: Botão de filtros colapsável */}
+                  {isMobile && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setFiltersExpanded(!filtersExpanded)}
+                      className={hasActiveFilters ? "border-primary" : ""}
+                    >
+                      <Filter className="w-4 h-4 mr-2" />
+                      Filtros
+                      {hasActiveFilters && (
+                        <span className="ml-2 bg-primary text-primary-foreground text-xs rounded-full px-1.5 py-0.5">
+                          {activeFilterCount}
+                        </span>
+                      )}
+                      <ChevronDown className={`w-4 h-4 ml-1 transition-transform ${filtersExpanded ? "rotate-180" : ""}`} />
+                    </Button>
+                  )}
+
+                  {/* Desktop: Filtros inline */}
+                  {!isMobile && (
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Filter className="w-4 h-4 text-muted-foreground" />
+                      <Select value={contentTypeFilter} onValueChange={setContentTypeFilter}>
+                        <SelectTrigger className="w-[160px]">
+                          <SelectValue placeholder="Filtrar por tipo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos os tipos</SelectItem>
+                          <SelectItem value="Reels">Reels</SelectItem>
+                          <SelectItem value="YouTube">YouTube</SelectItem>
+                          <SelectItem value="TikTok">TikTok</SelectItem>
+                          <SelectItem value="X (Twitter)">X (Twitter)</SelectItem>
+                        </SelectContent>
+                      </Select>
+
+                      <Select value={stageFilter} onValueChange={setStageFilter}>
+                        <SelectTrigger className="w-[160px]">
+                          <SelectValue placeholder="Filtrar por etapa" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todas as etapas</SelectItem>
+                          <SelectItem value="idea">Ideação</SelectItem>
+                          <SelectItem value="script">Roteiro</SelectItem>
+                          <SelectItem value="review">Revisão</SelectItem>
+                          <SelectItem value="record">Gravação</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </div>
+
+              </div>
+
+              {/* Mobile: Painel expansível de filtros */}
+              {isMobile && filtersExpanded && (
+                <div className="flex flex-col gap-2 p-3 bg-muted/20 rounded-lg border border-border">
+                  <Select value={contentTypeFilter} onValueChange={setContentTypeFilter}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Filtrar por tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos os tipos</SelectItem>
+                      <SelectItem value="Reels">Reels</SelectItem>
+                      <SelectItem value="YouTube">YouTube</SelectItem>
+                      <SelectItem value="TikTok">TikTok</SelectItem>
+                      <SelectItem value="X (Twitter)">X (Twitter)</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={stageFilter} onValueChange={setStageFilter}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Filtrar por etapa" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas as etapas</SelectItem>
+                      <SelectItem value="idea">Ideação</SelectItem>
+                      <SelectItem value="script">Roteiro</SelectItem>
+                      <SelectItem value="review">Revisão</SelectItem>
+                      <SelectItem value="record">Gravação</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={viewMode === "month" ? goToPreviousMonth : goToPreviousWeek}
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </Button>
+                <span className="text-lg font-semibold min-w-[200px] text-center">
+                  {format(currentDate, "MMMM 'de' yyyy", { locale: ptBR })}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={viewMode === "month" ? goToNextMonth : goToNextWeek}
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </Button>
+              </div>
+            </div>
+
+            <TabsContent value="month" className="mt-0">
+              <div className="bg-card rounded-lg border border-border overflow-hidden">
+                {/* Calendar Header */}
+                <div className="grid grid-cols-7 bg-muted/30 border-b border-border">
+                  {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((day) => (
+                    <div key={day} className="p-3 text-center text-sm font-medium text-muted-foreground">
+                      {day}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Calendar Grid */}
+                <div className="grid grid-cols-7">
+                  {monthDays.map((day, idx) => {
+                    const dayScripts = getScriptsForDate(day);
+                    const isCurrentMonth = isSameMonth(day, currentDate);
+                    const isToday = isSameDay(day, new Date());
+
+                    return (
+                      <div key={idx} className={idx % 7 === 6 ? "" : ""}>
+                        <CalendarDay
+                          day={day}
+                          scripts={dayScripts}
+                          isCurrentMonth={isCurrentMonth}
+                          isToday={isToday}
+                          compact={deviceType === "mobile" || deviceType === "tablet"}
+                          onDayClick={handleDayClick}
+                          onAddScript={handleAddScript}
+                          onDragStart={handleDragStart}
+                          onDragOver={handleDragOver}
+                          onDragLeave={handleDragLeave}
+                          onDrop={handleDrop}
+                          onViewScript={handleViewScript}
+                          onDeleteScript={handleDeleteScript}
+                          draggedScript={draggedScript}
+                          dragOverDate={dragOverDate}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="week" className="mt-0">
+              {isMobile ? (
+                <MobileWeekAgendaView
+                  weekDays={weekDays}
+                  getScriptsForDate={getScriptsForDate}
+                  onViewScript={handleViewScript}
+                  onAddScript={handleAddScript}
+                  onDeleteScript={handleDeleteScript}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  dragOverDate={dragOverDate}
+                  onPreviousWeek={goToPreviousWeek}
+                  onNextWeek={goToNextWeek}
+                  currentWeekLabel={`${format(weekStart, "d MMM", { locale: ptBR })} - ${format(weekEnd, "d MMM", { locale: ptBR })}`}
+                />
+              ) : (
+                <div className="bg-card rounded-lg border border-border overflow-hidden">
+                  {/* Week Header - Desktop */}
+                  <div className="grid grid-cols-7 bg-muted/30 border-b border-border">
+                    {weekDays.map((day) => {
+                      const isToday = isSameDay(day, new Date());
+
+                      return (
+                        <div
+                          key={day.toISOString()}
+                          className="text-center border-r border-border last:border-r-0 p-4"
+                        >
+                          <div className="text-muted-foreground uppercase text-xs">
+                            {format(day, "EEE", { locale: ptBR })}
+                          </div>
+                          <div className={`font-semibold mt-1 text-2xl ${isToday ? "text-primary" : "text-foreground"}`}>
+                            {format(day, "d")}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Week Grid - Desktop */}
+                  <div className="grid grid-cols-7">
+                    {weekDays.map((day) => {
+                      const dayScripts = getScriptsForDate(day);
+                      const isToday = isSameDay(day, new Date());
+
+                      return (
+                        <CalendarDay
+                          key={day.toISOString()}
+                          day={day}
+                          scripts={dayScripts}
+                          isCurrentMonth={true}
+                          isToday={isToday}
+                          compact={false}
+                          onDayClick={handleDayClick}
+                          onAddScript={handleAddScript}
+                          onDragStart={handleDragStart}
+                          onDragOver={handleDragOver}
+                          onDragLeave={handleDragLeave}
+                          onDrop={handleDrop}
+                          onViewScript={handleViewScript}
+                          onDeleteScript={handleDeleteScript}
+                          draggedScript={draggedScript}
+                          dragOverDate={dragOverDate}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        ) : viewType === "gallery" ? (
+          <YouTubeGalleryView
+            scripts={youtubeScripts}
+            onViewScript={handleViewScript}
+            onDeleteScript={handleDeleteScript}
+          />
+        ) : viewType === "board" ? (
+          <div className="space-y-4">
+            {/* Toggle Produção/Publicação */}
+            <div className="flex items-center gap-3">
+              <Select value={boardSubView} onValueChange={(v) => setBoardSubView(v as "production" | "publication")}>
+                <SelectTrigger className="w-[180px]">
+                  <div className="flex items-center gap-2">
+                    <ArrowUpDown className="w-4 h-4" />
+                    <SelectValue />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="production">
+                    <div className="flex items-center gap-2">
+                      <Columns3 className="w-4 h-4" />
+                      Produção
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="publication">
+                    <div className="flex items-center gap-2">
+                      <CalendarIcon className="w-4 h-4" />
+                      Publicação
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <span className="text-sm text-muted-foreground">
+                {boardSubView === "production"
+                  ? "Workflow de criação"
+                  : "Status de publicação"}
+              </span>
+            </div>
+
+            {/* Renderizar apenas UM Kanban por vez */}
+            {boardSubView === "production" ? (
+              <ProductionBoardView
+                scripts={scripts}
+                onViewScript={handleViewScript}
+                onDeleteScript={handleDeleteScript}
+                onUpdateStatus={handleUpdateStatus}
+              />
+            ) : (
+              <PublicationBoardView
+                scripts={scripts}
+                onViewScript={handleViewScript}
+                onDeleteScript={handleDeleteScript}
+                onUpdatePublishStatus={handleUpdatePublishStatus}
+                onReschedule={handleRescheduleScript}
+              />
+            )}
+          </div>
+        ) : null}
+      </div>
+
+      {/* Popups gerenciados */}
+      {(() => {
+        const hasOverduePopup = isPopupOpen && !!currentPopupScript;
+
+        // DayContent modal só aparece se não há popup de overdue
+        const shouldShowDayModal = modalOpen && !hasOverduePopup;
+
+        return (
+          <>
+            <DayContentModal
+              open={shouldShowDayModal}
+              onOpenChange={setModalOpen}
+              date={selectedDate}
+              scripts={selectedDate ? getScriptsForDate(selectedDate) : []}
+              onViewScript={handleViewScript}
+              onAddScript={handleAddScript}
+              onRefresh={fetchScripts}
+            />
+
+            {/* Popup for overdue content */}
+            <PostConfirmationPopup
+              open={hasOverduePopup}
+              onOpenChange={setIsPopupOpen}
+              script={currentPopupScript}
+              onMarkAsPosted={handlePopupMarkAsPosted}
+              onReschedule={handlePopupReschedule}
+              onRemindLater={handlePopupRemindLater}
+              onDelete={handlePopupDelete}
+            />
+          </>
+        );
+      })()}
+
+      {/* Modal de reagendamento para cards perdidos */}
+      <RescheduleDateModal
+        open={rescheduleModalOpen}
+        onOpenChange={setRescheduleModalOpen}
+        onSelectDate={handleRescheduleConfirm}
+        title="Reagendar conteúdo"
+        description="Escolha uma nova data de publicação"
+      />
+
+      {/* Paywall */}
+      <Paywall
+        open={paywallOpen}
+        onClose={() => setPaywallOpen(false)}
+        action={paywallAction}
+        currentUsage={planCapabilities?.usage.scriptsThisWeek}
+        limit={planCapabilities?.limits.weeklyScripts}
+        daysUntilReset={daysUntilWeekReset(timezone)}
+        context="calendario"
+      />
+    </div>
+  );
+};
+
+export default CalendarioEditorial;

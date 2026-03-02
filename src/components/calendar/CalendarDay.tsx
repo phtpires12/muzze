@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import { useState, useEffect } from "react";
-import { cn } from "@/lib/utils";
+import { cn } from '@/core/utils';
 import {
   AlertDialog,
   AlertDialogAction,

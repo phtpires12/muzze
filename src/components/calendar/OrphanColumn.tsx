@@ -5,8 +5,8 @@ import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { AlertTriangle, Trash2, ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
-import { ORPHAN_COLUMN, getOrphanOriginalStageLabel } from "@/lib/kanban-columns";
+import { cn } from '@/core/utils';
+import { ORPHAN_COLUMN, getOrphanOriginalStageLabel } from '@/core/constants';
 import {
   Tooltip,
   TooltipContent,

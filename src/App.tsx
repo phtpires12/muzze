@@ -2,188 +2,20 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createBrowserRouter, RouterProvider, Navigate, Outlet } from "react-router-dom";
-import { AppNavigationProvider, AppLayout } from "@/components/AppNavigation";
-import { SessionContextProvider } from "@/contexts/SessionContext";
-import { WorkspaceContextProvider } from "@/contexts/WorkspaceContext";
-import { CelebrationContextProvider } from "@/contexts/CelebrationContext";
-import { ProfileContextProvider } from "@/contexts/ProfileContext";
-import { PlanContextProvider } from "@/contexts/PlanContext";
-import { GlobalCelebrations } from "@/components/GlobalCelebrations";
-import ErrorBoundary from "@/components/ErrorBoundary";
-import { setupGlobalErrorHandlers } from "@/lib/error-logger";
-import { UpdateOverlay } from "@/components/UpdateOverlay";
-import { usePWAUpdate } from "@/hooks/usePWAUpdate";
-import Onboarding from "./pages/NewOnboarding";
-import Auth from "./pages/Auth";
-import ResetPassword from "./pages/ResetPassword";
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { RouterProvider } from "react-router-dom";
+import { SessionContextProvider } from '@/core/contexts';
+import { ProfileContextProvider } from '@/core/contexts';
+import { CelebrationContextProvider } from '@/core/contexts';
+import ErrorBoundary from "@/components/shared";
+import { setupGlobalErrorHandlers } from '@/core/services';
+import { UpdateOverlay } from "@/components/shared";
+import { usePWAUpdate } from '@/core/hooks';
+import { router } from "@/routes";
 
 // Initialize global error handlers
 setupGlobalErrorHandlers();
-import Index from "./pages/Index";
-import Stats from "./pages/Stats";
-import Workflows from "./pages/Workflows";
-import CalendarioEditorial from "./pages/CalendarioEditorial";
-import Session from "./pages/Session";
-import ShotList from "./pages/ShotList";
-import ShotListReview from "./pages/ShotListReview";
-import ShotListRecord from "./pages/ShotListRecord";
-import Profile from "./pages/Profile";
-import EditProfile from "./pages/EditProfile";
-import MyProgress from "./pages/MyProgress";
-import Settings from "./pages/Settings";
-import SendSuggestions from "./pages/SendSuggestions";
-import Help from "./pages/Help";
-import TermsOfUse from "./pages/TermsOfUse";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
-import NotFound from "./pages/NotFound";
-import Levels from "./pages/Levels";
-import Ofensiva from "./pages/Ofensiva";
-import DevTools from "./pages/DevTools";
-import Install from "./pages/Install";
-import Guests from "./pages/Guests";
-import AcceptInvite from "./pages/AcceptInvite";
-import ContentView from "./pages/ContentView";
-import MyPlan from "./pages/MyPlan";
-import PaywallPage from "./pages/PaywallPage";
-import EditingWorkspace from "./pages/EditingWorkspace";
-import { UpgradeCelebration } from "./components/upgrade/UpgradeCelebration";
-import Recap from "./pages/Recap";
-import { LevelUpModal } from "./components/LevelUpModal";
-import { TrophyUnlockedModal } from "./components/TrophyUnlockedModal";
-import { TutorialProvider } from "./components/tutorial/TutorialProvider";
-import { TutorialOverlay } from "./components/tutorial/TutorialOverlay";
 
 const queryClient = new QueryClient();
-
-const Layout = ({ children }: { children: React.ReactNode }) => (
-  <AppLayout>{children}</AppLayout>
-);
-
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<any>(null);
-  const [profile, setProfile] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-
-      if (user) {
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('user_id', user.id)
-          .maybeSingle();
-        setProfile(profileData);
-      }
-      setLoading(false);
-    };
-
-    checkAuth();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user || null);
-      
-      if (session?.user) {
-        setTimeout(() => {
-          supabase
-            .from('profiles')
-            .select('*')
-            .eq('user_id', session.user.id)
-            .maybeSingle()
-            .then(({ data: profileData }) => setProfile(profileData));
-        }, 0);
-      } else {
-        setProfile(null);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-if (loading) {
-    return (
-      <div className="safe-app min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-pulse text-xl text-foreground">Carregando...</div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <Navigate to="/onboarding" replace />;
-  }
-
-  const currentPath = window.location.pathname;
-  if (profile?.first_login === true && currentPath !== '/onboarding') {
-    return <Navigate to="/onboarding" replace />;
-  }
-
-  return <>{children}</>;
-};
-
-// Root layout component that wraps all routes with providers that need router context
-const RootLayout = () => (
-  <AppNavigationProvider>
-    <WorkspaceContextProvider>
-      <PlanContextProvider>
-        <TutorialProvider>
-          <GlobalCelebrations />
-          <LevelUpModal />
-          <TrophyUnlockedModal />
-          <TutorialOverlay />
-          <UpgradeCelebration />
-          <div className="safe-app">
-            <Outlet />
-          </div>
-        </TutorialProvider>
-      </PlanContextProvider>
-    </WorkspaceContextProvider>
-  </AppNavigationProvider>
-);
-
-// Create data router with all routes
-const router = createBrowserRouter([
-  {
-    element: <RootLayout />,
-    children: [
-      { path: "/auth", element: <Auth /> },
-      { path: "/reset-password", element: <ResetPassword /> },
-      { path: "/onboarding", element: <Onboarding /> },
-      { path: "/install", element: <Install /> },
-      { path: "/", element: <ProtectedRoute><Layout><Index /></Layout></ProtectedRoute> },
-      { path: "/workflows", element: <ProtectedRoute><Layout><Workflows /></Layout></ProtectedRoute> },
-      { path: "/calendario", element: <ProtectedRoute><Layout><CalendarioEditorial /></Layout></ProtectedRoute> },
-      { path: "/session", element: <ProtectedRoute><Session /></ProtectedRoute> },
-      { path: "/shot-list/review", element: <ProtectedRoute><ShotListReview /></ProtectedRoute> },
-      { path: "/shot-list/record", element: <ProtectedRoute><ShotListRecord /></ProtectedRoute> },
-      { path: "/stats", element: <ProtectedRoute><Layout><Stats /></Layout></ProtectedRoute> },
-      { path: "/profile", element: <ProtectedRoute><Layout><Profile /></Layout></ProtectedRoute> },
-      { path: "/edit-profile", element: <ProtectedRoute><Layout><EditProfile /></Layout></ProtectedRoute> },
-      { path: "/my-plan", element: <ProtectedRoute><Layout><MyPlan /></Layout></ProtectedRoute> },
-      { path: "/paywall", element: <ProtectedRoute><PaywallPage /></ProtectedRoute> },
-      { path: "/paywall/success", element: <Navigate to="/" replace /> },
-      { path: "/my-progress", element: <Navigate to="/my-plan" replace /> },
-      { path: "/settings", element: <ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute> },
-      { path: "/send-suggestions", element: <ProtectedRoute><Layout><SendSuggestions /></Layout></ProtectedRoute> },
-      { path: "/help", element: <ProtectedRoute><Layout><Help /></Layout></ProtectedRoute> },
-      { path: "/terms", element: <TermsOfUse /> },
-      { path: "/privacy", element: <PrivacyPolicy /> },
-      { path: "/levels", element: <ProtectedRoute><Levels /></ProtectedRoute> },
-      { path: "/ofensiva", element: <ProtectedRoute><Ofensiva /></ProtectedRoute> },
-      { path: "/dev-tools", element: <ProtectedRoute><Layout><DevTools /></Layout></ProtectedRoute> },
-      { path: "/guests", element: <ProtectedRoute><Layout><Guests /></Layout></ProtectedRoute> },
-      { path: "/invite", element: <AcceptInvite /> },
-      { path: "/content/view/:scriptId", element: <ProtectedRoute><ContentView /></ProtectedRoute> },
-      { path: "/editing-workspace", element: <ProtectedRoute><EditingWorkspace /></ProtectedRoute> },
-      { path: "/recap/:recapId", element: <ProtectedRoute><Recap /></ProtectedRoute> },
-      { path: "*", element: <NotFound /> },
-    ],
-  },
-]);
 
 const PWAManager = () => {
   if (!('serviceWorker' in navigator)) return null;

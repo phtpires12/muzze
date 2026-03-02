@@ -1,9 +1,9 @@
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { useProfile } from '@/hooks/useProfile';
-import { useWorkspaceContext } from '@/contexts/WorkspaceContext';
-import { usePlanCapabilitiesOptional } from '@/contexts/PlanContext';
-import { useWorkspace } from '@/hooks/useWorkspace';
+import { useProfile } from '@/core/hooks';
+import { useWorkspaceContext } from '@/core/contexts';
+import { usePlanCapabilitiesOptional } from '@/core/contexts';
+import { useWorkspace } from '@/core/hooks';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,7 +21,9 @@ import {
 import { Check, LogOut, Pencil, Crown, Shield, User, Plus, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useState, useEffect } from 'react';
-import { Paywall } from '@/components/Paywall';
+import { Paywall } from "@/components/shared";
+import { ROUTES } from "@/routes/routes";
+
 
 interface ProfileSheetProps {
   onClose?: () => void;
@@ -123,13 +125,13 @@ export const ProfileSheet = ({ onClose }: ProfileSheetProps) => {
 
   const handleEditProfile = () => {
     onClose?.();
-    navigate('/edit-profile');
+    navigate(ROUTES.EDIT_PROFILE);
   };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     onClose?.();
-    navigate('/auth');
+    navigate(ROUTES.AUTH);
   };
 
   const handleCreateWorkspaceClick = () => {

@@ -3,8 +3,8 @@ import { createRoot } from "react-dom/client";
 import { ThemeProvider } from "next-themes";
 import App from "./App.tsx";
 import "./index.css";
-import { getShortBuildId } from "./lib/build-info";
-import { BUILD_INFO } from "./lib/build-info";
+import { getShortBuildId } from "@/core/constants";
+import { BUILD_INFO } from "@/core/constants";
 
 // Emergency SW cleanup - remove rogue firebase-messaging-sw.js before React mounts
 if ('serviceWorker' in navigator) {

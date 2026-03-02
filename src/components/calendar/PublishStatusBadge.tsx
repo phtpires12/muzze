@@ -1,6 +1,6 @@
 import { Calendar, Sparkles, Check, AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { cn } from '@/core/utils';
 
 export type PublishStatus = "planejado" | "pronto_para_postar" | "postado" | "perdido";
 

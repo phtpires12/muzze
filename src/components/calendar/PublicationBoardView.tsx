@@ -7,17 +7,17 @@ import {
   closestCorners,
 } from "@dnd-kit/core";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from '@/core/hooks';
 import { 
   PUBLICATION_COLUMNS, 
   getPublicationColumnForStatus, 
   getPublishStatusForColumn,
   isPublicationDragAllowed,
   PublicationColumnId 
-} from "@/lib/kanban-columns";
+} from '@/core/constants';
 import { PublicationKanbanColumn } from "./PublicationKanbanColumn";
 import { PublicationKanbanCard } from "./PublicationKanbanCard";
-import { useLongPressSensors, triggerHapticFeedback } from "@/hooks/useLongPressSensors";
+import { useLongPressSensors, triggerHapticFeedback } from '@/core/hooks';
 
 interface Script {
   id: string;

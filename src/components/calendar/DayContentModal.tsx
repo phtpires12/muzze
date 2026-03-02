@@ -6,17 +6,17 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from "@/components/ui/drawer";
-import { useDeviceType } from "@/hooks/useDeviceType";
+import { useDeviceType } from '@/core/hooks';
 import { PublishStatus } from "./PublishStatusBadge";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from '@/core/hooks';
 import { useState } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
-import { usePlanCapabilitiesOptional } from "@/contexts/PlanContext";
-import { Paywall } from "@/components/Paywall";
-import { isDateInCurrentWeek } from "@/lib/timezone-utils";
+import { cn } from '@/core/utils';
+import { usePlanCapabilitiesOptional } from '@/core/contexts';
+import { Paywall } from "@/components/shared";
+import { isDateInCurrentWeek } from '@/core/utils';
 
 interface Script {
   id: string;

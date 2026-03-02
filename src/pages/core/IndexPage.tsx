@@ -1,0 +1,946 @@
+import { useEffect, useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import { useProfileWithLevel } from '@/core/hooks';
+import { useAnalytics } from '@/core/hooks';
+import { useSessionContext } from '@/core/contexts';
+import { useStreakValidator } from '@/core/hooks';
+import { useStreakAutoRecovery } from '@/core/hooks';
+import { useCelebration } from '@/core/contexts';
+import { useDailyGoalProgress } from '@/core/hooks';
+import { useLiveDailyProgress } from '@/core/hooks';
+import { supabase } from "@/integrations/supabase/client";
+import { getLevelByXP, TROPHIES } from '@/core/services';
+import { useGamification } from '@/core/hooks';
+import { getRandomQuote } from '@/core/constants';
+
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { ProfileSheet } from "@/components/ProfileSheet";
+import { FreePlanBanner } from "@/components/shared";
+import { ContinuityCarousel } from "@/components/content/home/ContinuityCarousel";
+import { Flame, Clock, Trophy, Zap, Workflow, Check, AlertCircle, Lock, Lightbulb, Film, Mic, Scissors } from "lucide-react";
+import { cn } from '@/core/utils';
+import { toast } from "sonner";
+import PWAInstallPrompt from "@/components/shared";
+import { StreakRecoveryModal } from "@/components/shared";
+import { useHolidayAlert } from '@/core/hooks';
+import { HolidayAlertDialog } from "@/components/shared";
+import StreakProtectedCelebration from "@/components/shared";
+import { ROUTES } from "@/routes/routes";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
+interface ContentItem {
+  id: string;
+  title: string;
+  status: string;
+  dueDate?: string;
+  sessionsCount?: number;
+}
+
+const Index = () => {
+  const navigate = useNavigate();
+  const { 
+    profile, 
+    loading: profileLoading, 
+    refetch,
+    effectiveLevel,
+    goalMinutes,
+    freezeCost,
+  } = useProfileWithLevel();
+  const { trackEvent } = useAnalytics();
+  const { muzzeSession, setMuzzeSession, resetMuzzeSession } = useSessionContext();
+  const { stats } = useGamification();
+  
+  const { isShowingAnyCelebration } = useCelebration();
+  const { 
+    result: streakValidation, 
+    isLoading: streakValidationLoading,
+    useFreezesToRecover,
+    buyFreezesAndRecover,
+    resetStreak,
+    dismissCheck,
+    autoUseFreezesIfAvailable,
+    maxFreezes,
+  } = useStreakValidator({ 
+    profile, 
+    refetchProfile: refetch,
+    effectiveLevel,
+    goalMinutes,
+    freezeCost,
+  });
+  const { recoverMissedStreaks, isRecovering: isRecoveringStreak } = useStreakAutoRecovery({ profile });
+  const { progress: dbProgress } = useDailyGoalProgress({ goalMinutes });
+  const liveProgress = useLiveDailyProgress(dbProgress.actualMinutes, dbProgress.goalMinutes);
+  const [streakData, setStreakData] = useState<any>(null);
+  const [weeklySessionsCount, setWeeklySessionsCount] = useState(0);
+  const [isWorkflowModalOpen, setIsWorkflowModalOpen] = useState(false);
+  const [isStreakRecoveryModalOpen, setIsStreakRecoveryModalOpen] = useState(false);
+  
+  // Novos estados para seleção de item
+  const [isPickItemModalOpen, setIsPickItemModalOpen] = useState(false);
+  const [pickListType, setPickListType] = useState<"" | "script" | "record" | "edit">("");
+  const [eligibleItems, setEligibleItems] = useState<ContentItem[]>([]);
+  const [selectedItemId, setSelectedItemId] = useState<string>("");
+  const [isAlertOpen, setIsAlertOpen] = useState(false);
+  const [alertConfig, setAlertConfig] = useState({ title: "", description: "", action: "" });
+  
+  // Modal de troféus
+  const [isTrophiesModalOpen, setIsTrophiesModalOpen] = useState(false);
+  
+  // Modal de tempo total
+  const [isTimeModalOpen, setIsTimeModalOpen] = useState(false);
+  const [recentSessions, setRecentSessions] = useState<any[]>([]);
+  const [averageTimeByStage, setAverageTimeByStage] = useState<any>({});
+  
+  // Profile Sheet
+  const [isProfileSheetOpen, setIsProfileSheetOpen] = useState(false);
+  
+  // Streak Protection Celebration
+  const [showProtectedCelebration, setShowProtectedCelebration] = useState(false);
+  
+  // Holiday alerts
+  const { alert: holidayAlert, dismiss: dismissHoliday, remindLater: remindHolidayLater } = useHolidayAlert();
+  const [protectedCelebrationData, setProtectedCelebrationData] = useState({
+    freezesUsed: 0,
+    currentStreak: 0,
+  });
+
+  const getUserInitials = () => {
+    if (profile?.username) {
+      return profile.username.slice(0, 2).toUpperCase();
+    }
+    return 'U';
+  };
+
+
+
+  // Verificar se há dias perdidos na ofensiva e auto-usar freezes se possível
+  useEffect(() => {
+    const handleStreakRecovery = async () => {
+      // Se não há dias perdidos, garantir que o modal está fechado
+      if (!streakValidation?.hasLostDays) {
+        setIsStreakRecoveryModalOpen(false);
+        return;
+      }
+      
+      if (streakValidationLoading) return;
+      
+      // Se pode usar freeze automaticamente
+      if (streakValidation.canUseFreeze) {
+        const result = await autoUseFreezesIfAvailable();
+        if (result.success) {
+          // Mostrar celebração de proteção
+          setProtectedCelebrationData({
+            freezesUsed: result.freezesUsed,
+            currentStreak: streakValidation.currentStreak,
+          });
+          setShowProtectedCelebration(true);
+          return;
+        }
+      }
+      
+      // Se não pode auto-usar, abre modal
+      setIsStreakRecoveryModalOpen(true);
+    };
+    
+    handleStreakRecovery();
+  }, [streakValidation, streakValidationLoading, autoUseFreezesIfAvailable]);
+
+  // Auto-recovery: verificar e corrigir streaks retroativamente ao abrir o app
+  useEffect(() => {
+    const checkAndRecoverStreak = async () => {
+      if (!profile || profileLoading) return;
+      
+      const result = await recoverMissedStreaks();
+      if (result?.corrected && result.daysRecovered > 0) {
+        toast.success("Ofensiva atualizada! 🔥", {
+          description: `Encontramos ${result.daysRecovered} dia(s) de trabalho não contabilizado(s). Sua ofensiva agora é ${result.newStreak}!`,
+        });
+        // Refetch streak data to update UI
+        fetchStreakData();
+      }
+    };
+    
+    checkAndRecoverStreak();
+  }, [profile, profileLoading, recoverMissedStreaks]);
+
+  useEffect(() => {
+    if (profile && !profileLoading) {
+      fetchStreakData();
+      fetchWeeklySessions();
+      
+      const dataInterval = setInterval(() => {
+        fetchStreakData();
+        fetchWeeklySessions();
+      }, 30000);
+
+      return () => {
+        clearInterval(dataInterval);
+      };
+    }
+  }, [profile, profileLoading]);
+
+  const fetchStreakData = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data } = await supabase
+      .from('streaks')
+      .select('*')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    setStreakData(data);
+  };
+
+  const fetchWeeklySessions = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // Contar total de sessões completadas (stage_times)
+    const { count } = await supabase
+      .from('stage_times')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id);
+
+    setWeeklySessionsCount(count || 0);
+  };
+
+  const fetchRecentSessions = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // Buscar todas as sessões recentes
+    const { data } = await supabase
+      .from('stage_times')
+      .select('started_at, duration_seconds')
+      .eq('user_id', user.id)
+      .not('duration_seconds', 'is', null)
+      .order('started_at', { ascending: false });
+
+    if (data) {
+      // Agrupar por DATA (dia) ao invés de content_item_id
+      const sessionMap = new Map();
+      data.forEach(item => {
+        const date = new Date(item.started_at).toDateString();
+        if (!sessionMap.has(date)) {
+          sessionMap.set(date, {
+            date: item.started_at,
+            total_duration: 0
+          });
+        }
+        sessionMap.get(date).total_duration += item.duration_seconds || 0;
+      });
+
+      const sessions = Array.from(sessionMap.values())
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        .slice(0, 5);
+      
+      setRecentSessions(sessions);
+    }
+  };
+
+  const fetchAverageTimeByStage = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data } = await supabase
+      .from('stage_times')
+      .select('stage, duration_seconds')
+      .eq('user_id', user.id)
+      .not('duration_seconds', 'is', null);
+
+    if (data) {
+      const stageMap = new Map();
+      data.forEach(item => {
+        if (!item.stage) return;
+        if (!stageMap.has(item.stage)) {
+          stageMap.set(item.stage, { total: 0, count: 0 });
+        }
+        const stats = stageMap.get(item.stage);
+        stats.total += item.duration_seconds;
+        stats.count += 1;
+      });
+
+      const averages: any = {};
+      stageMap.forEach((value, key) => {
+        averages[key] = Math.round(value.total / value.count);
+      });
+
+      setAverageTimeByStage(averages);
+    }
+  };
+
+
+  const handleOpenTimeModal = () => {
+    setIsTimeModalOpen(true);
+    fetchRecentSessions();
+    fetchAverageTimeByStage();
+  };
+
+
+  const handleStartSession = () => {
+    navigate(ROUTES.SESSION);
+  };
+
+
+
+  const handleOpenItem = () => {
+    if (!selectedItemId) return;
+
+    setMuzzeSession({
+      stage: pickListType,
+      duration: null,
+      contentId: selectedItemId,
+    });
+
+    setIsPickItemModalOpen(false);
+    
+    if (pickListType === "script") {
+      navigate(`/scripts?open=${selectedItemId}`);
+    } else if (pickListType === "record") {
+      navigate(`/scripts?detail=${selectedItemId}&tab=record`);
+    } else if (pickListType === "edit") {
+      navigate(`/scripts?detail=${selectedItemId}&tab=edit`);
+    }
+    
+    trackEvent(`session_${pickListType}_item_selected`);
+  };
+
+  const handleAlertAction = () => {
+    setIsAlertOpen(false);
+    navigate("/scripts");
+  };
+
+  // Se celebração está ativa, renderizar tela mínima para evitar flash
+  if (isShowingAnyCelebration) {
+    return (
+      <div className="min-h-screen bg-background">
+        {/* Tela em branco - celebração aparece como overlay via GlobalCelebrations */}
+      </div>
+    );
+  }
+
+  if (profileLoading || !profile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Safety check - if first_login is still true, don't render
+  if (profile?.first_login === true) {
+    return null;
+  }
+
+  
+  const currentLevel = stats?.level ?? 1;
+  const currentLevelInfo = getLevelByXP(stats?.totalXP ?? 0);
+  const xpProgress = (((stats?.totalXP ?? 0) % 1000) / 1000) * 100;
+  const totalHours = Math.floor(stats?.totalHours ?? 0);
+  const totalMinutes = Math.round(((stats?.totalHours ?? 0) - totalHours) * 60);
+
+  const calculateTrophyProgress = (trophyId: string) => {
+    const scriptsCreated = stats?.scriptsCreated ?? 0;
+    const ideasCreated = stats?.ideasCreated ?? 0;
+    const totalHours = stats?.totalHours ?? 0;
+    const streak = stats?.streak ?? 0;
+
+    switch (trophyId) {
+      case 'first_script':
+        return { 
+          progress: Math.min((scriptsCreated / 1) * 100, 100),
+          text: `${scriptsCreated}/1 roteiro`
+        };
+      case 'scriptwriter':
+        return {
+          progress: Math.min((scriptsCreated / 10) * 100, 100),
+          text: `${scriptsCreated}/10 roteiros`
+        };
+      case 'first_idea':
+        return {
+          progress: Math.min((ideasCreated / 1) * 100, 100),
+          text: `${ideasCreated}/1 ideia`
+        };
+      case 'idea_machine':
+        return {
+          progress: Math.min((ideasCreated / 50) * 100, 100),
+          text: `${ideasCreated}/50 ideias`
+        };
+      case 'week_streak':
+        return {
+          progress: Math.min((streak / 7) * 100, 100),
+          text: `${streak}/7 dias`
+        };
+      case 'month_streak':
+        return {
+          progress: Math.min((streak / 30) * 100, 100),
+          text: `${streak}/30 dias`
+        };
+      case 'hour_creator':
+        return {
+          progress: Math.min((totalHours / 1) * 100, 100),
+          text: `${totalHours.toFixed(1)}/1 hora`
+        };
+      case 'ten_hours':
+        return {
+          progress: Math.min((totalHours / 10) * 100, 100),
+          text: `${totalHours.toFixed(1)}/10 horas`
+        };
+      case 'hundred_hours':
+        return {
+          progress: Math.min((totalHours / 100) * 100, 100),
+          text: `${totalHours.toFixed(1)}/100 horas`
+        };
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-background pb-24">
+      {/* Header */}
+      <header className="px-6 pt-6 pb-4 bg-background">
+        <div className="flex items-center justify-between gap-3 mb-2">
+          {/* Ofensiva - lado esquerdo */}
+          <button 
+            id="tutorial-streak"
+            onClick={() => navigate(ROUTES.OFENSIVA)}
+            className="flex items-center gap-2 text-foreground hover:text-accent transition-colors active:scale-95 shrink-0"
+          >
+            <Flame className="w-5 h-5 text-accent" />
+            <span className="font-semibold">{streakData?.current_streak ?? 0} dias</span>
+          </button>
+          
+          {/* Barra de Progresso - centro */}
+          <button
+            id="tutorial-daily-progress"
+            onClick={() => navigate(ROUTES.STATS)}
+            className="flex-1 max-w-[160px] flex items-center gap-2 group active:scale-95 transition-transform"
+          >
+            <div className="flex-1 relative">
+              <Progress 
+                value={Math.min(liveProgress.percentageProgress, 100)} 
+                className={cn(
+                  "h-2 bg-secondary/50",
+                  liveProgress.isAbove && "[&>div]:bg-green-500"
+                )}
+              />
+            </div>
+            <span className={cn(
+              "text-xs font-medium shrink-0 transition-colors",
+              liveProgress.isAbove 
+                ? "text-green-500" 
+                : "text-muted-foreground group-hover:text-foreground"
+            )}>
+              {liveProgress.isAbove ? (
+                <Check className="w-4 h-4" />
+              ) : (
+                `${liveProgress.actualMinutes}/${liveProgress.goalMinutes}m`
+              )}
+            </span>
+          </button>
+          
+          {/* Avatar - lado direito */}
+          <Sheet open={isProfileSheetOpen} onOpenChange={setIsProfileSheetOpen}>
+            <SheetTrigger asChild>
+              <button id="tutorial-profile" className="focus:outline-none focus:ring-2 focus:ring-primary rounded-full transition-all hover:ring-2 hover:ring-primary/50 shrink-0">
+                <Avatar className="h-9 w-9 cursor-pointer">
+                  {profile?.avatar_url ? (
+                    <AvatarImage src={profile.avatar_url} alt={profile?.username || "Avatar"} />
+                  ) : null}
+                  <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-primary-foreground text-sm font-semibold">
+                    {getUserInitials()}
+                  </AvatarFallback>
+                </Avatar>
+              </button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-80">
+              <ProfileSheet onClose={() => setIsProfileSheetOpen(false)} />
+            </SheetContent>
+          </Sheet>
+        </div>
+      </header>
+
+      {/* Free Plan Banner */}
+      <div className="px-6 mt-4">
+        <FreePlanBanner />
+      </div>
+
+      {/* Main Panel - Continuity Carousel */}
+      <div className="px-6 mt-6">
+        <ContinuityCarousel 
+          username={profile?.username || undefined}
+          onStartNewSession={handleStartSession}
+        />
+      </div>
+
+      {/* Progress Section - Seção alternada cinza */}
+      <div className="px-6 py-8 mt-6 bg-muted/30">
+        <h3 className="text-xl font-bold text-foreground mb-6">
+          Seu progresso na Muzze
+        </h3>
+
+        <div className="space-y-4">
+          <button 
+            onClick={() => navigate(ROUTES.LEVELS)}
+            className="w-full p-4 bg-card rounded-xl border border-border shadow-sm hover:shadow-md active:scale-[0.98] transition-all cursor-pointer"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-foreground">
+                Nível {currentLevel} — {currentLevelInfo?.name || "Criador Iniciante"}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {Math.floor(xpProgress)}%
+              </span>
+            </div>
+            <Progress 
+              value={xpProgress} 
+              className="h-2 bg-secondary"
+            />
+          </button>
+
+          <div className="grid grid-cols-3 gap-3">
+            <button 
+              onClick={() => setIsTrophiesModalOpen(true)}
+              className="p-4 bg-card rounded-xl border border-border text-center hover:shadow-md transition-all"
+            >
+              <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-primary flex items-center justify-center">
+                <Trophy className="w-6 h-6 text-primary-foreground" />
+              </div>
+              <div className="text-sm font-semibold text-foreground">
+                {stats?.trophies?.length ?? 0}/{TROPHIES.length}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Conquistas
+              </div>
+            </button>
+
+            <button 
+              onClick={handleOpenTimeModal}
+              className="p-4 bg-card rounded-xl border border-border text-center hover:shadow-md transition-all"
+            >
+              <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-primary flex items-center justify-center">
+                <Clock className="w-6 h-6 text-primary-foreground" />
+              </div>
+              <div className="text-sm font-semibold text-foreground">
+                {totalHours}h {totalMinutes}m
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Tempo Total
+              </div>
+            </button>
+
+            <button 
+              onClick={() => navigate(ROUTES.WORKFLOWS)}
+              className="p-4 bg-card rounded-xl border border-border text-center hover:shadow-md transition-all"
+            >
+              <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-accent flex items-center justify-center">
+                <Workflow className="w-6 h-6 text-accent-foreground" />
+              </div>
+              <div className="text-sm font-semibold text-foreground">
+                Workflow
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Seu método
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Motivational Card */}
+      <MotivationalCard currentStreak={streakData?.current_streak ?? 0} />
+
+      {/* Workflow Modal */}
+      <Dialog open={isWorkflowModalOpen} onOpenChange={setIsWorkflowModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Trocar Workflow</DialogTitle>
+            <DialogDescription>
+              Esta funcionalidade estará disponível em breve.
+            </DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
+
+
+      {/* Pick Item Modal */}
+      <Dialog open={isPickItemModalOpen} onOpenChange={setIsPickItemModalOpen}>
+        <DialogContent data-testid="modal-pick-item" className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">
+              {pickListType === "script" && "Qual ideia você quer roteirizar?"}
+              {pickListType === "record" && "Qual item você vai gravar?"}
+              {pickListType === "edit" && "Qual item você vai editar?"}
+            </DialogTitle>
+            <DialogDescription className="text-sm">
+              Selecione um item para continuar com a sessão criativa.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 max-h-[400px] overflow-y-auto py-2">
+            {eligibleItems.map((item) => (
+              <button
+                key={item.id}
+                data-testid={`pick-item-${item.id}`}
+                onClick={() => setSelectedItemId(item.id)}
+                className={cn(
+                  "w-full p-4 rounded-xl border-2 transition-all text-left",
+                  "hover:border-primary hover:bg-primary/5",
+                  selectedItemId === item.id
+                    ? "border-primary bg-primary/10"
+                    : "border-border bg-card"
+                )}
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <h3 className="font-semibold text-foreground">{item.title}</h3>
+                  {item.sessionsCount !== undefined && (
+                    <Badge variant="secondary" className="text-xs">
+                      {item.sessionsCount} sessões
+                    </Badge>
+                  )}
+                </div>
+                {item.dueDate && (
+                  <p className="text-xs text-muted-foreground mb-1">
+                    Vencimento: {new Date(item.dueDate).toLocaleDateString("pt-BR")}
+                  </p>
+                )}
+                <Badge variant="outline" className="text-xs">
+                  {item.status === "ideia" && "Ideia"}
+                  {item.status === "roteiro-em-progresso" && "Roteiro em progresso"}
+                  {item.status === "roteiro-pronto" && "Roteiro pronto"}
+                  {item.status === "gravação-pendente" && "Gravação pendente"}
+                  {item.status === "gravado" && "Gravado"}
+                  {item.status === "edição-pendente" && "Edição pendente"}
+                </Badge>
+              </button>
+            ))}
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <Button
+              data-testid="btn-cancel-pick"
+              variant="outline"
+              onClick={() => {
+                setIsPickItemModalOpen(false);
+                setSelectedItemId("");
+              }}
+              className="flex-1"
+            >
+              Cancelar
+            </Button>
+            <Button
+              data-testid="btn-open-picked-item"
+              onClick={handleOpenItem}
+              disabled={!selectedItemId}
+              className="flex-1 bg-gradient-to-r from-primary to-accent hover:opacity-90 text-white disabled:opacity-50"
+            >
+              Abrir
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Alert Dialog for no eligible items */}
+      <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <div className="flex items-center gap-2 text-accent mb-2">
+              <AlertCircle className="w-5 h-5" />
+              <AlertDialogTitle>{alertConfig.title}</AlertDialogTitle>
+            </div>
+            <AlertDialogDescription>
+              {alertConfig.description}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleAlertAction}>
+              Abrir roteiros
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Trophies Modal */}
+      <Dialog open={isTrophiesModalOpen} onOpenChange={setIsTrophiesModalOpen}>
+        <DialogContent 
+          className="sm:max-w-2xl max-h-[80vh] overflow-y-auto"
+          style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1.5rem)' }}
+        >
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold flex items-center gap-2">
+              <Trophy className="w-6 h-6 text-accent" />
+              Troféus
+            </DialogTitle>
+            <DialogDescription>
+              {stats?.trophies?.length ?? 0} de {TROPHIES.length} conquistas desbloqueadas
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {/* Unlocked Trophies */}
+            {TROPHIES.filter(t => stats?.trophies?.includes(t.id)).map((trophy) => (
+              <div
+                key={trophy.id}
+                className="flex items-start gap-3 p-4 rounded-lg bg-gradient-to-r from-primary/5 to-accent/5 border border-primary/20"
+              >
+                <div className="text-3xl">{trophy.icon}</div>
+                <div className="flex-1">
+                  <h4 className="font-semibold text-foreground">{trophy.name}</h4>
+                  <p className="text-sm text-muted-foreground">{trophy.description}</p>
+                  <Badge variant="secondary" className="mt-2">
+                    +{trophy.points} XP
+                  </Badge>
+                </div>
+              </div>
+            ))}
+            
+            {/* Locked Trophies */}
+            {TROPHIES.filter(t => !stats?.trophies?.includes(t.id)).map((trophy) => {
+              const progressData = calculateTrophyProgress(trophy.id);
+              
+              return (
+                <div
+                  key={trophy.id}
+                  className="flex items-start gap-3 p-4 rounded-lg bg-muted/30 border-muted/40 transition-all hover:bg-muted/40 hover:border-muted/60"
+                >
+                  <div className="text-3xl grayscale opacity-50">{trophy.icon}</div>
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-semibold text-sm text-foreground/70">{trophy.name}</h4>
+                      <Lock className="w-3.5 h-3.5 text-muted-foreground" />
+                    </div>
+                    <p className="text-xs text-muted-foreground">{trophy.description}</p>
+                    
+                    {progressData && (
+                      <div className="space-y-2 pt-1">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-muted-foreground font-medium">{progressData.text}</span>
+                          <span className="font-semibold text-primary">{Math.floor(progressData.progress)}%</span>
+                        </div>
+                        <Progress value={progressData.progress} className="h-2" />
+                      </div>
+                    )}
+                    
+                    <Badge variant="outline" className="text-xs font-semibold">
+                      +{trophy.points} XP
+                    </Badge>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Time Stats Modal */}
+      <Dialog open={isTimeModalOpen} onOpenChange={setIsTimeModalOpen}>
+        <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold flex items-center gap-2">
+              <Clock className="w-6 h-6 text-primary" />
+              Estatísticas de Tempo
+            </DialogTitle>
+            <DialogDescription>
+              Veja seu tempo de sessão preferido, histórico e médias por etapa
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6 py-4">
+            {/* Tempo de Sessão Preferido */}
+            <div className="p-4 rounded-lg bg-gradient-to-r from-primary/5 to-accent/5 border border-primary/20">
+              <h3 className="font-semibold text-foreground mb-2">Tempo de Sessão Preferido</h3>
+              <p className="text-3xl font-bold text-primary">
+                {profile?.preferred_session_minutes || 25} minutos
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Configurado nas suas preferências
+              </p>
+            </div>
+
+            {/* Últimas 5 Sessões */}
+            <div>
+              <h3 className="font-semibold text-foreground mb-3">Últimas 5 Sessões</h3>
+              {recentSessions.length > 0 ? (
+                <div className="space-y-2">
+                  {recentSessions.map((session, index) => {
+                    const hours = Math.floor(session.total_duration / 3600);
+                    const minutes = Math.floor((session.total_duration % 3600) / 60);
+                    return (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-3 rounded-lg bg-card border border-border/20"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Clock className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">
+                            {new Date(session.date).toLocaleDateString('pt-BR')}
+                          </span>
+                        </div>
+                        <span className="text-sm font-semibold text-foreground">
+                          {hours > 0 ? `${hours}h ` : ''}{minutes}min
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Nenhuma sessão registrada ainda
+                </p>
+              )}
+            </div>
+
+            {/* Tempo Médio por Etapa */}
+            <div>
+              <h3 className="font-semibold text-foreground mb-3">Tempo Médio por Etapa</h3>
+              <div className="space-y-3">
+                {[
+                  { key: 'ideation', label: 'Ideação', icon: Lightbulb },
+                  { key: 'script', label: 'Roteirização', icon: Film },
+                  { key: 'review', label: 'Revisão', icon: AlertCircle },
+                  { key: 'record', label: 'Gravação', icon: Mic },
+                  { key: 'edit', label: 'Edição', icon: Scissors }
+                ].map(({ key, label, icon: Icon }) => {
+                  const avgSeconds = averageTimeByStage[key] || 0;
+                  const hours = Math.floor(avgSeconds / 3600);
+                  const minutes = Math.floor((avgSeconds % 3600) / 60);
+                  const seconds = avgSeconds % 60;
+                  
+                  // Formatar tempo: mostra segundos se < 1min, minutos se >= 1min
+                  const formatTime = () => {
+                    if (avgSeconds === 0) return 'Sem dados';
+                    if (hours > 0) return `${hours}h ${minutes}min`;
+                    if (minutes > 0) return `${minutes}min`;
+                    return `${seconds}s`;
+                  };
+                  
+                  return (
+                    <div
+                      key={key}
+                      className="flex items-center justify-between p-3 rounded-lg bg-card border border-border/20"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Icon className="w-4 h-4 text-primary" />
+                        <span className="text-sm font-medium text-foreground">{label}</span>
+                      </div>
+                      <span className="text-sm font-semibold text-foreground">
+                        {formatTime()}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Streak Recovery Modal */}
+      {streakValidation && streakValidation.hasLostDays && (
+        <StreakRecoveryModal
+          open={isStreakRecoveryModalOpen}
+          onOpenChange={setIsStreakRecoveryModalOpen}
+          lostDaysCount={streakValidation.lostDaysCount}
+          availableFreezes={streakValidation.availableFreezes}
+          currentStreak={streakValidation.currentStreak}
+          canUseFreeze={streakValidation.canUseFreeze}
+          userXP={profile?.xp_points || 0}
+          freezeCost={freezeCost}
+          maxFreezes={maxFreezes}
+          wasRecentlyReset={streakValidation.wasRecentlyReset}
+          onUseFreeze={useFreezesToRecover}
+          onBuyFreezesAndRecover={buyFreezesAndRecover}
+          onResetStreak={resetStreak}
+          onDismiss={dismissCheck}
+          onProtectionSuccess={(freezesUsed, streak) => {
+            setProtectedCelebrationData({ freezesUsed, currentStreak: streak });
+            setShowProtectedCelebration(true);
+          }}
+        />
+      )}
+
+      {/* Streak Protected Celebration */}
+      <StreakProtectedCelebration
+        show={showProtectedCelebration}
+        freezesUsed={protectedCelebrationData.freezesUsed}
+        currentStreak={protectedCelebrationData.currentStreak}
+        onContinue={() => {
+          setShowProtectedCelebration(false);
+          // Atualizar dados após proteção da ofensiva
+          refetch();
+          fetchStreakData();
+        }}
+      />
+
+      {/* PWA Install Prompt */}
+      <PWAInstallPrompt variant="popup" />
+
+      {/* Holiday Alert Dialog */}
+      {!isStreakRecoveryModalOpen && !showProtectedCelebration && (
+        <HolidayAlertDialog
+          alert={holidayAlert}
+          onDismiss={dismissHoliday}
+          onRemindLater={remindHolidayLater}
+        />
+      )}
+
+      
+    </div>
+  );
+};
+
+// Componente separado para o card motivacional com frases rotativas
+function MotivationalCard({ currentStreak }: { currentStreak: number }) {
+  const quote = useMemo(() => getRandomQuote(), []);
+  
+  return (
+    <div className="px-6 py-8 bg-background">
+      <Card className="p-6 bg-primary text-primary-foreground border-0 rounded-xl shadow-md">
+        {currentStreak > 0 ? (
+          <p className="text-center font-semibold">
+            Você está há {currentStreak} dias com a mente em movimento.
+          </p>
+        ) : (
+          <div className="text-center">
+            <p className="font-semibold text-lg leading-relaxed italic">
+              "{quote.text}"
+            </p>
+            <p className="text-sm mt-3 text-primary-foreground/80">
+              — {quote.author}
+            </p>
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+}
+
+export default Index;

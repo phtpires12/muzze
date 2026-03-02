@@ -4,9 +4,9 @@ import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
-import { getWorkflowTemplate, WorkflowTemplateId } from "@/lib/workflow-templates";
-import { useWorkflowTemplate } from "@/hooks/useWorkflowTemplate";
+import { cn } from '@/core/utils';
+import { getWorkflowTemplate, WorkflowTemplateId } from '@/core/constants';
+import { useWorkflowTemplate } from '@/core/hooks';
 
 interface Script {
   id: string;

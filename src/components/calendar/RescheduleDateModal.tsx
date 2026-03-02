@@ -11,8 +11,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { usePlanCapabilitiesOptional } from "@/contexts/PlanContext";
-import { isDateInCurrentWeek } from "@/lib/timezone-utils";
+import { usePlanCapabilitiesOptional } from '@/core/contexts';
+import { isDateInCurrentWeek } from '@/core/utils';
 
 interface RescheduleDateModalProps {
   open: boolean;

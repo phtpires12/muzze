@@ -4,10 +4,10 @@ import Underline from '@tiptap/extension-underline';
 import Placeholder from '@tiptap/extension-placeholder';
 import GlobalDragHandle from 'tiptap-extension-global-drag-handle';
 import AutoJoiner from 'tiptap-extension-auto-joiner';
-import { NotionListKeymap } from '@/lib/tiptap-extensions/notion-list-keymap';
-import { cn } from '@/lib/utils';
+import { NotionListKeymap } from '@/core/utils/tiptap-extensions';
+import { cn } from '@/core/utils';
 import { useEffect, useImperativeHandle, forwardRef } from 'react';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useIsMobile } from '@/core/hooks';
 import { CornerDownLeft } from 'lucide-react';
 
 export interface RichTextEditorRef {

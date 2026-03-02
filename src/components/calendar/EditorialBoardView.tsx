@@ -7,11 +7,11 @@ import {
   closestCorners,
 } from "@dnd-kit/core";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import { KANBAN_COLUMNS, getColumnForStatus, getStatusForColumn, KanbanColumnId } from "@/lib/kanban-columns";
+import { useToast } from '@/core/hooks';
+import { KANBAN_COLUMNS, getColumnForStatus, getStatusForColumn, KanbanColumnId } from '@/core/constants';
 import { KanbanColumn } from "./KanbanColumn";
 import { KanbanCard } from "./KanbanCard";
-import { useLongPressSensors, triggerHapticFeedback } from "@/hooks/useLongPressSensors";
+import { useLongPressSensors, triggerHapticFeedback } from '@/core/hooks';
 
 interface Script {
   id: string;

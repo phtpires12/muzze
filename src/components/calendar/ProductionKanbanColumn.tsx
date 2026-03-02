@@ -1,7 +1,7 @@
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { ProductionKanbanCard } from "./ProductionKanbanCard";
-import { cn } from "@/lib/utils";
+import { cn } from '@/core/utils';
 
 interface Script {
   id: string;

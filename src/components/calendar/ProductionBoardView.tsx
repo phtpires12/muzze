@@ -7,7 +7,7 @@ import {
   closestCorners,
 } from "@dnd-kit/core";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from '@/core/hooks';
 import { 
   getProductionColumnForStatus, 
   getStatusForProductionColumn, 
@@ -16,12 +16,12 @@ import {
   getOrphanScripts,
   ORPHAN_COLUMN,
   PRODUCTION_COLUMNS,
-} from "@/lib/kanban-columns";
+} from '@/core/constants';
 import { ProductionKanbanColumn } from "./ProductionKanbanColumn";
 import { ProductionKanbanCard } from "./ProductionKanbanCard";
 import { OrphanColumn } from "./OrphanColumn";
-import { useLongPressSensors, triggerHapticFeedback } from "@/hooks/useLongPressSensors";
-import { useWorkflowTemplate } from "@/hooks/useWorkflowTemplate";
+import { useLongPressSensors, triggerHapticFeedback } from '@/core/hooks';
+import { useWorkflowTemplate } from '@/core/hooks';
 
 interface Script {
   id: string;
