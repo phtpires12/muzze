@@ -62,12 +62,7 @@ interface Script {
   workflow_template: string | null;
 }
 
-interface ParsedContent {
-  gancho?: string;
-  setup?: string;
-  desenvolvimento?: string;
-  conclusao?: string;
-}
+type ParsedContent = Record<string, string>;
 
 const getStage = (script: Script): string => {
   if (script.status === "design") return "design";
@@ -123,7 +118,7 @@ const getPublishStatusClass = (status: string | null): string => {
   }
 };
 
-const parseContent = (content: string | null): ParsedContent => {
+const parseContent = (content: string | null): Record<string, string> => {
   if (!content) return {};
   try {
     return JSON.parse(content);
@@ -542,33 +537,17 @@ export default function ContentView() {
                 <CardContent className="p-6 space-y-4 cursor-pointer break-words overflow-hidden">
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Roteiro</p>
 
-                  {parsedContent.gancho && (
-                    <div className="space-y-1">
-                      <p className="text-xs font-semibold text-primary">Gancho</p>
-                      <RichTextRenderer content={parsedContent.gancho} className="text-sm" />
-                    </div>
-                  )}
+                  {workflowProps.currentTemplate.sections.map((section) => {
+                    const sectionContent = parsedContent[section.key];
+                    if (!sectionContent || !sectionContent.trim()) return null;
 
-                  {parsedContent.setup && (
-                    <div className="space-y-1">
-                      <p className="text-xs font-semibold text-primary">Setup</p>
-                      <RichTextRenderer content={parsedContent.setup} className="text-sm" />
-                    </div>
-                  )}
-
-                  {parsedContent.desenvolvimento && (
-                    <div className="space-y-1">
-                      <p className="text-xs font-semibold text-primary">Desenvolvimento</p>
-                      <RichTextRenderer content={parsedContent.desenvolvimento} className="text-sm" />
-                    </div>
-                  )}
-
-                  {parsedContent.conclusao && (
-                    <div className="space-y-1">
-                      <p className="text-xs font-semibold text-primary">Conclusão</p>
-                      <RichTextRenderer content={parsedContent.conclusao} className="text-sm" />
-                    </div>
-                  )}
+                    return (
+                      <div key={section.key} className="space-y-1">
+                        <p className="text-xs font-semibold text-primary">{section.label}</p>
+                        <RichTextRenderer content={sectionContent} className="text-sm" />
+                      </div>
+                    );
+                  })}
                 </CardContent>
               </Card>
             )}
