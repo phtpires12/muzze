@@ -16,7 +16,7 @@ import {
 import { FileText, ExternalLink, Loader2, Check, Trash2, Video, Scissors } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from '@/core/hooks';
-import { useSessionContext } from '@/core/contexts';
+import { useSessionContext, useProfileContext } from '@/core/contexts';
 import { useSession } from '@/core/hooks';
 import { useCelebration } from '@/core/contexts';
 import { useSoundEffects } from '@/core/hooks';
@@ -56,12 +56,13 @@ interface IdeaDetailProps {
   scriptId: string;
 }
 
-const CONTENT_TYPES = ["Reels", "YouTube", "TikTok", "X (Twitter)"];
+const CONTENT_TYPES = ["Reels", "YouTube", "TikTok", "Carrossel"];
 
 export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { resetTimer } = useSessionContext();
+  const { profile } = useProfileContext();
   const { session, endSession, saveCurrentStageTime } = useSession();
   const { triggerFullCelebration } = useCelebration();
   const { playSound } = useSoundEffects(0.6);
@@ -190,7 +191,7 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
     if (hasUnsavedChanges) {
       await autoSave();
     }
-    
+
     // Determinar próximo estágio baseado no workflow
     const next = nextStage('ideation');
     if (!next) {
@@ -201,13 +202,13 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
       });
       return;
     }
-    
+
     // Update status to the next stage
     await supabase
       .from("scripts")
       .update({ status: next })
       .eq("id", scriptId);
-    
+
     // Navigate to the next stage using dynamic URL
     const url = getNextUrl('ideation', scriptId);
     if (url) {
@@ -222,7 +223,7 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
   const getNextStageButton = () => {
     const next = nextStage('ideation');
     if (!next) return { label: "Roteirizar essa ideia", icon: FileText };
-    
+
     switch (next) {
       case 'script':
         return { label: "Roteirizar essa ideia", icon: FileText };
@@ -280,7 +281,7 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
     try {
       // Reset timer first to unblock navigation
       resetTimer();
-      
+
       const { error } = await supabase
         .from("scripts")
         .delete()
@@ -338,8 +339,8 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
     return (
       <div className="text-center py-12">
         <p className="text-muted-foreground">Ideia não encontrada.</p>
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           onClick={() => navigate(ROUTES.CALENDARIO)}
           className="mt-4"
         >
@@ -402,7 +403,15 @@ export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
             {/* Content Type */}
             <div className="space-y-2">
               <Label htmlFor="content-type">Tipo de Conteúdo</Label>
-              <Select value={contentType} onValueChange={setContentType}>
+              <Select value={contentType} onValueChange={(value) => {
+                setContentType(value);
+                setHasUnsavedChanges(true);
+                if (value === "Carrossel") {
+                  setWorkflowTemplate("carousel");
+                } else if (contentType === "Carrossel") {
+                  setWorkflowTemplate((profile?.current_workflow as WorkflowTemplateId) || 'classic');
+                }
+              }}>
                 <SelectTrigger className="bg-background/50">
                   <SelectValue placeholder="Selecione o tipo" />
                 </SelectTrigger>

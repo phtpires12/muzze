@@ -1,10 +1,10 @@
 import { useCallback, useMemo } from "react";
 import { useProfile } from '@/core/hooks/useProfile';
 import { CreativeStage } from "@/types/workspace";
-import { 
-  WorkflowTemplate, 
-  WorkflowTemplateId, 
-  getWorkflowTemplate, 
+import {
+  WorkflowTemplate,
+  WorkflowTemplateId,
+  getWorkflowTemplate,
   WORKFLOW_TEMPLATES_LIST,
   isValidWorkflowTemplateId,
 } from '@/core/constants';
@@ -20,6 +20,7 @@ export const SESSION_TO_CREATIVE: Record<string, CreativeStage> = {
   'recording': 'recording',
   'edit': 'editing',
   'editing': 'editing',
+  'design': 'design',
 };
 
 export const CREATIVE_TO_SESSION: Record<CreativeStage, string> = {
@@ -28,6 +29,7 @@ export const CREATIVE_TO_SESSION: Record<CreativeStage, string> = {
   'review': 'review',
   'recording': 'record',
   'editing': 'edit',
+  'design': 'design',
 };
 
 /**
@@ -42,20 +44,20 @@ export function getNextStageUrl(
   if (currentIndex === -1 || currentIndex >= template.stages.length - 1) {
     return null;
   }
-  
+
   const nextCreativeStage = template.stages[currentIndex + 1];
   const sessionStage = CREATIVE_TO_SESSION[nextCreativeStage];
-  
+
   // Gravação tem URL especial
   if (nextCreativeStage === 'recording') {
     return `/shot-list/record?scriptId=${scriptId}`;
   }
-  
+
   // Edição agora vai para o novo Editing Workspace
   if (nextCreativeStage === 'editing') {
     return `/editing-workspace?scriptId=${scriptId}`;
   }
-  
+
   return `/session?stage=${sessionStage}&scriptId=${scriptId}`;
 }
 
@@ -71,20 +73,20 @@ export function getPrevStageUrl(
   if (currentIndex <= 0) {
     return null;
   }
-  
+
   const prevCreativeStage = template.stages[currentIndex - 1];
   const sessionStage = CREATIVE_TO_SESSION[prevCreativeStage];
-  
+
   // Gravação tem URL especial
   if (prevCreativeStage === 'recording') {
     return `/shot-list/record?scriptId=${scriptId}`;
   }
-  
+
   // Revisão tem URL especial
   if (prevCreativeStage === 'review') {
     return `/shot-list/review?scriptId=${scriptId}`;
   }
-  
+
   return `/session?stage=${sessionStage}&scriptId=${scriptId}`;
 }
 
@@ -110,14 +112,14 @@ export function useWorkflowTemplate(options?: UseWorkflowTemplateOptions) {
 
   // Workflow global do usuário
   const globalTemplateId = profile?.current_workflow as WorkflowTemplateId | null;
-  
+
   // Workflow efetivo: conteúdo > global
   const effectiveTemplateId = options?.scriptWorkflow || globalTemplateId;
-  
+
   const globalTemplate = useMemo(() => {
     return getWorkflowTemplate(globalTemplateId);
   }, [globalTemplateId]);
-  
+
   const currentTemplate = useMemo(() => {
     return getWorkflowTemplate(effectiveTemplateId);
   }, [effectiveTemplateId]);
@@ -125,7 +127,7 @@ export function useWorkflowTemplate(options?: UseWorkflowTemplateOptions) {
   const stages = currentTemplate.stages;
 
   // Indica se está usando workflow específico do conteúdo (diferente do global)
-  const isUsingContentWorkflow = options?.scriptWorkflow !== undefined && 
+  const isUsingContentWorkflow = options?.scriptWorkflow !== undefined &&
     options?.scriptWorkflow !== null &&
     options?.scriptWorkflow !== globalTemplateId;
 

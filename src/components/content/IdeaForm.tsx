@@ -20,7 +20,7 @@ const CONTENT_TYPES = [
   { value: "Reels", label: "Reels" },
   { value: "YouTube", label: "YouTube" },
   { value: "TikTok", label: "TikTok" },
-  { value: "X (Twitter)", label: "X (Twitter)" },
+  { value: "Carrossel", label: "Carrossel" },
 ];
 
 interface IdeaFormProps {
@@ -34,7 +34,7 @@ export const IdeaForm = ({ scriptId }: IdeaFormProps) => {
   const { activeWorkspace } = useWorkspaceContext();
   const { profile } = useProfileContext();
   const planCapabilities = usePlanCapabilitiesOptional();
-  
+
   const [title, setTitle] = useState("");
   const [contentType, setContentType] = useState("");
   const [centralIdea, setCentralIdea] = useState("");
@@ -148,7 +148,7 @@ export const IdeaForm = ({ scriptId }: IdeaFormProps) => {
         user_id: user.id,
         publish_date: publishDate,
         workspace_id: activeWorkspace?.id,
-        workflow_template: profile?.current_workflow || 'classic',
+        workflow_template: contentType === "Carrossel" ? "carousel" : profile?.current_workflow || 'classic',
         music_reference: musicRef,
       };
 
@@ -203,92 +203,92 @@ export const IdeaForm = ({ scriptId }: IdeaFormProps) => {
         onClose={() => setShowPaywall(false)}
         action={paywallAction}
       />
-    <div className="max-w-3xl mx-auto space-y-6">
-      <div className="space-y-2">
-        <Label htmlFor="title">Título (opcional)</Label>
-        <Input
-          id="title"
-          placeholder="Digite um título para sua ideia..."
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="content-type">
-          Tipo de Conteúdo <span className="text-destructive">*</span>
-        </Label>
-        <Select value={contentType} onValueChange={setContentType}>
-          <SelectTrigger id="content-type">
-            <SelectValue placeholder="Selecione o tipo de conteúdo" />
-          </SelectTrigger>
-          <SelectContent>
-            {CONTENT_TYPES.map((type) => (
-              <SelectItem key={type.value} value={type.value}>
-                {type.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="central-idea">
-          {centralIdeaLabel} <span className="text-destructive">*</span>
-        </Label>
-        <Textarea
-          id="central-idea"
-          placeholder={centralIdeaPlaceholder}
-          value={centralIdea}
-          onChange={(e) => setCentralIdea(e.target.value)}
-          rows={6}
-          className="resize-none"
-        />
-        <p className="text-sm text-muted-foreground">
-          Explique minimamente sua ideia para poder avançar.
-        </p>
-      </div>
-
-      <MusicInput
-        url={musicUrl}
-        name={musicName}
-        onUrlChange={setMusicUrl}
-        onNameChange={setMusicName}
-        required={musicRequired}
-      />
-
-      <div className="space-y-2">
-        <Label htmlFor="reference-url">
-          Referência (Opcional)
-        </Label>
-        <Input
-          id="reference-url"
-          type="url"
-          placeholder="Cole aqui o link de referência para esta ideia..."
-          value={referenceUrl}
-          onChange={(e) => setReferenceUrl(e.target.value)}
-        />
-        <p className="text-sm text-muted-foreground">
-          Ex: vídeo inspiração, artigo, post de exemplo, etc.
-        </p>
-      </div>
-
-      {publishDate && (
-        <div className="text-sm text-muted-foreground">
-          📅 Data de publicação: {new Date(publishDate).toLocaleDateString("pt-BR")}
+      <div className="max-w-3xl mx-auto space-y-6">
+        <div className="space-y-2">
+          <Label htmlFor="title">Título (opcional)</Label>
+          <Input
+            id="title"
+            placeholder="Digite um título para sua ideia..."
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+          />
         </div>
-      )}
 
-      <Button
-        onClick={handleSave}
-        disabled={!canAdvance || loading}
-        className="w-full"
-        size="lg"
-      >
-        {loading ? "Salvando..." : "Avançar para Roteiro"}
-        <ArrowRight className="w-4 h-4 ml-2" />
-      </Button>
-    </div>
+        <div className="space-y-2">
+          <Label htmlFor="content-type">
+            Tipo de Conteúdo <span className="text-destructive">*</span>
+          </Label>
+          <Select value={contentType} onValueChange={setContentType}>
+            <SelectTrigger id="content-type">
+              <SelectValue placeholder="Selecione o tipo de conteúdo" />
+            </SelectTrigger>
+            <SelectContent>
+              {CONTENT_TYPES.map((type) => (
+                <SelectItem key={type.value} value={type.value}>
+                  {type.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="central-idea">
+            {centralIdeaLabel} <span className="text-destructive">*</span>
+          </Label>
+          <Textarea
+            id="central-idea"
+            placeholder={centralIdeaPlaceholder}
+            value={centralIdea}
+            onChange={(e) => setCentralIdea(e.target.value)}
+            rows={6}
+            className="resize-none"
+          />
+          <p className="text-sm text-muted-foreground">
+            Explique minimamente sua ideia para poder avançar.
+          </p>
+        </div>
+
+        <MusicInput
+          url={musicUrl}
+          name={musicName}
+          onUrlChange={setMusicUrl}
+          onNameChange={setMusicName}
+          required={musicRequired}
+        />
+
+        <div className="space-y-2">
+          <Label htmlFor="reference-url">
+            Referência (Opcional)
+          </Label>
+          <Input
+            id="reference-url"
+            type="url"
+            placeholder="Cole aqui o link de referência para esta ideia..."
+            value={referenceUrl}
+            onChange={(e) => setReferenceUrl(e.target.value)}
+          />
+          <p className="text-sm text-muted-foreground">
+            Ex: vídeo inspiração, artigo, post de exemplo, etc.
+          </p>
+        </div>
+
+        {publishDate && (
+          <div className="text-sm text-muted-foreground">
+            📅 Data de publicação: {new Date(publishDate).toLocaleDateString("pt-BR")}
+          </div>
+        )}
+
+        <Button
+          onClick={handleSave}
+          disabled={!canAdvance || loading}
+          className="w-full"
+          size="lg"
+        >
+          {loading ? "Salvando..." : "Avançar para Roteiro"}
+          <ArrowRight className="w-4 h-4 ml-2" />
+        </Button>
+      </div>
     </>
   );
 };

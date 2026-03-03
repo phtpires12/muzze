@@ -7,6 +7,7 @@ export const PRODUCTION_COLUMNS = [
   { id: 'review' as CreativeStage, label: 'Revisão', status: 'review', color: 'bg-blue-400' },
   { id: 'recording' as CreativeStage, label: 'Gravação', status: 'recording', color: 'bg-orange-500' },
   { id: 'editing' as CreativeStage, label: 'Edição', status: 'editing', color: 'bg-cyan-500' },
+  { id: 'design' as CreativeStage, label: 'Design', status: 'design', color: 'bg-emerald-500' },
 ] as const;
 
 export type ProductionColumn = typeof PRODUCTION_COLUMNS[number];
@@ -43,7 +44,7 @@ export interface OrphanableScript {
  * scripts em "Roteiro", "Revisão" ou "Gravação" são órfãos.
  */
 export function getOrphanScripts<T extends OrphanableScript>(
-  scripts: T[], 
+  scripts: T[],
   activeStages: CreativeStage[]
 ): T[] {
   return scripts.filter(script => {
@@ -113,27 +114,27 @@ export const getPublishStatusForColumn = (columnId: PublicationColumnId): string
 
 // === VALIDAÇÃO DE DRAG & DROP PARA PUBLICAÇÃO ===
 export const isPublicationDragAllowed = (
-  fromColumnId: string, 
+  fromColumnId: string,
   toColumnId: string
 ): { allowed: boolean; reason?: string } => {
   // Verificar se está bloqueado
   const blockedRule = PUBLICATION_DRAG_RULES.blocked.find(
     rule => rule.from === fromColumnId && rule.to === toColumnId
   );
-  
+
   if (blockedRule) {
     return { allowed: false, reason: blockedRule.reason };
   }
-  
+
   // Verificar se está explicitamente permitido
   const isAllowed = PUBLICATION_DRAG_RULES.allowed.some(
     rule => rule.from === fromColumnId && rule.to === toColumnId
   );
-  
+
   if (!isAllowed) {
     return { allowed: false, reason: 'Este movimento não é permitido.' };
   }
-  
+
   return { allowed: true };
 };
 

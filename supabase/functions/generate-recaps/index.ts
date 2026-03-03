@@ -434,7 +434,7 @@ async function calculateRecapStats(
   }
 
   // Calculate total minutes and sessions
-  const totalSeconds = sessions.reduce((acc, s) => acc + (s.duration_seconds || 0), 0);
+  const totalSeconds = sessions.reduce((acc: number, s: any) => acc + (s.duration_seconds || 0), 0);
   const totalMinutes = Math.round(totalSeconds / 60);
   const sessionsCount = sessions.length;
 

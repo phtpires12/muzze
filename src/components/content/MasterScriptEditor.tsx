@@ -6,6 +6,7 @@ import GlobalDragHandle from 'tiptap-extension-global-drag-handle';
 import AutoJoiner from 'tiptap-extension-auto-joiner';
 import { SectionHeader } from '@/core/utils/tiptap-extensions';
 import { buildMasterDocument, splitFromEditor, ContentSections } from '@/core/utils';
+import { ContentSection, DEFAULT_SECTIONS } from '@/core/constants/workflow-templates';
 import { cn } from '@/core/utils';
 import { useEffect, useRef, useCallback } from 'react';
 import { useLongPressDrag } from '@/core/hooks';
@@ -17,6 +18,9 @@ interface MasterScriptEditorProps {
   isLoaded: boolean;
   editable?: boolean;
   className?: string;
+  sectionConfig?: ContentSection[];
+  removableSections?: boolean;
+  onRemoveSection?: (sectionKey: string) => void;
 }
 
 /**
@@ -36,21 +40,24 @@ export function MasterScriptEditor({
   isLoaded,
   editable = true,
   className,
+  sectionConfig = DEFAULT_SECTIONS,
+  removableSections = false,
+  onRemoveSection,
 }: MasterScriptEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const hasInitialized = useRef(false);
   const isUserEditing = useRef(false);
   const lastEmittedContent = useRef<string>('');
-  
+
   const isMobile = useIsMobile();
-  
+
   // Enable long-press drag on mobile
   useLongPressDrag(containerRef, {
     delay: 350,
     vibration: 15,
     enabled: isMobile && editable,
   });
-  
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -106,9 +113,9 @@ export function MasterScriptEditor({
     onUpdate: ({ editor }) => {
       // Only emit onChange after initialization (avoid loop on load)
       if (hasInitialized.current) {
-        const sections = splitFromEditor(editor);
+        const sections = splitFromEditor(editor, sectionConfig);
         const contentJson = JSON.stringify(sections);
-        
+
         // Avoid emitting if content hasn't changed
         if (contentJson !== lastEmittedContent.current) {
           lastEmittedContent.current = contentJson;
@@ -125,45 +132,59 @@ export function MasterScriptEditor({
       },
     },
   });
-  
+
   // Load content when data is ready (CORRECTION: use setContent instead of useMemo)
   useEffect(() => {
     if (!editor || !isLoaded || hasInitialized.current) return;
-    
+
     // Guard: don't reset if user is editing
     if (isUserEditing.current) return;
-    
-    const doc = buildMasterDocument(content);
+
+    const doc = buildMasterDocument(content, sectionConfig, removableSections);
     editor.commands.setContent(doc);
     hasInitialized.current = true;
-    
+
     // Store initial content to prevent unnecessary updates
-    const sections = splitFromEditor(editor);
+    const sections = splitFromEditor(editor, sectionConfig);
     lastEmittedContent.current = JSON.stringify(sections);
   }, [editor, isLoaded, content]);
-  
+
   // Update editable state
   useEffect(() => {
     if (editor) {
       editor.setEditable(editable);
     }
   }, [editor, editable]);
-  
+
   // Handle external content updates (e.g., from sync)
   const handleExternalContentUpdate = useCallback((newContent: ContentSections) => {
     if (!editor || !hasInitialized.current) return;
     if (isUserEditing.current) return; // Don't update while user is editing
-    
+
     const currentJson = lastEmittedContent.current;
     const newJson = JSON.stringify(newContent);
-    
+
     if (currentJson !== newJson) {
-      const doc = buildMasterDocument(newContent);
+      const doc = buildMasterDocument(newContent, sectionConfig, removableSections);
       editor.commands.setContent(doc);
       lastEmittedContent.current = newJson;
     }
-  }, [editor]);
-  
+  }, [editor, sectionConfig, removableSections]);
+
+  // Listen to remove-section event
+  useEffect(() => {
+    if (!removableSections || !editable || !onRemoveSection) return;
+
+    const handleRemoveSection = (e: Event) => {
+      const customEvent = e as CustomEvent<{ section: string }>;
+      const { section } = customEvent.detail;
+      onRemoveSection(section);
+    };
+
+    window.addEventListener('remove-section', handleRemoveSection);
+    return () => window.removeEventListener('remove-section', handleRemoveSection);
+  }, [removableSections, editable, onRemoveSection]);
+
   if (!editor) {
     return (
       <div className={cn(
@@ -173,7 +194,7 @@ export function MasterScriptEditor({
       )} />
     );
   }
-  
+
   return (
     <div
       ref={containerRef}

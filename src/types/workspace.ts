@@ -1,6 +1,6 @@
 export type WorkspaceRole = 'owner' | 'admin' | 'collaborator';
 
-export type CreativeStage = 'ideation' | 'script' | 'review' | 'recording' | 'editing';
+export type CreativeStage = 'ideation' | 'script' | 'review' | 'recording' | 'editing' | 'design';
 
 export interface Workspace {
   id: string;
@@ -48,4 +48,5 @@ export const CREATIVE_STAGES: Record<CreativeStage, { key: CreativeStage; label:
   review: { key: 'review', label: 'Revisão', color: 'blue' },
   recording: { key: 'recording', label: 'Gravação', color: 'orange' },
   editing: { key: 'editing', label: 'Edição', color: 'pink' },
+  design: { key: 'design', label: 'Design', color: 'emerald' },
 } as const;

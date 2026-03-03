@@ -1,28 +1,19 @@
 import { Editor } from '@tiptap/core';
 import { DOMSerializer } from '@tiptap/pm/model';
 
-export interface ContentSections {
-  gancho: string;
-  setup: string;
-  desenvolvimento: string;
-  conclusao: string;
-}
+import { ContentSection, DEFAULT_SECTIONS } from '../constants/workflow-templates';
 
-export const SECTION_CONFIG = [
-  { key: 'gancho', label: '🪝 GANCHO' },
-  { key: 'setup', label: '🤨 SETUP' },
-  { key: 'desenvolvimento', label: '🦅 DESENVOLVIMENTO' },
-  { key: 'conclusao', label: '📩 CONCLUSÃO' },
-] as const;
+export type ContentSections = Record<string, string>;
 
-type SectionKey = typeof SECTION_CONFIG[number]['key'];
+// Para manter compatibilidade com usos antigos, exportamos a config default
+export const SECTION_CONFIG = DEFAULT_SECTIONS;
 
 /**
  * Parse inline content from an HTML element into TipTap JSON format
  */
 function parseInlineContent(el: Element): any[] {
   const content: any[] = [];
-  
+
   el.childNodes.forEach(child => {
     if (child.nodeType === Node.TEXT_NODE) {
       const text = child.textContent || '';
@@ -33,7 +24,7 @@ function parseInlineContent(el: Element): any[] {
       const childEl = child as Element;
       const tag = childEl.tagName.toLowerCase();
       const marks: any[] = [];
-      
+
       if (tag === 'strong' || tag === 'b') marks.push({ type: 'bold' });
       if (tag === 'em' || tag === 'i') marks.push({ type: 'italic' });
       if (tag === 'u') marks.push({ type: 'underline' });
@@ -45,7 +36,7 @@ function parseInlineContent(el: Element): any[] {
           marks.push({ type: 'link', attrs: { href } });
         }
       }
-      
+
       // Handle nested inline elements (e.g., <strong><em>text</em></strong>)
       if (['strong', 'b', 'em', 'i', 'u', 's', 'strike', 'code', 'a'].includes(tag)) {
         const nestedContent = parseInlineContent(childEl);
@@ -75,7 +66,7 @@ function parseInlineContent(el: Element): any[] {
       }
     }
   });
-  
+
   return content;
 }
 
@@ -84,14 +75,14 @@ function parseInlineContent(el: Element): any[] {
  */
 function parseListItems(listEl: Element): any[] {
   const items: any[] = [];
-  
+
   listEl.querySelectorAll(':scope > li').forEach(li => {
     // Check for nested lists
     const nestedUl = li.querySelector(':scope > ul');
     const nestedOl = li.querySelector(':scope > ol');
-    
+
     const itemContent: any[] = [];
-    
+
     // Get text content (excluding nested lists)
     const textContent = Array.from(li.childNodes)
       .filter(node => {
@@ -108,19 +99,19 @@ function parseListItems(listEl: Element): any[] {
         return (node as Element).outerHTML;
       })
       .join('');
-    
+
     // Parse the text content as a paragraph
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = textContent;
     const inlineContent = parseInlineContent(tempDiv);
-    
+
     if (inlineContent.length > 0) {
       itemContent.push({
         type: 'paragraph',
         content: inlineContent,
       });
     }
-    
+
     // Handle nested lists
     if (nestedUl) {
       itemContent.push({
@@ -134,13 +125,13 @@ function parseListItems(listEl: Element): any[] {
         content: parseListItems(nestedOl),
       });
     }
-    
+
     items.push({
       type: 'listItem',
       content: itemContent.length > 0 ? itemContent : [{ type: 'paragraph', content: [] }],
     });
   });
-  
+
   return items;
 }
 
@@ -151,15 +142,15 @@ function htmlToNodes(html: string): any[] {
   if (!html || html === '<p></p>' || html.trim() === '') {
     return [{ type: 'paragraph', content: [] }];
   }
-  
+
   const doc = new DOMParser().parseFromString(html, 'text/html');
   const nodes: any[] = [];
-  
+
   doc.body.childNodes.forEach(child => {
     if (child.nodeType === Node.ELEMENT_NODE) {
       const el = child as Element;
       const tagName = el.tagName.toLowerCase();
-      
+
       if (tagName === 'p') {
         const content = parseInlineContent(el);
         nodes.push({
@@ -236,7 +227,7 @@ function htmlToNodes(html: string): any[] {
       }
     }
   });
-  
+
   return nodes.length > 0 ? nodes : [{ type: 'paragraph', content: [] }];
 }
 
@@ -244,22 +235,26 @@ function htmlToNodes(html: string): any[] {
  * Build a ProseMirror JSON document from the 4 content sections
  * This is the "mount" operation when loading content into the Master Editor
  */
-export function buildMasterDocument(sections: ContentSections): any {
+export function buildMasterDocument(
+  sections: ContentSections,
+  sectionConfig: ContentSection[] = DEFAULT_SECTIONS,
+  removableSections: boolean = false
+): any {
   const content: any[] = [];
-  
-  SECTION_CONFIG.forEach(({ key, label }) => {
+
+  sectionConfig.forEach(({ key, label }) => {
     // Add section header node
     content.push({
       type: 'sectionHeader',
-      attrs: { section: key, label },
+      attrs: { section: key, label, removable: removableSections },
     });
-    
+
     // Add content nodes for this section
-    const sectionHtml = sections[key as SectionKey] || '';
+    const sectionHtml = sections[key] || '';
     const nodes = htmlToNodes(sectionHtml);
     content.push(...nodes);
   });
-  
+
   return {
     type: 'doc',
     content,
@@ -270,54 +265,54 @@ export function buildMasterDocument(sections: ContentSections): any {
  * Extract the 4 content sections from the editor's current state
  * This is the "split" operation when saving content from the Master Editor
  */
-export function splitFromEditor(editor: Editor): ContentSections {
-  const sections: ContentSections = {
-    gancho: '',
-    setup: '',
-    desenvolvimento: '',
-    conclusao: '',
-  };
-  
+export function splitFromEditor(editor: Editor, sectionConfig: ContentSection[] = DEFAULT_SECTIONS): ContentSections {
+  const sections: ContentSections = {};
+
+  // Initialize default empty sections
+  sectionConfig.forEach(({ key }) => {
+    sections[key] = '';
+  });
+
   const doc = editor.state.doc;
-  let currentSection: SectionKey | null = null;
-  const sectionNodes: Map<SectionKey, any[]> = new Map();
-  
+  let currentSection: string | null = null;
+  const sectionNodes: Map<string, any[]> = new Map();
+
   // Initialize arrays for each section
-  SECTION_CONFIG.forEach(({ key }) => sectionNodes.set(key as SectionKey, []));
-  
+  sectionConfig.forEach(({ key }) => sectionNodes.set(key, []));
+
   // Walk through all nodes in the document
   doc.forEach((node) => {
     if (node.type.name === 'sectionHeader') {
-      currentSection = node.attrs.section as SectionKey;
+      currentSection = node.attrs.section as string;
     } else if (currentSection) {
       const nodes = sectionNodes.get(currentSection) || [];
       nodes.push(node);
       sectionNodes.set(currentSection, nodes);
     }
   });
-  
+
   // Convert nodes of each section to HTML
-  SECTION_CONFIG.forEach(({ key }) => {
-    const nodes = sectionNodes.get(key as SectionKey) || [];
+  sectionConfig.forEach(({ key }) => {
+    const nodes = sectionNodes.get(key) || [];
     if (nodes.length > 0) {
       try {
         // Create a temporary document fragment with just these nodes
         const fragment = editor.state.schema.nodes.doc.create(null, nodes);
         const div = document.createElement('div');
-        
+
         // Serialize to HTML using ProseMirror's DOMSerializer
         const serializer = DOMSerializer.fromSchema(editor.schema);
         const domFragment = serializer.serializeFragment(fragment.content);
         div.appendChild(domFragment);
-        
-        sections[key as SectionKey] = div.innerHTML;
+
+        sections[key] = div.innerHTML;
       } catch (e) {
         console.error(`Error serializing section ${key}:`, e);
-        sections[key as SectionKey] = '';
+        sections[key] = '';
       }
     }
   });
-  
+
   return sections;
 }
 

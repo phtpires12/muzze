@@ -21,7 +21,7 @@ const CONTENT_TYPES = [
   { value: "Reels", label: "Reels", icon: Clapperboard },
   { value: "YouTube", label: "YouTube", icon: Video },
   { value: "TikTok", label: "TikTok", icon: Music },
-  { value: "X (Twitter)", label: "X (Twitter)", icon: FileText },
+  { value: "Carrossel", label: "Carrossel", icon: FileText },
 ];
 
 interface IdeaCardProps {
@@ -31,7 +31,7 @@ interface IdeaCardProps {
   centralIdea?: string;
   referenceUrl?: string;
   thumbnailUrl?: string;
-  onUpdate: (id: string, data: { title?: string; content_type?: string; central_idea?: string; reference_url?: string; thumbnail_url?: string; music_reference?: any }) => void;
+  onUpdate: (id: string, data: { title?: string; content_type?: string; workflow_template?: string; central_idea?: string; reference_url?: string; thumbnail_url?: string; music_reference?: any }) => void;
   onDelete: (id: string) => void;
   onSchedule?: () => void;
   isDragging?: boolean;
@@ -234,7 +234,22 @@ export const IdeaCard = ({
         <div className={cn("flex-1 flex flex-col pb-4", compact ? "gap-2 px-3" : "gap-3 px-4")}>
           <Select value={localContentType} onValueChange={(value) => {
             setLocalContentType(value);
-            handleBlur("content_type", value);
+
+            const isCarrossel = value === "Carrossel";
+            const wasCarrossel = localContentType === "Carrossel";
+            let workflowTemplate = undefined;
+
+            if (isCarrossel) {
+              workflowTemplate = "carousel";
+            } else if (wasCarrossel) {
+              workflowTemplate = profile?.current_workflow || 'classic';
+            }
+
+            if (workflowTemplate) {
+              onUpdate(id, { content_type: value, workflow_template: workflowTemplate });
+            } else {
+              handleBlur("content_type", value);
+            }
           }}>
             <SelectTrigger className={cn(compact ? "h-8 text-xs" : "h-9")}>
               <SelectValue placeholder="Tipo de Conteúdo *" />

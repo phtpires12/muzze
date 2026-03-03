@@ -18,11 +18,13 @@ import {
   Scissors,
   CheckCircle,
   ArrowLeft,
+  Palette,
 } from "lucide-react";
 import { cn } from '@/core/utils';
 import { ScriptEditor } from "@/components/content";
 import { BrainstormWorkspace } from "@/components/content/brainstorm/BrainstormWorkspace";
 import { IdeaDetail } from "@/components/content/brainstorm/IdeaDetail";
+import { DesignWorkspace } from "@/components/content/design/DesignWorkspace";
 import { DraggableSessionTimer } from "@/components/shared";
 import { AutoHideNav } from "@/components/layout/AutoHideNav";
 import { supabase } from "@/integrations/supabase/client";
@@ -47,6 +49,7 @@ const STAGES: {
     { id: "review", label: "Revisão", icon: CheckCircle, iconName: "CheckCircle", color: "text-green-500" },
     { id: "record", label: "Gravação", icon: Video, iconName: "Video", color: "text-red-500" },
     { id: "edit", label: "Edição", icon: Scissors, iconName: "Scissors", color: "text-purple-500" },
+    { id: "design", label: "Design", icon: Palette, iconName: "Palette", color: "text-pink-500" },
   ];
 
 const Session = () => {
@@ -577,6 +580,59 @@ const Session = () => {
         />
 
         {/* Celebration Components rendered globally via GlobalCelebrations */}
+      </div>
+    );
+  }
+
+  // If stage is "design", show the design workspace with floating timer
+  if (session.stage === "design") {
+    const progress = session.targetSeconds
+      ? Math.min(100, (session.elapsedSeconds / session.targetSeconds) * 100)
+      : 0;
+
+    return (
+      <div className="relative">
+        <div className="fixed top-4 left-4 md:top-6 md:left-6 z-50">
+          <Button
+            variant="ghost"
+            onClick={() => navigate(ROUTES.HOME)}
+            className="bg-card/95 backdrop-blur-md hover:bg-accent/10 border border-border/20 shadow-lg h-9 md:h-10 text-sm"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            <span className="hidden sm:inline">Dashboard</span>
+          </Button>
+        </div>
+
+        {/* Floating Draggable Timer */}
+        <DraggableSessionTimer
+          stage={currentStage.label}
+          icon={currentStage.iconName}
+          elapsedSeconds={session.elapsedSeconds}
+          targetSeconds={session.targetSeconds}
+          isStreakMode={session.isStreakMode}
+          dailyGoalMinutes={session.dailyGoalMinutes}
+          isPaused={session.isPaused}
+          isFrozen={session.isFrozen}
+          onPause={pauseSession}
+          onResume={resumeSession}
+          onStop={handleEnd}
+          progress={progress}
+          dailyBaselineSeconds={session.dailyBaselineSeconds}
+          permissionEnabled={canUseTimer}
+          hidden={isShowingAnyCelebration}
+        />
+
+        {/* Design Workspace */}
+        <div className="pt-20">
+          <DesignWorkspace scriptId={scriptId} />
+        </div>
+
+        <AutoHideNav />
+
+        <DevToolsPanel
+          onSimulateSession={handleSimulateSession}
+          onSimulateTrophy={handleSimulateTrophy}
+        />
       </div>
     );
   }

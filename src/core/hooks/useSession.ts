@@ -15,14 +15,14 @@ interface UseSessionOptions {
 export const useSession = (options: UseSessionOptions = {}) => {
   const { attachBeforeUnloadListener = false } = options;
   const { toast } = useToast();
-  
+
   // Usar o timer global do contexto
-  const { 
-    timer, 
-    startTimer, 
-    pauseTimer, 
-    resumeTimer, 
-    resetTimer, 
+  const {
+    timer,
+    startTimer,
+    pauseTimer,
+    resumeTimer,
+    resetTimer,
     changeTimerStage,
     setContentId,
     saveStageTime,
@@ -50,9 +50,9 @@ export const useSession = (options: UseSessionOptions = {}) => {
   const startSession = useCallback(async (initialStage: SessionStage = "idea") => {
     // Normalizar: "ideation" é sinônimo de "idea"
     const normalizedStage: SessionStage = initialStage === "ideation" ? "idea" : initialStage;
-    
+
     await startTimer(normalizedStage);
-    
+
     // timer.targetSeconds já contém a meta correta baseada no nível
     const goalMinutes = Math.floor(timer.targetSeconds / 60);
     toast({
@@ -74,7 +74,7 @@ export const useSession = (options: UseSessionOptions = {}) => {
   // Wrapper para changeStage que usa o timer global
   const changeStage = useCallback(async (newStage: SessionStage) => {
     await changeTimerStage(newStage);
-    
+
     toast({
       title: "Etapa alterada",
       description: `Agora você está em: ${getStageLabel(newStage)}`,
@@ -135,8 +135,8 @@ export const useSession = (options: UseSessionOptions = {}) => {
       // Dispatch level up celebration if user leveled up
       if (newLevel > previousLevel) {
         const levelInfo = getLevelInfo(newLevel);
-        window.dispatchEvent(new CustomEvent('levelUp', { 
-          detail: { level: newLevel, levelInfo } 
+        window.dispatchEvent(new CustomEvent('levelUp', {
+          detail: { level: newLevel, levelInfo }
         }));
       }
 
@@ -146,7 +146,7 @@ export const useSession = (options: UseSessionOptions = {}) => {
       await supabase.from('analytics_events').insert({
         user_id: user.id,
         event: 'session_completed',
-        payload: { 
+        payload: {
           duration_seconds: timer.elapsedSeconds,
           final_stage: timer.stage,
           baseXP,
@@ -159,7 +159,7 @@ export const useSession = (options: UseSessionOptions = {}) => {
       // SEMPRE chamar updateStreak - a função verifica internamente se o dia foi cumprido
       // baseado nos stage_times REAIS do banco, não no timer.elapsedSeconds (que pode ter sido resetado)
       const streakResult = await updateStreak(user.id, totalMinutes);
-      
+
       const summary = {
         duration: timer.elapsedSeconds,
         stage: timer.stage,
@@ -222,7 +222,7 @@ export const useSession = (options: UseSessionOptions = {}) => {
         .lte('started_at', endUTC.toISOString());
 
       const creativeMinutesToday = (todaySessions || []).reduce(
-        (sum, session) => sum + (session.duration_seconds / 60), 
+        (sum, session) => sum + (session.duration_seconds / 60),
         0
       );
 
@@ -259,11 +259,11 @@ export const useSession = (options: UseSessionOptions = {}) => {
 
       // Check if already counted today
       if (lastEventDate === todayKey) {
-        return { 
-          streakAchieved: true, 
-          newStreak: currentStreak, 
+        return {
+          streakAchieved: true,
+          newStreak: currentStreak,
           creativeMinutesToday,
-          alreadyCounted: true 
+          alreadyCounted: true
         };
       }
 
@@ -290,11 +290,11 @@ export const useSession = (options: UseSessionOptions = {}) => {
 
       console.log(`[updateStreak] Streak updated: ${currentStreak} -> ${newStreak}, lastEventDate: ${lastEventDate} -> ${todayKey}`);
 
-      return { 
-        streakAchieved: true, 
-        newStreak, 
+      return {
+        streakAchieved: true,
+        newStreak,
         creativeMinutesToday,
-        isNewRecord: newStreak > longestStreak 
+        isNewRecord: newStreak > longestStreak
       };
     } catch (error) {
       console.error('[useSession] Error updating streak:', error);
@@ -346,6 +346,7 @@ export const getStageLabel = (stage: SessionStage): string => {
     review: "Revisão",
     record: "Gravação",
     edit: "Edição",
+    design: "Design",
   };
   return labels[stage] || stage;
 };
@@ -354,7 +355,7 @@ export const formatTime = (seconds: number): string => {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
   const s = seconds % 60;
-  
+
   if (h > 0) {
     return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   }

@@ -1,12 +1,34 @@
 import { CreativeStage, CREATIVE_STAGES } from "@/types/workspace";
 
-export type WorkflowTemplateId = 'classic' | 'freestyle' | 'minimalist';
+export type WorkflowTemplateId = 'classic' | 'freestyle' | 'minimalist' | 'carousel';
 
 export interface IdeationConfig {
   centralIdeaLabel: string;
   centralIdeaPlaceholder: string;
   musicRequired: boolean;
 }
+
+export interface ContentSection {
+  key: string;
+  label: string;
+}
+
+export const DEFAULT_SECTIONS: ContentSection[] = [
+  { key: 'gancho', label: '🪝 GANCHO' },
+  { key: 'setup', label: '🤨 SETUP' },
+  { key: 'desenvolvimento', label: '🦅 DESENVOLVIMENTO' },
+  { key: 'conclusao', label: '📩 CONCLUSÃO' },
+];
+
+export const CAROUSEL_SECTIONS: ContentSection[] = [
+  { key: 'capa', label: '🖼️ CAPA' },
+  { key: 'aquecimento', label: '🔥 AQUECIMENTO' },
+  { key: 'vida_comum', label: '🌍 VIDA COMUM' },
+  { key: 'dor_conflito', label: '⚔️ DOR/CONFLITO' },
+  { key: 'virada', label: '🔄 VIRADA' },
+  { key: 'solucao', label: '💡 SOLUÇÃO' },
+  { key: 'cta', label: '📢 CTA' },
+];
 
 export interface WorkflowTemplate {
   id: WorkflowTemplateId;
@@ -16,6 +38,7 @@ export interface WorkflowTemplate {
   icon: string;
   gradient: string;
   ideationConfig: IdeationConfig;
+  sections: ContentSection[];
 }
 
 export const WORKFLOW_TEMPLATES: Record<WorkflowTemplateId, WorkflowTemplate> = {
@@ -27,6 +50,7 @@ export const WORKFLOW_TEMPLATES: Record<WorkflowTemplateId, WorkflowTemplate> = 
     icon: '🎬',
     gradient: 'from-blue-500 to-cyan-500',
     ideationConfig: { centralIdeaLabel: 'Ideia Central', centralIdeaPlaceholder: 'Descreva a ideia central do seu conteúdo...', musicRequired: false },
+    sections: DEFAULT_SECTIONS,
   },
   freestyle: {
     id: 'freestyle',
@@ -36,6 +60,7 @@ export const WORKFLOW_TEMPLATES: Record<WorkflowTemplateId, WorkflowTemplate> = 
     icon: '🎤',
     gradient: 'from-orange-500 to-yellow-500',
     ideationConfig: { centralIdeaLabel: 'Ideia Central', centralIdeaPlaceholder: 'Descreva a ideia central do seu conteúdo...', musicRequired: false },
+    sections: DEFAULT_SECTIONS,
   },
   minimalist: {
     id: 'minimalist',
@@ -45,6 +70,17 @@ export const WORKFLOW_TEMPLATES: Record<WorkflowTemplateId, WorkflowTemplate> = 
     icon: '✂️',
     gradient: 'from-purple-500 to-pink-500',
     ideationConfig: { centralIdeaLabel: 'Mensagem a ser passada', centralIdeaPlaceholder: 'Qual a mensagem que você quer passar nesse edit?', musicRequired: true },
+    sections: DEFAULT_SECTIONS,
+  },
+  carousel: {
+    id: 'carousel',
+    name: 'Carrossel',
+    description: 'Focado em textos e slides',
+    stages: ['ideation', 'script', 'review', 'design'],
+    icon: '📱',
+    gradient: 'from-emerald-500 to-teal-500',
+    ideationConfig: { centralIdeaLabel: 'Ideia Central', centralIdeaPlaceholder: 'Qual o tema ou assunto principal do carrossel?', musicRequired: false },
+    sections: CAROUSEL_SECTIONS,
   },
 };
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RichTextEditor, htmlToText, textToHtml } from "@/components/ui/rich-text-editor";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
-import { 
+import {
   Calendar as CalendarIcon,
   FileText,
   Link as LinkIcon,
@@ -40,7 +40,7 @@ import { generateShotListFromContent } from '@/core/utils';
 import { FEATURES } from '@/core/constants';
 import { MasterScriptEditor } from "@/components/content";
 import { useWorkflowTemplate, getNextStageUrl } from '@/core/hooks';
-import { WorkflowTemplateId, getStageLabel } from '@/core/constants';
+import { WorkflowTemplateId, getStageLabel, DEFAULT_SECTIONS, CAROUSEL_SECTIONS, ContentSection } from '@/core/constants';
 import { ROUTES } from "@/routes/routes";
 
 
@@ -62,18 +62,8 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
   const { profile } = useProfileContext();
   const { triggerFullCelebration } = useCelebration();
   const [title, setTitle] = useState("Novo Roteiro");
-  const [content, setContent] = useState({
-    gancho: "",
-    setup: "",
-    desenvolvimento: "",
-    conclusao: ""
-  });
-  const [originalContent, setOriginalContent] = useState({
-    gancho: "",
-    setup: "",
-    desenvolvimento: "",
-    conclusao: ""
-  });
+  const [content, setContent] = useState<Record<string, string>>({});
+  const [originalContent, setOriginalContent] = useState<Record<string, string>>({});
   const [references, setReferences] = useState<string[]>([]);
   const [newReference, setNewReference] = useState("");
   const [contentType, setContentType] = useState("");
@@ -81,12 +71,29 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const autoSaveTimer = useRef<NodeJS.Timeout | null>(null);
-  const [reviewedSections, setReviewedSections] = useState<{[key: string]: boolean}>({
-    gancho: false,
-    setup: false,
-    desenvolvimento: false,
-    conclusao: false,
-  });
+  const [reviewedSections, setReviewedSections] = useState<Record<string, boolean>>({});
+
+  // Dynamic Sections config
+  const isCarousel = contentType === "Carrossel";
+  const currentSectionsConfig = useMemo(() => {
+    return isCarousel ? CAROUSEL_SECTIONS : DEFAULT_SECTIONS;
+  }, [isCarousel]);
+
+  // Track removed sections to hide them
+  const [removedSectionKeys, setRemovedSectionKeys] = useState<string[]>([]);
+
+  const activeSectionsConfig = useMemo(() => {
+    return currentSectionsConfig.filter(s => !removedSectionKeys.includes(s.key));
+  }, [currentSectionsConfig, removedSectionKeys]);
+
+  const handleRemoveSection = useCallback((key: string) => {
+    setRemovedSectionKeys(prev => [...prev, key]);
+    setContent(prev => {
+      const newContent = { ...prev };
+      delete newContent[key];
+      return newContent;
+    });
+  }, []);
   const [showComparison, setShowComparison] = useState(false);
   const [hasLoadedOriginal, setHasLoadedOriginal] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -97,7 +104,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
   const [notesOpen, setNotesOpen] = useState(false);
   const [showEndSessionConfirmation, setShowEndSessionConfirmation] = useState(false);
   const [hasShotList, setHasShotList] = useState(false);
-  
+
   // Workflow template state
   const [scriptWorkflow, setScriptWorkflow] = useState<WorkflowTemplateId | null>(null);
   const { nextStage, currentTemplate, isStageIncluded } = useWorkflowTemplate({ scriptWorkflow });
@@ -173,26 +180,30 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
 
       if (data) {
         setTitle(data.title);
-        
+
         let loadedContent;
         try {
-          loadedContent = typeof data.content === 'string' 
+          loadedContent = typeof data.content === 'string'
             ? JSON.parse(data.content)
             : data.content;
-          
-          // Ensure all sections exist and sanitize to remove residual empty links
-          loadedContent = sanitizeContentSections({
-            gancho: loadedContent?.gancho || "",
-            setup: loadedContent?.setup || "",
-            desenvolvimento: loadedContent?.desenvolvimento || "",
-            conclusao: loadedContent?.conclusao || ""
-          });
+
+          loadedContent = sanitizeContentSections(loadedContent || {});
+
+          // Identify removed sections if any
+          const loadedKeys = Object.keys(loadedContent);
+          const currentType = data.content_type || "";
+          const expectedConfig = currentType === "Carrossel" ? CAROUSEL_SECTIONS : DEFAULT_SECTIONS;
+
+          if (loadedKeys.length > 0) {
+            const missingKeys = expectedConfig.filter(s => !loadedKeys.includes(s.key)).map(s => s.key);
+            setRemovedSectionKeys(missingKeys);
+          }
         } catch {
-          loadedContent = { gancho: "", setup: "", desenvolvimento: "", conclusao: "" };
+          loadedContent = {};
         }
-        
+
         setContent(loadedContent);
-        
+
         // Load original content for comparison in review mode
         if (isReviewMode && !hasLoadedOriginal) {
           let originalLoadedContent;
@@ -206,18 +217,13 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
               // Fallback to current content if no original_content saved yet
               originalLoadedContent = loadedContent;
             }
-            
+
             // Ensure all sections exist and sanitize
-            originalLoadedContent = sanitizeContentSections({
-              gancho: originalLoadedContent?.gancho || "",
-              setup: originalLoadedContent?.setup || "",
-              desenvolvimento: originalLoadedContent?.desenvolvimento || "",
-              conclusao: originalLoadedContent?.conclusao || ""
-            });
+            originalLoadedContent = sanitizeContentSections(originalLoadedContent || {});
           } catch {
-            originalLoadedContent = { gancho: "", setup: "", desenvolvimento: "", conclusao: "" };
+            originalLoadedContent = {};
           }
-          
+
           setOriginalContent(originalLoadedContent);
           setHasLoadedOriginal(true);
         }
@@ -229,7 +235,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
           autoResize(desenvolvimentoRef.current);
           autoResize(conclusaoRef.current);
         }, 0);
-        
+
         // Load references - prefer reference_links array, but fallback to reference_url from Ideas stage
         const savedReferences = data.reference_links || [];
         if (!savedReferences.length && data.reference_url) {
@@ -240,7 +246,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
         setContentType(data.content_type || "");
         setPublishDate(data.publish_date || "");
         setThumbnailUrl(data.thumbnail_url || null);
-        
+
         // Load notes - pre-fill with central_idea if notes is empty
         const loadedNotes = data.notes;
         if (!loadedNotes && data.central_idea) {
@@ -248,13 +254,13 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
         } else {
           setNotes(loadedNotes || "");
         }
-        
+
         // Check if shot_list exists
         setHasShotList(data.shot_list && Array.isArray(data.shot_list) && data.shot_list.length > 0);
-        
+
         // Load workflow template for dynamic navigation
         setScriptWorkflow(data.workflow_template as WorkflowTemplateId | null);
-        
+
         setIsLoaded(true);
       }
     } catch (error) {
@@ -273,18 +279,13 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
       console.log('[DEBUG - ScriptEditor] ⚠️ Auto-save bloqueado: dados ainda não carregados');
       return;
     }
-    
+
     console.log('[DEBUG - ScriptEditor] Auto-save iniciado', {
       effectiveScriptId,
-      hasContent: !!(content.gancho || content.setup || content.desenvolvimento || content.conclusao),
-      contentPreview: {
-        gancho: content.gancho?.substring(0, 50),
-        setup: content.setup?.substring(0, 50),
-        desenvolvimento: content.desenvolvimento?.substring(0, 50),
-        conclusao: content.conclusao?.substring(0, 50),
-      }
+      hasContent: Object.values(content).some(val => typeof val === 'string' && val.trim() !== ''),
+      contentKeys: Object.keys(content),
     });
-    
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -294,7 +295,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
 
       // Sanitize content before saving to remove empty/residual anchor tags
       const sanitizedContent = sanitizeContentSections(content);
-      
+
       const scriptData: any = {
         user_id: user.id,
         title,
@@ -338,13 +339,13 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
           .single();
 
         if (error) throw error;
-        
+
         console.log('[DEBUG - ScriptEditor] ✅ Novo script criado com sucesso', data?.id);
-        
+
         // Salvar o ID criado no state local para que o próximo auto-save faça UPDATE
         if (data?.id) {
           setCreatedScriptId(data.id);
-          window.history.replaceState({}, '', `/session?stage=script&scriptId=${data.id}`);
+          window.history.replaceState({}, '', `/ session ? stage = script & scriptId=${data.id} `);
         }
       }
 
@@ -360,30 +361,30 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
       setShowScheduleAlert(true);
       return;
     }
-    
+
     // Se há sessão ativa, mostrar popup de confirmação de encerramento
     if (timer.isActive) {
       setShowEndSessionConfirmation(true);
       return;
     }
-    
+
     // Caso contrário, sai normalmente
     proceedWithBack();
   };
 
   const handleConfirmEndSession = async () => {
     setShowEndSessionConfirmation(false);
-    
+
     // Capturar dados ANTES de encerrar
     const capturedDuration = timer.elapsedSeconds || 0;
     const capturedStage = timer.stage || 'script';
-    
+
     // Salvar tempo da etapa atual
     await saveCurrentStageTime();
-    
+
     // Encerrar sessão
     const result = await endSession();
-    
+
     // Preparar dados de celebração
     const sessionSummary = {
       duration: result?.duration || capturedDuration,
@@ -391,14 +392,14 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
       stage: capturedStage,
       autoRedirectDestination: '/calendario',
     };
-    
-    const streakCount = result?.shouldShowCelebration && !result?.alreadyCounted 
-      ? (result?.newStreak || 0) 
+
+    const streakCount = result?.shouldShowCelebration && !result?.alreadyCounted
+      ? (result?.newStreak || 0)
       : 0;
-    
+
     // Se havia uma navegação bloqueada (swipe), prosseguir com ela após celebração
     const shouldProceedWithBlocker = blocker.state === "blocked";
-    
+
     // Disparar celebração global
     await triggerFullCelebration(
       sessionSummary,
@@ -428,19 +429,19 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
       const today = format(new Date(), "yyyy-MM-dd");
       await supabase
         .from('scripts')
-        .update({ 
+        .update({
           publish_date: today,
           publish_status: 'perdido'
         })
         .eq('id', effectiveScriptId);
     }
-    
+
     // Se há sessão ativa, mostrar popup de confirmação de encerramento
     if (timer.isActive) {
       setShowEndSessionConfirmation(true);
       return;
     }
-    
+
     // Salvar tempo da sessão antes de navegar (caso não haja sessão ativa)
     await saveCurrentStageTime();
     navigate(ROUTES.CALENDARIO);
@@ -451,12 +452,12 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
       const formattedDate = format(scheduleDate, "yyyy-MM-dd");
       await supabase
         .from('scripts')
-        .update({ 
+        .update({
           publish_date: formattedDate,
           publish_status: 'planejado'
         })
         .eq('id', effectiveScriptId);
-      
+
       // Atualiza state local
       setPublishDate(formattedDate);
     }
@@ -476,14 +477,11 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
     console.log('[DEBUG - ScriptEditor] handleNextStage called');
     console.log('[DEBUG - ScriptEditor] Current mode:', isReviewMode ? 'review' : 'script');
     console.log('[DEBUG - ScriptEditor] Current scriptId:', effectiveScriptId);
-    
+
     // Validate that script has content before advancing to review
     if (!isReviewMode) {
-      const hasContent = content.gancho.trim() || 
-                        content.setup.trim() || 
-                        content.desenvolvimento.trim() || 
-                        content.conclusao.trim();
-      
+      const hasContent = Object.values(content).some(val => typeof val === 'string' && val.trim() !== '');
+
       if (!hasContent) {
         toast({
           title: "Roteiro vazio",
@@ -493,27 +491,27 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
         return;
       }
     }
-    
+
     // Save current changes before advancing
     console.log('[DEBUG - ScriptEditor] Salvando antes de navegar...');
     await handleAutoSave();
     console.log('[DEBUG - ScriptEditor] ✅ Auto-save completed');
-    
+
     // Salvar tempo da sessão
     await saveCurrentStageTime();
     console.log('[DEBUG - ScriptEditor] ✅ Stage time saved');
-    
+
     // Add small delay to ensure DB commit completes
     await new Promise(resolve => setTimeout(resolve, 500));
     console.log('[DEBUG - ScriptEditor] Delay completado, prosseguindo com navegação');
-    
+
     // Navigate to next stage based on workflow template
     const currentCreativeStage = isReviewMode ? 'review' : 'script';
     const next = nextStage(currentCreativeStage);
-    
+
     console.log('[DEBUG - ScriptEditor] Current stage:', currentCreativeStage);
     console.log('[DEBUG - ScriptEditor] Next stage from workflow:', next);
-    
+
     // Check if all sections are reviewed when in review mode
     if (isReviewMode) {
       const allReviewed = Object.values(reviewedSections).every(v => v);
@@ -525,11 +523,11 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
         });
       }
     }
-    
+
     // Preserve scriptId in the URL
     const params = new URLSearchParams(window.location.search);
     const currentScriptId = effectiveScriptId || params.get('scriptId');
-    
+
     if (!currentScriptId) {
       toast({
         title: "Erro ao avançar",
@@ -538,7 +536,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
       });
       return;
     }
-    
+
     if (!next) {
       // Último estágio - não deveria acontecer, mas tratamos
       toast({
@@ -547,16 +545,16 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
       });
       return;
     }
-    
+
     // Update status in database based on next stage
     await supabase
       .from('scripts')
       .update({ status: next })
       .eq('id', currentScriptId);
-    
+
     // Get dynamic URL based on workflow
     const url = getNextStageUrl(currentCreativeStage, currentTemplate, currentScriptId);
-    
+
     if (!url) {
       toast({
         title: "Erro ao avançar",
@@ -565,14 +563,14 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
       });
       return;
     }
-    
+
     console.log('[DEBUG - ScriptEditor] Navegando para:', url);
     navigate(url);
-    
+
     const nextLabel = getStageLabel(next);
     toast({
-      title: `Avançando para ${nextLabel}`,
-      description: `Seu roteiro foi salvo. ${next === 'recording' ? 'Prepare-se para gravar!' : next === 'review' ? 'Hora de revisar!' : 'Próxima etapa!'}`,
+      title: `Avançando para ${nextLabel} `,
+      description: `Seu roteiro foi salvo.${next === 'recording' ? 'Prepare-se para gravar!' : next === 'review' ? 'Hora de revisar!' : 'Próxima etapa!'} `,
     });
   };
 
@@ -613,25 +611,23 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
     }
   };
 
-  const getFullText = (contentObj: typeof content) => {
-    return [
-      htmlToText(contentObj.gancho),
-      htmlToText(contentObj.setup),
-      htmlToText(contentObj.desenvolvimento),
-      htmlToText(contentObj.conclusao)
-    ].filter(Boolean).join('\n\n');
+  const getFullText = (contentObj: Record<string, string>) => {
+    return activeSectionsConfig
+      .map(config => htmlToText(contentObj[config.key] || ''))
+      .filter(Boolean)
+      .join('\n\n');
   };
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-6 pb-28 sm:pb-32 scroll-pb-28 sm:scroll-pb-32">
       <div className="max-w-4xl mx-auto w-full">
         {/* Header with action buttons - com safe-area para Dynamic Island */}
-        <div 
+        <div
           className="flex flex-col md:flex-row md:justify-between md:items-center gap-3 mb-4"
           style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.5rem)' }}
         >
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             size="sm"
             onClick={handleBackClick}
             className="gap-2 self-start"
@@ -647,8 +643,8 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
               </div>
             )}
             {onClose && (
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 size="icon"
                 onClick={onClose}
                 className="rounded-full h-8 w-8 md:h-10 md:w-10"
@@ -721,10 +717,10 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                     </span>
                   </div>
                 </SelectItem>
-                <SelectItem value="X (Twitter)">
+                <SelectItem value="Carrossel">
                   <div className="flex items-center gap-2">
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                      X (Twitter)
+                      Carrossel
                     </span>
                   </div>
                 </SelectItem>
@@ -748,7 +744,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                   )}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {publishDate 
+                  {publishDate
                     ? format(new Date(publishDate + 'T00:00:00'), "dd/MM/yyyy", { locale: ptBR })
                     : "Selecione uma data"
                   }
@@ -783,9 +779,9 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                   {references.map((ref, index) => (
                     <div key={index} className="flex items-center gap-1 group/ref">
                       {/* Link clicável - separado do botão de remover */}
-                      <a 
-                        href={ref} 
-                        target="_blank" 
+                      <a
+                        href={ref}
+                        target="_blank"
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}
                         className="inline-flex items-center gap-2 h-8 px-3 border border-input rounded-md text-xs hover:bg-accent/10 transition-colors max-w-[200px]"
@@ -793,7 +789,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                         <LinkIcon className="w-3 h-3 flex-shrink-0" />
                         <span className="truncate">{ref}</span>
                       </a>
-                      
+
                       {/* Botão de remover - SEPARADO do link */}
                       <Button
                         variant="ghost"
@@ -810,7 +806,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                   ))}
                 </div>
               )}
-              
+
               {/* Input for new reference */}
               <div className="flex gap-2">
                 <Input
@@ -846,7 +842,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                   onClick={async () => {
                     const params = new URLSearchParams(window.location.search);
                     const currentScriptId = effectiveScriptId || params.get('scriptId');
-                    
+
                     if (!currentScriptId) {
                       toast({
                         title: "Erro",
@@ -855,15 +851,15 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                       });
                       return;
                     }
-                    
+
                     if (hasShotList) {
                       // Already has shot list, just navigate
-                      navigate(`/shot-list/review?scriptId=${currentScriptId}`);
+                      navigate(`/ shot - list / review ? scriptId = ${currentScriptId} `);
                     } else {
                       // Generate shot list from content
                       const contentObj = typeof content === 'string' ? JSON.parse(content) : content;
                       const shots = generateShotListFromContent(contentObj);
-                      
+
                       if (shots.length === 0) {
                         toast({
                           title: "Aviso",
@@ -872,13 +868,13 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                         });
                         return;
                       }
-                      
+
                       // Save to database
                       const { error } = await supabase
                         .from('scripts')
                         .update({ shot_list: shots as any })
                         .eq('id', currentScriptId);
-                      
+
                       if (error) {
                         toast({
                           title: "Erro",
@@ -887,13 +883,13 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                         });
                         return;
                       }
-                      
+
                       toast({
                         title: "Shot List criada!",
                         description: `${shots.length} slots gerados a partir do roteiro`,
                       });
-                      
-                      navigate(`/shot-list/review?scriptId=${currentScriptId}`);
+
+                      navigate(`/ shot - list / review ? scriptId = ${currentScriptId}`);
                     }
                   }}
                   className="gap-2 w-full md:w-auto"
@@ -939,7 +935,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                 {isReviewMode ? '👁️ REVISÃO' : '📝 ROTEIRO'}
               </h3>
             </div>
-            
+
             {/* Desktop: Button inline */}
             <Button
               id={isReviewMode ? 'review-advance' : 'script-advance'}
@@ -953,7 +949,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
           </div>
 
           {/* Mobile: Fixed Bottom Button - acima da navbar do iPhone */}
-          <div 
+          <div
             className="md:hidden fixed left-0 right-0 p-4 bg-gradient-to-t from-background via-background to-transparent z-40"
             style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 5rem)' }}
           >
@@ -981,7 +977,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                 >
                   {showComparison ? 'Ocultar Comparação' : 'Comparar Versões'}
                 </Button>
-                
+
                 {showComparison && (
                   <div className="flex items-center gap-1 ml-2">
                     <Button
@@ -1015,7 +1011,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                   <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
                     Original
                   </h4>
-                  
+
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <h5 className="text-base font-semibold text-foreground">
@@ -1046,7 +1042,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                   <h4 className="text-sm font-semibold text-primary uppercase tracking-wider mb-4">
                     Versão Editada
                   </h4>
-                  
+
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <h5 className="text-base font-semibold text-foreground">
@@ -1083,103 +1079,33 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                   <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
                     Original
                   </h4>
-                  
+
                   <div className="space-y-4">
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <h5 className="text-base font-semibold text-foreground flex items-center gap-2">
-                          🪝 Gancho
-                        </h5>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => copyToClipboard(htmlToText(originalContent.gancho), "Gancho (Original)")}
-                          className="h-8 w-8 hover:bg-accent"
-                          title="Copiar texto original"
-                        >
-                          <Copy className="w-4 h-4" />
-                        </Button>
+                    {activeSectionsConfig.map(config => (
+                      <div key={`original - ${config.key} `}>
+                        <div className="flex items-center justify-between mb-2">
+                          <h5 className="text-base font-semibold text-foreground flex items-center gap-2">
+                            {config.label}
+                          </h5>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => copyToClipboard(htmlToText(originalContent[config.key] || ''), `${config.label} (Original)`)}
+                            className="h-8 w-8 hover:bg-accent"
+                            title="Copiar texto original"
+                          >
+                            <Copy className="w-4 h-4" />
+                          </Button>
+                        </div>
+                        <Textarea
+                          value={htmlToText(originalContent[config.key] || '')}
+                          readOnly
+                          onClick={(e) => e.stopPropagation()}
+                          onMouseDown={(e) => e.stopPropagation()}
+                          className="min-h-[100px] md:min-h-[120px] text-sm md:text-base leading-relaxed resize-none border-border/40 bg-muted/20 focus-visible:ring-0"
+                        />
                       </div>
-                      <Textarea
-                        value={htmlToText(originalContent.gancho)}
-                        readOnly
-                        onClick={(e) => e.stopPropagation()}
-                        onMouseDown={(e) => e.stopPropagation()}
-                        className="min-h-[100px] md:min-h-[120px] text-sm md:text-base leading-relaxed resize-none border-border/40 bg-muted/20 focus-visible:ring-0"
-                      />
-                    </div>
-
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <h5 className="text-base font-semibold text-foreground flex items-center gap-2">
-                          🤨 Setup (Contexto)
-                        </h5>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => copyToClipboard(htmlToText(originalContent.setup), "Setup (Original)")}
-                          className="h-8 w-8 hover:bg-accent"
-                          title="Copiar texto original"
-                        >
-                          <Copy className="w-4 h-4" />
-                        </Button>
-                      </div>
-                      <Textarea
-                        value={htmlToText(originalContent.setup)}
-                        readOnly
-                        onClick={(e) => e.stopPropagation()}
-                        onMouseDown={(e) => e.stopPropagation()}
-                        className="min-h-[100px] md:min-h-[120px] text-sm md:text-base leading-relaxed resize-none border-border/40 bg-muted/20 focus-visible:ring-0"
-                      />
-                    </div>
-
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <h5 className="text-base font-semibold text-foreground flex items-center gap-2">
-                          🦅 Desenvolvimento
-                        </h5>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => copyToClipboard(htmlToText(originalContent.desenvolvimento), "Desenvolvimento (Original)")}
-                          className="h-8 w-8 hover:bg-accent"
-                          title="Copiar texto original"
-                        >
-                          <Copy className="w-4 h-4" />
-                        </Button>
-                      </div>
-                      <Textarea
-                        value={htmlToText(originalContent.desenvolvimento)}
-                        readOnly
-                        onClick={(e) => e.stopPropagation()}
-                        onMouseDown={(e) => e.stopPropagation()}
-                        className="min-h-[100px] md:min-h-[120px] text-sm md:text-base leading-relaxed resize-none border-border/40 bg-muted/20 focus-visible:ring-0"
-                      />
-                    </div>
-
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <h5 className="text-base font-semibold text-foreground flex items-center gap-2">
-                          📩 Conclusão (Fecho de Loop)
-                        </h5>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => copyToClipboard(htmlToText(originalContent.conclusao), "Conclusão (Original)")}
-                          className="h-8 w-8 hover:bg-accent"
-                          title="Copiar texto original"
-                        >
-                          <Copy className="w-4 h-4" />
-                        </Button>
-                      </div>
-                      <Textarea
-                        value={htmlToText(originalContent.conclusao)}
-                        readOnly
-                        onClick={(e) => e.stopPropagation()}
-                        onMouseDown={(e) => e.stopPropagation()}
-                        className="min-h-[100px] md:min-h-[120px] text-sm md:text-base leading-relaxed resize-none border-border/40 bg-muted/20 focus-visible:ring-0"
-                      />
-                    </div>
+                    ))}
                   </div>
                 </div>
 
@@ -1188,135 +1114,41 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                   <h4 className="text-sm font-semibold text-primary uppercase tracking-wider mb-4">
                     Versão Editada
                   </h4>
-                  
+
                   <div className="space-y-4">
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <h5 className="text-base font-semibold text-foreground flex items-center gap-2">
-                          🪝 Gancho
-                        </h5>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => copyToClipboard(getPlainText(content.gancho), "Gancho")}
-                            className="h-8 w-8 hover:bg-accent"
-                            title="Copiar texto editado"
-                          >
-                            <Copy className="w-4 h-4" />
-                          </Button>
-                          <input
-                            type="checkbox"
-                            id="gancho-check"
-                            checked={reviewedSections.gancho}
-                            onChange={() => toggleSectionReview('gancho')}
-                            className="w-4 h-4 rounded border-border cursor-pointer"
-                          />
+                    {activeSectionsConfig.map(config => (
+                      <div key={`edited - ${config.key} `}>
+                        <div className="flex items-center justify-between mb-2">
+                          <h5 className="text-base font-semibold text-foreground flex items-center gap-2">
+                            {config.label}
+                          </h5>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => copyToClipboard(getPlainText(content[config.key] || ''), config.label)}
+                              className="h-8 w-8 hover:bg-accent"
+                              title="Copiar texto editado"
+                            >
+                              <Copy className="w-4 h-4" />
+                            </Button>
+                            <input
+                              type="checkbox"
+                              id={`${config.key} -check`}
+                              checked={reviewedSections[config.key] || false}
+                              onChange={() => toggleSectionReview(config.key)}
+                              className="w-4 h-4 rounded border-border cursor-pointer"
+                            />
+                          </div>
                         </div>
+                        <RichTextEditor
+                          content={content[config.key] || ''}
+                          onChange={(html) => setContent({ ...content, [config.key]: html })}
+                          className="border-primary/40 bg-background"
+                          minHeight="60px"
+                        />
                       </div>
-                      <RichTextEditor
-                        content={content.gancho}
-                        onChange={(html) => setContent({...content, gancho: html})}
-                        className="border-primary/40 bg-background"
-                        minHeight="60px"
-                      />
-                    </div>
-
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <h5 className="text-base font-semibold text-foreground flex items-center gap-2">
-                          🤨 Setup (Contexto)
-                        </h5>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => copyToClipboard(getPlainText(content.setup), "Setup")}
-                            className="h-8 w-8 hover:bg-accent"
-                            title="Copiar texto editado"
-                          >
-                            <Copy className="w-4 h-4" />
-                          </Button>
-                          <input
-                            type="checkbox"
-                            id="setup-check"
-                            checked={reviewedSections.setup}
-                            onChange={() => toggleSectionReview('setup')}
-                            className="w-4 h-4 rounded border-border cursor-pointer"
-                          />
-                        </div>
-                      </div>
-                      <RichTextEditor
-                        content={content.setup}
-                        onChange={(html) => setContent({...content, setup: html})}
-                        className="border-primary/40 bg-background"
-                        minHeight="60px"
-                      />
-                    </div>
-
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <h5 className="text-base font-semibold text-foreground flex items-center gap-2">
-                          🦅 Desenvolvimento
-                        </h5>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => copyToClipboard(getPlainText(content.desenvolvimento), "Desenvolvimento")}
-                            className="h-8 w-8 hover:bg-accent"
-                            title="Copiar texto editado"
-                          >
-                            <Copy className="w-4 h-4" />
-                          </Button>
-                          <input
-                            type="checkbox"
-                            id="desenvolvimento-check"
-                            checked={reviewedSections.desenvolvimento}
-                            onChange={() => toggleSectionReview('desenvolvimento')}
-                            className="w-4 h-4 rounded border-border cursor-pointer"
-                          />
-                        </div>
-                      </div>
-                      <RichTextEditor
-                        content={content.desenvolvimento}
-                        onChange={(html) => setContent({...content, desenvolvimento: html})}
-                        className="border-primary/40 bg-background"
-                        minHeight="60px"
-                      />
-                    </div>
-
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <h5 className="text-base font-semibold text-foreground flex items-center gap-2">
-                          📩 Conclusão (Fecho de Loop)
-                        </h5>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => copyToClipboard(getPlainText(content.conclusao), "Conclusão")}
-                            className="h-8 w-8 hover:bg-accent"
-                            title="Copiar texto editado"
-                          >
-                            <Copy className="w-4 h-4" />
-                          </Button>
-                          <input
-                            type="checkbox"
-                            id="conclusao-check"
-                            checked={reviewedSections.conclusao}
-                            onChange={() => toggleSectionReview('conclusao')}
-                            className="w-4 h-4 rounded border-border cursor-pointer"
-                          />
-                        </div>
-                      </div>
-                      <RichTextEditor
-                        content={content.conclusao}
-                        onChange={(html) => setContent({...content, conclusao: html})}
-                        className="border-primary/40 bg-background"
-                        minHeight="60px"
-                      />
-                    </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -1329,157 +1161,51 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
               isLoaded={isLoaded}
               editable={!isReviewMode || viewMode === 'sections'}
               className="min-h-[400px]"
+              sectionConfig={activeSectionsConfig}
+              removableSections={isCarousel}
+              onRemoveSection={handleRemoveSection}
             />
           ) : (
             // Legacy: 4 separate editors (default when feature flag is off)
             <div className="space-y-4">
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h5 className="text-base font-semibold text-foreground flex items-center gap-2">
-                    🪝 Gancho
-                  </h5>
-                  <div className="flex items-center gap-2">
-                    {isReviewMode && (
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => copyToClipboard(getPlainText(content.gancho), "Gancho")}
-                          className="h-8 w-8 hover:bg-accent"
-                          title="Copiar texto"
-                        >
-                          <Copy className="w-4 h-4" />
-                        </Button>
-                        <input
-                          type="checkbox"
-                          id="gancho-check-single"
-                          checked={reviewedSections.gancho}
-                          onChange={() => toggleSectionReview('gancho')}
-                          className="w-4 h-4 rounded border-border cursor-pointer"
-                        />
-                      </>
-                    )}
+              {activeSectionsConfig.map(config => (
+                <div key={`legacy - ${config.key} `}>
+                  <div className="flex items-center justify-between mb-2">
+                    <h5 className="text-base font-semibold text-foreground flex items-center gap-2">
+                      {config.label}
+                    </h5>
+                    <div className="flex items-center gap-2">
+                      {isReviewMode && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => copyToClipboard(getPlainText(content[config.key] || ''), config.label)}
+                            className="h-8 w-8 hover:bg-accent"
+                            title="Copiar texto"
+                          >
+                            <Copy className="w-4 h-4" />
+                          </Button>
+                          <input
+                            type="checkbox"
+                            id={`${config.key} -check - single`}
+                            checked={reviewedSections[config.key] || false}
+                            onChange={() => toggleSectionReview(config.key)}
+                            className="w-4 h-4 rounded border-border cursor-pointer"
+                          />
+                        </>
+                      )}
+                    </div>
                   </div>
+                  <RichTextEditor
+                    content={content[config.key] || ''}
+                    onChange={(html) => setContent({ ...content, [config.key]: html })}
+                    placeholder={`Escreva o ${config.label.toLowerCase()}...`}
+                    className="border-none focus-within:ring-0 bg-transparent"
+                    minHeight="60px"
+                  />
                 </div>
-                <RichTextEditor
-                  content={content.gancho}
-                  onChange={(html) => setContent({...content, gancho: html})}
-                  placeholder="Escreva o gancho inicial..."
-                  className="border-none focus-within:ring-0 bg-transparent"
-                  minHeight="60px"
-                />
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h5 className="text-base font-semibold text-foreground flex items-center gap-2">
-                    🤨 Setup (Contexto)
-                  </h5>
-                  <div className="flex items-center gap-2">
-                    {isReviewMode && (
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => copyToClipboard(getPlainText(content.setup), "Setup")}
-                          className="h-8 w-8 hover:bg-accent"
-                          title="Copiar texto"
-                        >
-                          <Copy className="w-4 h-4" />
-                        </Button>
-                        <input
-                          type="checkbox"
-                          id="setup-check-single"
-                          checked={reviewedSections.setup}
-                          onChange={() => toggleSectionReview('setup')}
-                          className="w-4 h-4 rounded border-border cursor-pointer"
-                        />
-                      </>
-                    )}
-                  </div>
-                </div>
-                <RichTextEditor
-                  content={content.setup}
-                  onChange={(html) => setContent({...content, setup: html})}
-                  placeholder="Forneça o contexto necessário..."
-                  className="border-none focus-within:ring-0 bg-transparent"
-                  minHeight="60px"
-                />
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h5 className="text-base font-semibold text-foreground flex items-center gap-2">
-                    🦅 Desenvolvimento
-                  </h5>
-                  <div className="flex items-center gap-2">
-                    {isReviewMode && (
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => copyToClipboard(getPlainText(content.desenvolvimento), "Desenvolvimento")}
-                          className="h-8 w-8 hover:bg-accent"
-                          title="Copiar texto"
-                        >
-                          <Copy className="w-4 h-4" />
-                        </Button>
-                        <input
-                          type="checkbox"
-                          id="desenvolvimento-check-single"
-                          checked={reviewedSections.desenvolvimento}
-                          onChange={() => toggleSectionReview('desenvolvimento')}
-                          className="w-4 h-4 rounded border-border cursor-pointer"
-                        />
-                      </>
-                    )}
-                  </div>
-                </div>
-                <RichTextEditor
-                  content={content.desenvolvimento}
-                  onChange={(html) => setContent({...content, desenvolvimento: html})}
-                  placeholder="Desenvolva o conteúdo principal..."
-                  className="border-none focus-within:ring-0 bg-transparent"
-                  minHeight="60px"
-                />
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h5 className="text-base font-semibold text-foreground flex items-center gap-2">
-                    📩 Conclusão (Fecho de Loop)
-                  </h5>
-                  <div className="flex items-center gap-2">
-                    {isReviewMode && (
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => copyToClipboard(getPlainText(content.conclusao), "Conclusão")}
-                          className="h-8 w-8 hover:bg-accent"
-                          title="Copiar texto"
-                        >
-                          <Copy className="w-4 h-4" />
-                        </Button>
-                        <input
-                          type="checkbox"
-                          id="conclusao-check-single"
-                          checked={reviewedSections.conclusao}
-                          onChange={() => toggleSectionReview('conclusao')}
-                          className="w-4 h-4 rounded border-border cursor-pointer"
-                        />
-                      </>
-                    )}
-                  </div>
-                </div>
-                <RichTextEditor
-                  content={content.conclusao}
-                  onChange={(html) => setContent({...content, conclusao: html})}
-                  placeholder="Conclua e feche o loop..."
-                  className="border-none focus-within:ring-0 bg-transparent"
-                  minHeight="60px"
-                />
-              </div>
+              ))}
             </div>
           )}
         </div>
@@ -1500,7 +1226,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
               Este conteúdo não tem data de publicação. Sem uma data, ele pode ser difícil de encontrar depois.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          
+
           <div className="py-4">
             <Popover>
               <PopoverTrigger asChild>
@@ -1529,7 +1255,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
           </div>
 
           <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-            <AlertDialogCancel 
+            <AlertDialogCancel
               onClick={() => {
                 setShowScheduleAlert(false);
                 proceedWithBack(true);
@@ -1538,7 +1264,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
             >
               Continuar Sem Agendar
             </AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={handleScheduleAndBack}
               disabled={!scheduleDate}
               className="bg-primary hover:bg-primary/90"

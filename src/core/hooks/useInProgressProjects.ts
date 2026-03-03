@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export type ProjectType = "idea" | "script" | "shotlist";
-export type SessionStage = "idea" | "ideation" | "script" | "record" | "edit" | "review";
+export type SessionStage = "idea" | "ideation" | "script" | "record" | "edit" | "review" | "design";
 
 export interface InProgressProject {
   type: ProjectType;
@@ -62,22 +62,22 @@ export const useInProgressProjects = () => {
             if (script.shot_list && script.shot_list.length > 0) {
               return "record";
             }
-            
+
             // Prioridade 2: Se status é review e tem conteúdo → revisão
             if (script.status === "review" && script.content && script.content.length > 50) {
               return "review";
             }
-            
+
             // Prioridade 3: Se tem conteúdo substancial → roteirização
             if (script.content && script.content.length > 100) {
               return "script";
             }
-            
+
             // Prioridade 4: Se tem central_idea → ideação (usar "idea" como padrão)
             if (script.central_idea && script.central_idea.trim().length > 0) {
               return "idea";
             }
-            
+
             // Fallback: ideação (usar "idea" como padrão)
             return "idea";
           };
