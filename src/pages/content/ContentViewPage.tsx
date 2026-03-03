@@ -159,7 +159,7 @@ export default function ContentView() {
 
   const allowedColumns = useMemo(() => {
     return script ? workflowProps.getOrderedKanbanColumns() : PRODUCTION_COLUMNS;
-  }, [script, workflowProps]);
+  }, [script, workflowProps.stages]);
 
   // Fetch script data
   useEffect(() => {

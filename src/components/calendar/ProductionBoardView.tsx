@@ -102,6 +102,14 @@ export function ProductionBoardView({
     triggerHapticFeedback();
   };
 
+  // Calcular se o drop está desabilitado para cada coluna durante drag
+  const activeScriptWorkflow = activeScript
+    ? getWorkflowTemplate(
+        (activeScript.content_type === 'Carrossel' ? 'carousel'
+        : (activeScript.workflow_template || currentTemplate.id)) as WorkflowTemplateId
+      )
+    : null;
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
@@ -132,6 +140,27 @@ export function ProductionBoardView({
     }
 
     const scriptId = active.id as string;
+
+    // Validar se a coluna de destino pertence ao workflow do script
+    const draggedScript = localScripts.find(s => s.id === scriptId);
+    if (draggedScript) {
+      const scriptWorkflowId = draggedScript.content_type === 'Carrossel'
+        ? 'carousel'
+        : (draggedScript.workflow_template || currentTemplate.id);
+      const scriptTemplate = getWorkflowTemplate(scriptWorkflowId as WorkflowTemplateId);
+      const targetColumn = orderedColumns.find(c => c.id === targetColumnId) ||
+        PRODUCTION_COLUMNS.find(c => c.id === targetColumnId);
+
+      if (!scriptTemplate.stages.includes(targetColumnId as any)) {
+        toast({
+          title: "Movimento não permitido",
+          description: `Conteúdos com workflow "${scriptTemplate.name}" não passam pela etapa "${targetColumn?.label || targetColumnId}".`,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     const newStatus = getStatusForProductionColumn(targetColumnId);
 
     // Encontrar o label da coluna de destino
@@ -188,6 +217,7 @@ export function ProductionBoardView({
               key={column.id}
               column={column}
               scripts={columnScripts}
+              isDropDisabled={activeScriptWorkflow ? !activeScriptWorkflow.stages.includes(column.id as any) : false}
               onViewScript={onViewScript}
               onDeleteScript={onDeleteScript}
             />
