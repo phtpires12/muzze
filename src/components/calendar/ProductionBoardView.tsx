@@ -8,14 +8,16 @@ import {
 } from "@dnd-kit/core";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from '@/core/hooks';
-import { 
-  getProductionColumnForStatus, 
-  getStatusForProductionColumn, 
+import {
+  getProductionColumnForStatus,
+  getStatusForProductionColumn,
   ProductionColumnId,
   getOrderedProductionColumns,
   getOrphanScripts,
   ORPHAN_COLUMN,
   PRODUCTION_COLUMNS,
+  getWorkflowTemplate,
+  WorkflowTemplateId,
 } from '@/core/constants';
 import { ProductionKanbanColumn } from "./ProductionKanbanColumn";
 import { ProductionKanbanCard } from "./ProductionKanbanCard";
@@ -50,24 +52,38 @@ export function ProductionBoardView({
 }: ProductionBoardViewProps) {
   const { toast } = useToast();
   const { stages, currentTemplate } = useWorkflowTemplate();
-  const orderedColumns = getOrderedProductionColumns(stages);
-  
   // Filtrar scripts que não estão completos E não foram postados
-  const productionScripts = scripts.filter(s => 
-    s.status !== 'completed' && 
+  const productionScripts = scripts.filter(s =>
+    s.status !== 'completed' &&
     s.publish_status !== 'postado'
   );
   const [localScripts, setLocalScripts] = useState<Script[]>(productionScripts);
   const [activeId, setActiveId] = useState<string | null>(null);
 
-  // Detectar scripts órfãos (em etapas que não existem no workflow atual)
-  const orphanScripts = getOrphanScripts(localScripts, stages);
+  // Descobrir quais estágios englobam todos os scripts atuais + global
+  const allActiveStages = new Set(stages);
+
+  localScripts.forEach(s => {
+    if (s.workflow_template && s.workflow_template !== currentTemplate.id) {
+      const template = getWorkflowTemplate(s.workflow_template as WorkflowTemplateId);
+      if (template) {
+        template.stages.forEach(st => allActiveStages.add(st));
+      }
+    }
+  });
+
+  const activeStagesList = Array.from(allActiveStages);
+  // Garante a ordem correta independente de quando o estágio foi incluído no Set
+  const orderedColumns = PRODUCTION_COLUMNS.filter(col => allActiveStages.has(col.id));
+
+  // Detectar scripts órfãos (em etapas que não existem no workflow atual nem nos scripts ativos)
+  const orphanScripts = getOrphanScripts(localScripts, activeStagesList);
   const hasOrphans = orphanScripts.length > 0;
 
   // Sincronizar localScripts quando scripts mudar externamente
   useEffect(() => {
-    setLocalScripts(scripts.filter(s => 
-      s.status !== 'completed' && 
+    setLocalScripts(scripts.filter(s =>
+      s.status !== 'completed' &&
       s.publish_status !== 'postado'
     ));
   }, [scripts]);
@@ -103,7 +119,7 @@ export function ProductionBoardView({
 
     if (!targetColumnId) return;
     if (sourceColumnId === targetColumnId) return;
-    
+
     // Não permitir arrastar PARA a coluna de órfãos
     if (targetColumnId === 'orphan') {
       toast({
@@ -116,9 +132,9 @@ export function ProductionBoardView({
 
     const scriptId = active.id as string;
     const newStatus = getStatusForProductionColumn(targetColumnId);
-    
+
     // Encontrar o label da coluna de destino
-    const targetColumn = orderedColumns.find(c => c.id === targetColumnId) || 
+    const targetColumn = orderedColumns.find(c => c.id === targetColumnId) ||
       PRODUCTION_COLUMNS.find(c => c.id === targetColumnId);
 
     const previousLocalScripts = [...localScripts];
@@ -176,7 +192,7 @@ export function ProductionBoardView({
             />
           );
         })}
-        
+
         {/* Coluna de órfãos (aparece apenas se houver conteúdos em etapas fora do workflow) */}
         {hasOrphans && (
           <OrphanColumn
@@ -194,8 +210,8 @@ export function ProductionBoardView({
             <ProductionKanbanCard
               script={activeScript}
               columnId=""
-              onClick={() => {}}
-              onDelete={() => {}}
+              onClick={() => { }}
+              onDelete={() => { }}
             />
           </div>
         )}
