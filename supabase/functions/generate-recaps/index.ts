@@ -29,14 +29,14 @@ const PERIOD_LABELS: Record<string, string> = {
 // Get Firebase access token for FCM
 async function getAccessToken(): Promise<string> {
   const serviceAccount = JSON.parse(Deno.env.get('Firebase_API_KEY') || '{}');
-  
+
   if (!serviceAccount.client_email || !serviceAccount.private_key) {
     throw new Error('Firebase service account not configured');
   }
-  
+
   const now = Math.floor(Date.now() / 1000);
   const expiry = now + 3600;
-  
+
   const header = { alg: 'RS256', typ: 'JWT' };
   const payload = {
     iss: serviceAccount.client_email,
@@ -46,18 +46,18 @@ async function getAccessToken(): Promise<string> {
     exp: expiry,
     scope: 'https://www.googleapis.com/auth/firebase.messaging'
   };
-  
+
   const encodedHeader = btoa(JSON.stringify(header));
   const encodedPayload = btoa(JSON.stringify(payload));
-  
+
   const privateKey = serviceAccount.private_key;
   const keyData = privateKey
     .replace('-----BEGIN PRIVATE KEY-----', '')
     .replace('-----END PRIVATE KEY-----', '')
     .replace(/\s/g, '');
-  
+
   const binaryKey = Uint8Array.from(atob(keyData), c => c.charCodeAt(0));
-  
+
   const cryptoKey = await crypto.subtle.importKey(
     'pkcs8',
     binaryKey,
@@ -65,21 +65,21 @@ async function getAccessToken(): Promise<string> {
     false,
     ['sign']
   );
-  
+
   const dataToSign = `${encodedHeader}.${encodedPayload}`;
   const signature = await crypto.subtle.sign(
     'RSASSA-PKCS1-v1_5',
     cryptoKey,
     new TextEncoder().encode(dataToSign)
   );
-  
+
   const encodedSignature = btoa(String.fromCharCode(...new Uint8Array(signature)))
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
     .replace(/=/g, '');
-  
+
   const jwt = `${encodedHeader}.${encodedPayload}.${encodedSignature}`;
-  
+
   const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -88,21 +88,21 @@ async function getAccessToken(): Promise<string> {
       assertion: jwt
     })
   });
-  
+
   const tokenData = await tokenResponse.json();
   return tokenData.access_token;
 }
 
 // Send FCM push notification
 async function sendFCMNotification(
-  token: string, 
-  title: string, 
-  body: string, 
+  token: string,
+  title: string,
+  body: string,
   accessToken: string
 ): Promise<boolean> {
   try {
     const projectId = 'muzze-app';
-    
+
     const response = await fetch(
       `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`,
       {
@@ -122,13 +122,13 @@ async function sendFCMNotification(
         })
       }
     );
-    
+
     if (!response.ok) {
       const errorData = await response.text();
       console.error('FCM API Error:', response.status, errorData);
       return false;
     }
-    
+
     return true;
   } catch (error) {
     console.error('Error sending FCM notification:', error);
@@ -138,7 +138,7 @@ async function sendFCMNotification(
 
 // Send recap notification to user
 async function sendRecapNotification(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   userId: string,
   periodType: string,
   accessToken: string
@@ -218,7 +218,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createClient<any>(supabaseUrl, supabaseServiceKey);
 
     // Get FCM access token for notifications
     let accessToken: string | null = null;
@@ -282,7 +282,7 @@ Deno.serve(async (req) => {
 
           const periodEnd = new Date();
           periodEnd.setHours(23, 59, 59, 999);
-          
+
           const periodStart = new Date(periodEnd);
           periodStart.setDate(periodStart.getDate() - period.days);
           periodStart.setHours(0, 0, 0, 0);
@@ -405,7 +405,7 @@ Deno.serve(async (req) => {
 });
 
 async function calculateRecapStats(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   userId: string,
   periodStart: Date,
   periodEnd: Date,
@@ -446,7 +446,7 @@ async function calculateRecapStats(
   for (const session of sessions) {
     const day = new Date(session.created_at).toISOString().split('T')[0];
     activeDays.add(day);
-    
+
     const mins = Math.round((session.duration_seconds || 0) / 60);
     dailyMinutes[day] = (dailyMinutes[day] || 0) + mins;
 
@@ -481,7 +481,7 @@ async function calculateRecapStats(
   // Calculate weekly goals hit
   const weeks = Math.ceil((periodEnd.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24 * 7));
   let weeklyGoalHitCount = 0;
-  
+
   for (let w = 0; w < weeks; w++) {
     const weekStart = new Date(periodStart);
     weekStart.setDate(weekStart.getDate() + w * 7);
