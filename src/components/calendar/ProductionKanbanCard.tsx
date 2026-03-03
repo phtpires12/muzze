@@ -25,14 +25,14 @@ interface ProductionKanbanCardProps {
   onDelete: (e: React.MouseEvent) => void;
 }
 
-export function ProductionKanbanCard({ 
-  script, 
-  columnId, 
-  onClick, 
+export function ProductionKanbanCard({
+  script,
+  columnId,
+  onClick,
   onDelete,
 }: ProductionKanbanCardProps) {
   const { globalTemplateId } = useWorkflowTemplate();
-  
+
   const {
     attributes,
     listeners,
@@ -53,12 +53,12 @@ export function ProductionKanbanCard({
     transform: CSS.Transform.toString(transform),
     transition,
   };
-  
+
   // Verificar se tem workflow diferente do global
-  const hasCustomWorkflow = script.workflow_template && 
-    script.workflow_template !== globalTemplateId;
-  const customWorkflowTemplate = hasCustomWorkflow 
-    ? getWorkflowTemplate(script.workflow_template as WorkflowTemplateId)
+  const effectiveTemplate = script.workflow_template || (script.content_type === 'Carrossel' ? 'carousel' : null);
+  const hasCustomWorkflow = effectiveTemplate && effectiveTemplate !== globalTemplateId;
+  const customWorkflowTemplate = hasCustomWorkflow
+    ? getWorkflowTemplate(effectiveTemplate as WorkflowTemplateId)
     : null;
 
   return (
@@ -115,8 +115,8 @@ export function ProductionKanbanCard({
         )}
         {/* Badge de workflow customizado */}
         {hasCustomWorkflow && customWorkflowTemplate && (
-          <Badge 
-            variant="secondary" 
+          <Badge
+            variant="secondary"
             className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary"
           >
             {customWorkflowTemplate.icon} {customWorkflowTemplate.name}

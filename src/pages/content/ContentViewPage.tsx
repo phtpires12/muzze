@@ -70,6 +70,7 @@ interface ParsedContent {
 }
 
 const getStage = (script: Script): string => {
+  if (script.status === "design") return "design";
   if (script.status === "editing") return "edit";
   if (script.status === "review") return "review";
   if (script.status === "recording") return "record";
@@ -81,6 +82,7 @@ const getStage = (script: Script): string => {
 
 const getStageLabel = (stage: string): string => {
   switch (stage) {
+    case "design": return "Design";
     case "edit": return "Edição";
     case "review": return "Revisão";
     case "record": return "Gravação";
@@ -92,8 +94,9 @@ const getStageLabel = (stage: string): string => {
 
 const getStageBadgeClass = (stage: string): string => {
   switch (stage) {
-    case "edit": return "bg-blue-500/70 text-white";
-    case "review": return "bg-purple-400/70 text-white";
+    case "design": return "bg-emerald-500/70 text-white";
+    case "edit": return "bg-cyan-500/70 text-white";
+    case "review": return "bg-blue-400/70 text-white";
     case "record": return "bg-orange-500/70 text-white";
     case "script": return "bg-purple-500/70 text-white";
     case "idea": return "bg-accent/70 text-accent-foreground";
@@ -149,7 +152,8 @@ export default function ContentView() {
 
   // Workflow dinâmico para garantir que apenas os estágios permitidos apareçam
   const workflowProps = useWorkflowTemplate({
-    scriptWorkflow: (script?.workflow_template as WorkflowTemplateId) || null
+    scriptWorkflow: (script?.workflow_template as WorkflowTemplateId) ||
+      (script?.content_type === 'Carrossel' ? 'carousel' : null)
   });
 
   const allowedColumns = useMemo(() => {

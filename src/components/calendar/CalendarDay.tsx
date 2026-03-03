@@ -76,10 +76,13 @@ const getCardBackground = (script: Script): string => {
 
   // Prioridade 2: Etapas do workflow - status explícito primeiro
   if (script.status === "editing") {
-    return "bg-blue-500/25";
+    return "bg-cyan-500/25";
+  }
+  if (script.status === "design") {
+    return "bg-emerald-500/25";
   }
   if (script.status === "review") {
-    return "bg-purple-300/25";
+    return "bg-blue-400/25";
   }
   if (script.status === "recording") {
     return "bg-orange-500/25";
@@ -104,6 +107,7 @@ const getStageLabel = (script: Script): string | null => {
   if (script.publish_status === "perdido") return "Perdido";
   if (script.publish_status === "postado") return "Publicado";
   if (script.status === "editing") return "Edição";
+  if (script.status === "design") return "Design";
   if (script.status === "review") return "Revisão";
   if (script.status === "recording") return "Gravação";
   if (script.status === "draft") return "Roteiro";
@@ -125,10 +129,13 @@ const getStageBadgeClasses = (script: Script): string | null => {
 
   // Prioridade 2: Etapas do workflow - status explícito primeiro
   if (script.status === "editing") {
-    return "bg-blue-500/70 text-white border-transparent";
+    return "bg-cyan-500/70 text-white border-transparent";
+  }
+  if (script.status === "design") {
+    return "bg-emerald-500/70 text-white border-transparent";
   }
   if (script.status === "review") {
-    return "bg-purple-400/70 text-white border-transparent";
+    return "bg-blue-400/70 text-white border-transparent";
   }
   if (script.status === "recording") {
     return "bg-orange-500/70 text-white border-transparent";
@@ -152,8 +159,9 @@ const getStageBadgeClasses = (script: Script): string | null => {
 const getStageIndicatorColor = (script: Script): string => {
   if (script.publish_status === "perdido") return "bg-red-500";
   if (script.publish_status === "postado") return "bg-green-500";
-  if (script.status === "editing") return "bg-blue-500";
-  if (script.status === "review") return "bg-purple-400";
+  if (script.status === "editing") return "bg-cyan-500";
+  if (script.status === "design") return "bg-emerald-500";
+  if (script.status === "review") return "bg-blue-400";
   if (script.status === "recording") return "bg-orange-500";
   if (script.status === "draft") return "bg-purple-500";
   // Inferências como fallback
