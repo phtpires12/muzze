@@ -148,11 +148,13 @@ export default function ContentView() {
   const planCapabilities = usePlanCapabilitiesOptional();
 
   // Workflow dinâmico para garantir que apenas os estágios permitidos apareçam
-  const { getOrderedKanbanColumns } = useWorkflowTemplate({
+  const workflowProps = useWorkflowTemplate({
     scriptWorkflow: (script?.workflow_template as WorkflowTemplateId) || null
   });
 
-  const allowedColumns = script ? getOrderedKanbanColumns() : PRODUCTION_COLUMNS;
+  const allowedColumns = useMemo(() => {
+    return script ? workflowProps.getOrderedKanbanColumns() : PRODUCTION_COLUMNS;
+  }, [script, workflowProps]);
 
   // Fetch script data
   useEffect(() => {
