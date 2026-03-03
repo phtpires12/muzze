@@ -22,7 +22,7 @@ const PLATFORMS: Platform[] = [
   { id: "Instagram", name: "Instagram", logo: instagramLogo },
   { id: "TikTok", name: "TikTok", logo: tiktokLogo },
   { id: "YouTube", name: "YouTube", logo: youtubeLogo },
-  { id: "X (Twitter)", name: "X (Twitter)", icon: "𝕏" },
+  { id: "Carrossel", name: "Carrossel", icon: "📑" },
 ];
 
 export const PlatformSelector = ({

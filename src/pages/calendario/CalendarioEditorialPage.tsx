@@ -662,7 +662,7 @@ const CalendarioEditorial = () => {
                       <SelectItem value="Reels">Reels</SelectItem>
                       <SelectItem value="YouTube">YouTube</SelectItem>
                       <SelectItem value="TikTok">TikTok</SelectItem>
-                      <SelectItem value="X (Twitter)">X (Twitter)</SelectItem>
+                      <SelectItem value="Carrossel">Carrossel</SelectItem>
                     </SelectContent>
                   </Select>
 
