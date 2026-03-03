@@ -22,6 +22,7 @@ interface KanbanColumnType {
 interface ProductionKanbanColumnProps {
   column: KanbanColumnType;
   scripts: Script[];
+  isDropDisabled?: boolean;
   onViewScript: (scriptId: string) => void;
   onDeleteScript: (e: React.MouseEvent, scriptId: string) => void;
 }
@@ -29,6 +30,7 @@ interface ProductionKanbanColumnProps {
 export function ProductionKanbanColumn({ 
   column, 
   scripts, 
+  isDropDisabled = false,
   onViewScript, 
   onDeleteScript 
 }: ProductionKanbanColumnProps) {
@@ -44,8 +46,10 @@ export function ProductionKanbanColumn({
     <div
       ref={setNodeRef}
       className={cn(
-        "flex flex-col min-w-[280px] max-w-[280px] bg-muted/30 rounded-lg flex-shrink-0",
-        isOver && "ring-2 ring-primary/50 bg-primary/5"
+        "flex flex-col min-w-[280px] max-w-[280px] bg-muted/30 rounded-lg flex-shrink-0 transition-opacity duration-200",
+        isOver && !isDropDisabled && "ring-2 ring-primary/50 bg-primary/5",
+        isOver && isDropDisabled && "ring-2 ring-destructive/50 bg-destructive/5",
+        isDropDisabled && "opacity-30"
       )}
     >
       {/* Header */}
