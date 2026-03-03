@@ -64,7 +64,7 @@ export function ProductionBoardView({
   const allActiveStages = new Set(stages);
 
   localScripts.forEach(s => {
-    const sWorkflow = s.workflow_template || (s.content_type === 'Carrossel' ? 'carousel' : null);
+    const sWorkflow = s.content_type === 'Carrossel' ? 'carousel' : (s.workflow_template || null);
     if (sWorkflow && sWorkflow !== currentTemplate.id) {
       const template = getWorkflowTemplate(sWorkflow as WorkflowTemplateId);
       if (template) {

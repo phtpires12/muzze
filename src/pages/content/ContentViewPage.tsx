@@ -152,8 +152,9 @@ export default function ContentView() {
 
   // Workflow dinâmico para garantir que apenas os estágios permitidos apareçam
   const workflowProps = useWorkflowTemplate({
-    scriptWorkflow: (script?.workflow_template as WorkflowTemplateId) ||
-      (script?.content_type === 'Carrossel' ? 'carousel' : null)
+    scriptWorkflow: script?.content_type === 'Carrossel'
+      ? 'carousel'
+      : (script?.workflow_template as WorkflowTemplateId) || null
   });
 
   const allowedColumns = useMemo(() => {

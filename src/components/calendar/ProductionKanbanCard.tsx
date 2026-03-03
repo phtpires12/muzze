@@ -55,7 +55,7 @@ export function ProductionKanbanCard({
   };
 
   // Verificar se tem workflow diferente do global
-  const effectiveTemplate = script.workflow_template || (script.content_type === 'Carrossel' ? 'carousel' : null);
+  const effectiveTemplate = script.content_type === 'Carrossel' ? 'carousel' : (script.workflow_template || null);
   const hasCustomWorkflow = effectiveTemplate && effectiveTemplate !== globalTemplateId;
   const customWorkflowTemplate = hasCustomWorkflow
     ? getWorkflowTemplate(effectiveTemplate as WorkflowTemplateId)
