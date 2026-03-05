@@ -189,14 +189,35 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
 
           loadedContent = sanitizeContentSections(loadedContent || {});
 
-          // Identify removed sections if any
+          // Identify removed sections if any AND filter out legacy keys
           const loadedKeys = Object.keys(loadedContent);
           const currentType = data.content_type || "";
           const expectedConfig = currentType === "Carrossel" ? CAROUSEL_SECTIONS : DEFAULT_SECTIONS;
+          const expectedKeys = expectedConfig.map(s => s.key);
+
+          // Remove chaves do banco que não fazem mais parte da configuração (ex: de 7 para 4 seções)
+          const validContent: Record<string, string> = {};
+          expectedKeys.forEach(k => {
+            if (loadedContent[k] !== undefined) {
+              validContent[k] = loadedContent[k];
+            } else {
+              validContent[k] = '';
+            }
+          });
+          loadedContent = validContent;
 
           if (loadedKeys.length > 0) {
-            const missingKeys = expectedConfig.filter(s => !loadedKeys.includes(s.key)).map(s => s.key);
-            setRemovedSectionKeys(missingKeys);
+            // Só detecta seções removidas MANUALMENTE pelo usuário (que estão no expectedKeys mas faltam no loadedKeys)
+            const hasAnyExpectedKey = expectedConfig.some(s => loadedKeys.includes(s.key));
+            if (hasAnyExpectedKey) {
+              const missingKeys = expectedConfig
+                .filter(s => !loadedKeys.includes(s.key))
+                .map(s => s.key);
+              setRemovedSectionKeys(missingKeys);
+            } else {
+              // Conteúdo salvo em formato diferente — começa com todas as seções ativas
+              setRemovedSectionKeys([]);
+            }
           }
         } catch {
           loadedContent = {};
@@ -259,7 +280,11 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
         setHasShotList(data.shot_list && Array.isArray(data.shot_list) && data.shot_list.length > 0);
 
         // Load workflow template for dynamic navigation
-        setScriptWorkflow(data.workflow_template as WorkflowTemplateId | null);
+        // Se content_type é 'Carrossel', forçar o template carousel independente do workflow_template salvo
+        const effectiveWorkflow = data.content_type === 'Carrossel'
+          ? 'carousel'
+          : (data.workflow_template as WorkflowTemplateId | null);
+        setScriptWorkflow(effectiveWorkflow);
 
         setIsLoaded(true);
       }
@@ -829,8 +854,8 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
             </div>
           </div>
 
-          {/* Shot List - Only in Review Mode */}
-          {isReviewMode && (
+          {/* Shot List - Only in Review Mode (not for Carousel — goes to Design) */}
+          {isReviewMode && !isCarousel && (
             <div className="flex flex-col md:flex-row md:items-start gap-2 md:gap-3 p-3 rounded-lg hover:bg-accent/10 transition-colors group">
               <div className="flex items-center gap-2 md:min-w-[180px] text-sm text-muted-foreground md:pt-2">
                 <ListChecks className="w-4 h-4" />
@@ -943,7 +968,9 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
               className="hidden md:flex gap-2 bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-opacity"
               size="lg"
             >
-              {isReviewMode ? 'Avançar para Gravação' : 'Avançar para Revisão'}
+              {isReviewMode
+                ? `Avançar para ${nextStage('review') ? getStageLabel(nextStage('review')!) : 'Próxima Etapa'}`
+                : 'Avançar para Revisão'}
               <ArrowRight className="w-4 h-4" />
             </Button>
           </div>
@@ -958,15 +985,26 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
               className="w-full gap-2 bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-opacity shadow-lg"
               size="lg"
             >
-              {isReviewMode ? 'Avançar para Gravação' : 'Avançar para Revisão'}
+              {isReviewMode
+                ? `Avançar para ${nextStage('review') ? getStageLabel(nextStage('review')!) : 'Próxima Etapa'}`
+                : 'Avançar para Revisão'}
               <ArrowRight className="w-4 h-4" />
             </Button>
           </div>
+
+          {isCarousel && !isReviewMode && (
+            <div className="bg-muted/30 p-3 rounded-lg border border-border/40 mb-4">
+              <p className="text-sm text-muted-foreground">
+                💡 <strong>Dica para o Design:</strong> Pressione <strong>Shift+Enter</strong> (ou Shift+Return) para marcar uma quebra de página. Cada trecho vai gerar um slide separado na próxima etapa!
+              </p>
+            </div>
+          )}
 
           {isReviewMode && (
             <div className="bg-muted/30 p-4 rounded-lg border border-border/40 mb-4">
               <p className="text-sm text-muted-foreground mb-3">
                 💡 Dica: Leia seu texto frase por frase em voz alta, finja que já está gravando-o.
+                {isCarousel && " Lembre-se: Use Shift+Enter para criar quebras de slide para o Design."}
               </p>
               <div className="flex flex-wrap items-center gap-2">
                 <Button
@@ -1156,6 +1194,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
           ) : FEATURES.MASTER_EDITOR ? (
             // Master Editor: Single unified editor with section headers
             <MasterScriptEditor
+              key={effectiveScriptId || 'new-script'}
               content={content}
               onChange={setContent}
               isLoaded={isLoaded}

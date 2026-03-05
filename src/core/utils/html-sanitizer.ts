@@ -56,3 +56,26 @@ export function sanitizeContentSections(content: Record<string, string>): Record
   }
   return sanitized;
 }
+
+/**
+ * Strips HTML tags and returns plain text.
+ * Preserves paragraph breaks as newlines.
+ * Useful for displaying rich-text content inside plain <textarea> elements.
+ */
+export function stripHtmlToPlainText(html: string): string {
+  if (!html || html.trim() === '') return '';
+  // If no HTML tags, return as-is
+  if (!html.includes('<')) return html;
+
+  try {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    // Replace block elements with newlines before extracting text
+    doc.querySelectorAll('p, br, div, li').forEach(el => {
+      el.after('\n');
+    });
+    return (doc.body.textContent || '').trim();
+  } catch {
+    // Fallback: simple tag-strip regex
+    return html.replace(/<[^>]*>/g, '').trim();
+  }
+}

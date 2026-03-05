@@ -51,6 +51,12 @@ export function MasterScriptEditor({
 
   const isMobile = useIsMobile();
 
+  // Guards for stale closures inside useEditor
+  const sectionConfigRef = useRef(sectionConfig);
+  sectionConfigRef.current = sectionConfig;
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+
   // Enable long-press drag on mobile
   useLongPressDrag(containerRef, {
     delay: 350,
@@ -113,13 +119,14 @@ export function MasterScriptEditor({
     onUpdate: ({ editor }) => {
       // Only emit onChange after initialization (avoid loop on load)
       if (hasInitialized.current) {
-        const sections = splitFromEditor(editor, sectionConfig);
+        const currentConfig = sectionConfigRef.current;
+        const sections = splitFromEditor(editor, currentConfig);
         const contentJson = JSON.stringify(sections);
 
         // Avoid emitting if content hasn't changed
         if (contentJson !== lastEmittedContent.current) {
           lastEmittedContent.current = contentJson;
-          onChange(sections);
+          onChangeRef.current(sections);
         }
       }
     },
@@ -140,7 +147,13 @@ export function MasterScriptEditor({
     // Guard: don't reset if user is editing
     if (isUserEditing.current) return;
 
-    const doc = buildMasterDocument(content, sectionConfig, removableSections);
+    // Limpa chaves não conhecidas usando a sectionConfig
+    const validContent: ContentSections = {};
+    sectionConfig.forEach(section => {
+      validContent[section.key] = content[section.key] || '';
+    });
+
+    const doc = buildMasterDocument(validContent, sectionConfig, removableSections);
     editor.commands.setContent(doc);
     hasInitialized.current = true;
 
@@ -188,7 +201,7 @@ export function MasterScriptEditor({
   if (!editor) {
     return (
       <div className={cn(
-        "master-script-editor rounded-lg border border-input bg-background",
+        "master-script-editor rounded-lg bg-background",
         "min-h-[400px] animate-pulse",
         className
       )} />
@@ -199,8 +212,7 @@ export function MasterScriptEditor({
     <div
       ref={containerRef}
       className={cn(
-        "master-script-editor rounded-lg border border-input bg-background",
-        "ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
+        "master-script-editor rounded-lg bg-background",
         !editable && "opacity-70 cursor-not-allowed",
         className
       )}

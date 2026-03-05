@@ -58,6 +58,11 @@ export function getNextStageUrl(
     return `/editing-workspace?scriptId=${scriptId}`;
   }
 
+  // Design vai para o SessionPage que renderiza o DesignWorkspace
+  if (nextCreativeStage === 'design') {
+    return `/session?stage=design&scriptId=${scriptId}`;
+  }
+
   return `/session?stage=${sessionStage}&scriptId=${scriptId}`;
 }
 

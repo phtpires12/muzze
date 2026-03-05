@@ -2,15 +2,15 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { 
-  Play, 
-  Pause, 
-  Square, 
-  GripVertical, 
-  Lightbulb, 
-  FileText, 
-  Video, 
-  Scissors, 
+import {
+  Play,
+  Pause,
+  Square,
+  GripVertical,
+  Lightbulb,
+  FileText,
+  Video,
+  Scissors,
   CheckCircle,
   Flame,
   LucideIcon,
@@ -65,7 +65,7 @@ interface DraggableSessionTimerProps {
   permissionEnabled?: boolean; // When false, timer is not rendered (permission denied)
 }
 
-export const DraggableSessionTimer = ({ 
+export const DraggableSessionTimer = ({
   stage,
   icon,
   elapsedSeconds,
@@ -86,6 +86,18 @@ export const DraggableSessionTimer = ({
   const [showEndConfirmation, setShowEndConfirmation] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const { playSound, preloadSounds } = useSoundEffects(0.6);
+  // Controla o pisca-pisca: só dura 5s após entrar em streak mode
+  const [showPulse, setShowPulse] = useState(false);
+  const prevStreakModeRef = useRef(false);
+
+  useEffect(() => {
+    if (isStreakMode && !prevStreakModeRef.current) {
+      setShowPulse(true);
+      const t = setTimeout(() => setShowPulse(false), 5000);
+      return () => clearTimeout(t);
+    }
+    prevStreakModeRef.current = isStreakMode;
+  }, [isStreakMode]);
 
   // Preload sounds on mount
   useEffect(() => {
@@ -121,8 +133,8 @@ export const DraggableSessionTimer = ({
   }, [playSound, onStop]);
 
   const [position, setPosition] = useState({
-    x: isMobile ? 16 : window.innerWidth - 370, 
-    y: isMobile ? 16 : 24 
+    x: isMobile ? 16 : window.innerWidth - 370,
+    y: isMobile ? 16 : 24
   });
   const [isDragging, setIsDragging] = useState(false);
   const [safeAreaTop, setSafeAreaTop] = useState(0);
@@ -216,7 +228,7 @@ export const DraggableSessionTimer = ({
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
     const s = seconds % 60;
-    
+
     if (h > 0) {
       return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
     }
@@ -225,28 +237,32 @@ export const DraggableSessionTimer = ({
 
   const Icon = isStreakMode ? ICON_MAP['Flame'] : (ICON_MAP[icon] || ICON_MAP['Lightbulb']);
   const displayedTarget = isStreakMode ? dailyGoalMinutes * 60 : 25 * 60;
-  
+
   // CÁLCULO SIMPLIFICADO E MONOTÔNICO:
   // dailyBaselineSeconds = snapshot imutável do início da sessão (não muda)
   // elapsedSeconds = tempo decorrido nesta sessão (sempre crescente)
-  // Não usar mais todayMinutesFromDB nem savedSecondsThisSession para o cálculo visual
-  const goalSeconds = dailyGoalMinutes * 60;
   const totalCreatedToday = dailyBaselineSeconds + elapsedSeconds;
-  const remainingSeconds = Math.max(0, goalSeconds - totalCreatedToday);
-  const bonusSeconds = Math.max(0, totalCreatedToday - goalSeconds);
-  
+
+  // A meta da Ofensiva Diária é ditada por targetSeconds (normalmente 25 min)
+  const remainingSeconds = Math.max(0, targetSeconds - totalCreatedToday);
+  const bonusSeconds = Math.max(0, totalCreatedToday - targetSeconds);
+
   // Modo bônus: só ativa 1m30s (90 segundos) APÓS bater a meta E já estar em ofensiva
   // Sequência garantida: Padrão -> Ofensiva (25min) -> Bônus (meta + 90s em ofensiva)
   const isBonusMode = bonusSeconds >= 90 && isStreakMode;
-  
+
   // Gerar texto dinâmico baseado no progresso
   let goalText: string;
   if (isFrozen) {
     goalText = "Aguardando você começar...";
-  } else if (remainingSeconds > 0) {
-    goalText = `Falta: ${formatTime(remainingSeconds)}`;
+  } else if (isStreakMode) {
+    if (bonusSeconds > 0) {
+      goalText = `Tempo bônus: +${formatTime(bonusSeconds)}`;
+    } else {
+      goalText = "Você cumpriu sua ofensiva diária! 🔥";
+    }
   } else {
-    goalText = `🔥 Bônus: +${formatTime(bonusSeconds)} além da meta`;
+    goalText = `Falta: ${formatTime(remainingSeconds)}`;
   }
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -383,7 +399,7 @@ export const DraggableSessionTimer = ({
           transition={{ duration: 0.2 }}
           className={cn(
             "fixed inset-0 z-[60] flex items-center justify-center",
-            isStreakMode 
+            isStreakMode
               ? "bg-gradient-to-br from-orange-600/98 via-red-600/98 to-orange-700/98"
               : isBonusMode
                 ? "bg-gradient-to-br from-orange-500/98 via-purple-600/98 to-violet-700/98"
@@ -406,7 +422,7 @@ export const DraggableSessionTimer = ({
           {/* Expanded content */}
           <div className="text-center space-y-8 px-8 max-w-2xl w-full">
             {/* Large icon */}
-            <motion.div 
+            <motion.div
               className={cn(
                 "mx-auto rounded-full flex items-center justify-center shadow-2xl",
                 isStreakMode
@@ -433,10 +449,10 @@ export const DraggableSessionTimer = ({
             )}>
               {stage}
             </p>
-            
+
             {/* Large timer display */}
             <div>
-              <motion.div 
+              <motion.div
                 className={cn(
                   "font-bold tabular-nums leading-none",
                   isStreakMode ? "text-orange-100" : isBonusMode ? "text-white" : "text-foreground",
@@ -447,7 +463,7 @@ export const DraggableSessionTimer = ({
               >
                 {formatTime(elapsedSeconds)}
               </motion.div>
-              
+
               <p className={cn(
                 "mt-4",
                 isStreakMode ? "text-orange-100/80" : isBonusMode ? "text-purple-100/80" : "text-muted-foreground",
@@ -458,8 +474,8 @@ export const DraggableSessionTimer = ({
             </div>
 
             {/* Progress bar */}
-            <Progress 
-              value={(elapsedSeconds / displayedTarget) * 100} 
+            <Progress
+              value={(elapsedSeconds / displayedTarget) * 100}
               className={cn(
                 "w-full max-w-md mx-auto",
                 isStreakMode && "bg-orange-300/30 [&>div]:bg-gradient-to-r [&>div]:from-orange-400 [&>div]:to-red-500",
@@ -550,11 +566,12 @@ export const DraggableSessionTimer = ({
       )}
       <Card className={cn(
         "backdrop-blur-md border-border/20 shadow-xl rounded-2xl transition-all duration-1000",
-        isStreakMode 
-          ? "bg-gradient-to-br from-orange-500/95 via-red-500/95 to-orange-600/95 border-orange-500 animate-pulse"
+        isStreakMode
+          ? "bg-gradient-to-br from-orange-500/95 via-red-500/95 to-orange-600/95 border-orange-500"
           : isBonusMode
             ? "bg-gradient-to-br from-orange-400/90 via-purple-500/90 to-violet-600/90 border-purple-400"
             : "bg-card/95",
+        showPulse && "animate-pulse",
         isMobile ? "w-[280px]" : "w-auto"
       )}>
         {/* Drag Handle - Compacto em mobile */}
@@ -584,8 +601,8 @@ export const DraggableSessionTimer = ({
                     size="icon"
                     className={cn(
                       "transition-colors",
-                      isStreakMode || isBonusMode 
-                        ? "text-white/60 hover:text-white hover:bg-white/10" 
+                      isStreakMode || isBonusMode
+                        ? "text-white/60 hover:text-white hover:bg-white/10"
                         : "text-muted-foreground hover:text-foreground",
                       isMobile ? "h-5 w-5" : "h-6 w-6"
                     )}
@@ -641,7 +658,7 @@ export const DraggableSessionTimer = ({
                 )} />
               )}
             </div>
-            
+
             <div className={cn(isMobile ? "min-w-[100px]" : "min-w-[140px]")}>
               <div className={cn(
                 "font-bold tabular-nums transition-colors duration-1000",
@@ -755,8 +772,8 @@ export const DraggableSessionTimer = ({
           </div>
 
           {/* Progress bar - Mais fino em mobile */}
-          <Progress 
-            value={(elapsedSeconds / displayedTarget) * 100} 
+          <Progress
+            value={(elapsedSeconds / displayedTarget) * 100}
             className={cn(
               "transition-all duration-500",
               isStreakMode && "bg-orange-200 [&>div]:bg-gradient-to-r [&>div]:from-orange-500 [&>div]:to-red-600",

@@ -11,6 +11,8 @@ export interface IdeationConfig {
 export interface ContentSection {
   key: string;
   label: string;
+  /** When true, only 1 slide allowed for this section (enforced in Design) */
+  isSingleSlide?: boolean;
 }
 
 export const DEFAULT_SECTIONS: ContentSection[] = [
@@ -21,13 +23,10 @@ export const DEFAULT_SECTIONS: ContentSection[] = [
 ];
 
 export const CAROUSEL_SECTIONS: ContentSection[] = [
-  { key: 'capa', label: '🖼️ CAPA' },
+  { key: 'capa', label: '🖼️ CAPA', isSingleSlide: true },
   { key: 'aquecimento', label: '🔥 AQUECIMENTO' },
-  { key: 'vida_comum', label: '🌍 VIDA COMUM' },
-  { key: 'dor_conflito', label: '⚔️ DOR/CONFLITO' },
-  { key: 'virada', label: '🔄 VIRADA' },
-  { key: 'solucao', label: '💡 SOLUÇÃO' },
-  { key: 'cta', label: '📢 CTA' },
+  { key: 'conteudo', label: '📝 CONTEÚDO' },
+  { key: 'chamada_para_acao', label: '📣 CHAMADA PARA AÇÃO' },
 ];
 
 export interface WorkflowTemplate {
