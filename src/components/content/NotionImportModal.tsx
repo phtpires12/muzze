@@ -76,32 +76,22 @@ export function NotionImportModal({ isOpen, onClose, onImportComplete }: NotionI
         }
     }, [isOpen, notionToken]);
 
-    // Função para listar os bancos de dados direto do Notion
+    // Função para listar os bancos de dados usando o Proxy
     const fetchDatabases = async () => {
         setIsLoadingList(true);
         try {
-            const notionResponse = await fetch("https://api.notion.com/v1/search", {
-                method: "POST",
-                headers: {
-                    "Authorization": `Bearer ${notionToken}`,
-                    "Notion-Version": "2022-06-28",
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    filter: {
-                        value: "database",
-                        property: "object"
-                    }
-                })
+            const { data, error } = await supabase.functions.invoke('notion-proxy', {
+                body: { action: 'search_databases', token: notionToken }
             });
 
-            const data = await notionResponse.json();
-
-            if (!notionResponse.ok) {
-                throw new Error(data.message || 'Erro ao buscar tabelas do Notion');
+            if (error) {
+                throw new Error("Erro na comunicação com o backend seguro do Notion (CORS).");
+            }
+            if (!data || !data.success) {
+                throw new Error(data?.error || 'Erro ao buscar tabelas do Notion');
             }
 
-            const formattedDbs = data.results.map((db: any) => {
+            const formattedDbs = data.data.results.map((db: any) => {
                 let title = "Sem Nome";
                 if (db.title && db.title.length > 0) {
                     title = db.title[0].plain_text;
@@ -151,24 +141,16 @@ export function NotionImportModal({ isOpen, onClose, onImportComplete }: NotionI
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error("Usuário não autenticado no aplicativo");
 
-            // 1. Query the database rows
-            const queryResponse = await fetch(`https://api.notion.com/v1/databases/${selectedDb}/query`, {
-                method: "POST",
-                headers: {
-                    "Authorization": `Bearer ${notionToken}`,
-                    "Notion-Version": "2022-06-28",
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    page_size: 100, // Limite conservador para navegador
-                    sorts: [{ direction: "descending", timestamp: "last_edited_time" }]
-                })
+            // 1. Query the database rows via Proxy
+            const { data: queryDataObj, error: queryError } = await supabase.functions.invoke('notion-proxy', {
+                body: { action: 'query_database', token: notionToken, database_id: selectedDb }
             });
 
-            const queryData = await queryResponse.json();
-            if (!queryResponse.ok) throw new Error(`Notion Query Error: ${queryData.message}`);
+            if (queryError || !queryDataObj || !queryDataObj.success) {
+                throw new Error(queryDataObj?.error || `Falha ao consultar páginas do banco de dados no Notion.`);
+            }
 
-            const pages = queryData.results;
+            const pages = queryDataObj.data.results;
             const scriptsToInsert = [];
 
             // 2. Processar cada página da tabela
@@ -193,19 +175,14 @@ export function NotionImportModal({ isOpen, onClose, onImportComplete }: NotionI
                 let centralIdea = '';
                 let contentJson: string | null = null;
 
-                // Opcional: Buscar os blocos de texto
+                // Opcional: Buscar os blocos de texto via Proxy
                 try {
-                    const blocksResponse = await fetch(`https://api.notion.com/v1/blocks/${page.id}/children?page_size=100`, {
-                        method: "GET",
-                        headers: {
-                            "Authorization": `Bearer ${notionToken}`,
-                            "Notion-Version": "2022-06-28",
-                        }
+                    const { data: blocksObj, error: blocksError } = await supabase.functions.invoke('notion-proxy', {
+                        body: { action: 'get_blocks', token: notionToken, page_id: page.id }
                     });
 
-                    if (blocksResponse.ok) {
-                        const blocksData = await blocksResponse.json();
-                        const paragraphs = blocksData.results
+                    if (!blocksError && blocksObj && blocksObj.success) {
+                        const paragraphs = blocksObj.data.results
                             .filter((b: any) => b.type === 'paragraph' && b.paragraph?.rich_text)
                             .map((b: any) => b.paragraph.rich_text.map((t: any) => t.plain_text).join(''))
                             .filter((p: string) => p.trim() !== '');
