@@ -7,6 +7,7 @@ import AuthPage from '@/pages/auth/AuthPage';
 import NewOnboardingPage from '@/pages/auth/NewOnboardingPage';
 import ResetPasswordPage from '@/pages/auth/ResetPasswordPage';
 import AcceptInvitePage from '@/pages/auth/AcceptInvitePage';
+import NotionCallbackPage from '@/pages/auth/NotionCallbackPage';
 
 // Core
 import IndexPage from '@/pages/core/IndexPage';
@@ -51,6 +52,7 @@ export const router = createBrowserRouter([
         children: [
             // Public routes
             { path: ROUTES.AUTH, element: <AuthPage /> },
+            { path: ROUTES.AUTH_NOTION_CALLBACK, element: <NotionCallbackPage /> },
             { path: ROUTES.RESET_PASSWORD, element: <ResetPasswordPage /> },
             { path: ROUTES.ONBOARDING, element: <NewOnboardingPage /> },
             { path: ROUTES.INSTALL, element: <InstallPage /> },

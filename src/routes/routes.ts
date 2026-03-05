@@ -5,6 +5,7 @@
 export const ROUTES = {
     // Public / Auth
     AUTH: '/auth',
+    AUTH_NOTION_CALLBACK: '/auth/notion/callback',
     RESET_PASSWORD: '/reset-password',
     ONBOARDING: '/onboarding',
     INSTALL: '/install',

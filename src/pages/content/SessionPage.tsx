@@ -209,15 +209,21 @@ const Session = () => {
     if (scriptIdParam) {
       setScriptId(scriptIdParam);
 
-      // Load workflow_template for dynamic navigation
+      // Load workflow_template (and content_type) for dynamic navigation
       const loadWorkflow = async () => {
         const { data } = await supabase
           .from('scripts')
-          .select('workflow_template')
+          .select('workflow_template, content_type')
           .eq('id', scriptIdParam)
           .single();
-        if (data?.workflow_template) {
-          setScriptWorkflow(data.workflow_template as WorkflowTemplateId);
+        if (data) {
+          // Se content_type é Carrossel, forçar template carousel independente do workflow_template salvo
+          const effectiveWorkflow = data.content_type === 'Carrossel'
+            ? 'carousel'
+            : data.workflow_template;
+          if (effectiveWorkflow) {
+            setScriptWorkflow(effectiveWorkflow as WorkflowTemplateId);
+          }
         }
       };
       loadWorkflow();
@@ -474,7 +480,7 @@ const Session = () => {
   if (session.stage === "idea") {
     console.log('[Session] Rendering idea stage, scriptId:', scriptId, 'scriptIdParam:', scriptIdParam);
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background pb-[calc(env(safe-area-inset-bottom,0px)+5rem)]">
         <div className="container mx-auto px-4 py-8">
           <Button
             variant="ghost"
@@ -533,7 +539,7 @@ const Session = () => {
       : 0;
 
     return (
-      <div className="relative">
+      <div className="relative pb-[calc(env(safe-area-inset-bottom,0px)+5rem)]">
         {/* ScriptEditor has its own back button, don't render here for script/review stages */}
         {session.stage !== 'script' && session.stage !== 'review' && (
           <div className="fixed top-4 left-4 md:top-6 md:left-6 z-50">
@@ -591,18 +597,7 @@ const Session = () => {
       : 0;
 
     return (
-      <div className="relative">
-        <div className="fixed top-4 left-4 md:top-6 md:left-6 z-50">
-          <Button
-            variant="ghost"
-            onClick={() => navigate(ROUTES.HOME)}
-            className="bg-card/95 backdrop-blur-md hover:bg-accent/10 border border-border/20 shadow-lg h-9 md:h-10 text-sm"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            <span className="hidden sm:inline">Dashboard</span>
-          </Button>
-        </div>
-
+      <div className="relative pb-[calc(env(safe-area-inset-bottom,0px)+5rem)]">
         {/* Floating Draggable Timer */}
         <DraggableSessionTimer
           stage={currentStage.label}

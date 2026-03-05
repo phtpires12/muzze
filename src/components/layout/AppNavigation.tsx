@@ -45,11 +45,10 @@ export const AppLayout = ({ children, className }: AppLayoutProps) => {
   const hasBottomNav = effectivePosition === 'bottom';
 
   return (
-    <div 
+    <div
       className={cn(
         "min-h-screen bg-background transition-all duration-300",
         hasSidebar && (isSidebarCollapsed ? "pl-16" : "pl-56"),
-        // Add class to parent safe-app via useEffect or direct class manipulation
         className
       )}
       data-has-bottom-nav={hasBottomNav}
@@ -62,7 +61,14 @@ export const AppLayout = ({ children, className }: AppLayoutProps) => {
           }
         `}</style>
       )}
-      <main className="h-full overflow-auto">{children}</main>
+      <main className={cn(
+        "h-full overflow-auto",
+        // Padding universal: garante que o conteúdo nunca fique atrás da navbar fixa
+        // Aplica em desktop e mobile. Não aplica quando há sidebar (nav lateral, sem conflito)
+        !hasSidebar && "pb-[calc(env(safe-area-inset-bottom,0px)+5rem)]"
+      )}>
+        {children}
+      </main>
       <AppNavigation />
     </div>
   );

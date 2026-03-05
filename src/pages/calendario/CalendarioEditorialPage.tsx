@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek, addWeeks, subWeeks } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Plus, ChevronLeft, ChevronRight, ChevronDown, Lightbulb, Filter, CalendarIcon, LayoutGrid, Columns3, ArrowUpDown } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, ChevronDown, Lightbulb, Filter, CalendarIcon, LayoutGrid, Columns3, ArrowUpDown, Database, Link2 } from "lucide-react";
 import {
   YouTubeGalleryView,
   ProductionBoardView,
@@ -18,6 +18,7 @@ import {
   PostConfirmationPopup,
   PublishStatus
 } from "@/components/calendar";
+import { NotionImportModal } from "@/components/content/NotionImportModal";
 import { Paywall, PaywallAction } from "@/components/shared";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from '@/core/hooks';
@@ -75,6 +76,7 @@ const CalendarioEditorial = () => {
   const [rescheduleModalOpen, setRescheduleModalOpen] = useState(false);
   const [paywallOpen, setPaywallOpen] = useState(false);
   const [paywallAction, setPaywallAction] = useState<PaywallAction>('create_script');
+  const [notionModalOpen, setNotionModalOpen] = useState(false);
 
   const isMobile = deviceType === 'mobile';
   const hasActiveFilters = contentTypeFilter !== "all" || stageFilter !== "all";
@@ -517,6 +519,15 @@ const CalendarioEditorial = () => {
   };
 
   const youtubeScripts = scripts.filter(s => s.content_type === "YouTube");
+  const hasNotionConnected = Boolean(profile?.notion_access_token);
+
+  const handleNotionConnect = () => {
+    // Redireciona para o fluxo OAuth do Notion
+    const clientId = import.meta.env.VITE_NOTION_CLIENT_ID || '31ad872b-594c-8166-8293-0037cccc849b'; // Fallback to provided client id
+    const redirectUri = encodeURIComponent(window.location.origin + '/auth/notion/callback');
+    const authUrl = `https://api.notion.com/v1/oauth/authorize?owner=user&client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code`;
+    window.location.href = authUrl;
+  };
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -528,10 +539,36 @@ const CalendarioEditorial = () => {
         >
           <div className="flex justify-between items-center">
             <h1 className="text-3xl font-bold tracking-tight">Calendário Editorial</h1>
-            <Button onClick={handleCreateNewScript} variant="default" className="rounded-lg">
-              <Plus className="w-4 h-4 mr-2" />
-              Nova Ideia
-            </Button>
+            <div className="flex items-center gap-2">
+              {!hasNotionConnected ? (
+                <Button
+                  onClick={handleNotionConnect}
+                  variant="outline"
+                  size={isMobile ? "icon" : "default"}
+                  className="rounded-lg border-primary/20 hover:bg-primary/5 text-primary"
+                  title="Conectar ao Notion"
+                >
+                  <Link2 className={`w-4 h-4 ${!isMobile && "mr-2"}`} />
+                  {!isMobile && "Conectar Notion"}
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => setNotionModalOpen(true)}
+                  variant="outline"
+                  size={isMobile ? "icon" : "default"}
+                  className="rounded-lg"
+                  title="Importar do Notion"
+                >
+                  <Database className={`w-4 h-4 ${!isMobile && "mr-2"}`} />
+                  {!isMobile && "Importar"}
+                </Button>
+              )}
+
+              <Button onClick={handleCreateNewScript} variant="default" size={isMobile ? "icon" : "default"} className="rounded-lg">
+                <Plus className={`w-4 h-4 ${!isMobile && "mr-2"}`} />
+                {!isMobile && "Nova Ideia"}
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -917,6 +954,12 @@ const CalendarioEditorial = () => {
         onSelectDate={handleRescheduleConfirm}
         title="Reagendar conteúdo"
         description="Escolha uma nova data de publicação"
+      />
+
+      <NotionImportModal
+        isOpen={notionModalOpen}
+        onClose={() => setNotionModalOpen(false)}
+        onImportComplete={fetchScripts}
       />
 
       {/* Paywall */}
