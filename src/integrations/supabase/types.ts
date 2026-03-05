@@ -165,6 +165,8 @@ export type Database = {
           is_internal_tester: boolean | null
           min_streak_minutes: number | null
           notifications_enabled: boolean | null
+          notion_access_token: string | null
+          notion_workspace_id: string | null
           onboarding_data: Json | null
           plan_type: string
           preferred_platform: string | null
@@ -194,6 +196,8 @@ export type Database = {
           is_internal_tester?: boolean | null
           min_streak_minutes?: number | null
           notifications_enabled?: boolean | null
+          notion_access_token?: string | null
+          notion_workspace_id?: string | null
           onboarding_data?: Json | null
           plan_type?: string
           preferred_platform?: string | null
@@ -223,6 +227,8 @@ export type Database = {
           is_internal_tester?: boolean | null
           min_streak_minutes?: number | null
           notifications_enabled?: boolean | null
+          notion_access_token?: string | null
+          notion_workspace_id?: string | null
           onboarding_data?: Json | null
           plan_type?: string
           preferred_platform?: string | null
