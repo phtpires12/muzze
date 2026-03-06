@@ -121,6 +121,20 @@ export const SectionHeader = Node.create<SectionHeaderOptions>({
   addKeyboardShortcuts() {
     return {
       'Backspace': ({ editor }) => {
+        const { selection } = editor.state;
+
+        // Prevent deletion if the selection spans across a section header
+        if (!selection.empty) {
+          let containsHeader = false;
+          editor.state.doc.nodesBetween(selection.from, selection.to, (node) => {
+            if (node.type.name === 'sectionHeader') {
+              containsHeader = true;
+              return false;
+            }
+          });
+          if (containsHeader) return true;
+        }
+
         const { $anchor } = editor.state.selection;
         const nodeBefore = $anchor.nodeBefore;
         if (nodeBefore?.type.name === 'sectionHeader') return true;
@@ -128,6 +142,20 @@ export const SectionHeader = Node.create<SectionHeaderOptions>({
         return false;
       },
       'Delete': ({ editor }) => {
+        const { selection } = editor.state;
+
+        // Prevent deletion if the selection spans across a section header
+        if (!selection.empty) {
+          let containsHeader = false;
+          editor.state.doc.nodesBetween(selection.from, selection.to, (node) => {
+            if (node.type.name === 'sectionHeader') {
+              containsHeader = true;
+              return false;
+            }
+          });
+          if (containsHeader) return true;
+        }
+
         const { $anchor } = editor.state.selection;
         const nodeAfter = $anchor.nodeAfter;
         if (nodeAfter?.type.name === 'sectionHeader') return true;

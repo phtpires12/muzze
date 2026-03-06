@@ -287,7 +287,7 @@ export function NotionImportModal({ isOpen, onClose, onImportComplete }: NotionI
                                 <SelectTrigger>
                                     <SelectValue placeholder="Selecione um banco de dados..." />
                                 </SelectTrigger>
-                                <SelectContent>
+                                <SelectContent className="max-h-[250px] overflow-y-auto">
                                     {databases.map((db) => (
                                         <SelectItem key={db.id} value={db.id}>
                                             {db.title}

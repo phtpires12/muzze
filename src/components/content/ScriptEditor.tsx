@@ -879,7 +879,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
 
                     if (hasShotList) {
                       // Already has shot list, just navigate
-                      navigate(`/ shot - list / review ? scriptId = ${currentScriptId} `);
+                      navigate(`/shot-list/review?scriptId=${currentScriptId}`);
                     } else {
                       // Generate shot list from content
                       const contentObj = typeof content === 'string' ? JSON.parse(content) : content;
@@ -914,7 +914,7 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
                         description: `${shots.length} slots gerados a partir do roteiro`,
                       });
 
-                      navigate(`/ shot - list / review ? scriptId = ${currentScriptId}`);
+                      navigate(`/shot-list/review?scriptId=${currentScriptId}`);
                     }
                   }}
                   className="gap-2 w-full md:w-auto"

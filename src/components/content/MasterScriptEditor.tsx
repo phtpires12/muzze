@@ -6,6 +6,7 @@ import GlobalDragHandle from 'tiptap-extension-global-drag-handle';
 import AutoJoiner from 'tiptap-extension-auto-joiner';
 import { SectionHeader } from '@/core/utils/tiptap-extensions';
 import { buildMasterDocument, splitFromEditor, ContentSections } from '@/core/utils';
+import { Slice, Fragment } from '@tiptap/pm/model';
 import { ContentSection, DEFAULT_SECTIONS } from '@/core/constants/workflow-templates';
 import { cn } from '@/core/utils';
 import { useEffect, useRef, useCallback } from 'react';
@@ -131,6 +132,21 @@ export function MasterScriptEditor({
       }
     },
     editorProps: {
+      transformPasted: (slice: Slice) => {
+        const filterFragment = (fragment: Fragment): Fragment => {
+          const nodes: any[] = [];
+          fragment.forEach((node) => {
+            if (node.type.name === 'sectionHeader') return;
+            if (node.isLeaf) {
+              nodes.push(node);
+            } else {
+              nodes.push(node.copy(filterFragment(node.content)));
+            }
+          });
+          return Fragment.fromArray(nodes);
+        };
+        return new Slice(filterFragment(slice.content), slice.openStart, slice.openEnd);
+      },
       attributes: {
         class: cn(
           'prose prose-sm dark:prose-invert max-w-none focus:outline-none',
