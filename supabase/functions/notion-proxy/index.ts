@@ -13,9 +13,6 @@ serve(async (req) => {
     const body = await req.json();
     const { action, ...params } = body;
 
-    // =========================================================================
-    // ACTION: OAUTH (Troca o Código pelo Access Token e Workspace ID)
-    // =========================================================================
     if (action === "oauth") {
       const { code, redirect_uri } = params;
       const clientId = Deno.env.get("NOTION_CLIENT_ID");
@@ -48,16 +45,11 @@ serve(async (req) => {
       );
     }
 
-    // =========================================================================
-    // ACTION: SEARCH_DATABASES (Busca as tabelas do Notion do usuário)
-    // =========================================================================
-    if (action === "search_databases") {
+    if (action === "search_all") {
       const { token, query } = params;
       if (!token) throw new Error("Notion access token is missing");
 
-      const bodyPayload: any = {
-        filter: { value: "database", property: "object" },
-      };
+      const bodyPayload: any = {};
 
       if (query && typeof query === "string" && query.trim() !== "") {
         bodyPayload.query = query.trim();
@@ -82,9 +74,6 @@ serve(async (req) => {
       });
     }
 
-    // =========================================================================
-    // ACTION: QUERY_DATABASE (Traz as linhas/páginas de uma tabela)
-    // =========================================================================
     if (action === "query_database") {
       const { token, database_id } = params;
       if (!token || !database_id) throw new Error("Missing params");
@@ -111,9 +100,6 @@ serve(async (req) => {
       });
     }
 
-    // =========================================================================
-    // ACTION: GET_BLOCKS (Traz o conteúdo rico de dentro de uma página)
-    // =========================================================================
     if (action === "get_blocks") {
       const { token, page_id } = params;
       if (!token || !page_id) throw new Error("Missing params");
@@ -135,7 +121,27 @@ serve(async (req) => {
       });
     }
 
-    // Ação Default caso não bata com as de cima
+    if (action === "get_database") {
+      const { token, database_id } = params;
+      if (!token || !database_id) throw new Error("Missing params");
+
+      const notionResponse = await fetch(`https://api.notion.com/v1/databases/${database_id}`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Notion-Version": "2022-06-28",
+        },
+      });
+
+      const data = await notionResponse.json();
+      if (!notionResponse.ok) throw new Error(data.message || "Erro ao buscar detalhes da database no Notion");
+
+      return new Response(JSON.stringify({ success: true, data }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      });
+    }
+
     throw new Error("Action method not supported by this proxy");
   } catch (error: any) {
     console.error("Error on notion-proxy:", error);
