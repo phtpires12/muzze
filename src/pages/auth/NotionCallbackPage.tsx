@@ -35,16 +35,16 @@ export default function NotionCallbackPage() {
                     throw new Error("Você precisa estar logado no Muzze para conectar o Notion.");
                 }
 
-                // Invoca a nova Edge Function 'notion-proxy' via Supabase/Lovable Cloud
                 const { data: proxyData, error: proxyError } = await supabase.functions.invoke('notion-proxy', {
                     body: {
+                        action: 'oauth',
                         code,
                         redirect_uri: window.location.origin + ROUTES.AUTH_NOTION_CALLBACK
                     }
                 });
 
                 if (proxyError) {
-                    throw new Error("Erro na comunicação com o backend seguro do Notion (CORS).");
+                    throw new Error(proxyError.message || "Erro na comunicação com o backend seguro do Notion");
                 }
 
                 if (!proxyData || !proxyData.success) {
