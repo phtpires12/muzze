@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Database, Download } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Loader2, Database, Download, Search } from "lucide-react";
 import { useToast } from "@/core/hooks";
 import { useProfileContext } from '@/core/contexts';
 
@@ -56,6 +57,7 @@ export function NotionImportModal({ isOpen, onClose, onImportComplete }: NotionI
     const [selectedDb, setSelectedDb] = useState<string>('');
     const [isLoadingList, setIsLoadingList] = useState(false);
     const [isImporting, setIsImporting] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
 
     const { toast } = useToast();
     const { profile } = useProfileContext();
@@ -77,11 +79,11 @@ export function NotionImportModal({ isOpen, onClose, onImportComplete }: NotionI
     }, [isOpen, notionToken]);
 
     // Função para listar os bancos de dados usando o Proxy
-    const fetchDatabases = async () => {
+    const fetchDatabases = async (query?: string) => {
         setIsLoadingList(true);
         try {
             const { data, error } = await supabase.functions.invoke('notion-proxy', {
-                body: { action: 'search_databases', token: notionToken }
+                body: { action: 'search_databases', token: notionToken, query: query || undefined }
             });
 
             if (error) {
@@ -253,7 +255,27 @@ export function NotionImportModal({ isOpen, onClose, onImportComplete }: NotionI
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="py-6">
+                <div className="py-6 space-y-4">
+                    <div className="flex gap-2 relative">
+                        <Input
+                            placeholder="Buscar tabelas ou calendários por nome..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') fetchDatabases(searchQuery)
+                            }}
+                            className="w-full pl-9"
+                        />
+                        <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-3" />
+                        <Button
+                            variant="secondary"
+                            onClick={() => fetchDatabases(searchQuery)}
+                            disabled={isLoadingList}
+                        >
+                            Buscar
+                        </Button>
+                    </div>
+
                     {isLoadingList ? (
                         <div className="flex flex-col items-center justify-center p-4 space-y-4">
                             <Loader2 className="w-8 h-8 text-primary animate-spin" />

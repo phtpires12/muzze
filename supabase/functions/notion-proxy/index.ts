@@ -50,8 +50,16 @@ serve(async (req) => {
     // ACTION: SEARCH_DATABASES (Busca as tabelas do Notion do usuário)
     // =========================================================================
     if (action === 'search_databases') {
-      const { token } = params;
+      const { token, query } = params;
       if (!token) throw new Error("Notion access token is missing");
+
+      const bodyPayload: any = {
+        filter: { value: "database", property: "object" }
+      };
+
+      if (query && typeof query === 'string' && query.trim() !== '') {
+        bodyPayload.query = query.trim();
+      }
 
       const notionResponse = await fetch("https://api.notion.com/v1/search", {
         method: "POST",
@@ -60,9 +68,7 @@ serve(async (req) => {
           "Notion-Version": "2022-06-28",
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          filter: { value: "database", property: "object" }
-        })
+        body: JSON.stringify(bodyPayload)
       });
 
       const data = await notionResponse.json();
