@@ -316,6 +316,7 @@ export type Database = {
           content: string | null
           content_type: string | null
           created_at: string
+          date_manually_set: boolean | null
           design_items: Json | null
           editing_notes: string | null
           editing_progress: string[] | null
@@ -325,6 +326,7 @@ export type Database = {
           main_video_url: string | null
           music_reference: Json | null
           notes: string | null
+          notion_page_id: string | null
           original_content: string | null
           publish_date: string | null
           publish_status: string | null
@@ -347,6 +349,7 @@ export type Database = {
           content?: string | null
           content_type?: string | null
           created_at?: string
+          date_manually_set?: boolean | null
           design_items?: Json | null
           editing_notes?: string | null
           editing_progress?: string[] | null
@@ -356,6 +359,7 @@ export type Database = {
           main_video_url?: string | null
           music_reference?: Json | null
           notes?: string | null
+          notion_page_id?: string | null
           original_content?: string | null
           publish_date?: string | null
           publish_status?: string | null
@@ -378,6 +382,7 @@ export type Database = {
           content?: string | null
           content_type?: string | null
           created_at?: string
+          date_manually_set?: boolean | null
           design_items?: Json | null
           editing_notes?: string | null
           editing_progress?: string[] | null
@@ -387,6 +392,7 @@ export type Database = {
           main_video_url?: string | null
           music_reference?: Json | null
           notes?: string | null
+          notion_page_id?: string | null
           original_content?: string | null
           publish_date?: string | null
           publish_status?: string | null
