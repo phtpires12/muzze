@@ -159,11 +159,13 @@ export const ProfileSheet = ({ onClose }: ProfileSheetProps) => {
       return;
     }
 
-    if (result.success) {
+    if (result.success && result.workspaceId) {
       setShowCreateModal(false);
       setNewWorkspaceName('');
-      // Reload to refresh workspace list
-      window.location.reload();
+      await switchWorkspace(result.workspaceId);
+      await refetch();
+      toast.success('Workspace criado e ativado!');
+      onClose?.();
     }
   };
 
