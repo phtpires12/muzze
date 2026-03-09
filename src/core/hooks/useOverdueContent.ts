@@ -60,6 +60,7 @@ export function useOverdueContent() {
       .eq("user_id", user.id)
       .lt("publish_date", today)
       .in("publish_status", ["planejado", "pronto_para_postar", "perdido"])
+      .or("notion_page_id.is.null,date_manually_set.eq.true")
       .order("publish_date", { ascending: true });
 
     if (error) {
