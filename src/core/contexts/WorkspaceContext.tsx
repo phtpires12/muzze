@@ -40,10 +40,12 @@ export const WorkspaceContextProvider = ({ children }: { children: ReactNode }) 
       const workspacesList: WorkspaceInfo[] = [];
 
       // 1. Buscar todos os workspaces próprios (onde sou owner)
-      const { data: ownWorkspaces } = await supabase
+      const { data: ownWorkspaces, error: ownError } = await supabase
         .from('workspaces')
         .select('*')
         .eq('owner_id', userId);
+
+      console.log('[WorkspaceContext] Own workspaces query:', { ownWorkspaces, ownError, userId });
 
       if (ownWorkspaces && ownWorkspaces.length > 0) {
         for (const ws of ownWorkspaces) {
