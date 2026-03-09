@@ -318,7 +318,7 @@ export default function ContentView() {
 
       const { error } = await supabase
         .from('scripts')
-        .update({ publish_date: formattedDate })
+        .update({ publish_date: formattedDate, date_manually_set: true } as any)
         .eq('id', script.id);
 
       if (error) throw error;

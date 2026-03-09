@@ -210,8 +210,10 @@ export function NotionImportModal({ isOpen, onClose, onImportComplete }: NotionI
                     reference_url: urlField,
                     central_idea: centralIdea || null,
                     content: contentJson,
-                    workflow_template: 'custom' // Custom para os workflows herdados
-                });
+                    workflow_template: 'custom',
+                    notion_page_id: page.id,
+                    date_manually_set: false,
+                } as any);
             }
 
             // 3. Batch Insert into Supabase

@@ -100,7 +100,8 @@ export function useOverdueContent() {
       .from("scripts")
       .update({
         publish_date: format(newDate, "yyyy-MM-dd"),
-      })
+        date_manually_set: true,
+      } as any)
       .eq("id", scriptId);
 
     // Remove from overdue list
