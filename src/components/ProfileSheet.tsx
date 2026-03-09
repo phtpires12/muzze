@@ -32,7 +32,7 @@ interface ProfileSheetProps {
 export const ProfileSheet = ({ onClose }: ProfileSheetProps) => {
   const navigate = useNavigate();
   const { profile } = useProfile();
-  const { activeWorkspace, activeRole, allWorkspaces, switchWorkspace } = useWorkspaceContext();
+  const { activeWorkspace, activeRole, allWorkspaces, switchWorkspace, refetch } = useWorkspaceContext();
   const planCapabilities = usePlanCapabilitiesOptional();
   const { createWorkspace } = useWorkspace();
   const [email, setEmail] = useState<string>('');
@@ -120,6 +120,7 @@ export const ProfileSheet = ({ onClose }: ProfileSheetProps) => {
     await switchWorkspace(workspaceId);
     toast.success('Workspace alterado');
     onClose?.();
+    // Reload to ensure all data is re-fetched for the new workspace context
     window.location.reload();
   };
 
@@ -159,11 +160,13 @@ export const ProfileSheet = ({ onClose }: ProfileSheetProps) => {
       return;
     }
 
-    if (result.success) {
+    if (result.success && result.workspaceId) {
       setShowCreateModal(false);
       setNewWorkspaceName('');
-      // Reload to refresh workspace list
-      window.location.reload();
+      await switchWorkspace(result.workspaceId);
+      await refetch();
+      toast.success('Workspace criado e ativado!');
+      onClose?.();
     }
   };
 

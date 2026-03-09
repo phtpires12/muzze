@@ -39,18 +39,19 @@ export const WorkspaceContextProvider = ({ children }: { children: ReactNode }) 
       const userId = userData.user.id;
       const workspacesList: WorkspaceInfo[] = [];
 
-      // 1. Buscar workspace próprio (onde sou owner)
-      const { data: ownWorkspace } = await supabase
+      // 1. Buscar todos os workspaces próprios (onde sou owner)
+      const { data: ownWorkspaces } = await supabase
         .from('workspaces')
         .select('*')
-        .eq('owner_id', userId)
-        .maybeSingle();
+        .eq('owner_id', userId);
 
-      if (ownWorkspace) {
-        workspacesList.push({
-          workspace: ownWorkspace as Workspace,
-          role: 'owner',
-        });
+      if (ownWorkspaces && ownWorkspaces.length > 0) {
+        for (const ws of ownWorkspaces) {
+          workspacesList.push({
+            workspace: ws as Workspace,
+            role: 'owner',
+          });
+        }
       }
 
       // 2. Buscar workspaces onde sou membro (convidado)

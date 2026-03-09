@@ -152,6 +152,74 @@ export type Database = {
         }
         Relationships: []
       }
+      production_schedules: {
+        Row: {
+          completed: boolean | null
+          completed_at: string | null
+          created_at: string | null
+          id: string
+          scheduled_date: string
+          script_id: string
+          stage: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          completed?: boolean | null
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          scheduled_date: string
+          script_id: string
+          stage: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          completed?: boolean | null
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          scheduled_date?: string
+          script_id?: string
+          stage?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_schedules_script_id_fkey"
+            columns: ["script_id"]
+            isOneToOne: false
+            referencedRelation: "scripts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      production_settings: {
+        Row: {
+          is_enabled: boolean | null
+          stage_slas: Json | null
+          updated_at: string | null
+          user_id: string
+          work_days: number[] | null
+        }
+        Insert: {
+          is_enabled?: boolean | null
+          stage_slas?: Json | null
+          updated_at?: string | null
+          user_id: string
+          work_days?: number[] | null
+        }
+        Update: {
+          is_enabled?: boolean | null
+          stage_slas?: Json | null
+          updated_at?: string | null
+          user_id?: string
+          work_days?: number[] | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -264,6 +332,7 @@ export type Database = {
           reference_links: string[] | null
           reference_url: string | null
           shot_list: string[] | null
+          stage_progress: Json | null
           status: string | null
           thumbnail_url: string | null
           title: string
@@ -294,6 +363,7 @@ export type Database = {
           reference_links?: string[] | null
           reference_url?: string | null
           shot_list?: string[] | null
+          stage_progress?: Json | null
           status?: string | null
           thumbnail_url?: string | null
           title: string
@@ -324,6 +394,7 @@ export type Database = {
           reference_links?: string[] | null
           reference_url?: string | null
           shot_list?: string[] | null
+          stage_progress?: Json | null
           status?: string | null
           thumbnail_url?: string | null
           title?: string
