@@ -318,7 +318,7 @@ export default function ContentView() {
 
       const { error } = await supabase
         .from('scripts')
-        .update({ publish_date: formattedDate })
+        .update({ publish_date: formattedDate, date_manually_set: true } as any)
         .eq('id', script.id);
 
       if (error) throw error;
@@ -362,7 +362,7 @@ export default function ContentView() {
 
   const stage = getStage(script);
   const parsedContent = parseContent(script.content);
-  const hasContent = Object.values(parsedContent).some(v => v && v.trim());
+  const hasContent = Object.values(parsedContent).some(v => v && typeof v === 'string' && v.trim().length > 0);
   const publishStatusLabel = getPublishStatusLabel(script.publish_status);
   const isPosted = script.publish_status === "postado";
 
