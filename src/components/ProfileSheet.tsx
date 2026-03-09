@@ -163,8 +163,10 @@ export const ProfileSheet = ({ onClose }: ProfileSheetProps) => {
     if (result.success && result.workspaceId) {
       setShowCreateModal(false);
       setNewWorkspaceName('');
-      await switchWorkspace(result.workspaceId);
+      // Must refetch first so the new workspace is in allWorkspaces,
+      // then switch to it
       await refetch();
+      await switchWorkspace(result.workspaceId);
       toast.success('Workspace criado e ativado!');
       onClose?.();
     }

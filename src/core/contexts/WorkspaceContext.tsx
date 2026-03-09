@@ -40,10 +40,12 @@ export const WorkspaceContextProvider = ({ children }: { children: ReactNode }) 
       const workspacesList: WorkspaceInfo[] = [];
 
       // 1. Buscar todos os workspaces próprios (onde sou owner)
-      const { data: ownWorkspaces } = await supabase
+      const { data: ownWorkspaces, error: ownError } = await supabase
         .from('workspaces')
         .select('*')
         .eq('owner_id', userId);
+
+      console.log('[WorkspaceContext] Own workspaces query:', { ownWorkspaces, ownError, userId });
 
       if (ownWorkspaces && ownWorkspaces.length > 0) {
         for (const ws of ownWorkspaces) {
@@ -134,12 +136,17 @@ export const WorkspaceContextProvider = ({ children }: { children: ReactNode }) 
 
   const switchWorkspace = useCallback(async (workspaceId: string) => {
     const targetWs = allWorkspaces.find(w => w.workspace.id === workspaceId);
+    console.log('[WorkspaceContext] switchWorkspace:', { workspaceId, found: !!targetWs, total: allWorkspaces.length });
     if (targetWs) {
       setActiveWorkspace(targetWs.workspace);
       setActiveRole(targetWs.role);
       localStorage.setItem(ACTIVE_WORKSPACE_KEY, workspaceId);
+    } else {
+      // Workspace not in current list yet - save to localStorage and refetch
+      localStorage.setItem(ACTIVE_WORKSPACE_KEY, workspaceId);
+      await fetchAllWorkspaces();
     }
-  }, [allWorkspaces]);
+  }, [allWorkspaces, fetchAllWorkspaces]);
 
   return (
     <WorkspaceContext.Provider
