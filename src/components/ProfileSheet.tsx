@@ -32,7 +32,7 @@ interface ProfileSheetProps {
 export const ProfileSheet = ({ onClose }: ProfileSheetProps) => {
   const navigate = useNavigate();
   const { profile } = useProfile();
-  const { activeWorkspace, activeRole, allWorkspaces, switchWorkspace } = useWorkspaceContext();
+  const { activeWorkspace, activeRole, allWorkspaces, switchWorkspace, refetch } = useWorkspaceContext();
   const planCapabilities = usePlanCapabilitiesOptional();
   const { createWorkspace } = useWorkspace();
   const [email, setEmail] = useState<string>('');
