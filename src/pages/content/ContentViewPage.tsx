@@ -362,7 +362,7 @@ export default function ContentView() {
 
   const stage = getStage(script);
   const parsedContent = parseContent(script.content);
-  const hasContent = Object.values(parsedContent).some(v => v && v.trim());
+  const hasContent = Object.values(parsedContent).some(v => v && typeof v === 'string' && v.trim().length > 0);
   const publishStatusLabel = getPublishStatusLabel(script.publish_status);
   const isPosted = script.publish_status === "postado";
 
