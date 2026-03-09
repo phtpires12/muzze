@@ -120,6 +120,7 @@ export const ProfileSheet = ({ onClose }: ProfileSheetProps) => {
     await switchWorkspace(workspaceId);
     toast.success('Workspace alterado');
     onClose?.();
+    // Reload to ensure all data is re-fetched for the new workspace context
     window.location.reload();
   };
 

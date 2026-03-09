@@ -45,71 +45,97 @@ export const useWorkspace = (): UseWorkspaceReturn => {
 
       const userId = userData.user.id;
 
-      // Buscar workspace próprio (onde sou owner)
-      const { data: ownWorkspace } = await supabase
+      // Buscar o workspace ativo do localStorage (ou primeiro próprio)
+      const savedActiveId = localStorage.getItem('muzze_active_workspace');
+
+      // Buscar todos os workspaces próprios
+      const { data: ownWorkspaces } = await supabase
         .from('workspaces')
         .select('*')
-        .eq('owner_id', userId)
-        .maybeSingle();
+        .eq('owner_id', userId);
 
-      if (ownWorkspace) {
-        setWorkspace(ownWorkspace as Workspace);
-        setMyRole('owner');
+      // Buscar workspaces onde sou membro
+      const { data: memberships } = await supabase
+        .from('workspace_members')
+        .select('role, workspaces(*)')
+        .eq('user_id', userId)
+        .not('accepted_at', 'is', null);
 
-        // Buscar membros do workspace
-        const { data: membersData } = await supabase
-          .from('workspace_members')
-          .select('*')
-          .eq('workspace_id', ownWorkspace.id);
+      // Determinar qual workspace usar
+      let activeWs: Workspace | null = null;
+      let activeRole: WorkspaceRole | null = null;
 
-        if (membersData) {
-          // Buscar usernames dos membros
-          const memberIds = membersData.map(m => m.user_id);
-          const { data: profiles } = await supabase
-            .from('profiles')
-            .select('user_id, username')
-            .in('user_id', memberIds);
-
-          const profileMap = new Map(profiles?.map(p => [p.user_id, p.username]) || []);
-
-          setMembers(membersData.map(m => ({
-            ...m,
-            role: m.role as WorkspaceRole,
-            allowed_timer_stages: (m.allowed_timer_stages || []) as CreativeStage[],
-            can_edit_stages: (m.can_edit_stages || []) as CreativeStage[],
-            username: profileMap.get(m.user_id) || undefined,
-            email: m.email || undefined,
-          })));
+      // Primeiro: tentar achar o workspace salvo
+      if (savedActiveId) {
+        const ownMatch = ownWorkspaces?.find(w => w.id === savedActiveId);
+        if (ownMatch) {
+          activeWs = ownMatch as Workspace;
+          activeRole = 'owner';
+        } else {
+          const memberMatch = memberships?.find(m => (m.workspaces as any)?.id === savedActiveId);
+          if (memberMatch?.workspaces) {
+            activeWs = memberMatch.workspaces as unknown as Workspace;
+            activeRole = memberMatch.role as WorkspaceRole;
+          }
         }
+      }
 
-        // Buscar convites pendentes
-        const { data: invitesData } = await supabase
-          .from('workspace_invites')
-          .select('*')
-          .eq('workspace_id', ownWorkspace.id)
-          .gt('expires_at', new Date().toISOString());
+      // Fallback: primeiro workspace próprio
+      if (!activeWs && ownWorkspaces && ownWorkspaces.length > 0) {
+        activeWs = ownWorkspaces[0] as Workspace;
+        activeRole = 'owner';
+      }
 
-        if (invitesData) {
-          setInvites(invitesData.map(i => ({
-            ...i,
-            role: i.role as WorkspaceRole,
-            allowed_timer_stages: (i.allowed_timer_stages || []) as CreativeStage[],
-            can_edit_stages: (i.can_edit_stages || []) as CreativeStage[],
-          })));
-        }
-      } else {
-        // Verificar se sou membro de algum workspace
-        const { data: membership } = await supabase
-          .from('workspace_members')
-          .select('*, workspaces(*)')
-          .eq('user_id', userId)
-          .not('accepted_at', 'is', null)
-          .maybeSingle();
+      // Fallback: primeiro workspace como membro
+      if (!activeWs && memberships && memberships.length > 0 && memberships[0].workspaces) {
+        activeWs = memberships[0].workspaces as unknown as Workspace;
+        activeRole = memberships[0].role as WorkspaceRole;
+      }
 
-        if (membership && membership.workspaces) {
-          const ws = membership.workspaces as unknown as Workspace;
-          setWorkspace(ws);
-          setMyRole(membership.role as WorkspaceRole);
+      if (activeWs) {
+        setWorkspace(activeWs);
+        setMyRole(activeRole);
+
+        // Buscar membros e convites apenas se sou owner
+        if (activeRole === 'owner') {
+          const { data: membersData } = await supabase
+            .from('workspace_members')
+            .select('*')
+            .eq('workspace_id', activeWs.id);
+
+          if (membersData) {
+            const memberIds = membersData.map(m => m.user_id);
+            const { data: profiles } = await supabase
+              .from('profiles')
+              .select('user_id, username')
+              .in('user_id', memberIds);
+
+            const profileMap = new Map(profiles?.map(p => [p.user_id, p.username]) || []);
+
+            setMembers(membersData.map(m => ({
+              ...m,
+              role: m.role as WorkspaceRole,
+              allowed_timer_stages: (m.allowed_timer_stages || []) as CreativeStage[],
+              can_edit_stages: (m.can_edit_stages || []) as CreativeStage[],
+              username: profileMap.get(m.user_id) || undefined,
+              email: m.email || undefined,
+            })));
+          }
+
+          const { data: invitesData } = await supabase
+            .from('workspace_invites')
+            .select('*')
+            .eq('workspace_id', activeWs.id)
+            .gt('expires_at', new Date().toISOString());
+
+          if (invitesData) {
+            setInvites(invitesData.map(i => ({
+              ...i,
+              role: i.role as WorkspaceRole,
+              allowed_timer_stages: (i.allowed_timer_stages || []) as CreativeStage[],
+              can_edit_stages: (i.can_edit_stages || []) as CreativeStage[],
+            })));
+          }
         }
       }
     } catch (error) {
