@@ -150,9 +150,8 @@ export default function ContentView() {
   const [siblings, setSiblings] = useState<{ id: string; title: string }[]>([]);
 
   // Swipe refs for sibling navigation
-  const touchStartX = import("react").then ? undefined : undefined;
-  const swipeStartX = useState<number | null>(null);
-  const swipeEndX = useState<number | null>(null);
+  const swipeStartXRef = useRef<number | null>(null);
+  const swipeEndXRef = useRef<number | null>(null);
 
   const planCapabilities = usePlanCapabilitiesOptional();
 
