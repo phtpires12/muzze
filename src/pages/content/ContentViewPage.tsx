@@ -147,6 +147,12 @@ export default function ContentView() {
   const [showPaywall, setShowPaywall] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [siblings, setSiblings] = useState<{ id: string; title: string }[]>([]);
+
+  // Swipe refs for sibling navigation
+  const touchStartX = import("react").then ? undefined : undefined;
+  const swipeStartX = useState<number | null>(null);
+  const swipeEndX = useState<number | null>(null);
 
   const planCapabilities = usePlanCapabilitiesOptional();
 
@@ -161,10 +167,20 @@ export default function ContentView() {
     return script ? workflowProps.getOrderedKanbanColumns() : PRODUCTION_COLUMNS;
   }, [script, workflowProps.stages]);
 
+  const currentIndex = siblings.findIndex(s => s.id === scriptId);
+  const hasSiblings = siblings.length > 1;
+
+  const navigateToSibling = (index: number) => {
+    if (index >= 0 && index < siblings.length) {
+      navigate(`/content/view/${siblings[index].id}`, { replace: true });
+    }
+  };
+
   // Fetch script data
   useEffect(() => {
     const fetchScript = async () => {
       if (!scriptId) return;
+      setLoading(true);
 
       try {
         const { data, error } = await supabase
@@ -175,6 +191,20 @@ export default function ContentView() {
 
         if (error) throw error;
         setScript(data);
+
+        // Fetch siblings if script has a publish_date
+        if (data?.publish_date && data?.user_id) {
+          const { data: siblingData } = await supabase
+            .from('scripts')
+            .select('id, title')
+            .eq('publish_date', data.publish_date)
+            .eq('user_id', data.user_id)
+            .order('created_at');
+
+          setSiblings(siblingData || []);
+        } else {
+          setSiblings([]);
+        }
       } catch (error) {
         console.error('Error fetching script:', error);
         toast({
