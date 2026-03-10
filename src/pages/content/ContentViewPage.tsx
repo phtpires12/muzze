@@ -402,27 +402,73 @@ export default function ContentView() {
         onClose={() => setShowPaywall(false)}
         action="schedule_future"
       />
-      <div className="min-h-screen bg-background">
+      <div
+        className="min-h-screen bg-background"
+        onTouchStart={(e) => {
+          swipeStartXRef.current = e.targetTouches[0].clientX;
+          swipeEndXRef.current = null;
+        }}
+        onTouchMove={(e) => {
+          swipeEndXRef.current = e.targetTouches[0].clientX;
+        }}
+        onTouchEnd={() => {
+          if (!swipeStartXRef.current || !swipeEndXRef.current || !hasSiblings) return;
+          const distance = swipeStartXRef.current - swipeEndXRef.current;
+          if (distance > 80) navigateToSibling(currentIndex + 1);
+          else if (distance < -80) navigateToSibling(currentIndex - 1);
+          swipeStartXRef.current = null;
+          swipeEndXRef.current = null;
+        }}
+      >
         {/* Header */}
         <div className="sticky top-0 z-10 border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
           <div
             className="max-w-2xl mx-auto px-4 py-4"
             style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}
           >
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" onClick={handleBack}>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="icon" onClick={handleBack} className="shrink-0">
                 <ArrowLeft className="w-5 h-5" />
               </Button>
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <Eye className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground font-medium">Modo Visualização</span>
+
+              {/* Sibling navigation */}
+              {hasSiblings && currentIndex >= 0 ? (
+                <div className="flex items-center gap-1 flex-1 min-w-0">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    disabled={currentIndex === 0}
+                    onClick={() => navigateToSibling(currentIndex - 1)}
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                  <span className="text-xs text-muted-foreground font-medium whitespace-nowrap">
+                    {currentIndex + 1} de {siblings.length}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    disabled={currentIndex === siblings.length - 1}
+                    onClick={() => navigateToSibling(currentIndex + 1)}
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
                 </div>
-              </div>
+              ) : (
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <Eye className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground font-medium">Modo Visualização</span>
+                  </div>
+                </div>
+              )}
+
               <Button
                 variant="ghost"
                 size="icon"
-                className="text-muted-foreground hover:text-destructive"
+                className="text-muted-foreground hover:text-destructive shrink-0"
                 onClick={() => setShowDeleteConfirm(true)}
               >
                 <Trash2 className="w-5 h-5" />
