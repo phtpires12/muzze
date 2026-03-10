@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowLeft, FileText, ExternalLink, Calendar, Play, Eye, Image, Check, ImageOff, Trash2 } from "lucide-react";
+import { ArrowLeft, FileText, ExternalLink, Calendar, Play, Eye, Image, Check, ImageOff, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { ShotItem } from '@/core/utils';
 import { generateSignedUrlsBatch } from '@/core/utils';
 import { Button } from "@/components/ui/button";
