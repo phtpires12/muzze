@@ -21,6 +21,7 @@ const CONTENT_TYPES = [
   { value: "YouTube", label: "YouTube" },
   { value: "TikTok", label: "TikTok" },
   { value: "Carrossel", label: "Carrossel" },
+  { value: "Anúncio", label: "Anúncio" },
 ];
 
 interface IdeaFormProps {

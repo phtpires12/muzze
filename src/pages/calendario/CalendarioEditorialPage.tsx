@@ -666,6 +666,7 @@ const CalendarioEditorial = () => {
                           <SelectItem value="YouTube">YouTube</SelectItem>
                           <SelectItem value="TikTok">TikTok</SelectItem>
                           <SelectItem value="Carrossel">Carrossel</SelectItem>
+                          <SelectItem value="Anúncio">Anúncio</SelectItem>
                         </SelectContent>
                       </Select>
 
@@ -700,8 +701,9 @@ const CalendarioEditorial = () => {
                       <SelectItem value="YouTube">YouTube</SelectItem>
                       <SelectItem value="TikTok">TikTok</SelectItem>
                       <SelectItem value="Carrossel">Carrossel</SelectItem>
+                      <SelectItem value="Anúncio">Anúncio</SelectItem>
                     </SelectContent>
-                  </Select>
+                   </Select>
 
                   <Select value={stageFilter} onValueChange={setStageFilter}>
                     <SelectTrigger className="w-full">
