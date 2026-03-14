@@ -56,7 +56,7 @@ interface IdeaDetailProps {
   scriptId: string;
 }
 
-const CONTENT_TYPES = ["Reels", "YouTube", "TikTok", "Carrossel"];
+const CONTENT_TYPES = ["Reels", "YouTube", "TikTok", "Carrossel", "Anúncio"];
 
 export const IdeaDetail = ({ scriptId }: IdeaDetailProps) => {
   const navigate = useNavigate();

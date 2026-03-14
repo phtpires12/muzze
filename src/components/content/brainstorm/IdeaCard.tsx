@@ -22,6 +22,7 @@ const CONTENT_TYPES = [
   { value: "YouTube", label: "YouTube", icon: Video },
   { value: "TikTok", label: "TikTok", icon: Music },
   { value: "Carrossel", label: "Carrossel", icon: FileText },
+  { value: "Anúncio", label: "Anúncio", icon: Megaphone },
 ];
 
 interface IdeaCardProps {
