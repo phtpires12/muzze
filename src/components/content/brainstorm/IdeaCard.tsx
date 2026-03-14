@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { X, GripVertical, Video, Clapperboard, Music, FileText, RefreshCw } from "lucide-react";
+import { X, GripVertical, Video, Clapperboard, Music, FileText, RefreshCw, Megaphone } from "lucide-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { cn } from '@/core/utils';
