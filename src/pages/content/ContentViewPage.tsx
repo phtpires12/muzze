@@ -578,11 +578,22 @@ export default function ContentView() {
                     </SelectContent>
                   </Select>
 
-                  {script.content_type && (
-                    <Badge variant="secondary">
-                      {script.content_type}
-                    </Badge>
-                  )}
+                  <Select
+                    value={script.content_type || ''}
+                    onValueChange={handleContentTypeChange}
+                    disabled={isUpdating}
+                  >
+                    <SelectTrigger className="h-7 w-auto gap-1 border-0 bg-secondary text-secondary-foreground px-2.5 text-xs font-semibold rounded-full hover:bg-secondary/80 [&>svg]:h-3 [&>svg]:w-3">
+                      <SelectValue placeholder="Tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CONTENT_TYPES.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   {publishStatusLabel && (
                     <Badge className={getPublishStatusClass(script.publish_status)}>
                       {publishStatusLabel}
