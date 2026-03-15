@@ -138,6 +138,7 @@ export default function ContentView() {
   const { scriptId } = useParams<{ scriptId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { profile } = useProfileContext();
 
   // ALL useState hooks FIRST - before any conditional returns
   const [script, setScript] = useState<Script | null>(null);
