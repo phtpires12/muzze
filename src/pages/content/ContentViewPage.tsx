@@ -43,7 +43,9 @@ import { isDateInCurrentWeek } from '@/core/utils';
 import { useWorkflowTemplate } from '@/core/hooks';
 import { WorkflowTemplateId } from '@/core/constants';
 import { ROUTES } from "@/routes/routes";
+import { useProfileContext } from '@/core/contexts';
 
+const CONTENT_TYPES = ["Reels", "YouTube", "TikTok", "Carrossel", "Anúncio"];
 
 interface Script {
   id: string;
@@ -136,6 +138,7 @@ export default function ContentView() {
   const { scriptId } = useParams<{ scriptId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { profile } = useProfileContext();
 
   // ALL useState hooks FIRST - before any conditional returns
   const [script, setScript] = useState<Script | null>(null);
@@ -324,6 +327,36 @@ export default function ContentView() {
         description: "Não foi possível alterar a etapa.",
         variant: "destructive",
       });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleContentTypeChange = async (newType: string) => {
+    if (!script || isUpdating) return;
+    setIsUpdating(true);
+
+    try {
+      const updateData: Record<string, any> = { content_type: newType };
+
+      if (newType === "Carrossel") {
+        updateData.workflow_template = "carousel";
+      } else if (script.content_type === "Carrossel") {
+        updateData.workflow_template = profile?.current_workflow || "classic";
+      }
+
+      const { error } = await supabase
+        .from('scripts')
+        .update(updateData)
+        .eq('id', script.id);
+
+      if (error) throw error;
+
+      setScript(prev => prev ? { ...prev, ...updateData } : null);
+      toast({ title: "Tipo de conteúdo atualizado", description: `Alterado para ${newType}` });
+    } catch (error) {
+      console.error('Error updating content type:', error);
+      toast({ title: "Erro ao atualizar", description: "Não foi possível alterar o tipo.", variant: "destructive" });
     } finally {
       setIsUpdating(false);
     }
@@ -545,11 +578,22 @@ export default function ContentView() {
                     </SelectContent>
                   </Select>
 
-                  {script.content_type && (
-                    <Badge variant="secondary">
-                      {script.content_type}
-                    </Badge>
-                  )}
+                  <Select
+                    value={script.content_type || ''}
+                    onValueChange={handleContentTypeChange}
+                    disabled={isUpdating}
+                  >
+                    <SelectTrigger className="h-7 w-auto gap-1 border-0 bg-secondary text-secondary-foreground px-2.5 text-xs font-semibold rounded-full hover:bg-secondary/80 [&>svg]:h-3 [&>svg]:w-3">
+                      <SelectValue placeholder="Tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CONTENT_TYPES.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   {publishStatusLabel && (
                     <Badge className={getPublishStatusClass(script.publish_status)}>
                       {publishStatusLabel}
