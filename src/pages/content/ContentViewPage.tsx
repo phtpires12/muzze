@@ -43,7 +43,9 @@ import { isDateInCurrentWeek } from '@/core/utils';
 import { useWorkflowTemplate } from '@/core/hooks';
 import { WorkflowTemplateId } from '@/core/constants';
 import { ROUTES } from "@/routes/routes";
+import { useProfileContext } from '@/core/contexts';
 
+const CONTENT_TYPES = ["Reels", "YouTube", "TikTok", "Carrossel", "Anúncio"];
 
 interface Script {
   id: string;
