@@ -362,6 +362,37 @@ export default function ContentView() {
     }
   };
 
+  const handlePublishStatusChange = async (newStatus: string) => {
+    if (!script || isUpdating) return;
+    setIsUpdating(true);
+
+    try {
+      const updateData: Record<string, any> = { publish_status: newStatus };
+
+      if (newStatus === "postado") {
+        updateData.published_at = new Date().toISOString();
+      } else if (script.publish_status === "postado") {
+        updateData.published_at = null;
+      }
+
+      const { error } = await supabase
+        .from('scripts')
+        .update(updateData)
+        .eq('id', script.id);
+
+      if (error) throw error;
+
+      setScript(prev => prev ? { ...prev, ...updateData } : null);
+      const label = getPublishStatusLabel(newStatus) || newStatus;
+      toast({ title: "Status atualizado", description: `Alterado para ${label}` });
+    } catch (error) {
+      console.error('Error updating publish status:', error);
+      toast({ title: "Erro ao atualizar", description: "Não foi possível alterar o status.", variant: "destructive" });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   const handleDateChange = async (newDate: Date | undefined) => {
     if (!script || !newDate || isUpdating) return;
 
@@ -594,11 +625,24 @@ export default function ContentView() {
                       ))}
                     </SelectContent>
                   </Select>
-                  {publishStatusLabel && (
-                    <Badge className={getPublishStatusClass(script.publish_status)}>
-                      {publishStatusLabel}
-                    </Badge>
-                  )}
+                  <Select
+                    value={script.publish_status || 'planejado'}
+                    onValueChange={handlePublishStatusChange}
+                    disabled={isUpdating}
+                  >
+                    <SelectTrigger className={cn(
+                      "h-7 text-xs rounded-full border-0 gap-1 px-3 w-auto",
+                      getPublishStatusClass(script.publish_status)
+                    )}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="planejado">Planejado</SelectItem>
+                      <SelectItem value="pronto_para_postar">Pronto para postar</SelectItem>
+                      <SelectItem value="postado">Postado</SelectItem>
+                      <SelectItem value="perdido">Perdido</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {/* Date Picker */}
