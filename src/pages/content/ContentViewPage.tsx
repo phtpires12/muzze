@@ -332,6 +332,36 @@ export default function ContentView() {
     }
   };
 
+  const handleContentTypeChange = async (newType: string) => {
+    if (!script || isUpdating) return;
+    setIsUpdating(true);
+
+    try {
+      const updateData: Record<string, any> = { content_type: newType };
+
+      if (newType === "Carrossel") {
+        updateData.workflow_template = "carousel";
+      } else if (script.content_type === "Carrossel") {
+        updateData.workflow_template = profile?.current_workflow || "classic";
+      }
+
+      const { error } = await supabase
+        .from('scripts')
+        .update(updateData)
+        .eq('id', script.id);
+
+      if (error) throw error;
+
+      setScript(prev => prev ? { ...prev, ...updateData } : null);
+      toast({ title: "Tipo de conteúdo atualizado", description: `Alterado para ${newType}` });
+    } catch (error) {
+      console.error('Error updating content type:', error);
+      toast({ title: "Erro ao atualizar", description: "Não foi possível alterar o tipo.", variant: "destructive" });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   const handleDateChange = async (newDate: Date | undefined) => {
     if (!script || !newDate || isUpdating) return;
 
