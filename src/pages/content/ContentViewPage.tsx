@@ -625,11 +625,24 @@ export default function ContentView() {
                       ))}
                     </SelectContent>
                   </Select>
-                  {publishStatusLabel && (
-                    <Badge className={getPublishStatusClass(script.publish_status)}>
-                      {publishStatusLabel}
-                    </Badge>
-                  )}
+                  <Select
+                    value={script.publish_status || 'planejado'}
+                    onValueChange={handlePublishStatusChange}
+                    disabled={isUpdating}
+                  >
+                    <SelectTrigger className={cn(
+                      "h-7 text-xs rounded-full border-0 gap-1 px-3 w-auto",
+                      getPublishStatusClass(script.publish_status)
+                    )}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="planejado">Planejado</SelectItem>
+                      <SelectItem value="pronto_para_postar">Pronto para postar</SelectItem>
+                      <SelectItem value="postado">Postado</SelectItem>
+                      <SelectItem value="perdido">Perdido</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {/* Date Picker */}
