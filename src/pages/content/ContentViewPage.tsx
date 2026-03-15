@@ -362,6 +362,37 @@ export default function ContentView() {
     }
   };
 
+  const handlePublishStatusChange = async (newStatus: string) => {
+    if (!script || isUpdating) return;
+    setIsUpdating(true);
+
+    try {
+      const updateData: Record<string, any> = { publish_status: newStatus };
+
+      if (newStatus === "postado") {
+        updateData.published_at = new Date().toISOString();
+      } else if (script.publish_status === "postado") {
+        updateData.published_at = null;
+      }
+
+      const { error } = await supabase
+        .from('scripts')
+        .update(updateData)
+        .eq('id', script.id);
+
+      if (error) throw error;
+
+      setScript(prev => prev ? { ...prev, ...updateData } : null);
+      const label = getPublishStatusLabel(newStatus) || newStatus;
+      toast({ title: "Status atualizado", description: `Alterado para ${label}` });
+    } catch (error) {
+      console.error('Error updating publish status:', error);
+      toast({ title: "Erro ao atualizar", description: "Não foi possível alterar o status.", variant: "destructive" });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   const handleDateChange = async (newDate: Date | undefined) => {
     if (!script || !newDate || isUpdating) return;
 
