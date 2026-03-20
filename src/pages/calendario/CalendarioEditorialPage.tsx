@@ -865,7 +865,7 @@ const CalendarioEditorial = () => {
         ) : viewType === "board" ? (
           <div className="space-y-4">
             {/* Toggle Produção/Publicação */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <Select value={boardSubView} onValueChange={(v) => setBoardSubView(v as "production" | "publication")}>
                 <SelectTrigger className="w-[180px]">
                   <div className="flex items-center gap-2">
@@ -888,6 +888,21 @@ const CalendarioEditorial = () => {
                   </SelectItem>
                 </SelectContent>
               </Select>
+
+              <Select value={contentTypeFilter} onValueChange={setContentTypeFilter}>
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="Tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os tipos</SelectItem>
+                  <SelectItem value="Reels">Reels</SelectItem>
+                  <SelectItem value="YouTube">YouTube</SelectItem>
+                  <SelectItem value="TikTok">TikTok</SelectItem>
+                  <SelectItem value="Carrossel">Carrossel</SelectItem>
+                  <SelectItem value="Anúncio">Anúncio</SelectItem>
+                </SelectContent>
+              </Select>
+
               <span className="text-sm text-muted-foreground">
                 {boardSubView === "production"
                   ? "Workflow de criação"
@@ -896,22 +911,27 @@ const CalendarioEditorial = () => {
             </div>
 
             {/* Renderizar apenas UM Kanban por vez */}
-            {boardSubView === "production" ? (
-              <ProductionBoardView
-                scripts={scripts}
-                onViewScript={handleViewScript}
-                onDeleteScript={handleDeleteScript}
-                onUpdateStatus={handleUpdateStatus}
-              />
-            ) : (
-              <PublicationBoardView
-                scripts={scripts}
-                onViewScript={handleViewScript}
-                onDeleteScript={handleDeleteScript}
-                onUpdatePublishStatus={handleUpdatePublishStatus}
-                onReschedule={handleRescheduleScript}
-              />
-            )}
+            {(() => {
+              const boardScripts = contentTypeFilter === "all"
+                ? scripts
+                : scripts.filter(s => s.content_type === contentTypeFilter);
+              return boardSubView === "production" ? (
+                <ProductionBoardView
+                  scripts={boardScripts}
+                  onViewScript={handleViewScript}
+                  onDeleteScript={handleDeleteScript}
+                  onUpdateStatus={handleUpdateStatus}
+                />
+              ) : (
+                <PublicationBoardView
+                  scripts={boardScripts}
+                  onViewScript={handleViewScript}
+                  onDeleteScript={handleDeleteScript}
+                  onUpdatePublishStatus={handleUpdatePublishStatus}
+                  onReschedule={handleRescheduleScript}
+                />
+              );
+            })()}
           </div>
         ) : null}
       </div>
