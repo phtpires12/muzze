@@ -911,22 +911,27 @@ const CalendarioEditorial = () => {
             </div>
 
             {/* Renderizar apenas UM Kanban por vez */}
-            {boardSubView === "production" ? (
-              <ProductionBoardView
-                scripts={scripts}
-                onViewScript={handleViewScript}
-                onDeleteScript={handleDeleteScript}
-                onUpdateStatus={handleUpdateStatus}
-              />
-            ) : (
-              <PublicationBoardView
-                scripts={scripts}
-                onViewScript={handleViewScript}
-                onDeleteScript={handleDeleteScript}
-                onUpdatePublishStatus={handleUpdatePublishStatus}
-                onReschedule={handleRescheduleScript}
-              />
-            )}
+            {(() => {
+              const boardScripts = contentTypeFilter === "all"
+                ? scripts
+                : scripts.filter(s => s.content_type === contentTypeFilter);
+              return boardSubView === "production" ? (
+                <ProductionBoardView
+                  scripts={boardScripts}
+                  onViewScript={handleViewScript}
+                  onDeleteScript={handleDeleteScript}
+                  onUpdateStatus={handleUpdateStatus}
+                />
+              ) : (
+                <PublicationBoardView
+                  scripts={boardScripts}
+                  onViewScript={handleViewScript}
+                  onDeleteScript={handleDeleteScript}
+                  onUpdatePublishStatus={handleUpdatePublishStatus}
+                  onReschedule={handleRescheduleScript}
+                />
+              );
+            })()}
           </div>
         ) : null}
       </div>
