@@ -507,7 +507,7 @@ const Guests = () => {
               <Label>Papel</Label>
               <RadioGroup 
                 value={inviteRole} 
-                onValueChange={(v) => setInviteRole(v as "admin" | "collaborator")}
+                onValueChange={(v) => setInviteRole(v as "admin" | "collaborator" | "client")}
                 className="space-y-2"
               >
                 <div className="flex items-start gap-3 p-3 border border-border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
@@ -532,8 +532,82 @@ const Guests = () => {
                     </p>
                   </div>
                 </div>
+                <div
+                  className={`flex items-start gap-3 p-3 border rounded-lg transition-colors ${
+                    canInviteClient
+                      ? "border-border cursor-pointer hover:bg-muted/50"
+                      : "border-border/50 opacity-60"
+                  }`}
+                >
+                  <RadioGroupItem
+                    value="client"
+                    id="client"
+                    className="mt-1"
+                    disabled={!canInviteClient}
+                  />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="client" className="font-medium cursor-pointer">
+                        Cliente
+                      </Label>
+                      {!canInviteClient && (
+                        <Badge variant="outline" className="text-[10px]">
+                          Studio
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      UX simplificada — só vê e aprova os conteúdos das etapas que você liberar.
+                    </p>
+                  </div>
+                </div>
               </RadioGroup>
             </div>
+
+            {/* Etapas visíveis ao cliente */}
+            {inviteRole === "client" && (
+              <div className="space-y-2">
+                <Label>Etapas que o cliente verá</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {(["ideation", "script", "review", "recording", "editing", "design"] as CreativeStage[]).map(
+                    (stage) => {
+                      const labels: Record<CreativeStage, string> = {
+                        ideation: "Ideação",
+                        script: "Roteiro",
+                        review: "Revisão",
+                        recording: "Gravação",
+                        editing: "Edição",
+                        design: "Design",
+                      };
+                      const checked = clientStages.includes(stage);
+                      return (
+                        <button
+                          type="button"
+                          key={stage}
+                          onClick={() =>
+                            setClientStages((prev) =>
+                              prev.includes(stage)
+                                ? prev.filter((s) => s !== stage)
+                                : [...prev, stage]
+                            )
+                          }
+                          className={`text-sm px-3 py-2 rounded-lg border transition-colors text-left ${
+                            checked
+                              ? "bg-primary/10 border-primary/50 text-foreground"
+                              : "bg-card border-border text-muted-foreground hover:bg-muted/50"
+                          }`}
+                        >
+                          {labels[stage]}
+                        </button>
+                      );
+                    }
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Em geral, deixe só "Gravação" marcada — assim o cliente só recebe os roteiros prontos para gravar.
+                </p>
+              </div>
+            )}
           </div>
           
           <DialogFooter className="gap-2 sm:gap-0">
