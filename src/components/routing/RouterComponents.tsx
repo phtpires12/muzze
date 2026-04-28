@@ -21,6 +21,7 @@ export const Layout = ({ children }: { children: ReactNode }) => (
 export const ProtectedRoute = ({ children }: { children: ReactNode }) => {
     const [user, setUser] = useState<any>(null);
     const [profile, setProfile] = useState<any>(null);
+    const [clientRole, setClientRole] = useState<boolean>(false);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -35,6 +36,17 @@ export const ProtectedRoute = ({ children }: { children: ReactNode }) => {
                     .eq('user_id', user.id)
                     .maybeSingle();
                 setProfile(profileData);
+
+                // Check if user is a client in any workspace they belong to
+                const { data: memberRows } = await supabase
+                    .from('workspace_members')
+                    .select('role')
+                    .eq('user_id', user.id)
+                    .not('accepted_at', 'is', null);
+                const isClient =
+                    !!memberRows && memberRows.length > 0 &&
+                    memberRows.every((m: any) => m.role === 'client');
+                setClientRole(isClient);
             }
             setLoading(false);
         };
@@ -52,9 +64,21 @@ export const ProtectedRoute = ({ children }: { children: ReactNode }) => {
                         .eq('user_id', session.user.id)
                         .maybeSingle()
                         .then(({ data: profileData }) => setProfile(profileData));
+                    supabase
+                        .from('workspace_members')
+                        .select('role')
+                        .eq('user_id', session.user.id)
+                        .not('accepted_at', 'is', null)
+                        .then(({ data: memberRows }) => {
+                            const isClient =
+                                !!memberRows && memberRows.length > 0 &&
+                                memberRows.every((m: any) => m.role === 'client');
+                            setClientRole(isClient);
+                        });
                 }, 0);
             } else {
                 setProfile(null);
+                setClientRole(false);
             }
         });
 
@@ -76,6 +100,15 @@ export const ProtectedRoute = ({ children }: { children: ReactNode }) => {
     const currentPath = window.location.pathname;
     if (profile?.first_login === true && currentPath !== ROUTES.ONBOARDING) {
         return <Navigate to={ROUTES.ONBOARDING} replace />;
+    }
+
+    // Modo cliente: usuários cujo único papel em todos workspaces é "client"
+    // são redirecionados para a interface simplificada do cliente.
+    if (clientRole && !currentPath.startsWith('/cliente')) {
+        return <Navigate to={ROUTES.CLIENT_HOME} replace />;
+    }
+    if (!clientRole && currentPath.startsWith('/cliente')) {
+        return <Navigate to={ROUTES.HOME} replace />;
     }
 
     return <>{children}</>;
