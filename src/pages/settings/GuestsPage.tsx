@@ -386,7 +386,11 @@ const Guests = () => {
                             {status.label}
                           </Badge>
                           <Badge variant="secondary" className="text-xs">
-                            {invite.role === "admin" ? "Admin" : "Colaborador"}
+                            {invite.role === "admin"
+                              ? "Admin"
+                              : invite.role === "client"
+                              ? "Cliente"
+                              : "Colaborador"}
                           </Badge>
                         </div>
                       </div>
