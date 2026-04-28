@@ -38,6 +38,7 @@ import { cn } from '@/core/utils';
 import { RichTextRenderer } from "@/components/ui/rich-text-renderer";
 import { PRODUCTION_COLUMNS } from '@/core/constants';
 import { usePlanCapabilitiesOptional } from '@/core/contexts';
+import { ClientCommentsSection } from "@/components/client/ClientCommentsSection";
 import { Paywall } from "@/components/shared";
 import { isDateInCurrentWeek } from '@/core/utils';
 import { useWorkflowTemplate } from '@/core/hooks';
