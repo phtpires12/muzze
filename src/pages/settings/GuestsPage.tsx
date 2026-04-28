@@ -51,7 +51,7 @@ interface ActiveMember {
   id: string;
   name?: string;
   email: string;
-  role: "admin" | "collaborator";
+  role: "admin" | "collaborator" | "client";
   userId: string;
   allowedTimerStages: CreativeStage[];
   canEditStages: CreativeStage[];
@@ -96,7 +96,8 @@ const Guests = () => {
   const [confirmRemove, setConfirmRemove] = useState<{ id: string; type: "member" | "invite"; name: string } | null>(null);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<"admin" | "collaborator">("collaborator");
+  const [inviteRole, setInviteRole] = useState<"admin" | "collaborator" | "client">("collaborator");
+  const [clientStages, setClientStages] = useState<CreativeStage[]>(["recording"]);
   const [isInviting, setIsInviting] = useState(false);
   const [resendingId, setResendingId] = useState<string | null>(null);
   const [editingMember, setEditingMember] = useState<ActiveMember | null>(null);
@@ -109,6 +110,9 @@ const Guests = () => {
   const maxGuests = planCapabilities?.limits.maxGuests ?? workspace?.max_guests ?? 3;
   const canInviteUsers = planCapabilities?.limits.canInviteUsers ?? true;
   const totalGuests = members.length + invites.length;
+  // Convidar como Cliente é exclusivo do plano Studio
+  const planType = (planCapabilities as any)?.planType || (planCapabilities as any)?.plan || undefined;
+  const canInviteClient = planType === 'studio';
 
   // Handler for invite button click - check plan limits first
   const handleInviteClick = () => {
@@ -142,7 +146,7 @@ const Guests = () => {
     id: m.id,
     name: m.username || undefined,
     email: m.email || `user_${m.user_id.slice(0, 8)}@...`,
-    role: (m.role === "owner" ? "admin" : m.role) as "admin" | "collaborator",
+    role: (m.role === "owner" ? "admin" : m.role) as "admin" | "collaborator" | "client",
     userId: m.user_id,
     allowedTimerStages: (m.allowed_timer_stages || []) as CreativeStage[],
     canEditStages: (m.can_edit_stages || []) as CreativeStage[],
@@ -193,18 +197,25 @@ const Guests = () => {
     
     setIsInviting(true);
     
-    // Para MVP: dar acesso total a todas as etapas
-    const permissions: StagePermissions = {
-      allowed_timer_stages: ['ideation', 'script', 'review', 'recording', 'editing'],
-      can_edit_stages: ['ideation', 'script', 'review', 'recording', 'editing'],
-    };
-    
+    // Cliente: usa as etapas selecionadas; demais papéis recebem acesso amplo
+    const permissions: StagePermissions =
+      inviteRole === 'client'
+        ? {
+            allowed_timer_stages: clientStages,
+            can_edit_stages: [],
+          }
+        : {
+            allowed_timer_stages: ['ideation', 'script', 'review', 'recording', 'editing'],
+            can_edit_stages: ['ideation', 'script', 'review', 'recording', 'editing'],
+          };
+
     const success = await inviteMember(email, inviteRole, permissions);
     
     if (success) {
       setShowInviteModal(false);
       setInviteEmail("");
       setInviteRole("collaborator");
+      setClientStages(["recording"]);
     }
     
     setIsInviting(false);
