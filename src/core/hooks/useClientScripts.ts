@@ -22,6 +22,7 @@ export interface ClientScript {
   client_approved_at: string | null;
   workspace_id: string;
   user_id: string;
+  main_video_url?: string | null;
 }
 
 /**
