@@ -310,9 +310,43 @@ export type Database = {
         }
         Relationships: []
       }
+      script_comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          resolved: boolean
+          script_id: string
+          updated_at: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          resolved?: boolean
+          script_id: string
+          updated_at?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          resolved?: boolean
+          script_id?: string
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       scripts: {
         Row: {
           central_idea: string | null
+          client_approved_at: string | null
           content: string | null
           content_type: string | null
           created_at: string
@@ -346,6 +380,7 @@ export type Database = {
         }
         Insert: {
           central_idea?: string | null
+          client_approved_at?: string | null
           content?: string | null
           content_type?: string | null
           created_at?: string
@@ -379,6 +414,7 @@ export type Database = {
         }
         Update: {
           central_idea?: string | null
+          client_approved_at?: string | null
           content?: string | null
           content_type?: string | null
           created_at?: string
@@ -908,7 +944,7 @@ export type Database = {
     }
     Enums: {
       app_role: "developer" | "admin" | "user"
-      workspace_role: "owner" | "admin" | "collaborator"
+      workspace_role: "owner" | "admin" | "collaborator" | "client"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1037,7 +1073,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["developer", "admin", "user"],
-      workspace_role: ["owner", "admin", "collaborator"],
+      workspace_role: ["owner", "admin", "collaborator", "client"],
     },
   },
 } as const

@@ -20,6 +20,10 @@ export const ROUTES = {
     CALENDARIO: '/calendario',
     WORKFLOWS: '/workflows',
 
+    // Modo Cliente (plano Studio)
+    CLIENT_HOME: '/cliente',
+    CLIENT_CALENDAR: '/cliente/calendario',
+
     // Content
     SESSION: '/session',
     SHOT_LIST_REVIEW: '/shot-list/review',

@@ -1,4 +1,4 @@
-export type WorkspaceRole = 'owner' | 'admin' | 'collaborator';
+export type WorkspaceRole = 'owner' | 'admin' | 'collaborator' | 'client';
 
 export type CreativeStage = 'ideation' | 'script' | 'review' | 'recording' | 'editing' | 'design';
 

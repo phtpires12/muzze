@@ -51,7 +51,7 @@ interface ActiveMember {
   id: string;
   name?: string;
   email: string;
-  role: "admin" | "collaborator";
+  role: "admin" | "collaborator" | "client";
   userId: string;
   allowedTimerStages: CreativeStage[];
   canEditStages: CreativeStage[];
@@ -96,7 +96,8 @@ const Guests = () => {
   const [confirmRemove, setConfirmRemove] = useState<{ id: string; type: "member" | "invite"; name: string } | null>(null);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<"admin" | "collaborator">("collaborator");
+  const [inviteRole, setInviteRole] = useState<"admin" | "collaborator" | "client">("collaborator");
+  const [clientStages, setClientStages] = useState<CreativeStage[]>(["recording"]);
   const [isInviting, setIsInviting] = useState(false);
   const [resendingId, setResendingId] = useState<string | null>(null);
   const [editingMember, setEditingMember] = useState<ActiveMember | null>(null);
@@ -109,6 +110,8 @@ const Guests = () => {
   const maxGuests = planCapabilities?.limits.maxGuests ?? workspace?.max_guests ?? 3;
   const canInviteUsers = planCapabilities?.limits.canInviteUsers ?? true;
   const totalGuests = members.length + invites.length;
+  // Convidar como Cliente é exclusivo do plano Studio
+  const canInviteClient = planCapabilities?.planType === 'studio';
 
   // Handler for invite button click - check plan limits first
   const handleInviteClick = () => {
@@ -142,7 +145,7 @@ const Guests = () => {
     id: m.id,
     name: m.username || undefined,
     email: m.email || `user_${m.user_id.slice(0, 8)}@...`,
-    role: (m.role === "owner" ? "admin" : m.role) as "admin" | "collaborator",
+    role: (m.role === "owner" ? "admin" : m.role) as "admin" | "collaborator" | "client",
     userId: m.user_id,
     allowedTimerStages: (m.allowed_timer_stages || []) as CreativeStage[],
     canEditStages: (m.can_edit_stages || []) as CreativeStage[],
@@ -193,18 +196,25 @@ const Guests = () => {
     
     setIsInviting(true);
     
-    // Para MVP: dar acesso total a todas as etapas
-    const permissions: StagePermissions = {
-      allowed_timer_stages: ['ideation', 'script', 'review', 'recording', 'editing'],
-      can_edit_stages: ['ideation', 'script', 'review', 'recording', 'editing'],
-    };
-    
+    // Cliente: usa as etapas selecionadas; demais papéis recebem acesso amplo
+    const permissions: StagePermissions =
+      inviteRole === 'client'
+        ? {
+            allowed_timer_stages: clientStages,
+            can_edit_stages: [],
+          }
+        : {
+            allowed_timer_stages: ['ideation', 'script', 'review', 'recording', 'editing'],
+            can_edit_stages: ['ideation', 'script', 'review', 'recording', 'editing'],
+          };
+
     const success = await inviteMember(email, inviteRole, permissions);
     
     if (success) {
       setShowInviteModal(false);
       setInviteEmail("");
       setInviteRole("collaborator");
+      setClientStages(["recording"]);
     }
     
     setIsInviting(false);
@@ -295,7 +305,11 @@ const Guests = () => {
                       <p className="text-sm text-muted-foreground">{member.email}</p>
                     )}
                     <Badge variant="secondary" className="mt-1 text-xs">
-                      {member.role === "admin" ? "Admin" : "Colaborador"}
+                      {member.role === "admin"
+                        ? "Admin"
+                        : member.role === "client"
+                        ? "Cliente"
+                        : "Colaborador"}
                     </Badge>
                   </div>
                 </div>
@@ -371,7 +385,11 @@ const Guests = () => {
                             {status.label}
                           </Badge>
                           <Badge variant="secondary" className="text-xs">
-                            {invite.role === "admin" ? "Admin" : "Colaborador"}
+                            {invite.role === "admin"
+                              ? "Admin"
+                              : invite.role === "client"
+                              ? "Cliente"
+                              : "Colaborador"}
                           </Badge>
                         </div>
                       </div>
@@ -488,7 +506,7 @@ const Guests = () => {
               <Label>Papel</Label>
               <RadioGroup 
                 value={inviteRole} 
-                onValueChange={(v) => setInviteRole(v as "admin" | "collaborator")}
+                onValueChange={(v) => setInviteRole(v as "admin" | "collaborator" | "client")}
                 className="space-y-2"
               >
                 <div className="flex items-start gap-3 p-3 border border-border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
@@ -513,8 +531,82 @@ const Guests = () => {
                     </p>
                   </div>
                 </div>
+                <div
+                  className={`flex items-start gap-3 p-3 border rounded-lg transition-colors ${
+                    canInviteClient
+                      ? "border-border cursor-pointer hover:bg-muted/50"
+                      : "border-border/50 opacity-60"
+                  }`}
+                >
+                  <RadioGroupItem
+                    value="client"
+                    id="client"
+                    className="mt-1"
+                    disabled={!canInviteClient}
+                  />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="client" className="font-medium cursor-pointer">
+                        Cliente
+                      </Label>
+                      {!canInviteClient && (
+                        <Badge variant="outline" className="text-[10px]">
+                          Studio
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      UX simplificada — só vê e aprova os conteúdos das etapas que você liberar.
+                    </p>
+                  </div>
+                </div>
               </RadioGroup>
             </div>
+
+            {/* Etapas visíveis ao cliente */}
+            {inviteRole === "client" && (
+              <div className="space-y-2">
+                <Label>Etapas que o cliente verá</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {(["ideation", "script", "review", "recording", "editing", "design"] as CreativeStage[]).map(
+                    (stage) => {
+                      const labels: Record<CreativeStage, string> = {
+                        ideation: "Ideação",
+                        script: "Roteiro",
+                        review: "Revisão",
+                        recording: "Gravação",
+                        editing: "Edição",
+                        design: "Design",
+                      };
+                      const checked = clientStages.includes(stage);
+                      return (
+                        <button
+                          type="button"
+                          key={stage}
+                          onClick={() =>
+                            setClientStages((prev) =>
+                              prev.includes(stage)
+                                ? prev.filter((s) => s !== stage)
+                                : [...prev, stage]
+                            )
+                          }
+                          className={`text-sm px-3 py-2 rounded-lg border transition-colors text-left ${
+                            checked
+                              ? "bg-primary/10 border-primary/50 text-foreground"
+                              : "bg-card border-border text-muted-foreground hover:bg-muted/50"
+                          }`}
+                        >
+                          {labels[stage]}
+                        </button>
+                      );
+                    }
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Em geral, deixe só "Gravação" marcada — assim o cliente só recebe os roteiros prontos para gravar.
+                </p>
+              </div>
+            )}
           </div>
           
           <DialogFooter className="gap-2 sm:gap-0">

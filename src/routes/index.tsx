@@ -46,6 +46,9 @@ import GuestsPage from '@/pages/settings/GuestsPage';
 import HelpPage from '@/pages/settings/HelpPage';
 import SendSuggestionsPage from '@/pages/settings/SendSuggestionsPage';
 
+// Client mode (Studio plan)
+import { ClientHomePage, ClientCalendarPage } from '@/pages/client';
+
 export const router = createBrowserRouter([
     {
         element: <RootLayout />,
@@ -67,6 +70,10 @@ export const router = createBrowserRouter([
             // Calendário
             { path: ROUTES.CALENDARIO, element: <ProtectedRoute><Layout><CalendarioEditorialPage /></Layout></ProtectedRoute> },
             { path: ROUTES.WORKFLOWS, element: <ProtectedRoute><Layout><WorkflowsPage /></Layout></ProtectedRoute> },
+
+            // Client mode (rotas do cliente do plano Studio)
+            { path: ROUTES.CLIENT_HOME, element: <ProtectedRoute><ClientHomePage /></ProtectedRoute> },
+            { path: ROUTES.CLIENT_CALENDAR, element: <ProtectedRoute><ClientCalendarPage /></ProtectedRoute> },
 
             // Content
             { path: ROUTES.SESSION, element: <ProtectedRoute><SessionPage /></ProtectedRoute> },

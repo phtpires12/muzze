@@ -38,6 +38,7 @@ import { cn } from '@/core/utils';
 import { RichTextRenderer } from "@/components/ui/rich-text-renderer";
 import { PRODUCTION_COLUMNS } from '@/core/constants';
 import { usePlanCapabilitiesOptional } from '@/core/contexts';
+import { ClientCommentsSection } from "@/components/client/ClientCommentsSection";
 import { Paywall } from "@/components/shared";
 import { isDateInCurrentWeek } from '@/core/utils';
 import { useWorkflowTemplate } from '@/core/hooks';
@@ -803,6 +804,9 @@ export default function ContentView() {
               <Play className="w-5 h-5 mr-2" />
               Iniciar Sessão Criativa
             </Button>
+
+            {/* Comentários enviados pelo cliente */}
+            <ClientCommentsSection scriptId={script.id} />
           </div>
         </div>
 
