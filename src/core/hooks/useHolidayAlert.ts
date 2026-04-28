@@ -20,7 +20,9 @@ export interface HolidayAlert {
 }
 
 const DISMISS_PREFIX = 'muzze_holiday_dismissed_';
+const REMIND_LATER_PREFIX = 'muzze_holiday_remind_';
 const DISMISS_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+const REMIND_LATER_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 function isDismissed(alertId: string): boolean {
   try {
@@ -39,6 +41,25 @@ function isDismissed(alertId: string): boolean {
 
 function dismissAlert(alertId: string) {
   localStorage.setItem(`${DISMISS_PREFIX}${alertId}`, Date.now().toString());
+}
+
+function remindLaterAlert(alertId: string) {
+  localStorage.setItem(`${REMIND_LATER_PREFIX}${alertId}`, Date.now().toString());
+}
+
+function isRemindedLater(alertId: string): boolean {
+  try {
+    const raw = localStorage.getItem(`${REMIND_LATER_PREFIX}${alertId}`);
+    if (!raw) return false;
+    const remindedAt = parseInt(raw, 10);
+    if (Date.now() - remindedAt > REMIND_LATER_TTL_MS) {
+      localStorage.removeItem(`${REMIND_LATER_PREFIX}${alertId}`);
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function isWeekend(date: Date): boolean {
@@ -175,7 +196,7 @@ export function useHolidayAlert() {
         // Find the most relevant upcoming alert
         const alerts = holidays
           .map(h => buildHolidayAlert(h, countryCode))
-          .filter((a): a is HolidayAlert => a !== null && !isDismissed(a.id))
+          .filter((a): a is HolidayAlert => a !== null && !isDismissed(a.id) && !isRemindedLater(a.id))
           .sort((a, b) => a.daysAhead - b.daysAhead);
 
         setAlert(alerts[0] || null);
@@ -197,7 +218,10 @@ export function useHolidayAlert() {
   };
 
   const remindLater = () => {
-    setAlert(null);
+    if (alert) {
+      remindLaterAlert(alert.id);
+      setAlert(null);
+    }
   };
 
   return { alert, loading, dismiss, remindLater };

@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   ArrowLeft, Users, UserPlus, MoreVertical, Mail, Shield, UserMinus, 
-  Clock, AlertTriangle, Send, X, RefreshCw, Calendar
+  Clock, AlertTriangle, Send, X, RefreshCw, Calendar, Info
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -36,7 +36,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { useWorkspace } from '@/core/hooks';
+import { useWorkspace, type EmailStatus } from '@/core/hooks/useWorkspace';
 import { useWorkspaceContext } from '@/core/contexts';
 import { usePlanCapabilitiesOptional } from '@/core/contexts';
 import { Paywall, PaywallAction } from "@/components/shared";
@@ -88,6 +88,7 @@ const Guests = () => {
     cancelInvite,
     resendInvite,
     inviteMember,
+    checkEmailStatus,
     updateMemberPermissions,
     isLoading: workspaceLoading,
     workspace 
@@ -103,6 +104,9 @@ const Guests = () => {
   const [editingMember, setEditingMember] = useState<ActiveMember | null>(null);
   const [showPaywall, setShowPaywall] = useState(false);
   const [paywallAction, setPaywallAction] = useState<PaywallAction>('invite_user');
+  const [emailStatus, setEmailStatus] = useState<EmailStatus>(null);
+  const [emailCheckLoading, setEmailCheckLoading] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   const isLoading = contextLoading || workspaceLoading;
   
@@ -130,6 +134,50 @@ const Guests = () => {
     }
     
     setShowInviteModal(true);
+  };
+
+  // Verificação de email em tempo real com debounce
+  const checkEmail = useCallback(async (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email.trim() || !emailRegex.test(email.trim())) {
+      setEmailStatus(null);
+      setEmailCheckLoading(false);
+      return;
+    }
+
+    setEmailCheckLoading(true);
+    const status = await checkEmailStatus(email.trim());
+    setEmailStatus(status);
+    setEmailCheckLoading(false);
+  }, [checkEmailStatus]);
+
+  useEffect(() => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+
+    if (!inviteEmail.trim()) {
+      setEmailStatus(null);
+      return;
+    }
+
+    debounceRef.current = setTimeout(() => {
+      checkEmail(inviteEmail);
+    }, 500);
+
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+    };
+  }, [inviteEmail, checkEmail]);
+
+  const resetInviteModal = () => {
+    setShowInviteModal(false);
+    setInviteEmail("");
+    setInviteRole("collaborator");
+    setEmailStatus(null);
+    setEmailCheckLoading(false);
   };
   
   // Verificar permissão (apenas owner/admin podem acessar)
@@ -193,6 +241,11 @@ const Guests = () => {
       toast.error("Email inválido");
       return;
     }
+
+    if (emailStatus === 'active_member') {
+      toast.error("Este email já pertence a um membro ativo do workspace.");
+      return;
+    }
     
     setIsInviting(true);
     
@@ -211,10 +264,7 @@ const Guests = () => {
     const success = await inviteMember(email, inviteRole, permissions);
     
     if (success) {
-      setShowInviteModal(false);
-      setInviteEmail("");
-      setInviteRole("collaborator");
-      setClientStages(["recording"]);
+      resetInviteModal();
     }
     
     setIsInviting(false);
@@ -480,12 +530,18 @@ const Guests = () => {
       />
 
       {/* Modal de convite */}
-      <Dialog open={showInviteModal} onOpenChange={setShowInviteModal}>
+      <Dialog open={showInviteModal} onOpenChange={(open) => { if (!open) resetInviteModal(); else setShowInviteModal(true); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Convidar Pessoa</DialogTitle>
+            <DialogTitle>
+              {emailStatus === 'previous_invite' || emailStatus === 'pending_invite' 
+                ? 'Reenviar Convite' 
+                : 'Convidar Pessoa'}
+            </DialogTitle>
             <DialogDescription>
-              Envie um convite para alguém colaborar no seu workspace.
+              {emailStatus === 'previous_invite' || emailStatus === 'pending_invite'
+                ? 'Reenvie o convite para alguém colaborar no seu workspace.'
+                : 'Envie um convite para alguém colaborar no seu workspace.'}
             </DialogDescription>
           </DialogHeader>
           
@@ -501,6 +557,50 @@ const Guests = () => {
                 disabled={isInviting}
               />
             </div>
+
+            {/* Banner contextual baseado no status do email */}
+            {emailCheckLoading && inviteEmail.trim() && (
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 border border-border">
+                <RefreshCw className="h-4 w-4 animate-spin text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">Verificando email...</span>
+              </div>
+            )}
+
+            {!emailCheckLoading && emailStatus === 'previous_invite' && (
+              <div className="flex items-start gap-2.5 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
+                <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-yellow-700">Este usuário já foi convidado antes</p>
+                  <p className="text-xs text-yellow-600/80 mt-0.5">
+                    O convite anterior expirou. Ao prosseguir, um novo convite será enviado.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {!emailCheckLoading && emailStatus === 'pending_invite' && (
+              <div className="flex items-start gap-2.5 p-3 rounded-lg bg-blue-500/10 border border-blue-500/30">
+                <Info className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-blue-700">Já existe um convite pendente</p>
+                  <p className="text-xs text-blue-600/80 mt-0.5">
+                    Ao prosseguir, o convite anterior será substituído por um novo.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {!emailCheckLoading && emailStatus === 'active_member' && (
+              <div className="flex items-start gap-2.5 p-3 rounded-lg bg-red-500/10 border border-red-500/30">
+                <X className="h-4 w-4 text-red-600 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-red-700">Este email já é de um membro ativo</p>
+                  <p className="text-xs text-red-600/80 mt-0.5">
+                    Esta pessoa já faz parte deste workspace.
+                  </p>
+                </div>
+              </div>
+            )}
             
             <div className="space-y-2">
               <Label>Papel</Label>
@@ -610,11 +710,23 @@ const Guests = () => {
           </div>
           
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setShowInviteModal(false)} disabled={isInviting}>
+            <Button variant="outline" onClick={resetInviteModal} disabled={isInviting}>
               Cancelar
             </Button>
-            <Button onClick={handleInvite} disabled={isInviting || !inviteEmail.trim()}>
-              {isInviting ? "Enviando..." : "Enviar Convite"}
+            <Button 
+              onClick={handleInvite} 
+              disabled={isInviting || !inviteEmail.trim() || emailStatus === 'active_member' || emailCheckLoading}
+            >
+              {isInviting ? (
+                <>Enviando...</>
+              ) : emailStatus === 'previous_invite' || emailStatus === 'pending_invite' ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-1.5" />
+                  Reenviar Convite
+                </>
+              ) : (
+                <>Enviar Convite</>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

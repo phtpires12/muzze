@@ -79,7 +79,7 @@ export const router = createBrowserRouter([
             { path: ROUTES.SESSION, element: <ProtectedRoute><SessionPage /></ProtectedRoute> },
             { path: ROUTES.SHOT_LIST_REVIEW, element: <ProtectedRoute><ShotListReviewPage /></ProtectedRoute> },
             { path: ROUTES.SHOT_LIST_RECORD, element: <ProtectedRoute><ShotListRecordPage /></ProtectedRoute> },
-            { path: ROUTES.CONTENT_VIEW, element: <ProtectedRoute><ContentViewPage /></ProtectedRoute> },
+            { path: ROUTES.CONTENT_VIEW, element: <ContentViewPage /> },
             { path: ROUTES.EDITING_WORKSPACE, element: <ProtectedRoute><EditingWorkspacePage /></ProtectedRoute> },
 
             // Stats / Gamificação

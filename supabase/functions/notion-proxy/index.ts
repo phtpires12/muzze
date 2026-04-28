@@ -121,9 +121,30 @@ serve(async (req) => {
       });
     }
 
+    // Ação GET_DATABASE (Para carregar dados de uma Database específica acessada via Link direto)
     if (action === "get_database") {
       const { token, database_id } = params;
       if (!token || !database_id) throw new Error("Missing params");
+
+      const notionResponse = await fetch(`https://api.notion.com/v1/databases/${database_id}`, {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Notion-Version": "2022-06-28",
+        }
+      });
+
+      const data = await notionResponse.json();
+      if (!notionResponse.ok) throw new Error(data.message || 'Erro ao buscar detalhes da database no Notion');
+
+      return new Response(
+        JSON.stringify({ success: true, data }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      )
+    }
+
+    throw new Error('Action method not supported by this proxy')
+>>>>>>> e65dfbc (feat: compartilhamento de conteúdo via link + production schedules + correções diversas)
 
       const notionResponse = await fetch(`https://api.notion.com/v1/databases/${database_id}`, {
         method: "GET",

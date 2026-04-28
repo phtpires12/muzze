@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowLeft, FileText, ExternalLink, Calendar, Play, Eye, Image, Check, ImageOff, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, FileText, ExternalLink, Calendar, Play, Eye, Image, Check, ImageOff, Trash2, ChevronLeft, ChevronRight, Share2 } from "lucide-react";
 import { ShotItem } from '@/core/utils';
 import { generateSignedUrlsBatch } from '@/core/utils';
 import { Button } from "@/components/ui/button";
@@ -157,6 +157,11 @@ export default function ContentView() {
   const swipeStartXRef = useRef<number | null>(null);
   const swipeEndXRef = useRef<number | null>(null);
 
+  // Access control state
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [accessLevel, setAccessLevel] = useState<'owner' | 'member' | 'viewer' | 'anon'>('anon');
+  const [canStartSession, setCanStartSession] = useState(false);
+
   const planCapabilities = usePlanCapabilitiesOptional();
 
   // Workflow dinâmico para garantir que apenas os estágios permitidos apareçam
@@ -179,7 +184,7 @@ export default function ContentView() {
     }
   };
 
-  // Fetch script data
+  // Fetch script data + determine access level
   useEffect(() => {
     const fetchScript = async () => {
       if (!scriptId) return;
@@ -208,6 +213,60 @@ export default function ContentView() {
         } else {
           setSiblings([]);
         }
+
+        // Determine access level
+        const { data: userData } = await supabase.auth.getUser();
+        const user = userData?.user ?? null;
+        setCurrentUser(user);
+
+        if (!user || !data) {
+          setAccessLevel('anon');
+          setCanStartSession(false);
+          return;
+        }
+
+        // Check if user owns this script directly
+        if (data.user_id === user.id) {
+          setAccessLevel('owner');
+          setCanStartSession(true);
+          return;
+        }
+
+        // Find which workspace owns this script
+        const { data: ownerWorkspace } = await supabase
+          .from('workspaces')
+          .select('id')
+          .eq('owner_id', data.user_id)
+          .maybeSingle();
+
+        if (!ownerWorkspace) {
+          setAccessLevel('viewer');
+          setCanStartSession(false);
+          return;
+        }
+
+        // Check if current user is a member of that workspace
+        const { data: membership } = await supabase
+          .from('workspace_members')
+          .select('role, allowed_timer_stages, can_edit_stages')
+          .eq('workspace_id', ownerWorkspace.id)
+          .eq('user_id', user.id)
+          .not('accepted_at', 'is', null)
+          .maybeSingle();
+
+        if (!membership) {
+          setAccessLevel('viewer');
+          setCanStartSession(false);
+          return;
+        }
+
+        const isAdmin = membership.role === 'admin';
+        setAccessLevel(isAdmin ? 'owner' : 'member');
+
+        // Check if member can start a session (has at least one allowed_timer_stage)
+        const hasTimerPermission = Array.isArray(membership.allowed_timer_stages) &&
+          membership.allowed_timer_stages.length > 0;
+        setCanStartSession(hasTimerPermission);
       } catch (error) {
         console.error('Error fetching script:', error);
         toast({
@@ -285,7 +344,29 @@ export default function ContentView() {
   }, [imagePathsKey]);
 
   const handleBack = () => {
-    navigate(ROUTES.CALENDARIO);
+    if (currentUser) {
+      navigate(ROUTES.CALENDARIO);
+    } else {
+      window.history.back();
+    }
+  };
+
+  const handleShare = async () => {
+    const url = window.location.href;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: script?.title || 'Conteúdo Muzze', url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        toast({
+          title: "Link copiado!",
+          description: "Qualquer pessoa com o link pode visualizar este conteúdo.",
+        });
+      }
+    } catch {
+      await navigator.clipboard.writeText(url);
+      toast({ title: "Link copiado!" });
+    }
   };
 
   const handleStartSession = () => {
@@ -530,14 +611,27 @@ export default function ContentView() {
                 </div>
               )}
 
+              {/* Share button — always visible */}
               <Button
                 variant="ghost"
                 size="icon"
-                className="text-muted-foreground hover:text-destructive shrink-0"
-                onClick={() => setShowDeleteConfirm(true)}
+                className="text-muted-foreground hover:text-foreground shrink-0"
+                onClick={handleShare}
+                title="Compartilhar conteúdo"
               >
-                <Trash2 className="w-5 h-5" />
+                <Share2 className="w-5 h-5" />
               </Button>
+              {/* Delete — only for owner/admin */}
+              {accessLevel === 'owner' && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-muted-foreground hover:text-destructive shrink-0"
+                  onClick={() => setShowDeleteConfirm(true)}
+                >
+                  <Trash2 className="w-5 h-5" />
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -556,8 +650,8 @@ export default function ContentView() {
             )}
 
             {/* Main Card */}
-            <Card className="mb-6 w-full overflow-hidden" onClick={handleEditAttempt}>
-              <CardContent className="p-6 space-y-4 cursor-pointer break-words overflow-hidden">
+            <Card className="mb-6 w-full overflow-hidden" onClick={accessLevel === 'owner' || accessLevel === 'member' ? handleEditAttempt : undefined}>
+              <CardContent className={`p-6 space-y-4 break-words overflow-hidden ${accessLevel === 'owner' || accessLevel === 'member' ? 'cursor-pointer' : ''}`}>
                 {/* Title */}
                 <div className="flex items-start gap-3">
                   <div className={cn(
@@ -584,31 +678,37 @@ export default function ContentView() {
 
                 {/* Stage Selector + Badges */}
                 <div className="flex flex-wrap gap-2 items-center">
-                  <Select
-                    value={script.status || 'draft_idea'}
-                    onValueChange={handleStageChange}
-                    disabled={isUpdating}
-                  >
-                    <SelectTrigger
-                      className={cn(
-                        "w-auto h-7 text-xs font-medium border-none gap-1 px-2",
-                        getStageBadgeClass(stage)
-                      )}
-                      onClick={(e) => e.stopPropagation()}
+                  {accessLevel === 'owner' ? (
+                    <Select
+                      value={script.status || 'draft_idea'}
+                      onValueChange={handleStageChange}
+                      disabled={isUpdating}
                     >
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {allowedColumns.map((col) => (
-                        <SelectItem key={col.id} value={col.status}>
-                          <div className="flex items-center gap-2">
-                            <div className={cn("w-2 h-2 rounded-full", col.color)} />
-                            {col.label}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                      <SelectTrigger
+                        className={cn(
+                          "w-auto h-7 text-xs font-medium border-none gap-1 px-2",
+                          getStageBadgeClass(stage)
+                        )}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {allowedColumns.map((col) => (
+                          <SelectItem key={col.id} value={col.status}>
+                            <div className="flex items-center gap-2">
+                              <div className={cn("w-2 h-2 rounded-full", col.color)} />
+                              {col.label}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Badge className={cn("text-xs font-medium", getStageBadgeClass(stage))}>
+                      {getStageLabel(stage)}
+                    </Badge>
+                  )}
 
                   <Select
                     value={script.content_type || ''}
@@ -646,32 +746,39 @@ export default function ContentView() {
                   </Select>
                 </div>
 
-                {/* Date Picker */}
-                <Popover open={showDatePicker} onOpenChange={setShowDatePicker}>
-                  <PopoverTrigger asChild>
-                    <button
-                      className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors py-1 px-2 -ml-2 rounded-md hover:bg-accent"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <Calendar className="w-4 h-4" />
-                      <span>
-                        {script.publish_date
-                          ? format(new Date(script.publish_date + 'T12:00:00'), "d 'de' MMMM 'de' yyyy", { locale: ptBR })
-                          : "Adicionar data"
-                        }
-                      </span>
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start" onClick={(e) => e.stopPropagation()}>
-                    <CalendarPicker
-                      mode="single"
-                      selected={script.publish_date ? new Date(script.publish_date + 'T12:00:00') : undefined}
-                      onSelect={handleDateChange}
-                      locale={ptBR}
-                      className="pointer-events-auto"
-                    />
-                  </PopoverContent>
-                </Popover>
+                {/* Date Picker — editable only for owner */}
+                {accessLevel === 'owner' ? (
+                  <Popover open={showDatePicker} onOpenChange={setShowDatePicker}>
+                    <PopoverTrigger asChild>
+                      <button
+                        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors py-1 px-2 -ml-2 rounded-md hover:bg-accent"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Calendar className="w-4 h-4" />
+                        <span>
+                          {script.publish_date
+                            ? format(new Date(script.publish_date + 'T12:00:00'), "d 'de' MMMM 'de' yyyy", { locale: ptBR })
+                            : "Adicionar data"
+                          }
+                        </span>
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start" onClick={(e) => e.stopPropagation()}>
+                      <CalendarPicker
+                        mode="single"
+                        selected={script.publish_date ? new Date(script.publish_date + 'T12:00:00') : undefined}
+                        onSelect={handleDateChange}
+                        locale={ptBR}
+                        className="pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                ) : script.publish_date ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground py-1">
+                    <Calendar className="w-4 h-4" />
+                    <span>{format(new Date(script.publish_date + 'T12:00:00'), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}</span>
+                  </div>
+                ) : null}
 
                 {/* Central Idea */}
                 {script.central_idea && (
@@ -702,8 +809,8 @@ export default function ContentView() {
 
             {/* Script Content (Read-only) */}
             {hasContent && (
-              <Card className="mb-6 w-full overflow-hidden" onClick={handleEditAttempt}>
-                <CardContent className="p-6 space-y-4 cursor-pointer break-words overflow-hidden">
+              <Card className="mb-6 w-full overflow-hidden" onClick={accessLevel === 'owner' || accessLevel === 'member' ? handleEditAttempt : undefined}>
+                <CardContent className={`p-6 space-y-4 break-words overflow-hidden ${accessLevel === 'owner' || accessLevel === 'member' ? 'cursor-pointer' : ''}`}>
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Roteiro</p>
 
                   {parsedContent.gancho && (
@@ -738,8 +845,8 @@ export default function ContentView() {
             )}
 
             {/* Shot List Preview */}
-            <Card className="mb-6 w-full overflow-hidden" onClick={handleEditAttempt}>
-              <CardContent className="p-6 space-y-3 cursor-pointer">
+            <Card className="mb-6 w-full overflow-hidden" onClick={accessLevel === 'owner' || accessLevel === 'member' ? handleEditAttempt : undefined}>
+              <CardContent className={`p-6 space-y-3 ${accessLevel === 'owner' || accessLevel === 'member' ? 'cursor-pointer' : ''}`}>
                 {parsedShots.length > 0 ? (
                   <>
                     <div className="flex items-center gap-2">
@@ -791,24 +898,40 @@ export default function ContentView() {
           </div>
         </ScrollArea>
 
-        {/* Fixed CTA Button */}
-        <div
-          className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background via-background to-transparent"
-          style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' }}
-        >
-          <div className="max-w-2xl mx-auto px-4">
-            <Button
-              onClick={() => setShowSessionModal(true)}
-              className="w-full h-14 text-lg bg-gradient-to-r from-primary to-accent hover:opacity-90 text-primary-foreground shadow-lg"
-            >
-              <Play className="w-5 h-5 mr-2" />
-              Iniciar Sessão Criativa
-            </Button>
+        {/* Fixed CTA Button — only for members with permission */}
+        {(accessLevel === 'owner' || (accessLevel === 'member' && canStartSession)) && (
+          <div
+            className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background via-background to-transparent"
+            style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' }}
+          >
+            <div className="max-w-2xl mx-auto px-4">
+              <Button
+                onClick={() => setShowSessionModal(true)}
+                className="w-full h-14 text-lg bg-gradient-to-r from-primary to-accent hover:opacity-90 text-primary-foreground shadow-lg"
+              >
+                <Play className="w-5 h-5 mr-2" />
+                Iniciar Sessão Criativa
+              </Button>
 
-            {/* Comentários enviados pelo cliente */}
-            <ClientCommentsSection scriptId={script.id} />
+              {/* Comentários enviados pelo cliente */}
+              <ClientCommentsSection scriptId={script.id} />
+            </div>
           </div>
-        </div>
+        )}
+        {/* Visitor CTA — for non-members */}
+        {(accessLevel === 'viewer' || accessLevel === 'anon') && (
+          <div
+            className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background via-background to-transparent"
+            style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' }}
+          >
+            <div className="max-w-2xl mx-auto px-4">
+              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground py-3 bg-muted/50 rounded-xl border border-border">
+                <Eye className="w-4 h-4" />
+                <span>Você está visualizando este conteúdo</span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Confirmation Modal */}
         <AlertDialog open={showSessionModal} onOpenChange={setShowSessionModal}>

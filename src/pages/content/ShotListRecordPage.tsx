@@ -33,6 +33,7 @@ import { extractPathFromUrl, generateSignedUrlsBatch } from '@/core/utils';
 import { useWorkflowTemplate, getNextStageUrl, getPrevStageUrl } from '@/core/hooks';
 import { WorkflowTemplateId, getStageLabel } from '@/core/constants';
 import { ROUTES } from "@/routes/routes";
+import { useStageProgress } from "@/core/hooks/useStageProgress";
 
 
 interface ContentSections {
@@ -198,6 +199,9 @@ const ShotListRecord = () => {
   const [forcePhraseByPhraseMode, setForcePhraseByPhraseMode] = useState(false);
   const [hasShotListContent, setHasShotListContent] = useState(false);
 
+  // Stage progress tracking for production calendar
+  const { updateProgress, calculateRecordingProgress } = useStageProgress(scriptId);
+
   useEffect(() => {
     if (!scriptId || scriptId === 'null' || scriptId === 'undefined') {
       toast({
@@ -245,6 +249,11 @@ const ShotListRecord = () => {
         if (error) throw error;
 
         setAutoSaveStatus('saved');
+
+        // Atualizar progresso de gravação para o calendário de produção
+        const recordingProgress = calculateRecordingProgress(shots.map(s => ({ isCompleted: !!s.isCompleted })));
+        updateProgress('recording', recordingProgress);
+
       } catch (error) {
         console.error('Auto-save failed:', error);
         setAutoSaveStatus('unsaved');

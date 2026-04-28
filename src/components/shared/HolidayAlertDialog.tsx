@@ -27,12 +27,12 @@ export function HolidayAlertDialog({ alert, onDismiss, onRemindLater }: HolidayA
   const Icon = isVacation ? (alert.type === 'vacation_active' ? Sun : Plane) : CalendarDays;
 
   const handlePlan = () => {
-    onRemindLater();
+    onDismiss();
     navigate(ROUTES.CALENDARIO);
   };
 
   return (
-    <Dialog open={!!alert} onOpenChange={(open) => { if (!open) onRemindLater(); }}>
+    <Dialog open={!!alert} onOpenChange={(open) => { if (!open) onDismiss(); }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader className="text-center items-center">
           <div className="w-14 h-14 rounded-full bg-accent/10 flex items-center justify-center mb-2">

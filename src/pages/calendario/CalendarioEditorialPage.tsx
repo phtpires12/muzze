@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek, addWeeks, subWeeks } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Plus, ChevronLeft, ChevronRight, ChevronDown, Lightbulb, Filter, CalendarIcon, LayoutGrid, Columns3, ArrowUpDown, Database, Link2 } from "lucide-react";
@@ -16,8 +18,13 @@ import {
   DayContentModal,
   MobileWeekAgendaView,
   PostConfirmationPopup,
-  PublishStatus
+  PublishStatus,
+  ProductionWorkflowWizard,
+  ProductionCalendarChip
 } from "@/components/calendar";
+import { useProductionSettings } from "@/core/hooks/useProductionSettings";
+import { useProductionSchedules } from "@/core/hooks/useProductionSchedules";
+import { generateBackwardSchedule } from "@/core/utils/production-schedule";
 import { NotionImportModal } from "@/components/content/NotionImportModal";
 import { Paywall, PaywallAction } from "@/components/shared";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,6 +36,8 @@ import { usePlanCapabilitiesOptional } from '@/core/contexts';
 import { useProfileContext } from '@/core/contexts';
 import { useAnalytics } from '@/core/hooks';
 import { daysUntilWeekReset } from '@/core/utils';
+import { getWorkflowTemplate } from '@/core/constants/workflow-templates';
+import { CreativeStage } from '@/types/workspace';
 
 interface Script {
   id: string;
@@ -81,6 +90,71 @@ const CalendarioEditorial = () => {
   const isMobile = deviceType === 'mobile';
   const hasActiveFilters = contentTypeFilter !== "all" || stageFilter !== "all";
   const activeFilterCount = (contentTypeFilter !== "all" ? 1 : 0) + (stageFilter !== "all" ? 1 : 0);
+
+  const { settings: prodSettings, updateSettings } = useProductionSettings();
+  const { schedules, upsertSchedules, toggleCompleted } = useProductionSchedules();
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [productionMode, setProductionMode] = useState(false);
+
+  useEffect(() => {
+    // Sincroniza o estado local com a configuração do DB
+    if (prodSettings) {
+      setProductionMode(prodSettings.is_enabled ?? false);
+    }
+  }, [prodSettings]);
+
+  // Gera e salva o cronograma reverso para um script
+  const generateAndSaveSchedule = async (script: Script, publishDate: string) => {
+    if (!prodSettings?.is_enabled || !profile?.user_id) return;
+
+    const template = getWorkflowTemplate(script.workflow_template);
+    const result = generateBackwardSchedule(
+      publishDate,
+      template.stages,
+      prodSettings.stage_slas,
+      prodSettings.work_days
+    );
+
+    if (result.schedule.length === 0) return;
+
+    // Avisa se cronograma está comprimido
+    if (result.isCompressed) {
+      toast({
+        title: "⏱️ Prazo apertado!",
+        description: `Esse conteúdo normalmente leva ${result.totalSLADays} dias. Você tem apenas ${result.availableDays} dia(s) disponível(is) até a publicação.`,
+      });
+    }
+
+    await upsertSchedules(
+      result.schedule.map(s => ({
+        script_id: script.id,
+        user_id: profile.user_id,
+        stage: s.stage,
+        scheduled_date: s.scheduled_date,
+        completed: false,
+      }))
+    );
+  };
+
+  // Pego o cronograma de um dia específico para o modo de produção
+  const getProductionSchedulesForDate = (checkDate: Date) => {
+    if (!schedules || !productionMode) return [];
+    const dateStr = format(checkDate, 'yyyy-MM-dd');
+    return schedules.filter(s => s.scheduled_date === dateStr);
+  };
+
+  const handleProductionToggle = (checked: boolean) => {
+    if (checked && (!prodSettings || !prodSettings.work_days || prodSettings.work_days.length === 0)) {
+      setWizardOpen(true);
+    } else {
+      setProductionMode(checked);
+      if (prodSettings) {
+        updateSettings({ is_enabled: checked });
+      } else {
+        setWizardOpen(true);
+      }
+    }
+  };
 
   // Overdue content popup
   const {
@@ -296,6 +370,9 @@ const CalendarioEditorial = () => {
         .eq('id', draggedScript.id);
 
       if (error) throw error;
+
+      // Gera (ou re-gera) o cronograma reverso se modo de produção ativo
+      generateAndSaveSchedule(draggedScript, newPublishDate);
 
       toast({
         title: "Data atualizada",
@@ -586,9 +663,9 @@ const CalendarioEditorial = () => {
 
       {/* Seção alternada cinza para controles */}
       <div className="bg-muted/30 py-4">
-        <div className="max-w-6xl mx-auto px-4">
+        <div className="max-w-6xl mx-auto px-4 flex justify-between items-center sm:flex-row flex-col gap-4 sm:gap-0">
           {/* View Switcher */}
-          <div className="flex items-center gap-1 bg-background rounded-lg p-1 mb-4 w-fit border border-border">
+          <div className="flex items-center gap-1 bg-background rounded-lg p-1 w-full sm:w-fit border border-border">
             <Button
               variant={viewType === "calendar" ? "secondary" : "ghost"}
               size="sm"
@@ -616,6 +693,18 @@ const CalendarioEditorial = () => {
               <Columns3 className="w-4 h-4 mr-1.5" />
               Quadro
             </Button>
+          </div>
+
+          {/* Toggle de Modo Produção */}
+          <div className="flex items-center gap-3 bg-background p-2 px-4 rounded-lg border border-border shrink-0 self-end sm:self-auto">
+            <Label htmlFor="production-mode" className="text-sm font-semibold cursor-pointer whitespace-nowrap">
+              Workflow de Produção
+            </Label>
+            <Switch
+              id="production-mode"
+              checked={productionMode}
+              onCheckedChange={handleProductionToggle}
+            />
           </div>
         </div>
       </div>
@@ -758,9 +847,23 @@ const CalendarioEditorial = () => {
                     const dayScripts = getScriptsForDate(day);
                     const isCurrentMonth = isSameMonth(day, currentDate);
                     const isToday = isSameDay(day, new Date());
+                    const dayProductionSchedules = getProductionSchedulesForDate(day);
+
+                    // Monta chips de produção para este dia
+                    const chips = dayProductionSchedules.map(sched => {
+                      const relatedScript = scripts.find(s => s.id === sched.script_id);
+                      return (
+                        <ProductionCalendarChip
+                          key={sched.id}
+                          schedule={sched}
+                          scriptTitle={relatedScript?.title || 'Sem título'}
+                          onToggle={(id, completed) => toggleCompleted({ scheduleId: id, completed })}
+                        />
+                      );
+                    });
 
                     return (
-                      <div key={idx} className={idx % 7 === 6 ? "" : ""}>
+                      <div key={idx}>
                         <CalendarDay
                           day={day}
                           scripts={dayScripts}
@@ -777,6 +880,7 @@ const CalendarioEditorial = () => {
                           onDeleteScript={handleDeleteScript}
                           draggedScript={draggedScript}
                           dragOverDate={dragOverDate}
+                          productionChips={chips.length > 0 ? chips : undefined}
                         />
                       </div>
                     );
@@ -982,6 +1086,11 @@ const CalendarioEditorial = () => {
         isOpen={notionModalOpen}
         onClose={() => setNotionModalOpen(false)}
         onImportComplete={fetchScripts}
+      />
+
+      <ProductionWorkflowWizard
+        open={wizardOpen}
+        onOpenChange={setWizardOpen}
       />
 
       {/* Paywall */}

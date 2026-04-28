@@ -2,15 +2,24 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Loader2, Database, Download, Search } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Loader2, Database, Download, Search, File, ChevronRight, ArrowLeft, Link as LinkIcon } from "lucide-react";
 import { useToast } from "@/core/hooks";
 import { useProfileContext } from '@/core/contexts';
 
-interface NotionDatabase {
+interface NotionItem {
     id: string;
     title: string;
+    type: 'database' | 'page';
+}
+
+interface NavLayer {
+    parentId: string;
+    title: string;
+    items: NotionItem[];
+    isLoadingList?: boolean;
 }
 
 interface NotionImportModalProps {
@@ -52,12 +61,27 @@ const mapContentType = (notionType: string | null): string => {
     return 'Reels';
 }
 
+const getTitle = (item: any) => {
+    if (item.object === 'database') {
+        return item.title?.[0]?.plain_text || "Sem Nome";
+    }
+    if (item.object === 'page' && item.properties) {
+        for (const key of Object.keys(item.properties)) {
+            const p = item.properties[key];
+            if (p.type === 'title') {
+                return p.title?.[0]?.plain_text || "Sem Nome";
+            }
+        }
+    }
+    return "Sem Nome";
+}
+
 export function NotionImportModal({ isOpen, onClose, onImportComplete }: NotionImportModalProps) {
-    const [databases, setDatabases] = useState<NotionDatabase[]>([]);
-    const [selectedDb, setSelectedDb] = useState<string>('');
-    const [isLoadingList, setIsLoadingList] = useState(false);
+    const [navStack, setNavStack] = useState<NavLayer[]>([]);
     const [isImporting, setIsImporting] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [linkInput, setLinkInput] = useState('');
+    const [activeTab, setActiveTab] = useState('link');
 
     const { toast } = useToast();
     const { profile } = useProfileContext();
@@ -66,7 +90,7 @@ export function NotionImportModal({ isOpen, onClose, onImportComplete }: NotionI
     useEffect(() => {
         if (isOpen) {
             if (notionToken) {
-                fetchDatabases();
+                fetchRoot();
             } else {
                 toast({
                     title: "Não autenticado",
@@ -75,87 +99,130 @@ export function NotionImportModal({ isOpen, onClose, onImportComplete }: NotionI
                 });
                 onClose();
             }
+        } else {
+            // Reset state on close
+            setNavStack([]);
+            setSearchQuery('');
+            setLinkInput('');
         }
     }, [isOpen, notionToken]);
 
-    // Função para listar os bancos de dados usando o Proxy
-    const fetchDatabases = async (query?: string) => {
-        setIsLoadingList(true);
+    const fetchRoot = async (query?: string) => {
+        setNavStack([{ parentId: 'root', title: 'Início', items: [], isLoadingList: true }]);
         try {
             const { data, error } = await supabase.functions.invoke('notion-proxy', {
-                body: { action: 'search_databases', token: notionToken, query: query || undefined }
+                body: { action: 'search_all', token: notionToken, query: query || undefined }
             });
 
-            if (error) {
-                throw new Error("Erro na comunicação com o backend seguro do Notion (CORS).");
-            }
+            if (error) throw new Error("Erro na comunicação com o backend seguro do Notion.");
             if (!data || !data.success) {
+                // Fallback caso a edge function não suporte search_all ainda
+                if (data?.error?.includes('Action method not supported')) {
+                    toast({
+                        title: "Proxy desatualizado",
+                        description: "Por favor, atualize o código da Edge Function no Lovable Cloud para a versão Nova.",
+                        variant: "destructive"
+                    });
+                }
                 throw new Error(data?.error || 'Erro ao buscar tabelas do Notion');
             }
 
-            const formattedDbs = data.data.results.map((db: any) => {
-                let title = "Sem Nome";
-                if (db.title && db.title.length > 0) {
-                    title = db.title[0].plain_text;
-                }
-                return {
-                    id: db.id,
-                    title: title,
-                };
-            });
+            const formatted = data.data.results.map((item: any) => ({
+                id: item.id,
+                title: getTitle(item),
+                type: item.object
+            }));
 
-            setDatabases(formattedDbs);
-
-            if (formattedDbs.length > 0) {
-                setSelectedDb(formattedDbs[0].id);
-            } else {
-                toast({
-                    title: "Nenhuma tabela encontrada",
-                    description: "Não achamos nenhuma base de dados conectada no seu Notion. Verifique as permissões de acesso.",
-                    variant: "destructive"
-                })
-            }
+            setNavStack([{ parentId: 'root', title: 'Início', items: formatted, isLoadingList: false }]);
         } catch (err: any) {
-            console.error("Erro listando databases do Notion:", err);
-            toast({
-                title: "Erro de conexão",
-                description: err.message || "Não foi possível conectar ao Notion para listar suas tabelas.",
-                variant: "destructive"
-            });
-            onClose();
-        } finally {
-            setIsLoadingList(false);
+            console.error("Erro listando root:", err);
+            setNavStack([{ parentId: 'root', title: 'Início', items: [], isLoadingList: false }]);
         }
     };
 
-    // Função para realizar a importação do banco de dados direto do navegador
-    const handleImport = async () => {
-        if (!selectedDb || !notionToken) return;
+    const handleExpandPage = async (page: NotionItem) => {
+        setNavStack(prev => [...prev, { parentId: page.id, title: page.title, items: [], isLoadingList: true }]);
+
+        try {
+            const { data, error } = await supabase.functions.invoke('notion-proxy', {
+                body: { action: 'get_blocks', token: notionToken, page_id: page.id }
+            });
+
+            if (error || !data?.success) throw new Error(data?.error || "Erro ao buscar subpastas.");
+
+            const childBlocks = data.data.results.filter((b: any) => b.type === 'child_page' || b.type === 'child_database');
+            const children: NotionItem[] = childBlocks.map((b: any) => ({
+                id: b.id,
+                title: b.type === 'child_page' ? b.child_page.title : b.child_database.title,
+                type: b.type === 'child_page' ? 'page' : 'database'
+            }));
+
+            setNavStack(prev => {
+                const newStack = [...prev];
+                newStack[newStack.length - 1].items = children;
+                newStack[newStack.length - 1].isLoadingList = false;
+                return newStack;
+            });
+        } catch (err: any) {
+            toast({ title: "Erro", description: err.message, variant: "destructive" });
+            setNavStack(prev => {
+                const newStack = [...prev];
+                newStack[newStack.length - 1].isLoadingList = false;
+                return newStack;
+            });
+        }
+    }
+
+    const goBack = () => {
+        setNavStack(prev => prev.length > 1 ? prev.slice(0, -1) : prev);
+    }
+
+    const handleLinkImport = () => {
+        let dbId = linkInput.trim();
+        if (dbId.includes('notion.so/')) {
+            // tentar extrair o id q são os últimos 32 chars do link
+            const match = dbId.match(/([a-f0-9]{32})(?:\?|$)/i);
+            if (match) {
+                dbId = match[1];
+            } else {
+                toast({ title: 'Link inválido', description: 'Não conseguimos achar o ID da tabela neste link.', variant: 'destructive' });
+                return;
+            }
+        }
+
+        // Validate UUID or 32 char ID
+        if (dbId.length === 32) {
+            dbId = `${dbId.substring(0, 8)}-${dbId.substring(8, 12)}-${dbId.substring(12, 16)}-${dbId.substring(16, 20)}-${dbId.substring(20)}`;
+        }
+
+        handleImportInternal(dbId);
+    }
+
+    const handleImportInternal = async (databaseId: string) => {
+        if (!databaseId || !notionToken) return;
 
         setIsImporting(true);
 
         toast({
             title: "Importando do Notion...",
-            description: "Por favor, aguarde. Isso pode levar alguns segundos dependendo do tamanho da sua tabela.",
+            description: "Por favor, aguarde. Isso pode levar alguns segundos.",
         });
 
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error("Usuário não autenticado no aplicativo");
 
-            // 1. Query the database rows via Proxy
             const { data: queryDataObj, error: queryError } = await supabase.functions.invoke('notion-proxy', {
-                body: { action: 'query_database', token: notionToken, database_id: selectedDb }
+                body: { action: 'query_database', token: notionToken, database_id: databaseId }
             });
 
             if (queryError || !queryDataObj || !queryDataObj.success) {
-                throw new Error(queryDataObj?.error || `Falha ao consultar páginas do banco de dados no Notion.`);
+                throw new Error(queryDataObj?.error || `Falha ao acessar os dados da tabela no Notion.`);
             }
 
             const pages = queryDataObj.data.results;
             const scriptsToInsert = [];
 
-            // 2. Processar cada página da tabela
             for (const page of pages) {
                 const properties = page.properties;
 
@@ -177,24 +244,25 @@ export function NotionImportModal({ isOpen, onClose, onImportComplete }: NotionI
                 let centralIdea = '';
                 let contentJson: string | null = null;
 
-                // Opcional: Buscar os blocos de texto via Proxy
                 try {
                     const { data: blocksObj, error: blocksError } = await supabase.functions.invoke('notion-proxy', {
                         body: { action: 'get_blocks', token: notionToken, page_id: page.id }
                     });
 
                     if (!blocksError && blocksObj && blocksObj.success) {
-                        const paragraphs = blocksObj.data.results
-                            .filter((b: any) => b.type === 'paragraph' && b.paragraph?.rich_text)
-                            .map((b: any) => b.paragraph.rich_text.map((t: any) => t.plain_text).join(''))
+                        const validBlockTypes = ['paragraph', 'heading_1', 'heading_2', 'heading_3', 'bulleted_list_item', 'numbered_list_item', 'to_do', 'toggle', 'quote', 'callout'];
+
+                        const textBlocks = blocksObj.data.results
+                            .filter((b: any) => validBlockTypes.includes(b.type) && b[b.type]?.rich_text)
+                            .map((b: any) => b[b.type].rich_text.map((t: any) => t.plain_text).join(''))
                             .filter((p: string) => p.trim() !== '');
 
-                        if (paragraphs.length > 0) {
-                            centralIdea = paragraphs.join('\n\n').substring(0, 500);
+                        if (textBlocks.length > 0) {
+                            centralIdea = textBlocks.join('\n\n').substring(0, 500);
                             contentJson = JSON.stringify([{
                                 id: crypto.randomUUID(),
                                 name: 'Importado do Notion',
-                                content: paragraphs.join('\n\n')
+                                content: textBlocks.join('\n\n')
                             }]);
                         }
                     }
@@ -202,10 +270,14 @@ export function NotionImportModal({ isOpen, onClose, onImportComplete }: NotionI
                     console.warn('Could not fetch blocks for page', page.id, e);
                 }
 
+                const scriptDate = dateField || new Date().toISOString();
+                const isPast = new Date(scriptDate).getTime() < new Date().setHours(0, 0, 0, 0);
+
                 scriptsToInsert.push({
                     user_id: user.id,
                     title: title,
-                    publish_date: dateField || new Date().toISOString(),
+                    publish_date: scriptDate,
+                    publish_status: isPast ? 'postado' : 'planejado',
                     content_type: mapContentType(typeField),
                     reference_url: urlField,
                     central_idea: centralIdea || null,
@@ -216,7 +288,6 @@ export function NotionImportModal({ isOpen, onClose, onImportComplete }: NotionI
                 } as any);
             }
 
-            // 3. Batch Insert into Supabase
             if (scriptsToInsert.length > 0) {
                 const { error: insertError } = await supabase
                     .from('scripts')
@@ -244,94 +315,155 @@ export function NotionImportModal({ isOpen, onClose, onImportComplete }: NotionI
         }
     };
 
+    const currentLayer = navStack[navStack.length - 1];
+
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !isImporting && onClose()}>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-lg">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <Database className="w-5 h-5 text-primary" />
                         Importar do Notion
                     </DialogTitle>
                     <DialogDescription>
-                        Selecione qual tabela / calendário do Notion você deseja importar para o Muzze.
+                        Navegue pelas suas pastas ou cole um link direto para importar.
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="py-6 space-y-4">
-                    <div className="flex gap-2 relative">
-                        <Input
-                            placeholder="Buscar tabelas ou calendários por nome..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter') fetchDatabases(searchQuery)
-                            }}
-                            className="w-full pl-9"
-                        />
-                        <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-3" />
-                        <Button
-                            variant="secondary"
-                            onClick={() => fetchDatabases(searchQuery)}
-                            disabled={isLoadingList}
-                        >
-                            Buscar
-                        </Button>
-                    </div>
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mt-4">
+                    <TabsList className="w-full grid grid-cols-2">
+                        <TabsTrigger value="browse">Navegar Pastas</TabsTrigger>
+                        <TabsTrigger value="link">Link Direto</TabsTrigger>
+                    </TabsList>
 
-                    {isLoadingList ? (
-                        <div className="flex flex-col items-center justify-center p-4 space-y-4">
-                            <Loader2 className="w-8 h-8 text-primary animate-spin" />
-                            <p className="text-sm text-muted-foreground">Buscando suas tabelas do Notion...</p>
+                    <TabsContent value="browse" className="py-4 space-y-4">
+                        {navStack.length === 1 && (
+                            <div className="flex gap-2 relative">
+                                <Input
+                                    placeholder="Pesquisar em todo o Notion..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') fetchRoot(searchQuery)
+                                    }}
+                                    className="w-full pl-9"
+                                />
+                                <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-3" />
+                                <Button
+                                    variant="secondary"
+                                    onClick={() => fetchRoot(searchQuery)}
+                                    disabled={currentLayer?.isLoadingList}
+                                >
+                                    Buscar
+                                </Button>
+                            </div>
+                        )}
+
+                        <div className="rounded-md border bg-muted/10 h-[300px] flex flex-col relative overflow-hidden">
+                            <div className="flex items-center py-2 px-1 border-b bg-background/95 backdrop-blur z-10 w-full shrink-0">
+                                {navStack.length > 1 ? (
+                                    <Button variant="ghost" size="sm" onClick={goBack} className="h-8 gap-1 mr-2 px-2 ml-1">
+                                        <ArrowLeft className="w-4 h-4" />
+                                        Voltar
+                                    </Button>
+                                ) : (
+                                    <div className="w-4 h-4 mx-2" />
+                                )}
+                                <span className="font-medium text-sm flex-1 truncate">{currentLayer?.title || "Início"}</span>
+                            </div>
+
+                            <ScrollArea className="flex-1 w-full h-full p-2">
+                                {currentLayer?.isLoadingList ? (
+                                    <div className="flex flex-col items-center justify-center h-[200px] space-y-4 h-full">
+                                        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                                        <p className="text-sm text-muted-foreground">Carregando...</p>
+                                    </div>
+                                ) : currentLayer?.items?.length > 0 ? (
+                                    <div className="space-y-1 pb-4">
+                                        {currentLayer.items.map(item => (
+                                            <div key={item.id} className="flex items-center justify-between p-2 hover:bg-accent rounded-md group transition-colors">
+                                                <div className="flex items-center gap-3 flex-1 min-w-0 pointer-events-none">
+                                                    {item.type === 'database' ? (
+                                                        <Database className="w-4 h-4 text-primary shrink-0" />
+                                                    ) : (
+                                                        <File className="w-4 h-4 text-muted-foreground shrink-0" />
+                                                    )}
+                                                    <span className="text-sm truncate select-none">{item.title}</span>
+                                                </div>
+
+                                                {item.type === 'page' ? (
+                                                    <Button
+                                                        variant="secondary"
+                                                        size="sm"
+                                                        className="h-8 px-2"
+                                                        onClick={() => handleExpandPage(item)}
+                                                    >
+                                                        Abrir <ChevronRight className="w-4 h-4" />
+                                                    </Button>
+                                                ) : (
+                                                    <Button
+                                                        size="sm"
+                                                        className="h-8 px-3 ml-2"
+                                                        onClick={() => handleImportInternal(item.id)}
+                                                        disabled={isImporting}
+                                                    >
+                                                        {isImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Importar"}
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="text-center flex items-center justify-center h-[200px] text-sm text-muted-foreground">
+                                        Nenhum item encontrado nesta pasta.
+                                    </div>
+                                )}
+                            </ScrollArea>
                         </div>
-                    ) : databases.length > 0 ? (
+                    </TabsContent>
+
+                    <TabsContent value="link" className="py-6 space-y-6">
                         <div className="space-y-4">
-                            <Select value={selectedDb} onValueChange={setSelectedDb} disabled={isImporting}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Selecione um banco de dados..." />
-                                </SelectTrigger>
-                                <SelectContent className="max-h-[250px] overflow-y-auto">
-                                    {databases.map((db) => (
-                                        <SelectItem key={db.id} value={db.id}>
-                                            {db.title}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <p className="text-xs text-muted-foreground mt-2">
-                                Apenas bancos de dados que você compartilhou expressamente com o Muzze aparecerão aqui.
+                            <p className="text-sm text-muted-foreground text-center">
+                                Sabia que é mais rápido importar por link? Vá no Notion, clique em <strong>Share</strong> na tabela desejada, depois <strong>Copy Link</strong> e cole aqui!
                             </p>
+                            <div className="flex gap-2 relative">
+                                <LinkIcon className="w-5 h-5 text-muted-foreground absolute left-3 top-2.5" />
+                                <Input
+                                    className="pl-10"
+                                    placeholder="https://notion.so/Seu-Calendario-12345..."
+                                    value={linkInput}
+                                    onChange={(e) => setLinkInput(e.target.value)}
+                                />
+                            </div>
                         </div>
-                    ) : (
-                        <div className="text-center p-4 text-sm text-muted-foreground bg-accent/20 rounded-md">
-                            Nenhum banco de dados disponível.
-                        </div>
-                    )}
-                </div>
+                        <Button
+                            className="w-full gap-2"
+                            disabled={!linkInput || isImporting}
+                            onClick={handleLinkImport}
+                        >
+                            {isImporting ? (
+                                <>
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    Importando...
+                                </>
+                            ) : (
+                                <>
+                                    <Download className="w-4 h-4" />
+                                    Importar pelo Link
+                                </>
+                            )}
+                        </Button>
+                    </TabsContent>
+                </Tabs>
 
-                <DialogFooter className="sm:justify-between">
+                <DialogFooter className="sm:justify-between border-t pt-4">
                     <Button
                         variant="ghost"
                         onClick={onClose}
                         disabled={isImporting}
                     >
                         Cancelar
-                    </Button>
-                    <Button
-                        onClick={handleImport}
-                        disabled={isImporting || isLoadingList || !selectedDb || databases.length === 0}
-                        className="gap-2"
-                    >
-                        {isImporting ? (
-                            <>
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                                Importando...
-                            </>
-                        ) : (
-                            <>
-                                <Download className="w-4 h-4" />
-                                Importar Conteúdos
-                            </>
-                        )}
                     </Button>
                 </DialogFooter>
             </DialogContent>

@@ -3,7 +3,7 @@ import { Plus, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
-import { useState, useEffect } from "react";
+import { useState, useEffect, ReactNode } from "react";
 import { cn } from '@/core/utils';
 import {
   AlertDialog,
@@ -47,6 +47,7 @@ interface CalendarDayProps {
   onDeleteScript?: (e: React.MouseEvent, scriptId: string) => void;
   draggedScript?: Script | null;
   dragOverDate?: string | null;
+  productionChips?: ReactNode; // Production workflow chips to display below scripts
 }
 
 const getContentTypeColor = (contentType: string | null) => {
@@ -188,6 +189,7 @@ export function CalendarDay({
   onDeleteScript,
   draggedScript,
   dragOverDate,
+  productionChips,
 }: CalendarDayProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [scriptToDelete, setScriptToDelete] = useState<Script | null>(null);
@@ -554,6 +556,13 @@ export function CalendarDay({
         )}
 
       </div>
+
+      {/* Production Workflow Chips */}
+      {productionChips && (
+        <div className="flex flex-wrap gap-1 mt-1.5 px-0.5">
+          {productionChips}
+        </div>
+      )}
 
       <AlertDialog open={!!scriptToDelete} onOpenChange={(open) => !open && setScriptToDelete(null)}>
         <AlertDialogContent>

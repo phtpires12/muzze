@@ -17,6 +17,7 @@ import { ShotItem } from '@/core/utils';
 import { generateSignedUrlsBatch } from '@/core/utils';
 import { parseShotList } from '@/core/utils';
 import { ROUTES } from "@/routes/routes";
+import { useStageProgress } from "@/core/hooks/useStageProgress";
 
 
 type VideoType = 'google_drive' | 'dropbox' | 'youtube' | 'other';
@@ -48,6 +49,17 @@ export default function EditingWorkspace() {
   const { session, startSession, pauseSession, resumeSession, endSession, saveCurrentStageTime } = useSession({
     attachBeforeUnloadListener: true
   });
+
+  // Stage progress tracking for production calendar
+  const { updateProgress, calculateEditingProgress } = useStageProgress(scriptId);
+
+  // Track editing progress whenever session time updates
+  useEffect(() => {
+    if (!session.isActive || !scriptId) return;
+    const progress = calculateEditingProgress(session.elapsedSeconds, 30);
+    // Throttle is handled inside updateProgress; safe to call here
+    updateProgress('editing', progress);
+  }, [session.elapsedSeconds]);
 
   // Workflow template for dynamic navigation
   const [scriptWorkflow, setScriptWorkflow] = useState<WorkflowTemplateId | null>(null);

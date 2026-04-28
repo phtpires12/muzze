@@ -42,6 +42,7 @@ import { MasterScriptEditor } from "@/components/content";
 import { useWorkflowTemplate, getNextStageUrl } from '@/core/hooks';
 import { WorkflowTemplateId, getStageLabel, DEFAULT_SECTIONS, CAROUSEL_SECTIONS, ContentSection } from '@/core/constants';
 import { ROUTES } from "@/routes/routes";
+import { useStageProgress } from "@/core/hooks/useStageProgress";
 
 
 interface ScriptEditorProps {
@@ -148,6 +149,9 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
     }
   }, [effectiveScriptId, isReviewMode]);
 
+  // Stage progress tracking for production calendar
+  const { updateProgress, calculateScriptProgress } = useStageProgress(effectiveScriptId);
+
   // Auto-save effect
   useEffect(() => {
     // Clear any existing timer
@@ -158,6 +162,12 @@ export const ScriptEditor = ({ onClose, scriptId, isReviewMode = false }: Script
     // Set up auto-save every 5 seconds (reduced from 30s for more frequent saves)
     autoSaveTimer.current = setTimeout(() => {
       handleAutoSave();
+
+      // Track progresso da etapa de roteiro/revisão
+      const fullHtml = Object.values(content).join(' ');
+      const stage = isReviewMode ? 'review' : 'script';
+      const progress = calculateScriptProgress(fullHtml, isReviewMode ? 4 : 8);
+      updateProgress(stage as any, progress);
     }, 5000);
 
     // Cleanup - only clear timer, DON'T call handleAutoSave (state may be stale)

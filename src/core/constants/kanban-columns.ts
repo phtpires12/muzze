@@ -75,14 +75,15 @@ export type PublicationColumnId = typeof PUBLICATION_COLUMNS[number]['id'];
 export const PUBLICATION_DRAG_RULES = {
   // Movimentos permitidos pelo usuário
   allowed: [
+    { from: 'scheduled', to: 'ready' },
+    { from: 'scheduled', to: 'posted' },
+    { from: 'ready', to: 'scheduled' },
     { from: 'ready', to: 'posted' },
+    { from: 'posted', to: 'scheduled' },
+    { from: 'posted', to: 'ready' },
   ],
   // Movimentos bloqueados (sistema faz automaticamente ou não permitido)
   blocked: [
-    { from: 'scheduled', to: 'ready', reason: 'Complete todas as etapas de edição' },
-    { from: 'scheduled', to: 'posted', reason: 'Complete a edição primeiro' },
-    { from: 'posted', to: 'scheduled', reason: 'Conteúdo já foi publicado' },
-    { from: 'posted', to: 'ready', reason: 'Conteúdo já foi publicado' },
     { from: 'lost', to: 'scheduled', reason: 'Use o botão "Reagendar" no card' },
     { from: 'lost', to: 'ready', reason: 'Reagende o conteúdo primeiro' },
     { from: 'lost', to: 'posted', reason: 'Reagende o conteúdo primeiro' },

@@ -10,6 +10,8 @@ import {
 } from '@/types/workspace';
 import { toast } from 'sonner';
 
+export type EmailStatus = 'active_member' | 'pending_invite' | 'previous_invite' | null;
+
 interface UseWorkspaceReturn {
   workspace: Workspace | null;
   myRole: WorkspaceRole | null;
@@ -23,6 +25,7 @@ interface UseWorkspaceReturn {
   updateMemberPermissions: (memberId: string, permissions: StagePermissions) => Promise<boolean>;
   cancelInvite: (inviteId: string) => Promise<boolean>;
   resendInvite: (inviteId: string) => Promise<boolean>;
+  checkEmailStatus: (email: string) => Promise<EmailStatus>;
   createWorkspace: (name: string) => Promise<{ success: boolean; limitReached?: boolean; workspaceId?: string }>;
   refetch: () => Promise<void>;
 }
@@ -149,6 +152,57 @@ export const useWorkspace = (): UseWorkspaceReturn => {
     fetchWorkspace();
   }, [fetchWorkspace]);
 
+  const checkEmailStatus = async (email: string): Promise<EmailStatus> => {
+    if (!workspace) return null;
+
+    const normalizedEmail = email.toLowerCase().trim();
+
+    try {
+      // 1. Verificar se já é membro ativo do workspace
+      const { data: existingMembers } = await supabase
+        .from('workspace_members')
+        .select('id')
+        .eq('workspace_id', workspace.id)
+        .eq('email', normalizedEmail)
+        .not('accepted_at', 'is', null)
+        .limit(1);
+
+      if (existingMembers && existingMembers.length > 0) {
+        return 'active_member';
+      }
+
+      // 2. Verificar se existe convite pendente (não expirado)
+      const { data: pendingInvite } = await supabase
+        .from('workspace_invites')
+        .select('id')
+        .eq('workspace_id', workspace.id)
+        .eq('email', normalizedEmail)
+        .gt('expires_at', new Date().toISOString())
+        .maybeSingle();
+
+      if (pendingInvite) {
+        return 'pending_invite';
+      }
+
+      // 3. Verificar se existe convite anterior (expirado)
+      const { data: expiredInvite } = await supabase
+        .from('workspace_invites')
+        .select('id')
+        .eq('workspace_id', workspace.id)
+        .eq('email', normalizedEmail)
+        .maybeSingle();
+
+      if (expiredInvite) {
+        return 'previous_invite';
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error checking email status:', error);
+      return null;
+    }
+  };
+
   const inviteMember = async (
     email: string, 
     role: WorkspaceRole, 
@@ -160,28 +214,45 @@ export const useWorkspace = (): UseWorkspaceReturn => {
     }
 
     try {
+      const normalizedEmail = email.toLowerCase().trim();
+
       // Verificar limite de convidados
       const { data: canInvite } = await supabase.rpc('can_invite_to_workspace', {
         _workspace_id: workspace.id
       });
 
       if (!canInvite) {
-        toast.error('Limite de 3 convidados atingido');
+        toast.error('Limite de convidados atingido');
         return false;
       }
 
-      // Verificar se já existe convite pendente no banco (fonte da verdade)
+      // Verificar se já é membro ativo
+      const { data: existingMembers } = await supabase
+        .from('workspace_members')
+        .select('id')
+        .eq('workspace_id', workspace.id)
+        .eq('email', normalizedEmail)
+        .not('accepted_at', 'is', null)
+        .limit(1);
+
+      if (existingMembers && existingMembers.length > 0) {
+        toast.error('Este email já pertence a um membro ativo do workspace.');
+        return false;
+      }
+
+      // Verificar se existe qualquer convite anterior (expirado ou não) e deletar
       const { data: existingInvite } = await supabase
         .from('workspace_invites')
         .select('id')
         .eq('workspace_id', workspace.id)
-        .eq('email', email.toLowerCase())
-        .gt('expires_at', new Date().toISOString())
+        .eq('email', normalizedEmail)
         .maybeSingle();
 
       if (existingInvite) {
-        toast.error('Já existe um convite pendente para este email. Use a opção "Reenviar".');
-        return false;
+        await supabase
+          .from('workspace_invites')
+          .delete()
+          .eq('id', existingInvite.id);
       }
 
       // Verificar se já é membro
@@ -191,7 +262,7 @@ export const useWorkspace = (): UseWorkspaceReturn => {
       // Inserir convite no banco
       const { data: inviteData, error } = await supabase.from('workspace_invites').insert({
         workspace_id: workspace.id,
-        email: email.toLowerCase(),
+        email: normalizedEmail,
         role,
         allowed_timer_stages: permissions.allowed_timer_stages,
         can_edit_stages: permissions.can_edit_stages,
@@ -199,11 +270,6 @@ export const useWorkspace = (): UseWorkspaceReturn => {
       }).select().single();
 
       if (error) {
-        // Tratar erro de duplicata como fallback (race condition)
-        if (error.code === '23505') {
-          toast.error('Já existe um convite pendente para este email. Use a opção "Reenviar".');
-          return false;
-        }
         throw error;
       }
 
@@ -216,12 +282,14 @@ export const useWorkspace = (): UseWorkspaceReturn => {
 
       const inviterName = profile?.username || userData.user.email?.split('@')[0] || 'Um usuário';
 
+      const isResend = !!existingInvite;
+
       // Enviar email de convite via Edge Function
       try {
         const { error: emailError } = await supabase.functions.invoke('send-invite-email', {
           body: {
             inviteId: inviteData.id,
-            toEmail: email.toLowerCase(),
+            toEmail: normalizedEmail,
             inviterName,
             workspaceName: workspace.name,
             role,
@@ -231,13 +299,19 @@ export const useWorkspace = (): UseWorkspaceReturn => {
         if (emailError) {
           console.error('Error sending invite email:', emailError);
           // Não falhar a operação se o email não for enviado
-          toast.success('Convite criado! (Email pode demorar alguns minutos)');
+          toast.success(isResend 
+            ? 'Convite reenviado! (Email pode demorar alguns minutos)' 
+            : 'Convite criado! (Email pode demorar alguns minutos)');
         } else {
-          toast.success('Convite enviado por email!');
+          toast.success(isResend 
+            ? 'Convite reenviado por email!' 
+            : 'Convite enviado por email!');
         }
       } catch (emailErr) {
         console.error('Error invoking email function:', emailErr);
-        toast.success('Convite criado! (Email pode demorar alguns minutos)');
+        toast.success(isResend 
+          ? 'Convite reenviado! (Email pode demorar alguns minutos)' 
+          : 'Convite criado! (Email pode demorar alguns minutos)');
       }
 
       await fetchWorkspace();
@@ -462,6 +536,7 @@ export const useWorkspace = (): UseWorkspaceReturn => {
     updateMemberPermissions,
     cancelInvite,
     resendInvite,
+    checkEmailStatus,
     createWorkspace,
     refetch: fetchWorkspace,
   };
