@@ -111,8 +111,7 @@ const Guests = () => {
   const canInviteUsers = planCapabilities?.limits.canInviteUsers ?? true;
   const totalGuests = members.length + invites.length;
   // Convidar como Cliente é exclusivo do plano Studio
-  const planType = (planCapabilities as any)?.planType || (planCapabilities as any)?.plan || undefined;
-  const canInviteClient = planType === 'studio';
+  const canInviteClient = planCapabilities?.planType === 'studio';
 
   // Handler for invite button click - check plan limits first
   const handleInviteClick = () => {
