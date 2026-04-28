@@ -306,7 +306,11 @@ const Guests = () => {
                       <p className="text-sm text-muted-foreground">{member.email}</p>
                     )}
                     <Badge variant="secondary" className="mt-1 text-xs">
-                      {member.role === "admin" ? "Admin" : "Colaborador"}
+                      {member.role === "admin"
+                        ? "Admin"
+                        : member.role === "client"
+                        ? "Cliente"
+                        : "Colaborador"}
                     </Badge>
                   </div>
                 </div>
