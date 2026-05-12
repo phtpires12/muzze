@@ -102,9 +102,7 @@ export const useWorkspace = (): UseWorkspaceReturn => {
         // Buscar membros e convites apenas se sou owner
         if (activeRole === 'owner') {
           const { data: membersData } = await supabase
-            .from('workspace_members')
-            .select('*')
-            .eq('workspace_id', activeWs.id);
+            .rpc('get_workspace_members_full', { _workspace_id: activeWs.id });
 
           if (membersData) {
             const memberIds = membersData.map(m => m.user_id);
