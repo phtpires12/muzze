@@ -913,6 +913,21 @@ export type Database = {
           weekly_time_seconds: number
         }[]
       }
+      get_workspace_members_full: {
+        Args: { _workspace_id: string }
+        Returns: {
+          accepted_at: string
+          allowed_timer_stages: string[]
+          can_edit_stages: string[]
+          email: string
+          id: string
+          invited_at: string
+          invited_by: string
+          role: Database["public"]["Enums"]["workspace_role"]
+          user_id: string
+          workspace_id: string
+        }[]
+      }
       get_workspace_role: {
         Args: { _user_id: string; _workspace_id: string }
         Returns: Database["public"]["Enums"]["workspace_role"]
